@@ -15,7 +15,7 @@
     "react-router-dom": "^6.26.2",
     "@heroui/react": "^2.4.8",
     "@heroui/system": "^2.2.6",
-    "framer-motion": "^10.18.0",
+    "framer-motion": "^11.15.0",
     "zustand": "^4.5.5",
     "@tanstack/react-query": "^5.56.2",
     "axios": "^1.7.7"

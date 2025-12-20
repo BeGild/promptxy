@@ -79,7 +79,6 @@
 
 **1. 克隆并安装依赖**
 ```bash
-cd promptxy
 chmod +x scripts/*.sh
 ```
 
