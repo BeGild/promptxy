@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Input, Spacer, Button, Spinner, Pagination } from "@heroui/react";
+import { Input, Button, Spinner, Pagination, Chip, Select, SelectItem } from "@heroui/react";
 import { RuleCard } from "./RuleCard";
 import { EmptyState } from "@/components/common";
 import { PromptxyRule } from "@/types";
@@ -42,8 +42,8 @@ export const RuleList: React.FC<RuleListProps> = ({
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
-        <Spinner>加载规则中...</Spinner>
+      <div className="flex justify-center items-center py-12">
+        <Spinner color="primary">加载规则中...</Spinner>
       </div>
     );
   }
@@ -60,64 +60,92 @@ export const RuleList: React.FC<RuleListProps> = ({
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
+    <div className="space-y-4">
+      {/* 搜索和过滤工具栏 */}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
-          placeholder="搜索规则ID或描述..."
+          placeholder="🔍 搜索规则ID或描述..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1 }}
+          className="flex-1"
+          radius="lg"
+          classNames={{
+            inputWrapper: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+          }}
         />
-        <select
-          value={filterClient}
+
+        <Select
+          selectedKeys={[filterClient]}
           onChange={(e) => setFilterClient(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            borderRadius: "8px",
-            border: "1px solid var(--heroui-colors-border)",
-            background: "var(--heroui-colors-background)",
-            color: "var(--heroui-colors-foreground)",
+          className="w-full md:w-48"
+          radius="lg"
+          classNames={{
+            trigger: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
           }}
         >
-          <option value="all">所有客户端</option>
-          <option value="claude">Claude</option>
-          <option value="codex">Codex</option>
-          <option value="gemini">Gemini</option>
-        </select>
-        <Button color="primary" onPress={onNewRule}>
-          新建规则
+          <SelectItem key="all">所有客户端</SelectItem>
+          <SelectItem key="claude">Claude</SelectItem>
+          <SelectItem key="codex">Codex</SelectItem>
+          <SelectItem key="gemini">Gemini</SelectItem>
+        </Select>
+
+        <Button
+          color="primary"
+          onPress={onNewRule}
+          className="shadow-md hover:shadow-lg transition-shadow"
+          radius="lg"
+        >
+          + 新建规则
         </Button>
       </div>
 
-      <div style={{ fontSize: "12px", color: "var(--heroui-colors-text-secondary)", marginBottom: "12px" }}>
-        共 {filteredRules.length} 条规则
+      {/* 统计信息 */}
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        <span>搜索结果:</span>
+        <Chip color="primary" variant="flat" size="sm">
+          {filteredRules.length} 条
+        </Chip>
+        {search && (
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => setSearch("")}
+            className="h-6 px-2"
+          >
+            清除搜索
+          </Button>
+        )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px" }}>
+      {/* 规则卡片列表 */}
+      <div className="space-y-3">
         {paginatedRules.map((rule) => (
-          <div key={rule.id} style={{ gridColumn: "span 1" }}>
-            <RuleCard
-              rule={rule}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggle={onToggle}
-            />
-          </div>
+          <RuleCard
+            key={rule.id}
+            rule={rule}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggle={onToggle}
+          />
         ))}
       </div>
 
+      {/* 分页 */}
       {totalPages > 1 && (
-        <>
-          <Spacer y={2} />
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Pagination
-              total={totalPages}
-              page={page}
-              onChange={setPage}
-              color="primary"
-            />
-          </div>
-        </>
+        <div className="flex justify-center mt-6">
+          <Pagination
+            total={totalPages}
+            page={page}
+            onChange={setPage}
+            color="primary"
+            showShadow={true}
+            classNames={{
+              wrapper: "gap-1",
+              item: "min-w-9 h-9",
+              cursor: "shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold",
+            }}
+          />
+        </div>
       )}
     </div>
   );

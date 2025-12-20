@@ -45,15 +45,15 @@ function AppContent() {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       <Sidebar collapsed={sidebarCollapsed} onClose={() => {}} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header
           onToggleSidebar={toggleSidebar}
           sseConnected={sseConnected}
           apiConnected={apiConnected}
         />
-        <div style={{ flex: 1, overflow: "auto", background: "var(--heroui-colors-background)" }}>
+        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
           {renderPage()}
         </div>
       </div>

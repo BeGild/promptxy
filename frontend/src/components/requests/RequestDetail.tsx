@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, CardBody, CardHeader, Spacer, Chip, Button, Badge, Spinner } from "@heroui/react";
+import { Card, CardBody, Chip, Button, Badge, Spinner, Divider } from "@heroui/react";
 import { RequestRecord } from "@/types";
 import { formatTime, formatDuration, getStatusColor, formatClient } from "@/utils";
 import { DiffViewer } from "./DiffViewer";
@@ -19,74 +19,70 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
-        <Spinner>加载详情中...</Spinner>
+      <div className="flex justify-center items-center py-12">
+        <Spinner color="primary">加载详情中...</Spinner>
       </div>
     );
   }
 
   if (!request) {
     return (
-      <div style={{ padding: "32px", textAlign: "center" }}>
-        <div>未找到请求详情</div>
-        <Spacer y={1} />
-        <Button onPress={onClose}>关闭</Button>
+      <div className="p-8 text-center space-y-4">
+        <div className="text-lg font-medium text-gray-600">未找到请求详情</div>
+        <Button onPress={onClose} radius="lg">关闭</Button>
       </div>
     );
   }
 
   return (
-    <div style={{ maxHeight: "70vh", overflowY: "auto", padding: "4px" }}>
+    <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
       {/* 基本信息 */}
-      <Card>
-        <CardBody style={{ padding: "16px" }}>
-          <h4 style={{ marginBottom: "8px" }}>基本信息</h4>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "14px" }}>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>ID:</span>
-              <span style={{ fontFamily: "monospace", marginLeft: "8px" }}>{request.id}</span>
-            </div>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>时间:</span>
-              <span style={{ marginLeft: "8px" }}>{formatTime(request.timestamp)}</span>
-            </div>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>客户端:</span>
-              <span style={{ marginLeft: "8px" }}>
-                <Badge color="primary" variant="flat" size="sm">
-                  {formatClient(request.client)}
-                </Badge>
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <CardBody className="space-y-3">
+          <h4 className="text-lg font-bold">基本信息</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 min-w-[60px]">ID:</span>
+              <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                {request.id}
               </span>
             </div>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>路径:</span>
-              <div style={{ fontFamily: "monospace", fontSize: "11px", marginTop: "2px", wordBreak: "break-all" }}>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 min-w-[60px]">时间:</span>
+              <span>{formatTime(request.timestamp)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 min-w-[60px]">客户端:</span>
+              <Badge color="primary" variant="flat" size="sm" className="font-medium">
+                {formatClient(request.client)}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 min-w-[60px]">方法:</span>
+              <Chip size="sm" variant="flat" className="uppercase text-xs">
+                {request.method}
+              </Chip>
+            </div>
+            <div className="flex items-center gap-2 md:col-span-2">
+              <span className="text-gray-500 min-w-[60px]">路径:</span>
+              <span className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">
                 {request.path}
-              </div>
-            </div>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>方法:</span>
-              <span style={{ marginLeft: "8px" }}>
-                <Chip size="sm" variant="flat">
-                  {request.method}
-                </Chip>
               </span>
             </div>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>状态:</span>
-              <span style={{ marginLeft: "8px" }}>
-                <Chip
-                  size="sm"
-                  color={getStatusColor(request.responseStatus)}
-                  variant="flat"
-                >
-                  {request.responseStatus || "N/A"}
-                </Chip>
-              </span>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 min-w-[60px]">状态:</span>
+              <Chip
+                size="sm"
+                color={getStatusColor(request.responseStatus)}
+                variant="flat"
+                className="font-medium"
+              >
+                {request.responseStatus || "N/A"}
+              </Chip>
             </div>
-            <div>
-              <span style={{ color: "var(--heroui-colors-text-secondary)" }}>耗时:</span>
-              <span style={{ marginLeft: "8px" }}>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 min-w-[60px]">耗时:</span>
+              <span className="font-medium">
                 {request.durationMs ? formatDuration(request.durationMs) : "-"}
               </span>
             </div>
@@ -96,76 +92,67 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 
       {/* 匹配规则 */}
       {request.matchedRules && request.matchedRules.length > 0 && (
-        <>
-          <Spacer y={1} />
-          <Card>
-            <CardBody style={{ padding: "16px" }}>
-              <h4 style={{ marginBottom: "8px" }}>匹配规则</h4>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                {request.matchedRules.map((match, i) => (
-                  <div key={i} style={{ display: "flex", gap: "4px" }}>
-                    <Badge color="secondary" variant="flat" size="sm">
-                      {match.ruleId}
-                    </Badge>
-                    <Badge color="warning" variant="flat" size="sm">
-                      {match.opType}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        </>
+        <Card className="border border-gray-200 dark:border-gray-700">
+          <CardBody className="space-y-3">
+            <h4 className="text-lg font-bold">匹配规则</h4>
+            <div className="flex flex-wrap gap-2">
+              {request.matchedRules.map((match, i) => (
+                <div key={i} className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900/30 px-2 py-1 rounded-lg">
+                  <Badge color="secondary" variant="flat" size="sm" className="text-xs">
+                    {match.ruleId}
+                  </Badge>
+                  <Chip color="warning" variant="flat" size="sm" className="text-xs uppercase">
+                    {match.opType}
+                  </Chip>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
       )}
 
-      <Spacer y={1} />
+      <Divider />
 
       {/* 差异对比 */}
-      <h4 style={{ marginBottom: "8px" }}>请求差异</h4>
-      <DiffViewer original={request.originalBody} modified={request.modifiedBody} />
+      <div className="space-y-2">
+        <h4 className="text-lg font-bold">请求差异</h4>
+        <DiffViewer original={request.originalBody} modified={request.modifiedBody} />
+      </div>
 
       {/* 错误信息 */}
       {request.error && (
-        <>
-          <Spacer y={1} />
-          <Card>
-            <CardBody style={{ padding: "16px", background: "var(--heroui-colors-danger-100)" }}>
-              <div style={{ fontWeight: "bold", color: "var(--heroui-colors-danger)", marginBottom: "4px" }}>
-                错误信息
-              </div>
-              <div style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--heroui-colors-danger)" }}>
-                {request.error}
-              </div>
-            </CardBody>
-          </Card>
-        </>
+        <Card className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <CardBody className="space-y-2">
+            <div className="font-bold text-red-700 dark:text-red-400">错误信息</div>
+            <div className="font-mono text-xs text-red-600 dark:text-red-300 bg-white/50 dark:bg-black/20 p-2 rounded">
+              {request.error}
+            </div>
+          </CardBody>
+        </Card>
       )}
 
       {/* 响应头 */}
       {request.responseHeaders && (
-        <>
-          <Spacer y={1} />
-          <Card>
-            <CardBody style={{ padding: "16px" }}>
-              <h5 style={{ marginBottom: "8px" }}>响应头</h5>
-              <div style={{ fontSize: "12px", fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
-                {JSON.stringify(request.responseHeaders, null, 2)}
-              </div>
-            </CardBody>
-          </Card>
-        </>
+        <Card className="border border-gray-200 dark:border-gray-700">
+          <CardBody className="space-y-2">
+            <h5 className="text-md font-bold">响应头</h5>
+            <pre className="font-mono text-xs bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg overflow-x-auto">
+              {JSON.stringify(request.responseHeaders, null, 2)}
+            </pre>
+          </CardBody>
+        </Card>
       )}
 
-      <Spacer y={2} />
-
       {/* 操作按钮 */}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+      <div className="flex gap-2 justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
         {onReplay && (
-          <Button color="warning" variant="flat" onPress={onReplay}>
+          <Button color="warning" variant="flat" onPress={onReplay} radius="lg">
             重放请求
           </Button>
         )}
-        <Button onPress={onClose}>关闭</Button>
+        <Button onPress={onClose} radius="lg" className="shadow-md">
+          关闭
+        </Button>
       </div>
     </div>
   );

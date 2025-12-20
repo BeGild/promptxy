@@ -96,3 +96,277 @@ code, pre, .monospace {
     opacity: 0.5;
   }
 }
+
+/* 现代化动画效果 */
+
+/* 淡入动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* 滑入动画 */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.4s ease-out forwards;
+}
+
+/* 滑入动画 - 右侧 */
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.4s ease-out forwards;
+}
+
+/* 缩放动画 */
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* 脉冲光晕动画 */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 122, 204, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 122, 204, 0.6);
+  }
+}
+
+.glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* 边框动画 */
+@keyframes borderPulse {
+  0%, 100% {
+    border-color: rgba(0, 122, 204, 0.3);
+  }
+  50% {
+    border-color: rgba(0, 122, 204, 1);
+  }
+}
+
+.border-pulse {
+  animation: borderPulse 2s ease-in-out infinite;
+}
+
+/* 悬停提升效果 */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* 渐变文字动画 */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-text-animated {
+  background: linear-gradient(90deg, #007acc, #8b5cf6, #ec4899, #007acc);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+/* 玻璃拟态效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 暗色模式下的玻璃拟态 */
+.dark .glass {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 表格行悬停动画 */
+.table-row-hover {
+  transition: background-color 0.15s ease;
+}
+
+.table-row-hover:hover {
+  background-color: rgba(0, 122, 204, 0.05);
+}
+
+/* 按钮点击波纹效果 */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.btn-ripple:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+/* 状态指示器 - 连接状态 */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.status-connected {
+  background: #4ec9b0;
+  box-shadow: 0 0 8px rgba(78, 201, 176, 0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-disconnected {
+  background: #f48771;
+}
+
+.status-connecting {
+  background: #ce9178;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 骨架屏动画 */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #2d2d30 25%, #3a3a3d 50%, #2d2d30 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* 标签页切换动画 */
+.tab-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 工具提示增强 */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.tooltip:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+/* 响应式断点提示 */
+@media (max-width: 768px) {
+  .fade-in,
+  .slide-in-left,
+  .slide-in-right,
+  .scale-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

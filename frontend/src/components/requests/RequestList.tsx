@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Button, Input, Spacer, Pagination, Spinner, Badge } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Button, Input, Pagination, Spinner, Badge, Select, SelectItem } from "@heroui/react";
 import { EmptyState } from "@/components/common";
 import { RequestListItem } from "@/types";
 import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from "@/utils";
@@ -41,8 +41,8 @@ export const RequestList: React.FC<RequestListProps> = ({
 
   if (isLoading && requests.length === 0) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
-        <Spinner>加载请求中...</Spinner>
+      <div className="flex justify-center items-center py-12">
+        <Spinner color="primary">加载请求中...</Spinner>
       </div>
     );
   }
@@ -59,46 +59,73 @@ export const RequestList: React.FC<RequestListProps> = ({
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* 工具栏 */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
-          placeholder="搜索ID或路径..."
+          placeholder="🔍 搜索ID或路径..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: "200px" }}
+          className="flex-1"
+          radius="lg"
+          classNames={{
+            inputWrapper: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+          }}
         />
-        <select
-          value={filterClient}
+
+        <Select
+          selectedKeys={[filterClient]}
           onChange={(e) => setFilterClient(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            borderRadius: "8px",
-            border: "1px solid var(--heroui-colors-border)",
-            background: "var(--heroui-colors-background)",
-            color: "var(--heroui-colors-foreground)",
+          className="w-full md:w-48"
+          radius="lg"
+          classNames={{
+            trigger: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
           }}
         >
-          <option value="all">所有客户端</option>
-          <option value="claude">Claude</option>
-          <option value="codex">Codex</option>
-          <option value="gemini">Gemini</option>
-        </select>
-        <Button color="primary" onPress={onRefresh}>
+          <SelectItem key="all">所有客户端</SelectItem>
+          <SelectItem key="claude">Claude</SelectItem>
+          <SelectItem key="codex">Codex</SelectItem>
+          <SelectItem key="gemini">Gemini</SelectItem>
+        </Select>
+
+        <Button
+          color="primary"
+          onPress={onRefresh}
+          className="shadow-md hover:shadow-lg transition-shadow"
+          radius="lg"
+        >
           刷新
         </Button>
       </div>
 
-      <div style={{ color: "var(--heroui-colors-text-secondary)", fontSize: "12px", marginBottom: "12px" }}>
-        共 {total} 条请求，显示 {filteredRequests.length} 条
+      {/* 统计信息 */}
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        <span>显示结果:</span>
+        <Chip color="secondary" variant="flat" size="sm">
+          {filteredRequests.length} / {total} 条
+        </Chip>
+        {search && (
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => setSearch("")}
+            className="h-6 px-2"
+          >
+            清除搜索
+          </Button>
+        )}
       </div>
 
       {/* 请求表格 */}
       <Table
         aria-label="请求历史表"
-        style={{ height: "auto", minWidth: "100%" }}
         selectionMode="single"
         onRowAction={(key) => onRowClick(key as string)}
+        classNames={{
+          wrapper: "shadow-md rounded-xl border border-gray-200 dark:border-gray-700",
+          th: "bg-gray-50 dark:bg-gray-800 text-sm font-semibold",
+          tr: "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+        }}
       >
         <TableHeader>
           <TableColumn>时间</TableColumn>
@@ -112,23 +139,23 @@ export const RequestList: React.FC<RequestListProps> = ({
         <TableBody
           items={filteredRequests}
           isLoading={isLoading}
-          emptyContent={<div style={{ padding: "32px" }}>暂无数据</div>}
+          emptyContent={<div className="py-12 text-center text-gray-500">暂无数据</div>}
         >
           {(item) => (
-            <TableRow key={item.id}>
-              <TableCell>{formatRelativeTime(item.timestamp)}</TableCell>
+            <TableRow key={item.id} className="cursor-pointer">
+              <TableCell className="text-sm">{formatRelativeTime(item.timestamp)}</TableCell>
               <TableCell>
-                <Badge color="primary" variant="flat" size="sm">
+                <Badge color="primary" variant="flat" size="sm" className="font-medium">
                   {formatClient(item.client)}
                 </Badge>
               </TableCell>
               <TableCell>
-                <span style={{ fontFamily: "monospace", fontSize: "12px" }}>
+                <span className="font-mono text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px] block">
                   {item.path}
                 </span>
               </TableCell>
               <TableCell>
-                <Chip size="sm" color="default" variant="flat">
+                <Chip size="sm" color="default" variant="flat" className="uppercase text-xs">
                   {item.method}
                 </Chip>
               </TableCell>
@@ -137,30 +164,34 @@ export const RequestList: React.FC<RequestListProps> = ({
                   size="sm"
                   color={getStatusColor(item.responseStatus)}
                   variant="flat"
+                  className="font-medium"
                 >
                   {item.responseStatus || "N/A"}
                 </Chip>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-sm">
                 {item.durationMs ? formatDuration(item.durationMs) : "-"}
               </TableCell>
               <TableCell>
-                <Button
-                  size="sm"
-                  variant="light"
-                  onPress={() => onRowClick(item.id)}
-                >
-                  查看
-                </Button>
-                <Button
-                  size="sm"
-                  color="danger"
-                  variant="light"
-                  onPress={() => onDelete(item.id)}
-                  style={{ marginLeft: "4px" }}
-                >
-                  删除
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="light"
+                    onPress={() => onRowClick(item.id)}
+                    className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
+                    查看
+                  </Button>
+                  <Button
+                    size="sm"
+                    color="danger"
+                    variant="light"
+                    onPress={() => onDelete(item.id)}
+                    className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    删除
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           )}
@@ -169,17 +200,20 @@ export const RequestList: React.FC<RequestListProps> = ({
 
       {/* 分页 */}
       {totalPages > 1 && (
-        <>
-          <Spacer y={2} />
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Pagination
-              total={totalPages}
-              page={page}
-              onChange={onPageChange}
-              color="primary"
-            />
-          </div>
-        </>
+        <div className="flex justify-center mt-6">
+          <Pagination
+            total={totalPages}
+            page={page}
+            onChange={onPageChange}
+            color="primary"
+            showShadow={true}
+            classNames={{
+              wrapper: "gap-1",
+              item: "min-w-9 h-9",
+              cursor: "shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold",
+            }}
+          />
+        </div>
       )}
     </div>
   );

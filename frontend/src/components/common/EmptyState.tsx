@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Card } from "@heroui/react";
+import { Button, Card, CardBody } from "@heroui/react";
 
 interface EmptyStateProps {
   icon?: string;
@@ -17,18 +17,29 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
 }) => {
   return (
-    <Card style={{ padding: "32px", textAlign: "center" }}>
-      <h3 style={{ marginBottom: "8px" }}>
-        {icon} {title}
-      </h3>
-      <p style={{ marginBottom: "24px", color: "var(--heroui-colors-text-secondary)" }}>
-        {description}
-      </p>
-      {actionText && onAction && (
-        <Button color="primary" onPress={onAction}>
-          {actionText}
-        </Button>
-      )}
+    <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+      <CardBody className="p-8 text-center space-y-4">
+        <div className="text-6xl">{icon}</div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            {title}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+            {description}
+          </p>
+        </div>
+        {actionText && onAction && (
+          <Button
+            color="primary"
+            onPress={onAction}
+            className="shadow-md hover:shadow-lg transition-shadow"
+            radius="lg"
+            size="lg"
+          >
+            {actionText}
+          </Button>
+        )}
+      </CardBody>
     </Card>
   );
 };
