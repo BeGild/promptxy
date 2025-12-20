@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Card, Text } from "@heroui/react";
+import { Button, Card } from "@heroui/react";
 
 interface EmptyStateProps {
   icon?: string;
@@ -17,15 +17,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
 }) => {
   return (
-    <Card css={{ p: "$8", textAlign: "center" }}>
-      <Text h3 css={{ mb: "$2" }}>
+    <Card style={{ padding: "32px", textAlign: "center" }}>
+      <h3 style={{ marginBottom: "8px" }}>
         {icon} {title}
-      </Text>
-      <Text color="$textSecondary" css={{ mb: "$6" }}>
+      </h3>
+      <p style={{ marginBottom: "24px", color: "var(--heroui-colors-text-secondary)" }}>
         {description}
-      </Text>
+      </p>
       {actionText && onAction && (
-        <Button color="primary" onPress={onAction} auto>
+        <Button color="primary" onPress={onAction}>
           {actionText}
         </Button>
       )}

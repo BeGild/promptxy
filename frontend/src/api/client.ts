@@ -2,7 +2,7 @@ import axios from "axios";
 import { ErrorResponse } from "@/types";
 
 // API 基础 URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:7071";
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:7071";
 
 // 创建 Axios 实例
 export const apiClient = axios.create({

@@ -1,10 +1,38 @@
 import React, { useEffect, useState } from "react";
 import { HeroUIProvider } from "@heroui/react";
 import { Header, Sidebar } from "@/components/layout";
-import { RulesPage, RequestsPage, PreviewPage, SettingsPage } from "@/pages";
 import { useUIStore, useAppStore } from "@/store";
 import { useSSE } from "@/hooks";
 import { checkHealth } from "@/api/client";
+
+// 简化的页面组件 - 临时版本
+const SimpleRulesPage = () => (
+  <div style={{ padding: "20px" }}>
+    <h2>📋 规则管理</h2>
+    <p>规则管理页面开发中...</p>
+  </div>
+);
+
+const SimpleRequestsPage = () => (
+  <div style={{ padding: "20px" }}>
+    <h2>📡 请求监控</h2>
+    <p>请求监控页面开发中...</p>
+  </div>
+);
+
+const SimplePreviewPage = () => (
+  <div style={{ padding: "20px" }}>
+    <h2>🧪 预览测试</h2>
+    <p>预览测试页面开发中...</p>
+  </div>
+);
+
+const SimpleSettingsPage = () => (
+  <div style={{ padding: "20px" }}>
+    <h2>⚙️ 设置</h2>
+    <p>设置页面开发中...</p>
+  </div>
+);
 
 function AppContent() {
   const activeTab = useUIStore((state) => state.activeTab);
@@ -12,8 +40,6 @@ function AppContent() {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const checkConnection = useAppStore((state) => state.checkConnection);
   const apiConnected = useAppStore((state) => state.apiConnected);
-  const setSSEStatus = useAppStore((state) => state.setSSEStatus);
-  const sseStatus = useAppStore((state) => state.sseStatus);
 
   const { isConnected: sseConnected } = useSSE();
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -31,15 +57,15 @@ function AppContent() {
   const renderPage = () => {
     switch (activeTab) {
       case "rules":
-        return <RulesPage />;
+        return <SimpleRulesPage />;
       case "requests":
-        return <RequestsPage />;
+        return <SimpleRequestsPage />;
       case "preview":
-        return <PreviewPage />;
+        return <SimplePreviewPage />;
       case "settings":
-        return <SettingsPage />;
+        return <SimpleSettingsPage />;
       default:
-        return <RulesPage />;
+        return <SimpleRulesPage />;
     }
   };
 

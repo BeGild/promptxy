@@ -31,7 +31,7 @@ export function useSSE() {
     };
 
     // 创建 SSE 客户端
-    const url = `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:7071"}/_promptxy/events`;
+    const url = `${(import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:7071"}/_promptxy/events`;
     sseClientRef.current = new SSEClient(url, handleEvent, handleStatusChange);
 
     // 自动连接

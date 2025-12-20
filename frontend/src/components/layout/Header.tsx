@@ -1,7 +1,7 @@
 import React from "react";
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Chip, Spacer } from "@heroui/react";
 import { StatusIndicator } from "@/components/common";
-import { useAppStore } from "@/store";
+import { useUIStore } from "@/store";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, apiConnected }) => {
-  const activeTab = useAppStore((state) => state.activeTab);
+  const activeTab = useUIStore((state) => state.activeTab);
 
   const getTabLabel = (tab: string) => {
     const labels: Record<string, string> = {
@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, a
   };
 
   return (
-    <Navbar isBordered variant="sticky" maxWidth="full">
+    <Navbar isBordered>
       <NavbarBrand>
         <Button isIconOnly variant="light" onPress={onToggleSidebar} aria-label="菜单">
           ☰

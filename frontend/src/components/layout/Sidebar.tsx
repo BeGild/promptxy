@@ -1,6 +1,6 @@
 import React from "react";
-import { Button, Spacer, Divider, Card, Text, Badge } from "@heroui/react";
-import { useAppStore } from "@/store";
+import { Button, Spacer, Divider, Card, Badge } from "@heroui/react";
+import { useUIStore } from "@/store";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -8,8 +8,8 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onClose }) => {
-  const activeTab = useAppStore((state) => state.activeTab);
-  const setActiveTab = useAppStore((state) => state.setActiveTab);
+  const activeTab = useUIStore((state) => state.activeTab);
+  const setActiveTab = useUIStore((state) => state.setActiveTab);
 
   const menuItems = [
     { key: "rules", label: "规则管理", icon: "📋", desc: "创建和管理修改规则" },
@@ -45,34 +45,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onClose }) => {
   return (
     <div style={{ width: "280px", background: "var(--heroui-colors-background)", borderRight: "1px solid var(--heroui-colors-border)", overflowY: "auto" }}>
       <div style={{ padding: "16px" }}>
-        <Text h4 css={{ mb: "$4" }}>
-          导航菜单
-        </Text>
+        <h4 style={{ marginBottom: "16px" }}>导航菜单</h4>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {menuItems.map((item) => (
             <Card
               key={item.key}
-              variant={activeTab === item.key ? "flat" : "bordered"}
-              css={{
-                p: "$3",
-                cursor: "pointer",
-                borderColor: activeTab === item.key ? "var(--heroui-colors-primary)" : undefined,
-              }}
+              isPressable
               onPress={() => {
                 setActiveTab(item.key as any);
                 onClose();
+              }}
+              style={{
+                padding: "12px",
+                cursor: "pointer",
+                border: activeTab === item.key ? "2px solid var(--heroui-colors-primary)" : "1px solid var(--heroui-colors-border)",
+                backgroundColor: activeTab === item.key ? "rgba(0, 122, 204, 0.1)" : "transparent"
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ fontSize: "20px" }}>{item.icon}</span>
                 <div style={{ flex: 1 }}>
-                  <Text b size="$sm">
-                    {item.label}
-                  </Text>
-                  <Text size="$xs" color="$textSecondary">
-                    {item.desc}
-                  </Text>
+                  <div style={{ fontWeight: "bold", fontSize: "14px" }}>{item.label}</div>
+                  <div style={{ fontSize: "12px", color: "var(--heroui-colors-text-secondary)" }}>{item.desc}</div>
                 </div>
                 {activeTab === item.key && (
                   <Badge color="primary" size="sm" variant="flat">
@@ -86,10 +81,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onClose }) => {
 
         <Spacer y={2} />
 
-        <Card variant="flat" css={{ p: "$3" }}>
-          <Text size="$xs" color="$textSecondary">
+        <Card style={{ padding: "12px", backgroundColor: "rgba(0, 122, 204, 0.05)" }}>
+          <div style={{ fontSize: "12px", color: "var(--heroui-colors-text-secondary)" }}>
             提示: 请确保后端服务正在运行，端口 7070 和 7071 需要可用。
-          </Text>
+          </div>
         </Card>
       </div>
     </div>

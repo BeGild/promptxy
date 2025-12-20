@@ -6,11 +6,8 @@ import {
   Input,
   Button,
   Spacer,
-  Grid,
   Card,
-  Text,
-  Row,
-  Loading,
+  Spinner,
 } from "@heroui/react";
 import { usePreviewRule } from "@/hooks";
 import { PromptxyClient, PromptxyField } from "@/types";
@@ -60,85 +57,81 @@ export const PreviewPanel: React.FC = () => {
   const result = previewMutation.data;
 
   return (
-    <Grid.Container gap={2}>
+    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
       {/* 输入区域 */}
-      <Grid xs={12} md={6}>
-        <Card variant="bordered" css={{ p: "$4", height: "100%" }}>
-          <Text h4 css={{ mb: "$3" }}>
-            测试输入
-          </Text>
+      <div style={{ flex: 1, minWidth: "300px" }}>
+        <Card style={{ padding: "16px", height: "100%" }}>
+          <h4 style={{ marginBottom: "12px" }}>测试输入</h4>
 
-          <Grid.Container gap={1}>
-            <Grid xs={12} md={6}>
-              <Select
-                label="客户端"
-                selectedKeys={[client]}
-                onChange={(e) => setClient(e.target.value as PromptxyClient)}
-                fullWidth
-              >
-                {CLIENT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </Select>
-            </Grid>
-            <Grid xs={12} md={6}>
-              <Select
-                label="字段"
-                selectedKeys={[field]}
-                onChange={(e) => setField(e.target.value as PromptxyField)}
-                fullWidth
-              >
-                {FIELD_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </Select>
-            </Grid>
-            <Grid xs={12}>
-              <Input
-                label="模型 (可选)"
-                placeholder="claude-3-sonnet-20240229"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                fullWidth
-              />
-            </Grid>
-            <Grid xs={12}>
-              <Input
-                label="路径"
-                placeholder="/v1/messages"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                fullWidth
-              />
-            </Grid>
-            <Grid xs={12}>
-              <Input
-                label="HTTP方法"
-                placeholder="POST"
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                fullWidth
-              />
-            </Grid>
-            <Grid xs={12}>
-              <Textarea
-                label="输入文本"
-                placeholder="在此输入要测试的文本..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                fullWidth
-                minRows={8}
-              />
-            </Grid>
-          </Grid.Container>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ flex: 1 }}>
+                <Select
+                  label="客户端"
+                  selectedKeys={[client]}
+                  onChange={(e) => setClient(e.target.value as PromptxyClient)}
+                  fullWidth
+                >
+                  {CLIENT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <Select
+                  label="字段"
+                  selectedKeys={[field]}
+                  onChange={(e) => setField(e.target.value as PromptxyField)}
+                  fullWidth
+                >
+                  {FIELD_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            <Input
+              label="模型 (可选)"
+              placeholder="claude-3-sonnet-20240229"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              fullWidth
+            />
+
+            <Input
+              label="路径"
+              placeholder="/v1/messages"
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              fullWidth
+            />
+
+            <Input
+              label="HTTP方法"
+              placeholder="POST"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              fullWidth
+            />
+
+            <Textarea
+              label="输入文本"
+              placeholder="在此输入要测试的文本..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              fullWidth
+              minRows={8}
+            />
+          </div>
 
           <Spacer y={1} />
 
-          <Row justify="flex-end">
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button
               color="primary"
               onPress={handlePreview}
@@ -147,98 +140,86 @@ export const PreviewPanel: React.FC = () => {
             >
               预览效果
             </Button>
-          </Row>
+          </div>
         </Card>
-      </Grid>
+      </div>
 
       {/* 输出区域 */}
-      <Grid xs={12} md={6}>
-        <Card variant="bordered" css={{ p: "$4", height: "100%" }}>
-          <Text h4 css={{ mb: "$3" }}>
-            预览结果
-          </Text>
+      <div style={{ flex: 1, minWidth: "300px" }}>
+        <Card style={{ padding: "16px", height: "100%" }}>
+          <h4 style={{ marginBottom: "12px" }}>预览结果</h4>
 
           {previewMutation.isPending && (
-            <div style={{ display: "flex", justifyContent: "center", padding: "$8" }}>
-              <Loading>处理中...</Loading>
+            <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
+              <Spinner>处理中...</Spinner>
             </div>
           )}
 
           {previewMutation.isError && (
-            <Card variant="flat" color="danger" css={{ p: "$3" }}>
-              <Text color="danger">
+            <Card style={{ padding: "12px", backgroundColor: "rgba(244, 135, 113, 0.1)", border: "1px solid var(--heroui-colors-danger)" }}>
+              <div style={{ color: "var(--heroui-colors-danger)" }}>
                 {previewMutation.error?.message || "预览失败"}
-              </Text>
+              </div>
             </Card>
           )}
 
           {result && (
             <>
-              <Card variant="flat" css={{ p: "$3", mb: "$2" }}>
-                <Text b size="$sm" css={{ mb: "$1" }}>
-                  原始文本:
-                </Text>
-                <Text
-                  size="$sm"
-                  css={{
-                    fontFamily: "monospace",
-                    bg: "$background",
-                    p: "$2",
-                    borderRadius: "$sm",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
+              <Card style={{ padding: "12px", marginBottom: "8px" }}>
+                <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>原始文本:</div>
+                <div style={{
+                  fontFamily: "monospace",
+                  backgroundColor: "var(--heroui-colors-background)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  whiteSpace: "pre-wrap",
+                  fontSize: "12px"
+                }}>
                   {typeof result.original === "object"
                     ? JSON.stringify(result.original, null, 2)
                     : String(result.original)}
-                </Text>
+                </div>
               </Card>
 
-              <Card variant="flat" css={{ p: "$3", mb: "$2" }}>
-                <Text b size="$sm" css={{ mb: "$1" }}>
-                  修改后:
-                </Text>
-                <Text
-                  size="$sm"
-                  css={{
-                    fontFamily: "monospace",
-                    bg: "$background",
-                    p: "$2",
-                    borderRadius: "$sm",
-                    whiteSpace: "pre-wrap",
-                    color: "$success",
-                  }}
-                >
+              <Card style={{ padding: "12px", marginBottom: "8px" }}>
+                <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>修改后:</div>
+                <div style={{
+                  fontFamily: "monospace",
+                  backgroundColor: "var(--heroui-colors-background)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  whiteSpace: "pre-wrap",
+                  color: "var(--heroui-colors-success)",
+                  fontSize: "12px"
+                }}>
                   {typeof result.modified === "object"
                     ? JSON.stringify(result.modified, null, 2)
                     : String(result.modified)}
-                </Text>
+                </div>
               </Card>
 
               {result.matches.length > 0 && (
-                <Card variant="flat" css={{ p: "$3" }}>
-                  <Text b size="$sm" css={{ mb: "$1" }}>
-                    匹配规则:
-                  </Text>
+                <Card style={{ padding: "12px" }}>
+                  <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>匹配规则:</div>
                   {result.matches.map((match, i) => (
-                    <Text key={i} size="$sm" css={{ fontFamily: "monospace" }}>
+                    <div key={i} style={{ fontFamily: "monospace", fontSize: "12px" }}>
                       • {match.ruleId} ({match.opType})
-                    </Text>
+                    </div>
                   ))}
                 </Card>
               )}
 
               {result.matches.length === 0 && (
-                <Card variant="flat" css={{ p: "$3" }}>
-                  <Text color="$textSecondary" size="$sm">
+                <Card style={{ padding: "12px" }}>
+                  <div style={{ color: "var(--heroui-colors-text-secondary)", fontSize: "12px" }}>
                     无规则匹配
-                  </Text>
+                  </div>
                 </Card>
               )}
             </>
           )}
         </Card>
-      </Grid>
-    </Grid.Container>
+      </div>
+    </div>
   );
 };
