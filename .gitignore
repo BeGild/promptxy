@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+
+# Reference repos (not part of promptxy)
+refence/
+
+# Local tool folders
+.claude/
+.gemini/
+
+# Local config
+promptxy.config.json

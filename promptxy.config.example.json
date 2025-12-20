@@ -1,0 +1,27 @@
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  },
+  "upstreams": {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com"
+  },
+  "rules": [
+    {
+      "id": "codex-append-custom-rules",
+      "when": {
+        "client": "codex",
+        "field": "instructions"
+      },
+      "ops": [
+        {
+          "type": "append",
+          "text": "\n\n## Custom Rules\n- Keep changes minimal.\n"
+        }
+      ]
+    }
+  ]
+}
+
