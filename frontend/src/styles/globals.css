@@ -1,0 +1,98 @@
+/* 全局样式 */
+
+:root {
+  /* 颜色系统 - 深色主题 */
+  --bg-main: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-card: #2d2d30;
+  --border-color: #3e3e42;
+  --text-primary: #cccccc;
+  --text-secondary: #858585;
+  --primary: #007acc;
+  --success: #4ec9b0;
+  --warning: #ce9178;
+  --error: #f48771;
+  --info: #569cd6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+/* 代码字体 */
+code, pre, .monospace {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+/* HeroUI 主题覆盖 */
+.heroui-provider {
+  background-color: var(--bg-main) !important;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 差异高亮 */
+.diff-added {
+  background-color: rgba(78, 201, 176, 0.1);
+  color: var(--success);
+}
+
+.diff-removed {
+  background-color: rgba(244, 135, 113, 0.1);
+  color: var(--error);
+}
+
+.diff-modified {
+  background-color: rgba(206, 145, 120, 0.1);
+  color: var(--warning);
+}
+
+/* 状态指示器脉冲动画 */
+.status-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptXY - 规则管理器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/design-tokens.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 8h8v8H8z" fill="currentColor"/>
+          </svg>
+          <span>PromptXY</span>
+        </div>
+        <nav class="main-nav">
+          <button class="nav-btn active" data-view="rules">📋 规则</button>
+          <button class="nav-btn" data-view="requests">📡 请求</button>
+          <button class="nav-btn" data-view="preview">🔍 预览</button>
+          <button class="nav-btn" data-view="settings">⚙️ 设置</button>
+        </nav>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">未连接</span>
+        </div>
+        <button class="btn-primary" id="new-rule-btn">➕ 新建规则</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="搜索规则/请求...">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+
+        <div class="filter-group">
+          <label>客户端筛选</label>
+          <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">全部</button>
+            <button class="filter-btn" data-filter="claude">Claude</button>
+            <button class="filter-btn" data-filter="codex">Codex</button>
+            <button class="filter-btn" data-filter="gemini">Gemini</button>
+          </div>
+        </div>
+
+        <div class="quick-stats">
+          <div class="stat-item">
+            <span class="stat-label">规则总数</span>
+            <span class="stat-value" id="stat-rules">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">启用中</span>
+            <span class="stat-value success" id="stat-enabled">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">请求记录</span>
+            <span class="stat-value" id="stat-requests">0</span>
+          </div>
+        </div>
+
+        <div class="sidebar-actions">
+          <button class="btn-secondary" id="export-btn">📤 导出</button>
+          <button class="btn-secondary" id="import-btn">📥 导入</button>
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <div class="content-area">
+        <!-- Rules View -->
+        <div id="view-rules" class="view-container active">
+          <div class="view-header">
+            <h2>规则管理</h2>
+            <div class="view-actions">
+              <button class="btn-secondary" id="batch-enable">批量启用</button>
+              <button class="btn-secondary" id="batch-disable">批量禁用</button>
+              <button class="btn-danger" id="batch-delete">批量删除</button>
+            </div>
+          </div>
+          <div class="rule-list" id="rule-list">
+            <!-- Rules will be rendered here -->
+          </div>
+        </div>
+
+        <!-- Requests View -->
+        <div id="view-requests" class="view-container">
+          <div class="view-header">
+            <h2>请求历史</h2>
+            <div class="view-actions">
+              <button class="btn-secondary" id="refresh-requests">🔄 刷新</button>
+              <button class="btn-secondary" id="clear-history">🗑️ 清理历史</button>
+            </div>
+          </div>
+          <div class="request-list" id="request-list">
+            <!-- Requests will be rendered here -->
+          </div>
+        </div>
+
+        <!-- Preview View -->
+        <div id="view-preview" class="view-container">
+          <div class="view-header">
+            <h2>规则预览 & 测试</h2>
+          </div>
+          <div class="preview-container">
+            <div class="input-section">
+              <label>测试请求体 (JSON)</label>
+              <textarea id="preview-input" placeholder='{"model":"gpt-4","messages":[{"role":"system","content":"You are helpful"}]}'></textarea>
+              <button class="btn-primary" id="run-preview">▶ 运行预览</button>
+            </div>
+            <div class="output-section">
+              <label>预览结果</label>
+              <div id="preview-output" class="preview-output"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="view-container">
+          <div class="view-header">
+            <h2>设置</h2>
+          </div>
+          <div class="settings-container">
+            <div class="setting-group">
+              <h3>数据管理</h3>
+              <div class="setting-item">
+                <label>最大历史记录数</label>
+                <input type="number" id="max-history" value="100" min="10" max="1000">
+              </div>
+              <div class="setting-item">
+                <label>自动清理</label>
+                <input type="checkbox" id="auto-cleanup" checked>
+              </div>
+              <button class="btn-primary" id="save-settings">💾 保存设置</button>
+            </div>
+
+            <div class="setting-group">
+              <h3>后端配置</h3>
+              <div class="setting-item">
+                <label>API地址</label>
+                <input type="text" id="api-base" value="http://127.0.0.1:7071" placeholder="http://127.0.0.1:7071">
+              </div>
+              <button class="btn-secondary" id="test-connection">🔗 测试连接</button>
+            </div>
+
+            <div class="setting-group">
+              <h3>关于</h3>
+              <p>PromptXY v1.0 - 开源规则管理器</p>
+              <p>本地运行，数据安全</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Panel -->
+      <aside class="detail-panel" id="detail-panel">
+        <div class="detail-empty">
+          <p>选择一个项目查看详情</p>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+      <!-- Rule Editor Modal -->
+      <div id="rule-modal" class="modal hidden">
+        <div class="modal-header">
+          <h3 id="rule-modal-title">新建规则</h3>
+          <button class="modal-close" id="close-rule-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <form id="rule-form">
+            <div class="form-section">
+              <h4>基本信息</h4>
+              <div class="form-group">
+                <label>规则ID *</label>
+                <input type="text" id="rule-id" required>
+              </div>
+              <div class="form-group">
+                <label>描述</label>
+                <input type="text" id="rule-desc" placeholder="规则用途说明">
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>匹配条件 (when)</h4>
+              <div class="form-group">
+                <label>客户端 *</label>
+                <div class="radio-group">
+                  <label><input type="radio" name="client" value="claude" checked> Claude</label>
+                  <label><input type="radio" name="client" value="codex"> Codex</label>
+                  <label><input type="radio" name="client" value="gemini"> Gemini</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>字段 *</label>
+                <div class="radio-group">
+                  <label><input type="radio" name="field" value="system" checked> System</label>
+                  <label><input type="radio" name="field" value="instructions"> Instructions</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>方法 (可选)</label>
+                <input type="text" id="rule-method" placeholder="POST">
+              </div>
+              <div class="form-group">
+                <label>路径正则 (可选)</label>
+                <input type="text" id="rule-pathRegex" placeholder="^/v1/messages$">
+              </div>
+              <div class="form-group">
+                <label>模型正则 (可选)</label>
+                <input type="text" id="rule-modelRegex" placeholder="claude-3">
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>操作序列 (ops)</h4>
+              <div id="ops-container">
+                <!-- Dynamic operations will be added here -->
+              </div>
+              <button type="button" class="btn-secondary" id="add-op">➕ 添加操作</button>
+            </div>
+
+            <div class="form-section">
+              <h4>高级选项</h4>
+              <label class="checkbox-label">
+                <input type="checkbox" id="rule-stop">
+                在此规则后停止执行
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="cancel-rule">取消</button>
+          <button class="btn-primary" id="save-rule">保存</button>
+        </div>
+      </div>
+
+      <!-- Request Detail Modal -->
+      <div id="request-modal" class="modal hidden">
+        <div class="modal-header">
+          <h3>请求详情</h3>
+          <button class="modal-close" id="close-request-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="request-info">
+            <div class="info-row">
+              <span class="label">ID:</span>
+              <span class="value" id="req-id"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">时间:</span>
+              <span class="value" id="req-time"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">客户端:</span>
+              <span class="value" id="req-client"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">路径:</span>
+              <span class="value" id="req-path"></span>
+            </div>
+            <div class="info-row">
+              <span class="label">状态:</span>
+              <span class="value" id="req-status"></span>
+            </div>
+          </div>
+
+          <div class="diff-viewer">
+            <div class="diff-panel">
+              <h4>原始请求</h4>
+              <pre id="req-original"></pre>
+            </div>
+            <div class="diff-divider">→</div>
+            <div class="diff-panel">
+              <h4>修改后请求</h4>
+              <pre id="req-modified"></pre>
+            </div>
+          </div>
+
+          <div class="matched-rules">
+            <h4>匹配规则</h4>
+            <div id="req-matched-rules"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="replay-request">🔄 重放请求</button>
+          <button class="btn-secondary" id="export-request">📤 导出</button>
+          <button class="btn-primary" id="close-req-detail">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./js/app.js" type="module"></script>
+</body>
+</html>

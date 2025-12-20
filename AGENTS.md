@@ -16,3 +16,16 @@ Use `@/openspec/AGENTS.md` to learn:
 Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
+
+
+
+# 0. 至高原则
+
+1. 始终使用中文回复
+2. 任何代码修改前 MUST 获得方案review通过
+
+# 1. 版本管理(git)
+
+1. 必须使用中文commit message
+2. 禁止使用简单的一行命令，必须详细描述 改动
+3. 鼓励使用图表来描述架构改动

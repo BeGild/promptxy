@@ -1,0 +1,33 @@
+{
+  "name": "promptxy-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PromptXY v2.0 Frontend - React + HeroUI Web Interface",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "@heroui/react": "^2.4.8",
+    "@heroui/system": "^2.2.6",
+    "framer-motion": "^10.18.0",
+    "zustand": "^4.5.5",
+    "@tanstack/react-query": "^5.56.2",
+    "axios": "^1.7.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "tailwindcss": "^3.4.14",
+    "postcss": "^8.4.47",
+    "autoprefixer": "^10.4.20"
+  }
+}
