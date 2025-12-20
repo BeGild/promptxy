@@ -7,10 +7,8 @@ import {
   Spacer,
   Button,
   Checkbox,
-  Grid,
-  Text,
   Card,
-  Row,
+  CardBody,
   Chip,
 } from "@heroui/react";
 import { PromptxyRule, PromptxyOp, PromptxyClient, PromptxyField, PromptxyOpType } from "@/types";
@@ -86,10 +84,10 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
     }));
   };
 
-  const updateOp = (index: number, updates: Partial<PromptxyOp>) => {
+  const updateOp = (index: number, updates: any) => {
     setFormData((prev) => ({
       ...prev,
-      ops: prev.ops.map((op, i) => (i === index ? { ...op, ...updates } : op)),
+      ops: prev.ops.map((op, i) => (i === index ? ({ ...op, ...updates } as PromptxyOp) : op)),
     }));
   };
 
@@ -121,15 +119,17 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
       {/* 验证错误显示 */}
       {!validation.valid && (
         <>
-          <Card variant="flat" color="danger" css={{ p: "$3", mb: "$4" }}>
-            <Text color="danger" b>
-              验证错误:
-            </Text>
-            {validation.errors.map((err, i) => (
-              <Text key={i} color="danger" size="$sm">
-                • {err}
-              </Text>
-            ))}
+          <Card>
+            <CardBody style={{ padding: "12px", background: "var(--heroui-colors-danger-100)" }}>
+              <div style={{ fontWeight: "bold", color: "var(--heroui-colors-danger)", marginBottom: "4px" }}>
+                验证错误:
+              </div>
+              {validation.errors.map((err, i) => (
+                <div key={i} style={{ color: "var(--heroui-colors-danger)", fontSize: "12px" }}>
+                  • {err}
+                </div>
+              ))}
+            </CardBody>
           </Card>
           <Spacer y={1} />
         </>
@@ -138,255 +138,259 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
       {/* 警告显示 */}
       {validation.warnings.length > 0 && (
         <>
-          <Card variant="flat" color="warning" css={{ p: "$3", mb: "$4" }}>
-            <Text color="warning" b>
-              警告:
-            </Text>
-            {validation.warnings.map((warn, i) => (
-              <Text key={i} color="warning" size="$sm">
-                • {warn}
-              </Text>
-            ))}
+          <Card>
+            <CardBody style={{ padding: "12px", background: "var(--heroui-colors-warning-100)" }}>
+              <div style={{ fontWeight: "bold", color: "var(--heroui-colors-warning)", marginBottom: "4px" }}>
+                警告:
+              </div>
+              {validation.warnings.map((warn, i) => (
+                <div key={i} style={{ color: "var(--heroui-colors-warning)", fontSize: "12px" }}>
+                  • {warn}
+                </div>
+              ))}
+            </CardBody>
           </Card>
           <Spacer y={1} />
         </>
       )}
 
       {/* 基本信息 */}
-      <Text h4>基本信息</Text>
-      <Grid.Container gap={1}>
-        <Grid xs={12} md={8}>
+      <h4 style={{ marginBottom: "8px" }}>基本信息</h4>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        <div style={{ gridColumn: "span 2" }}>
           <Input
             label="规则ID"
             placeholder="rule-xxx"
             value={formData.id}
             onChange={(e) => updateField("id", e.target.value)}
-            fullWidth
+            style={{ width: "100%" }}
             required
           />
-        </Grid>
-        <Grid xs={12} md={4} style={{ display: "flex", alignItems: "flex-end" }}>
-          <Button size="sm" variant="flat" onPress={generateNewId} fullWidth>
+        </div>
+        <div style={{ gridColumn: "span 1" }}>
+          <Button size="sm" variant="flat" onPress={generateNewId} style={{ width: "100%" }}>
             生成UUID
           </Button>
-        </Grid>
-        <Grid xs={12}>
+        </div>
+        <div style={{ gridColumn: "span 2" }}>
           <Textarea
             label="描述 (可选)"
             placeholder="描述这条规则的作用..."
             value={formData.description || ""}
             onChange={(e) => updateField("description", e.target.value)}
-            fullWidth
+            style={{ width: "100%" }}
           />
-        </Grid>
-      </Grid.Container>
+        </div>
+      </div>
 
       <Spacer y={2} />
 
       {/* 匹配条件 */}
-      <Text h4>匹配条件 (When)</Text>
-      <Grid.Container gap={1}>
-        <Grid xs={12} md={6}>
+      <h4 style={{ marginBottom: "8px" }}>匹配条件 (When)</h4>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        <div>
           <Select
             label="客户端"
             selectedKeys={[formData.when.client]}
             onChange={(e) => updateField("when.client", e.target.value)}
-            fullWidth
+            style={{ width: "100%" }}
           >
             {CLIENT_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
+              <SelectItem key={opt.value}>
                 {opt.label}
               </SelectItem>
             ))}
           </Select>
-        </Grid>
-        <Grid xs={12} md={6}>
+        </div>
+        <div>
           <Select
             label="字段"
             selectedKeys={[formData.when.field]}
             onChange={(e) => updateField("when.field", e.target.value)}
-            fullWidth
+            style={{ width: "100%" }}
           >
             {FIELD_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
+              <SelectItem key={opt.value}>
                 {opt.label}
               </SelectItem>
             ))}
           </Select>
-        </Grid>
-        <Grid xs={12} md={6}>
+        </div>
+        <div>
           <Input
             label="HTTP方法 (可选)"
             placeholder="GET, POST..."
             value={formData.when.method || ""}
             onChange={(e) => updateField("when.method", e.target.value || undefined)}
-            fullWidth
+            style={{ width: "100%" }}
           />
-        </Grid>
-        <Grid xs={12} md={6}>
+        </div>
+        <div>
           <Input
             label="路径正则 (可选)"
             placeholder="^/v1/messages$"
             value={formData.when.pathRegex || ""}
             onChange={(e) => updateField("when.pathRegex", e.target.value || undefined)}
-            fullWidth
+            style={{ width: "100%" }}
           />
-        </Grid>
-        <Grid xs={12}>
+        </div>
+        <div style={{ gridColumn: "span 2" }}>
           <Input
             label="模型正则 (可选)"
             placeholder="claude-3"
             value={formData.when.modelRegex || ""}
             onChange={(e) => updateField("when.modelRegex", e.target.value || undefined)}
-            fullWidth
+            style={{ width: "100%" }}
           />
-        </Grid>
-      </Grid.Container>
+        </div>
+      </div>
 
       <Spacer y={2} />
 
       {/* 操作序列 */}
-      <Text h4>操作序列 (Ops)</Text>
-      <Text size="$sm" color="$textSecondary" css={{ mb: "$3" }}>
+      <h4 style={{ marginBottom: "8px" }}>操作序列 (Ops)</h4>
+      <div style={{ fontSize: "12px", color: "var(--heroui-colors-text-secondary)", marginBottom: "12px" }}>
         按顺序执行操作，支持拖拽调整顺序（暂未实现）
-      </Text>
+      </div>
 
       {formData.ops.map((op, index) => (
-        <Card key={index} variant="bordered" css={{ p: "$4", mb: "$3" }}>
-          <Row justify="space-between" align="center" css={{ mb: "$2" }}>
+        <Card key={index} style={{ padding: "16px", marginBottom: "12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <Chip color="primary" size="sm">
               操作 {index + 1}
             </Chip>
             <Button size="sm" color="danger" variant="light" onPress={() => removeOp(index)}>
               删除
             </Button>
-          </Row>
+          </div>
 
-          <Grid.Container gap={1}>
-            <Grid xs={12} md={4}>
-              <Select
-                label="类型"
-                selectedKeys={[op.type]}
-                onChange={(e) => updateOp(index, { type: e.target.value as PromptxyOpType })}
-                fullWidth
-              >
-                {OP_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </Select>
-            </Grid>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+              <div style={{ gridColumn: "span 1" }}>
+                <Select
+                  label="类型"
+                  selectedKeys={[op.type]}
+                  onChange={(e) => updateOp(index, { type: e.target.value as PromptxyOpType })}
+                  style={{ width: "100%" }}
+                >
+                  {OP_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
 
-            {/* 动态字段 */}
-            {(op.type === "set" || op.type === "append" || op.type === "prepend") && (
-              <Grid xs={12} md={8}>
-                <Textarea
-                  label="文本"
-                  placeholder="输入文本内容..."
-                  value={op.text || ""}
-                  onChange={(e) => updateOp(index, { text: e.target.value })}
-                  fullWidth
-                  minRows={1}
-                />
-              </Grid>
-            )}
-
-            {(op.type === "replace" || op.type === "delete") && (
-              <>
-                <Grid xs={12} md={4}>
-                  <Input
-                    label="匹配文本 (可选)"
-                    placeholder="要匹配的文本"
-                    value={op.match || ""}
-                    onChange={(e) => updateOp(index, { match: e.target.value || undefined })}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid xs={12} md={4}>
-                  <Input
-                    label="正则表达式 (可选)"
-                    placeholder="pattern"
-                    value={op.regex || ""}
-                    onChange={(e) => updateOp(index, { regex: e.target.value || undefined })}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid xs={12} md={4}>
-                  <Input
-                    label="正则标志 (可选)"
-                    placeholder="gi"
-                    value={op.flags || ""}
-                    onChange={(e) => updateOp(index, { flags: e.target.value || undefined })}
-                    fullWidth
-                  />
-                </Grid>
-                {op.type === "replace" && (
-                  <Grid xs={12}>
-                    <Input
-                      label="替换为"
-                      placeholder="替换后的文本"
-                      value={op.replacement || ""}
-                      onChange={(e) => updateOp(index, { replacement: e.target.value })}
-                      fullWidth
-                    />
-                  </Grid>
-                )}
-              </>
-            )}
-
-            {(op.type === "insert_before" || op.type === "insert_after") && (
-              <>
-                <Grid xs={12} md={6}>
-                  <Input
-                    label="正则表达式"
-                    placeholder="pattern"
-                    value={op.regex || ""}
-                    onChange={(e) => updateOp(index, { regex: e.target.value })}
-                    fullWidth
-                    required
-                  />
-                </Grid>
-                <Grid xs={12} md={3}>
-                  <Input
-                    label="正则标志 (可选)"
-                    placeholder="gi"
-                    value={op.flags || ""}
-                    onChange={(e) => updateOp(index, { flags: e.target.value || undefined })}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid xs={12} md={3}>
-                  <Input
-                    label="插入文本"
-                    placeholder="要插入的文本"
+              {/* 动态字段 */}
+              {(op.type === "set" || op.type === "append" || op.type === "prepend") && (
+                <div style={{ gridColumn: "span 2" }}>
+                  <Textarea
+                    label="文本"
+                    placeholder="输入文本内容..."
                     value={op.text || ""}
                     onChange={(e) => updateOp(index, { text: e.target.value })}
-                    fullWidth
-                    required
+                    style={{ width: "100%" }}
+                    minRows={1}
                   />
-                </Grid>
-              </>
-            )}
-          </Grid.Container>
+                </div>
+              )}
+
+              {(op.type === "replace" || op.type === "delete") && (
+                <>
+                  <div style={{ gridColumn: "span 1" }}>
+                    <Input
+                      label="匹配文本 (可选)"
+                      placeholder="要匹配的文本"
+                      value={op.match || ""}
+                      onChange={(e) => updateOp(index, { match: e.target.value || undefined })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: "span 1" }}>
+                    <Input
+                      label="正则表达式 (可选)"
+                      placeholder="pattern"
+                      value={op.regex || ""}
+                      onChange={(e) => updateOp(index, { regex: e.target.value || undefined })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: "span 1" }}>
+                    <Input
+                      label="正则标志 (可选)"
+                      placeholder="gi"
+                      value={op.flags || ""}
+                      onChange={(e) => updateOp(index, { flags: e.target.value || undefined })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  {op.type === "replace" && (
+                    <div style={{ gridColumn: "span 3" }}>
+                      <Input
+                        label="替换为"
+                        placeholder="替换后的文本"
+                        value={op.replacement || ""}
+                        onChange={(e) => updateOp(index, { replacement: e.target.value })}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {(op.type === "insert_before" || op.type === "insert_after") && (
+                <>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <Input
+                      label="正则表达式"
+                      placeholder="pattern"
+                      value={op.regex || ""}
+                      onChange={(e) => updateOp(index, { regex: e.target.value })}
+                      style={{ width: "100%" }}
+                      required
+                    />
+                  </div>
+                  <div style={{ gridColumn: "span 1" }}>
+                    <Input
+                      label="正则标志 (可选)"
+                      placeholder="gi"
+                      value={op.flags || ""}
+                      onChange={(e) => updateOp(index, { flags: e.target.value || undefined })}
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: "span 3" }}>
+                    <Input
+                      label="插入文本"
+                      placeholder="要插入的文本"
+                      value={op.text || ""}
+                      onChange={(e) => updateOp(index, { text: e.target.value })}
+                      style={{ width: "100%" }}
+                      required
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </Card>
       ))}
 
-      <Button size="sm" variant="flat" onPress={addOp} css={{ width: "100%", mb: "$4" }}>
+      <Button size="sm" variant="flat" onPress={addOp} style={{ width: "100%", marginBottom: "16px" }}>
         + 添加操作
       </Button>
 
       {/* 高级选项 */}
-      <Text h4>高级选项</Text>
+      <h4 style={{ marginBottom: "8px" }}>高级选项</h4>
       <Checkbox
-        isSelected={formData.stop || false}
+        checked={formData.stop || false}
         onChange={(e) => updateField("stop", e.target.checked)}
       >
         在此规则后停止执行 (stop)
       </Checkbox>
       <Spacer y={1} />
       <Checkbox
-        isSelected={formData.enabled !== false}
+        checked={formData.enabled !== false}
         onChange={(e) => updateField("enabled", e.target.checked)}
       >
         启用此规则
@@ -395,7 +399,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
       <Spacer y={3} />
 
       {/* 操作按钮 */}
-      <Row gap={1} justify="flex-end">
+      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
         {onPreview && (
           <Button color="warning" variant="flat" onPress={handlePreview}>
             预览
@@ -407,7 +411,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
         <Button color="primary" onPress={handleSave} isDisabled={!validation.valid}>
           保存
         </Button>
-      </Row>
+      </div>
     </div>
   );
 };

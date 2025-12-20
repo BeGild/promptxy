@@ -62,7 +62,7 @@ export const RequestsPage: React.FC = () => {
         size="4xl"
       >
         <RequestDetail
-          request={request}
+          request={request || null}
           isLoading={detailLoading}
           onClose={handleClose}
         />

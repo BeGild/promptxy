@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Input, Spacer, Button, Loading, Grid, Pagination } from "@heroui/react";
+import { Input, Spacer, Button, Spinner, Pagination } from "@heroui/react";
 import { RuleCard } from "./RuleCard";
 import { EmptyState } from "@/components/common";
 import { PromptxyRule } from "@/types";
@@ -42,8 +42,8 @@ export const RuleList: React.FC<RuleListProps> = ({
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "$8" }}>
-        <Loading size="lg">加载规则中...</Loading>
+      <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
+        <Spinner>加载规则中...</Spinner>
       </div>
     );
   }
@@ -61,13 +61,12 @@ export const RuleList: React.FC<RuleListProps> = ({
 
   return (
     <div>
-      <div style={{ display: "flex", gap: "$4", marginBottom: "$4" }}>
+      <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
         <Input
           placeholder="搜索规则ID或描述..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          css={{ flex: 1 }}
-          clearable
+          style={{ flex: 1 }}
         />
         <select
           value={filterClient}
@@ -90,22 +89,22 @@ export const RuleList: React.FC<RuleListProps> = ({
         </Button>
       </div>
 
-      <Text color="$textSecondary" size="$sm" css={{ mb: "$3" }}>
+      <div style={{ fontSize: "12px", color: "var(--heroui-colors-text-secondary)", marginBottom: "12px" }}>
         共 {filteredRules.length} 条规则
-      </Text>
+      </div>
 
-      <Grid.Container gap={1}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px" }}>
         {paginatedRules.map((rule) => (
-          <Grid xs={12} key={rule.id}>
+          <div key={rule.id} style={{ gridColumn: "span 1" }}>
             <RuleCard
               rule={rule}
               onEdit={onEdit}
               onDelete={onDelete}
               onToggle={onToggle}
             />
-          </Grid>
+          </div>
         ))}
-      </Grid.Container>
+      </div>
 
       {totalPages > 1 && (
         <>

@@ -1,38 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { HeroUIProvider } from "@heroui/react";
 import { Header, Sidebar } from "@/components/layout";
+import { RulesPage } from "@/pages/RulesPage";
+import { RequestsPage } from "@/pages/RequestsPage";
+import { PreviewPage } from "@/pages/PreviewPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 import { useUIStore, useAppStore } from "@/store";
 import { useSSE } from "@/hooks";
 import { checkHealth } from "@/api/client";
-
-// 简化的页面组件 - 临时版本
-const SimpleRulesPage = () => (
-  <div style={{ padding: "20px" }}>
-    <h2>📋 规则管理</h2>
-    <p>规则管理页面开发中...</p>
-  </div>
-);
-
-const SimpleRequestsPage = () => (
-  <div style={{ padding: "20px" }}>
-    <h2>📡 请求监控</h2>
-    <p>请求监控页面开发中...</p>
-  </div>
-);
-
-const SimplePreviewPage = () => (
-  <div style={{ padding: "20px" }}>
-    <h2>🧪 预览测试</h2>
-    <p>预览测试页面开发中...</p>
-  </div>
-);
-
-const SimpleSettingsPage = () => (
-  <div style={{ padding: "20px" }}>
-    <h2>⚙️ 设置</h2>
-    <p>设置页面开发中...</p>
-  </div>
-);
 
 function AppContent() {
   const activeTab = useUIStore((state) => state.activeTab);
@@ -57,15 +32,15 @@ function AppContent() {
   const renderPage = () => {
     switch (activeTab) {
       case "rules":
-        return <SimpleRulesPage />;
+        return <RulesPage />;
       case "requests":
-        return <SimpleRequestsPage />;
+        return <RequestsPage />;
       case "preview":
-        return <SimplePreviewPage />;
+        return <PreviewPage />;
       case "settings":
-        return <SimpleSettingsPage />;
+        return <SettingsPage />;
       default:
-        return <SimpleRulesPage />;
+        return <RulesPage />;
     }
   };
 

@@ -91,12 +91,11 @@ export const useAppStore = create<AppState>()(
     saveRules: async (rules: PromptxyRule[]) => {
       set((state) => ({ loading: { ...state.loading, saving: true } }));
       try {
-        const result = await syncRules(rules);
+        await syncRules(rules);
         set({
           rules,
           errors: { ...get().errors, save: null },
         });
-        return result;
       } catch (error: any) {
         set({ errors: { ...get().errors, save: error.message } });
         throw error;
@@ -140,7 +139,6 @@ export const useAppStore = create<AppState>()(
     checkConnection: async () => {
       const connected = await checkHealth();
       set({ apiConnected: connected });
-      return connected;
     },
 
     // 设置 SSE 状态

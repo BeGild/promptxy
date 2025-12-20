@@ -7,7 +7,6 @@ import { PromptxyRule, PreviewRequest } from "@/types";
  * 获取所有规则的 Hook
  */
 export function useRules() {
-  const setRules = useAppStore((state) => state.setRules);
   const loading = useAppStore((state) => state.loading.rules);
 
   const query = useQuery({

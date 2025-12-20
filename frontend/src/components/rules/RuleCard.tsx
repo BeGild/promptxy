@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Text, Badge, Button, Spacer, Row, Switch, Tooltip } from "@heroui/react";
+import { Card, CardBody, CardHeader, Badge, Button, Spacer, Switch, Tooltip } from "@heroui/react";
 import { PromptxyRule } from "@/types";
 
 interface RuleCardProps {
@@ -13,81 +13,72 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
   const enabled = rule.enabled !== false;
 
   return (
-    <Card variant="bordered" css={{ p: "$4", mb: "$3" }}>
-      <Row justify="space-between" align="center">
-        <Text h4 css={{ m: 0 }}>
-          {rule.id}
-        </Text>
-        <Badge color={enabled ? "success" : "default"} variant="flat">
-          {enabled ? "启用" : "禁用"}
-        </Badge>
-      </Row>
+    <Card>
+      <CardBody style={{ padding: "16px" }}>
+        {/* Header row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+          <h4 style={{ margin: 0, fontSize: "18px" }}>{rule.id}</h4>
+          <Badge color={enabled ? "success" : "default"} variant="flat">
+            {enabled ? "启用" : "禁用"}
+          </Badge>
+        </div>
 
-      {rule.description && (
-        <>
-          <Spacer y={0.5} />
-          <Text color="$textSecondary" size="$sm">
+        {/* Description */}
+        {rule.description && (
+          <div style={{ color: "var(--heroui-colors-text-secondary)", fontSize: "14px", marginBottom: "8px" }}>
             {rule.description}
-          </Text>
-        </>
-      )}
-
-      <Spacer y={1} />
-
-      <Row wrap="wrap" css={{ gap: "$2" }}>
-        <Badge size="sm" color="primary" variant="flat">
-          {rule.when.client}
-        </Badge>
-        <Badge size="sm" color="secondary" variant="flat">
-          {rule.when.field}
-        </Badge>
-        {rule.when.method && (
-          <Badge size="sm" color="warning" variant="flat">
-            {rule.when.method}
-          </Badge>
+          </div>
         )}
-        {rule.ops.map((op, i) => (
-          <Badge key={i} size="sm" color="default" variant="flat">
-            {op.type}
+
+        {/* Tags row */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
+          <Badge size="sm" color="primary" variant="flat">
+            {rule.when.client}
           </Badge>
-        ))}
-      </Row>
+          <Badge size="sm" color="secondary" variant="flat">
+            {rule.when.field}
+          </Badge>
+          {rule.when.method && (
+            <Badge size="sm" color="warning" variant="flat">
+              {rule.when.method}
+            </Badge>
+          )}
+          {rule.ops.map((op, i) => (
+            <Badge key={i} size="sm" color="default" variant="flat">
+              {op.type}
+            </Badge>
+          ))}
+        </div>
 
-      {rule.when.pathRegex && (
-        <>
-          <Spacer y={0.5} />
-          <Text size="$sm" css={{ fontFamily: "monospace" }}>
+        {/* Regex info */}
+        {rule.when.pathRegex && (
+          <div style={{ fontSize: "12px", fontFamily: "monospace", marginBottom: "4px" }}>
             path: {rule.when.pathRegex}
-          </Text>
-        </>
-      )}
-
-      {rule.when.modelRegex && (
-        <>
-          <Spacer y={0.5} />
-          <Text size="$sm" css={{ fontFamily: "monospace" }}>
+          </div>
+        )}
+        {rule.when.modelRegex && (
+          <div style={{ fontSize: "12px", fontFamily: "monospace", marginBottom: "8px" }}>
             model: {rule.when.modelRegex}
-          </Text>
-        </>
-      )}
+          </div>
+        )}
 
-      <Spacer y={1.5} />
-
-      <Row justify="flex-end" gap={1}>
-        <Tooltip content={enabled ? "禁用规则" : "启用规则"}>
-          <Switch
-            size="sm"
-            checked={enabled}
-            onChange={() => onToggle(rule)}
-          />
-        </Tooltip>
-        <Button size="sm" variant="light" onPress={() => onEdit(rule.id)}>
-          编辑
-        </Button>
-        <Button size="sm" color="danger" variant="light" onPress={() => onDelete(rule.id)}>
-          删除
-        </Button>
-      </Row>
+        {/* Action buttons */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "4px", marginTop: "8px" }}>
+          <Tooltip content={enabled ? "禁用规则" : "启用规则"}>
+            <Switch
+              size="sm"
+              checked={enabled}
+              onChange={() => onToggle(rule)}
+            />
+          </Tooltip>
+          <Button size="sm" variant="light" onPress={() => onEdit(rule.id)}>
+            编辑
+          </Button>
+          <Button size="sm" color="danger" variant="light" onPress={() => onDelete(rule.id)}>
+            删除
+          </Button>
+        </div>
+      </CardBody>
     </Card>
   );
 };

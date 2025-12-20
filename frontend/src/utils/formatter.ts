@@ -104,11 +104,11 @@ export function formatStatus(status?: number): string {
 /**
  * 获取状态颜色
  */
-export function getStatusColor(status?: number): "success" | "warning" | "error" | "default" {
+export function getStatusColor(status?: number): "success" | "warning" | "danger" | "default" {
   if (!status) return "default";
   if (status >= 200 && status < 300) return "success";
   if (status >= 300 && status < 400) return "warning";
-  return "error";
+  return "danger";
 }
 
 /**

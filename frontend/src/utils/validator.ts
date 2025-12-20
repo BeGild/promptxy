@@ -1,4 +1,10 @@
-import { PromptxyRule, PromptxyOp, RuleValidationResult } from "@/types";
+import { PromptxyRule, PromptxyOp } from "@/types";
+
+interface RuleValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
 
 /**
  * 验证规则格式
@@ -67,32 +73,32 @@ function validateOp(op: PromptxyOp): string[] {
     case "set":
     case "append":
     case "prepend":
-      if (!op.text || typeof op.text !== "string") {
+      if (!("text" in op) || typeof op.text !== "string") {
         errors.push("需要 text 字段");
       }
       break;
 
     case "replace":
-      if (op.match === undefined && op.regex === undefined) {
+      if (!("match" in op || "regex" in op)) {
         errors.push("需要 match 或 regex");
       }
-      if (op.replacement === undefined) {
+      if (!("replacement" in op)) {
         errors.push("需要 replacement");
       }
       break;
 
     case "delete":
-      if (op.match === undefined && op.regex === undefined) {
+      if (!("match" in op || "regex" in op)) {
         errors.push("需要 match 或 regex");
       }
       break;
 
     case "insert_before":
     case "insert_after":
-      if (!op.regex || typeof op.regex !== "string") {
+      if (!("regex" in op) || typeof (op as any).regex !== "string") {
         errors.push("需要 regex");
       }
-      if (!op.text || typeof op.text !== "string") {
+      if (!("text" in op) || typeof (op as any).text !== "string") {
         errors.push("需要 text");
       }
       break;
@@ -102,9 +108,9 @@ function validateOp(op: PromptxyOp): string[] {
   }
 
   // 验证正则语法
-  if (op.regex) {
+  if ("regex" in op && op.regex) {
     try {
-      new RegExp(op.regex, op.flags);
+      new RegExp(op.regex, (op as any).flags);
     } catch (e: any) {
       errors.push(`正则表达式无效: ${e.message}`);
     }

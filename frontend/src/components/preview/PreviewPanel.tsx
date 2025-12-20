@@ -73,7 +73,7 @@ export const PreviewPanel: React.FC = () => {
                   fullWidth
                 >
                   {CLIENT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value}>
                       {opt.label}
                     </SelectItem>
                   ))}
@@ -87,7 +87,7 @@ export const PreviewPanel: React.FC = () => {
                   fullWidth
                 >
                   {FIELD_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value}>
                       {opt.label}
                     </SelectItem>
                   ))}
@@ -201,7 +201,7 @@ export const PreviewPanel: React.FC = () => {
               {result.matches.length > 0 && (
                 <Card style={{ padding: "12px" }}>
                   <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>匹配规则:</div>
-                  {result.matches.map((match, i) => (
+                  {result.matches.map((match: any, i: number) => (
                     <div key={i} style={{ fontFamily: "monospace", fontSize: "12px" }}>
                       • {match.ruleId} ({match.opType})
                     </div>

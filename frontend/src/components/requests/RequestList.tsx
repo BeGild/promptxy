@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Button, Input, Spacer, Row, Pagination, Loading, Badge } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Button, Input, Spacer, Pagination, Spinner, Badge } from "@heroui/react";
 import { EmptyState } from "@/components/common";
 import { RequestListItem } from "@/types";
 import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from "@/utils";
@@ -41,8 +41,8 @@ export const RequestList: React.FC<RequestListProps> = ({
 
   if (isLoading && requests.length === 0) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "$8" }}>
-        <Loading size="lg">加载请求中...</Loading>
+      <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
+        <Spinner>加载请求中...</Spinner>
       </div>
     );
   }
@@ -61,13 +61,12 @@ export const RequestList: React.FC<RequestListProps> = ({
   return (
     <div>
       {/* 工具栏 */}
-      <Row css={{ gap: "$4", mb: "$4", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
         <Input
           placeholder="搜索ID或路径..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          css={{ flex: 1, minWidth: "200px" }}
-          clearable
+          style={{ flex: 1, minWidth: "200px" }}
         />
         <select
           value={filterClient}
@@ -85,19 +84,19 @@ export const RequestList: React.FC<RequestListProps> = ({
           <option value="codex">Codex</option>
           <option value="gemini">Gemini</option>
         </select>
-        <Button color="primary" onPress={onRefresh} auto>
+        <Button color="primary" onPress={onRefresh}>
           刷新
         </Button>
-      </Row>
+      </div>
 
-      <Text color="$textSecondary" size="$sm" css={{ mb: "$3" }}>
+      <div style={{ color: "var(--heroui-colors-text-secondary)", fontSize: "12px", marginBottom: "12px" }}>
         共 {total} 条请求，显示 {filteredRequests.length} 条
-      </Text>
+      </div>
 
       {/* 请求表格 */}
       <Table
         aria-label="请求历史表"
-        css={{ height: "auto", minWidth: "100%" }}
+        style={{ height: "auto", minWidth: "100%" }}
         selectionMode="single"
         onRowAction={(key) => onRowClick(key as string)}
       >
@@ -113,7 +112,7 @@ export const RequestList: React.FC<RequestListProps> = ({
         <TableBody
           items={filteredRequests}
           isLoading={isLoading}
-          emptyContent={<div style={{ padding: "$8" }}>暂无数据</div>}
+          emptyContent={<div style={{ padding: "32px" }}>暂无数据</div>}
         >
           {(item) => (
             <TableRow key={item.id}>
@@ -149,10 +148,7 @@ export const RequestList: React.FC<RequestListProps> = ({
                 <Button
                   size="sm"
                   variant="light"
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onRowClick(item.id);
-                  }}
+                  onPress={() => onRowClick(item.id)}
                 >
                   查看
                 </Button>
@@ -160,11 +156,8 @@ export const RequestList: React.FC<RequestListProps> = ({
                   size="sm"
                   color="danger"
                   variant="light"
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onDelete(item.id);
-                  }}
-                  css={{ ml: "$1" }}
+                  onPress={() => onDelete(item.id)}
+                  style={{ marginLeft: "4px" }}
                 >
                   删除
                 </Button>

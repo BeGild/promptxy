@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, Text, Grid, Row, Button, Spacer } from "@heroui/react";
+import { Card, CardBody, CardHeader, Button, Spacer } from "@heroui/react";
 import { generateJSONDiff, highlightDiff } from "@/utils";
 
 interface DiffViewerProps {
@@ -21,19 +21,21 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
 
   if (!hasChanges) {
     return (
-      <Card variant="flat" css={{ p: "$4", textAlign: "center" }}>
-        <Text color="$textSecondary">无修改 - 请求未被规则改变</Text>
+      <Card>
+        <CardBody style={{ padding: "16px", textAlign: "center", color: "var(--heroui-colors-text-secondary)" }}>
+          无修改 - 请求未被规则改变
+        </CardBody>
       </Card>
     );
   }
 
   return (
     <div>
-      <Row justify="space-between" align="center" css={{ mb: "$2" }}>
-        <Text size="$sm" color="$textSecondary">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+        <span style={{ fontSize: "14px", color: "var(--heroui-colors-text-secondary)" }}>
           {viewMode === "side-by-side" ? "左右对比视图" : "JSON 格式化视图"}
-        </Text>
-        <Row gap={1}>
+        </span>
+        <div style={{ display: "flex", gap: "4px" }}>
           <Button
             size="sm"
             variant={viewMode === "side-by-side" ? "flat" : "light"}
@@ -48,17 +50,17 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
           >
             JSON
           </Button>
-        </Row>
-      </Row>
+        </div>
+      </div>
 
       {viewMode === "side-by-side" ? (
-        <Grid.Container gap={1}>
-          <Grid xs={6}>
-            <Card variant="bordered" css={{ height: "400px", overflow: "auto" }}>
-              <Card.Header css={{ bg: "$background", borderBottom: "1px solid $border" }}>
-                <Text b size="$sm">原始请求</Text>
-              </Card.Header>
-              <Card.Body css={{ fontFamily: "monospace", fontSize: "$xs", lineHeight: "1.5" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div style={{ flex: 1 }}>
+            <Card>
+              <CardHeader style={{ background: "var(--heroui-colors-background)", borderBottom: "1px solid var(--heroui-colors-border)" }}>
+                <b style={{ fontSize: "14px" }}>原始请求</b>
+              </CardHeader>
+              <CardBody style={{ fontFamily: "monospace", fontSize: "12px", lineHeight: "1.5", height: "400px", overflow: "auto" }}>
                 {left.map((line, i) => (
                   <div key={i} style={{
                     color: line.startsWith("-") ? "var(--heroui-colors-danger)" :
@@ -67,15 +69,15 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
                     {line}
                   </div>
                 ))}
-              </Card.Body>
+              </CardBody>
             </Card>
-          </Grid>
-          <Grid xs={6}>
-            <Card variant="bordered" css={{ height: "400px", overflow: "auto" }}>
-              <Card.Header css={{ bg: "$background", borderBottom: "1px solid $border" }}>
-                <Text b size="$sm">修改后请求</Text>
-              </Card.Header>
-              <Card.Body css={{ fontFamily: "monospace", fontSize: "$xs", lineHeight: "1.5" }}>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Card>
+              <CardHeader style={{ background: "var(--heroui-colors-background)", borderBottom: "1px solid var(--heroui-colors-border)" }}>
+                <b style={{ fontSize: "14px" }}>修改后请求</b>
+              </CardHeader>
+              <CardBody style={{ fontFamily: "monospace", fontSize: "12px", lineHeight: "1.5", height: "400px", overflow: "auto" }}>
                 {right.map((line, i) => (
                   <div key={i} style={{
                     color: line.startsWith("+") ? "var(--heroui-colors-success)" :
@@ -84,33 +86,33 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
                     {line}
                   </div>
                 ))}
-              </Card.Body>
+              </CardBody>
             </Card>
-          </Grid>
-        </Grid.Container>
+          </div>
+        </div>
       ) : (
-        <Grid.Container gap={1}>
-          <Grid xs={6}>
-            <Card variant="bordered" css={{ height: "400px", overflow: "auto" }}>
-              <Card.Header css={{ bg: "$background", borderBottom: "1px solid $border" }}>
-                <Text b size="$sm">原始</Text>
-              </Card.Header>
-              <Card.Body css={{ fontFamily: "monospace", fontSize: "$xs" }}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <div style={{ flex: 1 }}>
+            <Card>
+              <CardHeader style={{ background: "var(--heroui-colors-background)", borderBottom: "1px solid var(--heroui-colors-border)" }}>
+                <b style={{ fontSize: "14px" }}>原始</b>
+              </CardHeader>
+              <CardBody style={{ fontFamily: "monospace", fontSize: "12px", height: "400px", overflow: "auto" }}>
                 <pre>{originalStr}</pre>
-              </Card.Body>
+              </CardBody>
             </Card>
-          </Grid>
-          <Grid xs={6}>
-            <Card variant="bordered" css={{ height: "400px", overflow: "auto" }}>
-              <Card.Header css={{ bg: "$background", borderBottom: "1px solid $border" }}>
-                <Text b size="$sm">修改后</Text>
-              </Card.Header>
-              <Card.Body css={{ fontFamily: "monospace", fontSize: "$xs" }}>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Card>
+              <CardHeader style={{ background: "var(--heroui-colors-background)", borderBottom: "1px solid var(--heroui-colors-border)" }}>
+                <b style={{ fontSize: "14px" }}>修改后</b>
+              </CardHeader>
+              <CardBody style={{ fontFamily: "monospace", fontSize: "12px", height: "400px", overflow: "auto" }}>
                 <pre>{modifiedStr}</pre>
-              </Card.Body>
+              </CardBody>
             </Card>
-          </Grid>
-        </Grid.Container>
+          </div>
+        </div>
       )}
     </div>
   );
