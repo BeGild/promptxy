@@ -3,6 +3,12 @@ import { SSEClient } from "@/api/sse";
 import { useAppStore } from "@/store";
 import { SSERequestEvent, SSEConnectionStatus } from "@/types";
 
+function joinBaseUrl(baseUrl: string, path: string): string {
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${normalizedBase}${normalizedPath}`;
+}
+
 /**
  * SSE 连接 Hook
  */
@@ -31,7 +37,8 @@ export function useSSE() {
     };
 
     // 创建 SSE 客户端
-    const url = `${(import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:7071"}/_promptxy/events`;
+    const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined;
+    const url = baseUrl ? joinBaseUrl(baseUrl, "/_promptxy/events") : "/_promptxy/events";
     sseClientRef.current = new SSEClient(url, handleEvent, handleStatusChange);
 
     // 自动连接

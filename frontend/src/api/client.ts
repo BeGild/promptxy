@@ -1,12 +1,18 @@
 import axios from "axios";
 import { ErrorResponse } from "@/types";
 
+function joinBaseUrl(baseUrl: string, path: string): string {
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${normalizedBase}${normalizedPath}`;
+}
+
 // API 基础 URL
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:7071";
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL;
 
 // 创建 Axios 实例
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL ? joinBaseUrl(API_BASE_URL, "/") : undefined,
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
