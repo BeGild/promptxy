@@ -12,6 +12,8 @@ import {
   RequestRecordResponse,
   RequestListResponse,
   RuleValidationResult,
+  RuleOperationRequest,
+  RuleOperationResponse,
 } from "./types.js";
 import {
   insertRequestRecord,
@@ -22,7 +24,7 @@ import {
   getDatabaseInfo,
   getRequestStats,
 } from "./database.js";
-import { saveConfig } from "./config.js";
+import { saveConfig, loadConfig } from "./config.js";
 import { applyPromptRules } from "./rules/engine.js";
 import { readRequestBody } from "./http.js";
 
@@ -89,6 +91,7 @@ async function handleGetRequests(
     const client = url.searchParams.get("client") || undefined;
     const startTime = url.searchParams.get("startTime");
     const endTime = url.searchParams.get("endTime");
+    const search = url.searchParams.get("search") || undefined;
 
     const result = await getRequestList({
       limit,
@@ -96,6 +99,7 @@ async function handleGetRequests(
       client,
       startTime: startTime ? Number(startTime) : undefined,
       endTime: endTime ? Number(endTime) : undefined,
+      search,
     });
 
     sendJson(res, 200, result);
@@ -426,6 +430,136 @@ async function handleDatabaseInfo(
 }
 
 /**
+ * 保存当前规则到配置文件
+ */
+async function saveCurrentRules(rules: PromptxyRule[]): Promise<void> {
+  const config = await loadConfig();
+  const updatedConfig: PromptxyConfig = { ...config, rules };
+  await saveConfig(updatedConfig);
+}
+
+/**
+ * 验证单个规则
+ */
+function validateRule(rule: any): { valid: boolean; errors?: string[]; warnings?: string[] } {
+  const result = validateRules([rule]);
+  return {
+    valid: result.valid,
+    errors: result.errors,
+    warnings: result.warnings,
+  };
+}
+
+/**
+ * 处理创建单个规则
+ */
+async function handleCreateRule(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  currentRules: PromptxyRule[]
+): Promise<void> {
+  try {
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 * 1024 });
+    const { rule } = JSON.parse(body.toString());
+
+    // 验证规则
+    const validation = validateRule(rule);
+    if (!validation.valid) {
+      sendJson(res, 400, { error: "Validation failed", ...validation });
+      return;
+    }
+
+    // 添加到内存
+    currentRules.push(rule);
+
+    // 保存到文件
+    await saveCurrentRules(currentRules);
+
+    sendJson(res, 200, {
+      success: true,
+      message: "规则已创建",
+      rule,
+    });
+  } catch (error: any) {
+    sendJson(res, 500, { error: "Failed to create rule", message: error?.message });
+  }
+}
+
+/**
+ * 处理更新单个规则
+ */
+async function handleUpdateRule(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  currentRules: PromptxyRule[],
+  url: URL
+): Promise<void> {
+  try {
+    const ruleId = url.pathname.split("/").pop();
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 * 1024 });
+    const { rule } = JSON.parse(body.toString());
+
+    // 验证规则
+    const validation = validateRule(rule);
+    if (!validation.valid) {
+      sendJson(res, 400, { error: "Validation failed", ...validation });
+      return;
+    }
+
+    // 查找并更新
+    const index = currentRules.findIndex((r) => r.id === ruleId);
+    if (index === -1) {
+      sendJson(res, 404, { error: "Rule not found" });
+      return;
+    }
+
+    currentRules[index] = rule;
+    await saveCurrentRules(currentRules);
+
+    sendJson(res, 200, {
+      success: true,
+      message: "规则已更新",
+      rule,
+    });
+  } catch (error: any) {
+    sendJson(res, 500, { error: "Failed to update rule", message: error?.message });
+  }
+}
+
+/**
+ * 处理删除单个规则
+ */
+async function handleDeleteRule(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  currentRules: PromptxyRule[],
+  url: URL
+): Promise<void> {
+  try {
+    const ruleId = url.pathname.split("/").pop();
+
+    // 查找并删除
+    const index = currentRules.findIndex((r) => r.id === ruleId);
+    if (index === -1) {
+      sendJson(res, 404, { error: "Rule not found" });
+      return;
+    }
+
+    const deletedRule = currentRules[index];
+    currentRules.splice(index, 1);
+    await saveCurrentRules(currentRules);
+
+    sendJson(res, 200, {
+      success: true,
+      message: "规则已删除",
+      rule: deletedRule,
+    });
+  } catch (error: any) {
+    sendJson(res, 500, { error: "Failed to delete rule", message: error?.message });
+  }
+}
+
+/**
  * 创建 API 服务器
  */
 export function createApiServer(
@@ -492,6 +626,22 @@ export function createApiServer(
       // 配置同步
       if (req.method === "POST" && url.pathname === "/_promptxy/config/sync") {
         await handleConfigSync(req, res, config, currentRules);
+        return;
+      }
+
+      // 规则管理路由
+      if (url.pathname === "/_promptxy/rules" && req.method === "POST") {
+        await handleCreateRule(req, res, currentRules);
+        return;
+      }
+
+      if (url.pathname.startsWith("/_promptxy/rules/") && req.method === "PUT") {
+        await handleUpdateRule(req, res, currentRules, url);
+        return;
+      }
+
+      if (url.pathname.startsWith("/_promptxy/rules/") && req.method === "DELETE") {
+        await handleDeleteRule(req, res, currentRules, url);
         return;
       }
 

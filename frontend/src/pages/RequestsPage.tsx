@@ -4,12 +4,14 @@ import { RequestList } from "@/components/requests";
 import { RequestDetail } from "@/components/requests";
 import { Modal } from "@/components/common";
 import { useRequests, useRequestDetail, useDeleteRequest } from "@/hooks";
+import { RequestFilters } from "@/types";
 
 export const RequestsPage: React.FC = () => {
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<RequestFilters>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isLoading, refetch } = useRequests({}, page);
+  const { data, isLoading, refetch } = useRequests(filters, page);
   const { request, isLoading: detailLoading } = useRequestDetail(selectedId);
   const deleteMutation = useDeleteRequest();
 
@@ -98,6 +100,8 @@ export const RequestsPage: React.FC = () => {
       {/* 请求列表组件 */}
       <RequestList
         requests={data?.items || []}
+        filters={filters}
+        onFiltersChange={setFilters}
         isLoading={isLoading}
         total={data?.total || 0}
         page={page}

@@ -77,6 +77,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
     let warnings: string[] = [];
     let upstreamResponse: Response | undefined;
     let error: string | undefined;
+    let method: string = req.method || "unknown";
 
     try {
       if (!req.url || !req.method) {
@@ -85,9 +86,10 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
       }
 
       const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
+      method = req.method;
 
       // 健康检查端点（不记录）
-      if (req.method === "GET" && url.pathname === "/_promptxy/health") {
+      if (method === "GET" && url.pathname === "/_promptxy/health") {
         jsonError(res, 200, { status: "ok" });
         return;
       }
@@ -99,7 +101,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
       const headers = cloneAndFilterRequestHeaders(req.headers);
 
       let bodyBuffer: Buffer | undefined;
-      const expectsBody = req.method !== "GET" && req.method !== "HEAD";
+      const expectsBody = method !== "GET" && method !== "HEAD";
 
       if (expectsBody) {
         bodyBuffer = await readRequestBody(req, { maxBytes: 20 * 1024 * 1024 });
@@ -120,7 +122,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
         if (route.client === "claude") {
           const result = mutateClaudeBody({
             body: jsonBody,
-            method: req.method,
+            method: method,
             path: upstreamPath,
             rules: config.rules,
           });
@@ -129,7 +131,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
         } else if (route.client === "codex") {
           const result = mutateCodexBody({
             body: jsonBody,
-            method: req.method,
+            method: method,
             path: upstreamPath,
             rules: config.rules,
           });
@@ -139,7 +141,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
         } else if (route.client === "gemini") {
           const result = mutateGeminiBody({
             body: jsonBody,
-            method: req.method,
+            method: method,
             path: upstreamPath,
             rules: config.rules,
           });
@@ -150,7 +152,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
 
       if (config.debug) {
         logger.debug(
-          `[promptxy] ${route.client.toUpperCase()} ${req.method} ${url.pathname} -> ${upstreamUrl} (${summarizeMatches(
+          `[promptxy] ${route.client.toUpperCase()} ${method} ${url.pathname} -> ${upstreamUrl} (${summarizeMatches(
             matches
           )}${warnings.length ? ` warnings=${warnings.length}` : ""})`
         );
@@ -198,7 +200,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
         timestamp: Date.now(),
         client: route.client,
         path: upstreamPath,
-        method: req.method,
+        method: method,
         originalBody: originalBodyBuffer ? originalBodyBuffer.toString("utf-8") : "{}",
         modifiedBody: jsonBody ? JSON.stringify(jsonBody) : (originalBodyBuffer?.toString("utf-8") ?? "{}"),
         matchedRules: JSON.stringify(matches),
@@ -219,7 +221,8 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
         timestamp: record.timestamp,
         client: route.client,
         path: upstreamPath,
-        method: req.method,
+        method: method,
+        matchedRules: matches.map(m => m.ruleId),
       };
       broadcastRequest(sseData);
 
@@ -240,7 +243,7 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
           timestamp: Date.now(),
           client: route.client,
           path: upstreamPath,
-          method: req.method,
+          method: method,
           originalBody: originalBodyBuffer ? originalBodyBuffer.toString("utf-8") : "{}",
           modifiedBody: jsonBody ? JSON.stringify(jsonBody) : (originalBodyBuffer?.toString("utf-8") ?? "{}"),
           matchedRules: JSON.stringify(matches),
@@ -259,7 +262,8 @@ export function createGateway(config: PromptxyConfig, db: Database): http.Server
           timestamp: record.timestamp,
           client: route.client,
           path: upstreamPath,
-          method: req.method,
+          method: method,
+          matchedRules: matches.map(m => m.ruleId),
         };
         broadcastRequest(sseData);
       }

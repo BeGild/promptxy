@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Button, Input, Pagination, Spinner, Badge, Select, SelectItem } from "@heroui/react";
 import { EmptyState } from "@/components/common";
-import { RequestListItem } from "@/types";
+import { RequestListItem, RequestFilters } from "@/types";
 import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from "@/utils";
 
 interface RequestListProps {
   requests: RequestListItem[];
+  filters: RequestFilters;
+  onFiltersChange: (filters: RequestFilters) => void;
   isLoading: boolean;
   total: number;
   page: number;
@@ -17,6 +19,8 @@ interface RequestListProps {
 
 export const RequestList: React.FC<RequestListProps> = ({
   requests,
+  filters,
+  onFiltersChange,
   isLoading,
   total,
   page,
@@ -25,19 +29,31 @@ export const RequestList: React.FC<RequestListProps> = ({
   onRefresh,
   onDelete,
 }) => {
-  const [search, setSearch] = useState("");
-  const [filterClient, setFilterClient] = useState<string>("all");
-
-  // 过滤
-  const filteredRequests = requests.filter((req) => {
-    const matchSearch =
-      req.id.toLowerCase().includes(search.toLowerCase()) ||
-      req.path.toLowerCase().includes(search.toLowerCase());
-    const matchClient = filterClient === "all" || req.client === filterClient;
-    return matchSearch && matchClient;
-  });
 
   const totalPages = Math.ceil(total / 50);
+
+  // 处理搜索变化
+  const handleSearchChange = (value: string) => {
+    onFiltersChange({ ...filters, search: value });
+  };
+
+  // 处理客户端筛选变化
+  const handleClientChange = (value: string) => {
+    const newFilters = { ...filters };
+    if (value === "all") {
+      delete newFilters.client;
+    } else {
+      newFilters.client = value;
+    }
+    onFiltersChange(newFilters);
+  };
+
+  // 清除搜索
+  const clearSearch = () => {
+    const newFilters = { ...filters };
+    delete newFilters.search;
+    onFiltersChange(newFilters);
+  };
 
   if (isLoading && requests.length === 0) {
     return (
@@ -64,8 +80,8 @@ export const RequestList: React.FC<RequestListProps> = ({
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
           placeholder="🔍 搜索ID或路径..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={filters.search || ""}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="flex-1"
           radius="lg"
           classNames={{
@@ -74,8 +90,8 @@ export const RequestList: React.FC<RequestListProps> = ({
         />
 
         <Select
-          selectedKeys={[filterClient]}
-          onChange={(e) => setFilterClient(e.target.value)}
+          selectedKeys={[filters.client || "all"]}
+          onChange={(e) => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
           classNames={{
@@ -102,13 +118,13 @@ export const RequestList: React.FC<RequestListProps> = ({
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <span>显示结果:</span>
         <Chip color="secondary" variant="flat" size="sm">
-          {filteredRequests.length} / {total} 条
+          {requests.length} / {total} 条
         </Chip>
-        {search && (
+        {filters.search && (
           <Button
             size="sm"
             variant="light"
-            onPress={() => setSearch("")}
+            onPress={clearSearch}
             className="h-6 px-2"
           >
             清除搜索
@@ -132,12 +148,13 @@ export const RequestList: React.FC<RequestListProps> = ({
           <TableColumn>客户端</TableColumn>
           <TableColumn>路径</TableColumn>
           <TableColumn>方法</TableColumn>
+          <TableColumn>匹配规则</TableColumn>
           <TableColumn>状态</TableColumn>
           <TableColumn>耗时</TableColumn>
           <TableColumn>操作</TableColumn>
         </TableHeader>
         <TableBody
-          items={filteredRequests}
+          items={requests}
           isLoading={isLoading}
           emptyContent={<div className="py-12 text-center text-gray-500">暂无数据</div>}
         >
@@ -158,6 +175,30 @@ export const RequestList: React.FC<RequestListProps> = ({
                 <Chip size="sm" color="default" variant="flat" className="uppercase text-xs">
                   {item.method}
                 </Chip>
+              </TableCell>
+              <TableCell>
+                {item.matchedRules && item.matchedRules.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {item.matchedRules.slice(0, 3).map((ruleId) => (
+                      <Chip
+                        key={ruleId}
+                        size="sm"
+                        color="success"
+                        variant="flat"
+                        className="text-xs font-mono"
+                      >
+                        {ruleId}
+                      </Chip>
+                    ))}
+                    {item.matchedRules.length > 3 && (
+                      <Chip size="sm" color="default" variant="flat" className="text-xs">
+                        +{item.matchedRules.length - 3}
+                      </Chip>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">-</span>
+                )}
               </TableCell>
               <TableCell>
                 <Chip

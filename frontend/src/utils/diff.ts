@@ -115,22 +115,35 @@ export function highlightDiff(diff: DiffLine[]): { left: string[]; right: string
   const right: string[] = [];
 
   for (const line of diff) {
+    const path = line.path || "";
+
+    // 格式化路径显示
+    // 对于数组索引 [0]，显示为 [0]: value
+    // 对于对象字段 name，显示为 name: value
+    // 对于嵌套路径 user.name，显示为 user.name: value
+    const formatDisplay = (value: string, prefix: string) => {
+      if (path) {
+        return `${prefix} ${path}: ${value}`;
+      }
+      return `${prefix} ${value}`;
+    };
+
     switch (line.type) {
       case "same":
-        left.push(`  ${line.left || ""}`);
-        right.push(`  ${line.right || ""}`);
+        left.push(`  ${path ? `${path}: ` : ""}${line.left || ""}`);
+        right.push(`  ${path ? `${path}: ` : ""}${line.right || ""}`);
         break;
       case "removed":
-        left.push(`- ${line.left || ""}`);
-        right.push(`  `);
+        left.push(formatDisplay(line.left || "", "-"));
+        right.push(`  ${path ? `${path}: ` : ""}`);
         break;
       case "added":
-        left.push(`  `);
-        right.push(`+ ${line.right || ""}`);
+        left.push(`  ${path ? `${path}: ` : ""}`);
+        right.push(formatDisplay(line.right || "", "+"));
         break;
       case "modified":
-        left.push(`~ ${line.left || ""}`);
-        right.push(`~ ${line.right || ""}`);
+        left.push(formatDisplay(line.left || "", "~"));
+        right.push(formatDisplay(line.right || "", "~"));
         break;
     }
   }

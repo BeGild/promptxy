@@ -59,6 +59,7 @@ export interface SSERequestEvent {
   client: string;
   path: string;
   method: string;
+  matchedRules: string[];
 }
 
 export interface HealthCheckResponse {
@@ -70,4 +71,17 @@ export interface HealthCheckResponse {
 export interface ErrorResponse {
   error: string;
   message?: string;
+}
+
+// 规则操作相关类型
+export interface RuleOperationRequest {
+  rule: import("./rule").PromptxyRule;
+}
+
+export interface RuleOperationResponse {
+  success: boolean;
+  message: string;
+  rule?: import("./rule").PromptxyRule;
+  errors?: string[];
+  warnings?: string[];
 }

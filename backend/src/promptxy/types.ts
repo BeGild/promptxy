@@ -189,6 +189,20 @@ export interface ConfigSyncResponse {
   appliedRules: number;
 }
 
+// 规则操作请求
+export interface RuleOperationRequest {
+  rule: PromptxyRule;
+}
+
+// 规则操作响应
+export interface RuleOperationResponse {
+  success: boolean;
+  message: string;
+  rule?: PromptxyRule;
+  errors?: string[];
+  warnings?: string[];
+}
+
 // 预览请求
 export interface PreviewRequest {
   body: any;
@@ -223,6 +237,7 @@ export interface SSERequestEvent {
   client: string;
   path: string;
   method: string;
+  matchedRules: string[];
 }
 
 export interface SSEConfigUpdatedEvent {

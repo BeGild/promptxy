@@ -137,17 +137,20 @@ export async function getRequestList(options: {
   client?: string;
   startTime?: number;
   endTime?: number;
+  search?: string;
 }): Promise<RequestListResponse> {
   const db = getDatabase();
   const limit = Math.min(options.limit ?? 50, 100);
   const offset = options.offset ?? 0;
+  const search = options.search ?? null;
 
   // 计算总数
   const countResult = await db.get<{ count: number }>(
     `SELECT COUNT(*) as count FROM requests
      WHERE (? IS NULL OR client = ?)
        AND (? IS NULL OR timestamp >= ?)
-       AND (? IS NULL OR timestamp <= ?)`,
+       AND (? IS NULL OR timestamp <= ?)
+       AND (? IS NULL OR id LIKE ? OR path LIKE ? OR original_body LIKE ?)`,
     [
       options.client ?? null,
       options.client ?? null,
@@ -155,19 +158,24 @@ export async function getRequestList(options: {
       options.startTime ?? null,
       options.endTime ?? null,
       options.endTime ?? null,
+      search,
+      search ? `%${search}%` : null,
+      search ? `%${search}%` : null,
+      search ? `%${search}%` : null,
     ]
   );
   const total = countResult?.count ?? 0;
 
   // 获取分页数据
-  const rows = await db.all<any[]>(
-    `SELECT
+  const rows = await db.all<any[]>(`
+     SELECT
        id, timestamp, client, path, method,
        matched_rules, response_status, duration_ms, error
      FROM requests
      WHERE (? IS NULL OR client = ?)
        AND (? IS NULL OR timestamp >= ?)
        AND (? IS NULL OR timestamp <= ?)
+       AND (? IS NULL OR id LIKE ? OR path LIKE ? OR original_body LIKE ?)
      ORDER BY timestamp DESC
      LIMIT ? OFFSET ?`,
     [
@@ -177,6 +185,10 @@ export async function getRequestList(options: {
       options.startTime ?? null,
       options.endTime ?? null,
       options.endTime ?? null,
+      search,
+      search ? `%${search}%` : null,
+      search ? `%${search}%` : null,
+      search ? `%${search}%` : null,
       limit,
       offset,
     ]

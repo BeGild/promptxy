@@ -139,3 +139,51 @@ export function useRule(ruleId: string | null) {
     isLoading,
   };
 }
+
+/**
+ * 使用增量API创建规则的 Hook
+ */
+export function useCreateRuleIncremental() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rule: PromptxyRule) => {
+      return await createRule(rule);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+  });
+}
+
+/**
+ * 使用增量API更新规则的 Hook
+ */
+export function useUpdateRuleIncremental() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rule: PromptxyRule) => {
+      return await updateRule(rule);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+  });
+}
+
+/**
+ * 使用增量API删除规则的 Hook
+ */
+export function useDeleteRuleIncremental() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (ruleId: string) => {
+      return await deleteRule(ruleId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+  });
+}

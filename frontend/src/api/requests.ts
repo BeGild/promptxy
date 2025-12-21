@@ -12,6 +12,7 @@ export async function getRequests(filters: RequestFilters = {}, page: number = 1
   if (filters.client) params.set("client", filters.client);
   if (filters.startTime) params.set("startTime", filters.startTime.toString());
   if (filters.endTime) params.set("endTime", filters.endTime.toString());
+  if (filters.search) params.set("search", filters.search);
 
   const response = await apiClient.get(`/_promptxy/requests?${params.toString()}`);
   return response.data;

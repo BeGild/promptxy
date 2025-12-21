@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { PromptxyRule, ConfigSyncResponse } from "@/types";
+import { PromptxyRule, ConfigSyncResponse, RuleOperationResponse } from "@/types";
 
 /**
  * 获取所有规则
@@ -10,7 +10,7 @@ export async function getRules(): Promise<PromptxyRule[]> {
 }
 
 /**
- * 同步规则（保存）
+ * 同步规则（保存）- 保留用于批量导入/导出场景
  */
 export async function syncRules(rules: PromptxyRule[]): Promise<ConfigSyncResponse> {
   const response = await apiClient.post("/_promptxy/config/sync", { rules });
@@ -18,38 +18,31 @@ export async function syncRules(rules: PromptxyRule[]): Promise<ConfigSyncRespon
 }
 
 /**
- * 创建规则
+ * 创建规则 - 增量API
  */
-export async function createRule(rule: PromptxyRule): Promise<ConfigSyncResponse> {
-  const rules = await getRules();
-  rules.push(rule);
-  return syncRules(rules);
+export async function createRule(rule: PromptxyRule): Promise<RuleOperationResponse> {
+  const response = await apiClient.post("/_promptxy/rules", { rule });
+  return response.data;
 }
 
 /**
- * 更新规则
+ * 更新规则 - 增量API
  */
-export async function updateRule(rule: PromptxyRule): Promise<ConfigSyncResponse> {
-  const rules = await getRules();
-  const index = rules.findIndex((r) => r.id === rule.id);
-  if (index === -1) {
-    throw new Error("Rule not found");
-  }
-  rules[index] = rule;
-  return syncRules(rules);
+export async function updateRule(rule: PromptxyRule): Promise<RuleOperationResponse> {
+  const response = await apiClient.put(`/_promptxy/rules/${rule.id}`, { rule });
+  return response.data;
 }
 
 /**
- * 删除规则
+ * 删除规则 - 增量API
  */
-export async function deleteRule(ruleId: string): Promise<ConfigSyncResponse> {
-  const rules = await getRules();
-  const filtered = rules.filter((r) => r.id !== ruleId);
-  return syncRules(filtered);
+export async function deleteRule(ruleId: string): Promise<RuleOperationResponse> {
+  const response = await apiClient.delete(`/_promptxy/rules/${ruleId}`);
+  return response.data;
 }
 
 /**
- * 批量更新规则
+ * 批量更新规则 - 保留用于批量操作
  */
 export async function batchUpdateRules(rules: PromptxyRule[]): Promise<ConfigSyncResponse> {
   return syncRules(rules);

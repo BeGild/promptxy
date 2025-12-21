@@ -27,7 +27,7 @@ export function useSSE() {
         client: event.client,
         path: event.path,
         method: event.method,
-        matchedRules: [],
+        matchedRules: event.matchedRules || [],
       });
     };
 
