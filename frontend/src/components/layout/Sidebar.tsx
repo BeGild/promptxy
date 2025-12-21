@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Spacer, Divider, Card, Badge } from '@heroui/react';
+import { Button, Spacer, Card, Badge } from '@heroui/react';
 import { useUIStore } from '@/store';
 
 interface SidebarProps {

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Input, Button, Spinner, Pagination, Chip, Select, SelectItem } from '@heroui/react';
 import { RuleCard } from './RuleCard';
 import { EmptyState } from '@/components/common';
 import { PromptxyRule } from '@/types';
+import { RuleListVirtual } from './RuleListVirtual';
 
 interface RuleListProps {
   rules: PromptxyRule[];
@@ -11,34 +12,109 @@ interface RuleListProps {
   onDelete: (ruleId: string) => void;
   onToggle: (rule: PromptxyRule) => void;
   onNewRule: () => void;
+  enableVirtualScroll?: boolean;
 }
 
-export const RuleList: React.FC<RuleListProps> = ({
+/**
+ * RuleList - 优化的规则列表组件
+ * 使用 React.memo 避免不必要的重新渲染
+ * 使用 useMemo 优化计算密集型操作
+ */
+const RuleListComponent: React.FC<RuleListProps> = ({
   rules,
   isLoading,
   onEdit,
   onDelete,
   onToggle,
   onNewRule,
+  enableVirtualScroll = false,
 }) => {
   const [search, setSearch] = useState('');
   const [filterClient, setFilterClient] = useState<string>('all');
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
-  // 过滤规则
-  const filteredRules = rules.filter(rule => {
-    const matchSearch =
-      rule.id.toLowerCase().includes(search.toLowerCase()) ||
-      (rule.description || '').toLowerCase().includes(search.toLowerCase());
-    const matchClient = filterClient === 'all' || rule.when.client === filterClient;
-    return matchSearch && matchClient;
-  });
+  // 使用 useMemo 优化过滤逻辑，只有当 rules, search, filterClient 变化时才重新计算
+  const filteredRules = useMemo(() => {
+    return rules.filter(rule => {
+      const matchSearch =
+        rule.id.toLowerCase().includes(search.toLowerCase()) ||
+        (rule.description || '').toLowerCase().includes(search.toLowerCase());
+      const matchClient = filterClient === 'all' || rule.when.client === filterClient;
+      return matchSearch && matchClient;
+    });
+  }, [rules, search, filterClient]);
 
-  // 分页
-  const totalPages = Math.ceil(filteredRules.length / itemsPerPage);
-  const startIndex = (page - 1) * itemsPerPage;
-  const paginatedRules = filteredRules.slice(startIndex, startIndex + itemsPerPage);
+  // 使用 useMemo 优化分页计算
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredRules.length / itemsPerPage);
+  }, [filteredRules.length]);
+
+  const startIndex = useMemo(() => {
+    return (page - 1) * itemsPerPage;
+  }, [page]);
+
+  const paginatedRules = useMemo(() => {
+    return filteredRules.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredRules, startIndex]);
+
+  // 使用 useCallback 优化事件处理函数
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    // 重置到第一页，避免搜索后停留在可能不存在的页码
+    setPage(1);
+  }, []);
+
+  const handleClientChange = useCallback((value: string) => {
+    setFilterClient(value);
+    // 重置到第一页
+    setPage(1);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearch('');
+    setPage(1);
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  // 使用 useCallback 优化传递给 RuleCard 的回调函数
+  const handleEdit = useCallback(
+    (ruleId: string) => {
+      onEdit(ruleId);
+    },
+    [onEdit],
+  );
+
+  const handleDelete = useCallback(
+    (ruleId: string) => {
+      onDelete(ruleId);
+    },
+    [onDelete],
+  );
+
+  const handleToggle = useCallback(
+    (rule: PromptxyRule) => {
+      onToggle(rule);
+    },
+    [onToggle],
+  );
+
+  // 如果启用虚拟滚动，使用虚拟滚动组件
+  if (enableVirtualScroll) {
+    return (
+      <RuleListVirtual
+        rules={rules}
+        isLoading={isLoading}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggle={onToggle}
+        onNewRule={onNewRule}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -66,7 +142,7 @@ export const RuleList: React.FC<RuleListProps> = ({
         <Input
           placeholder="🔍 搜索规则ID或描述..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => handleSearchChange(e.target.value)}
           className="flex-1"
           radius="lg"
           classNames={{
@@ -77,7 +153,7 @@ export const RuleList: React.FC<RuleListProps> = ({
 
         <Select
           selectedKeys={[filterClient]}
-          onChange={e => setFilterClient(e.target.value)}
+          onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
           classNames={{
@@ -108,7 +184,7 @@ export const RuleList: React.FC<RuleListProps> = ({
           {filteredRules.length} 条
         </Chip>
         {search && (
-          <Button size="sm" variant="light" onPress={() => setSearch('')} className="h-6 px-2">
+          <Button size="sm" variant="light" onPress={handleClearSearch} className="h-6 px-2">
             清除搜索
           </Button>
         )}
@@ -120,9 +196,9 @@ export const RuleList: React.FC<RuleListProps> = ({
           <RuleCard
             key={rule.id}
             rule={rule}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onToggle={onToggle}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggle={handleToggle}
           />
         ))}
       </div>
@@ -133,7 +209,7 @@ export const RuleList: React.FC<RuleListProps> = ({
           <Pagination
             total={totalPages}
             page={page}
-            onChange={setPage}
+            onChange={handlePageChange}
             color="primary"
             showShadow={true}
             classNames={{
@@ -147,3 +223,9 @@ export const RuleList: React.FC<RuleListProps> = ({
     </div>
   );
 };
+
+/**
+ * 优化的 RuleList 组件，使用 React.memo 包裹
+ * 避免当父组件重新渲染但 props 未变化时的不必要渲染
+ */
+export const RuleList = React.memo(RuleListComponent);

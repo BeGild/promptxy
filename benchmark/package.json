@@ -1,0 +1,19 @@
+{
+  "name": "promptxy-benchmark",
+  "version": "2.0.0",
+  "description": "PromptXY v2.0 性能基准测试套件",
+  "type": "module",
+  "scripts": {
+    "benchmark": "tsx run-benchmarks.ts",
+    "benchmark:quick": "tsx run-benchmarks.ts --quick",
+    "benchmark:backend": "tsx run-benchmarks.ts --backend",
+    "benchmark:frontend": "tsx run-benchmarks.ts --frontend",
+    "benchmark:e2e": "tsx run-benchmarks.ts --e2e",
+    "benchmark:all": "tsx run-benchmarks.ts --all",
+    "benchmark:help": "tsx run-benchmarks.ts --help"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2"
+  }
+}

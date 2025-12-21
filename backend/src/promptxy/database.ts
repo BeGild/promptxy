@@ -1,4 +1,4 @@
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import * as path from 'node:path';
 import * as os from 'node:os';

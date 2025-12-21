@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Button,
   useDisclosure,
   Card,
   CardBody,
@@ -9,7 +8,6 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter,
 } from '@heroui/react';
 import { RuleList, RuleEditor } from '@/components/rules';
 import { useRules, useSaveRules, useDeleteRule } from '@/hooks';

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardBody, Button, Switch, Tooltip, Chip } from '@heroui/react';
 import { PromptxyRule } from '@/types';
 
@@ -9,8 +9,30 @@ interface RuleCardProps {
   onToggle: (rule: PromptxyRule) => void;
 }
 
-export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onToggle }) => {
+/**
+ * RuleCard - 优化的规则卡片组件
+ * 使用 React.memo 避免不必要的重新渲染
+ * 使用自定义比较函数进行深度比较
+ */
+const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onToggle }) => {
   const enabled = rule.enabled !== false;
+
+  // 使用 useCallback 优化事件处理函数，避免每次渲染都创建新函数
+  const handleEdit = useCallback(() => {
+    onEdit(rule.id);
+  }, [onEdit, rule.id]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(rule.id);
+  }, [onDelete, rule.id]);
+
+  const handleToggle = useCallback(() => {
+    onToggle(rule);
+  }, [onToggle, rule]);
+
+  const handleSwitchChange = useCallback(() => {
+    onToggle(rule);
+  }, [onToggle, rule]);
 
   return (
     <Card
@@ -43,7 +65,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
               <Switch
                 size="sm"
                 checked={enabled}
-                onChange={() => onToggle(rule)}
+                onChange={handleSwitchChange}
                 color={enabled ? 'success' : 'default'}
               />
             </Tooltip>
@@ -98,7 +120,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
           <Button
             size="sm"
             variant="light"
-            onPress={() => onEdit(rule.id)}
+            onPress={handleEdit}
             className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
             编辑
@@ -107,7 +129,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
             size="sm"
             color="danger"
             variant="light"
-            onPress={() => onDelete(rule.id)}
+            onPress={handleDelete}
             className="hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             删除
@@ -117,3 +139,28 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
     </Card>
   );
 };
+
+/**
+ * 优化的 RuleCard 组件，使用 React.memo 包裹
+ * 自定义比较函数确保只有在必要时才重新渲染
+ */
+export const RuleCard = React.memo(RuleCardComponent, (prevProps, nextProps) => {
+  // 比较 rule 对象引用
+  if (prevProps.rule !== nextProps.rule) {
+    return false; // 需要重新渲染
+  }
+
+  // 比较回调函数引用（通常这些应该是稳定的）
+  if (prevProps.onEdit !== nextProps.onEdit) {
+    return false;
+  }
+  if (prevProps.onDelete !== nextProps.onDelete) {
+    return false;
+  }
+  if (prevProps.onToggle !== nextProps.onToggle) {
+    return false;
+  }
+
+  // 所有引用都相同，不需要重新渲染
+  return true;
+});

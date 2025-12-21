@@ -5,7 +5,6 @@ import { createApiServer } from './promptxy/api-server.js';
 import { createLogger } from './promptxy/logger.js';
 import { setInterval } from 'node:timers';
 import { mkdir } from 'node:fs/promises';
-import * as path from 'node:path';
 
 async function startAutoCleanup(intervalHours: number, maxHistory: number): Promise<void> {
   const { cleanupOldRequests } = await import('./promptxy/database.js');
@@ -50,7 +49,7 @@ async function main() {
   const db = await initializeDatabase();
 
   // 创建主代理服务器（端口 7070）
-  const gatewayServer = createGateway(config, db);
+  const gatewayServer = createGateway(config);
 
   // 创建 API 服务器（端口 7071）
   // 注意：需要传递 config.rules 的引用，以便 API 可以更新它

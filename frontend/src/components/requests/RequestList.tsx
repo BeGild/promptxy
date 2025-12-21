@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   Table,
   TableHeader,
@@ -18,6 +18,7 @@ import {
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
 import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from '@/utils';
+import { RequestListVirtual } from './RequestListVirtual';
 
 interface RequestListProps {
   requests: RequestListItem[];
@@ -30,9 +31,15 @@ interface RequestListProps {
   onRowClick: (id: string) => void;
   onRefresh: () => void;
   onDelete: (id: string) => void;
+  enableVirtualScroll?: boolean;
 }
 
-export const RequestList: React.FC<RequestListProps> = ({
+/**
+ * RequestList - 优化的请求列表组件
+ * 使用 React.memo 避免不必要的重新渲染
+ * 使用 useMemo 和 useCallback 优化计算和事件处理
+ */
+const RequestListComponent: React.FC<RequestListProps> = ({
   requests,
   filters,
   onFiltersChange,
@@ -43,31 +50,88 @@ export const RequestList: React.FC<RequestListProps> = ({
   onRowClick,
   onRefresh,
   onDelete,
+  enableVirtualScroll = false,
 }) => {
-  const totalPages = Math.ceil(total / 50);
+  // 使用 useMemo 优化分页计算
+  const totalPages = useMemo(() => {
+    return Math.ceil(total / 50);
+  }, [total]);
 
-  // 处理搜索变化
-  const handleSearchChange = (value: string) => {
-    onFiltersChange({ ...filters, search: value });
-  };
+  // 使用 useCallback 优化事件处理函数
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      onFiltersChange({ ...filters, search: value });
+    },
+    [filters, onFiltersChange],
+  );
 
   // 处理客户端筛选变化
-  const handleClientChange = (value: string) => {
-    const newFilters = { ...filters };
-    if (value === 'all') {
-      delete newFilters.client;
-    } else {
-      newFilters.client = value;
-    }
-    onFiltersChange(newFilters);
-  };
+  const handleClientChange = useCallback(
+    (value: string) => {
+      const newFilters = { ...filters };
+      if (value === 'all') {
+        delete newFilters.client;
+      } else {
+        newFilters.client = value;
+      }
+      onFiltersChange(newFilters);
+    },
+    [filters, onFiltersChange],
+  );
 
   // 清除搜索
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     const newFilters = { ...filters };
     delete newFilters.search;
     onFiltersChange(newFilters);
-  };
+  }, [filters, onFiltersChange]);
+
+  // 优化的行点击处理
+  const handleRowClick = useCallback(
+    (key: React.Key) => {
+      onRowClick(key as string);
+    },
+    [onRowClick],
+  );
+
+  // 优化的删除处理
+  const handleDelete = useCallback(
+    (id: string) => {
+      onDelete(id);
+    },
+    [onDelete],
+  );
+
+  // 优化的刷新处理
+  const handleRefresh = useCallback(() => {
+    onRefresh();
+  }, [onRefresh]);
+
+  // 使用 useMemo 优化统计信息的计算
+  const statsDisplay = useMemo(() => {
+    return {
+      showing: requests.length,
+      total: total,
+    };
+  }, [requests.length, total]);
+
+  // 如果启用虚拟滚动，使用虚拟滚动组件
+  if (enableVirtualScroll) {
+    return (
+      <RequestListVirtual
+        requests={requests}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        isLoading={isLoading}
+        total={total}
+        page={page}
+        onPageChange={onPageChange}
+        onRowClick={onRowClick}
+        onRefresh={onRefresh}
+        onDelete={onDelete}
+      />
+    );
+  }
 
   if (isLoading && requests.length === 0) {
     return (
@@ -83,7 +147,7 @@ export const RequestList: React.FC<RequestListProps> = ({
         title="暂无请求"
         description="启动代理后，经过代理的请求将显示在这里"
         actionText="刷新"
-        onAction={onRefresh}
+        onAction={handleRefresh}
       />
     );
   }
@@ -122,7 +186,7 @@ export const RequestList: React.FC<RequestListProps> = ({
 
         <Button
           color="primary"
-          onPress={onRefresh}
+          onPress={handleRefresh}
           className="shadow-md hover:shadow-lg transition-shadow"
           radius="lg"
         >
@@ -134,7 +198,7 @@ export const RequestList: React.FC<RequestListProps> = ({
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <span>显示结果:</span>
         <Chip color="secondary" variant="flat" size="sm">
-          {requests.length} / {total} 条
+          {statsDisplay.showing} / {statsDisplay.total} 条
         </Chip>
         {filters.search && (
           <Button size="sm" variant="light" onPress={clearSearch} className="h-6 px-2">
@@ -147,7 +211,7 @@ export const RequestList: React.FC<RequestListProps> = ({
       <Table
         aria-label="请求历史表"
         selectionMode="single"
-        onRowAction={key => onRowClick(key as string)}
+        onRowAction={handleRowClick}
         classNames={{
           wrapper: 'shadow-md rounded-xl border border-gray-200 dark:border-gray-700',
           th: 'bg-gray-50 dark:bg-gray-800 text-sm font-semibold',
@@ -229,7 +293,7 @@ export const RequestList: React.FC<RequestListProps> = ({
                   <Button
                     size="sm"
                     variant="light"
-                    onPress={() => onRowClick(item.id)}
+                    onPress={() => handleRowClick(item.id)}
                     className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                   >
                     查看
@@ -238,7 +302,7 @@ export const RequestList: React.FC<RequestListProps> = ({
                     size="sm"
                     color="danger"
                     variant="light"
-                    onPress={() => onDelete(item.id)}
+                    onPress={() => handleDelete(item.id)}
                     className="hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     删除
@@ -270,3 +334,9 @@ export const RequestList: React.FC<RequestListProps> = ({
     </div>
   );
 };
+
+/**
+ * 优化的 RequestList 组件，使用 React.memo 包裹
+ * 避免当父组件重新渲染但 props 未变化时的不必要渲染
+ */
+export const RequestList = React.memo(RequestListComponent);

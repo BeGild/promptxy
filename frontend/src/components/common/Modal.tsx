@@ -5,7 +5,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Button,
 } from '@heroui/react';
 
 interface ModalProps {
@@ -37,7 +36,7 @@ export const Modal: React.FC<ModalProps> = ({
       scrollBehavior="outside"
     >
       <ModalContent>
-        {onCloseModal => (
+        {() => (
           <>
             <ModalHeader>{title}</ModalHeader>
             <ModalBody>{children}</ModalBody>

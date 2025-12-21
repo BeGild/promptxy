@@ -1,0 +1,75 @@
+{
+  "backend": {
+    "throughput": [
+      {
+        "concurrency": 100,
+        "requestsPerConnection": 100,
+        "totalRequests": 10000,
+        "successful": 0,
+        "failed": 10000,
+        "successRate": 0,
+        "rps": 2082.0320632937746,
+        "latency": {
+          "min": 7.217446999999993,
+          "max": 299.146425,
+          "avg": 45.52111412689991,
+          "p95": 86.53292299999998,
+          "p99": 178.17717499999992
+        },
+        "totalDuration": 4803
+      }
+    ],
+    "rules": {
+      "single": {
+        "label": "单条规则",
+        "iterations": 1000,
+        "latency": {
+          "min": 0.00044100000013713725,
+          "max": 0.48829399999976886,
+          "avg": 0.001500736000026336,
+          "p50": 0.000940999999329506,
+          "p95": 0.0011519999998199637,
+          "p99": 0.002585000000181026
+        },
+        "throughput": 666339.715967666
+      },
+      "multiple": {
+        "label": "3条规则",
+        "iterations": 1000,
+        "latency": {
+          "min": 0.0008010000001377193,
+          "max": 0.16543599999931757,
+          "avg": 0.0013906220000162648,
+          "p50": 0.0011320000003252062,
+          "p95": 0.0015229999999064603,
+          "p99": 0.0024839999996402184
+        },
+        "throughput": 719102.6749097195
+      }
+    },
+    "database": {
+      "singleWrite": {
+        "label": "单条写入",
+        "iterations": 20,
+        "latency": {
+          "min": 31.43848600000001,
+          "max": 323.93827299999975,
+          "avg": 76.68239669999994,
+          "p95": 323.93827299999975,
+          "p99": 323.93827299999975
+        },
+        "databaseInfo": {
+          "path": "/home/ekko.bao/.local/promptxy/promptxy.db",
+          "size": 2998272,
+          "recordCount": 151
+        }
+      }
+    }
+  },
+  "frontend": {
+    "error": "TypeError: items.map is not a function"
+  },
+  "e2e": {
+    "error": "Error: connect ECONNREFUSED 127.0.0.1:7070"
+  }
+}

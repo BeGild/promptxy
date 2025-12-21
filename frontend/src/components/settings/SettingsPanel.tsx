@@ -11,7 +11,7 @@ import { useCleanupRequests, useStats } from '@/hooks/useRequests';
 import { formatBytes } from '@/utils';
 
 export const SettingsPanel: React.FC = () => {
-  const { config, isLoading: configLoading } = useConfig();
+  const { isLoading: configLoading } = useConfig();
   const { stats, isLoading: statsLoading } = useStats();
   const exportMutation = useExportConfig();
   const importMutation = useImportConfig();

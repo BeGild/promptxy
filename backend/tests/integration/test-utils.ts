@@ -119,7 +119,7 @@ export async function startTestServers(
   db: Database,
 ): Promise<TestServerContainer> {
   // 创建网关服务器
-  const gatewayServer = createGateway(config, db);
+  const gatewayServer = createGateway(config);
 
   // 创建 API 服务器
   const apiServer = createApiServer(db, config, config.rules);

@@ -1,0 +1,5 @@
+{
+  "backend": {
+    "error": "ReferenceError: require is not defined in ES module scope, you can use import instead"
+  }
+}

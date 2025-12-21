@@ -57,7 +57,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, a
         <NavbarItem>
           <StatusIndicator
             connected={apiConnected}
-            lastEvent={null}
             error={!apiConnected ? 'API未连接' : null}
             showText={false}
           />
@@ -65,7 +64,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, a
         <NavbarItem>
           <StatusIndicator
             connected={sseConnected}
-            lastEvent={null}
             error={!sseConnected ? 'SSE未连接' : null}
             showText={false}
           />

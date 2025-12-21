@@ -1,0 +1,12 @@
+{
+  "backend": {
+    "error": "ReferenceError: require is not defined in ES module scope, you can use import instead"
+  },
+  "frontend": {
+    "error": "ReferenceError: require is not defined in ES module scope, you can use import instead"
+  },
+  "e2e": {
+    "error": "Error: connect ECONNREFUSED 127.0.0.1:7070"
+  },
+  "comprehensive": "# PromptXY v2.0 完整性能基准测试报告\n\n**测试时间**: 2025/12/21 16:02:53\n**环境**: linux v24.11.1\n**Node内存**: 11.90MB\n\n## 📊 总体评分\n\n- **后端综合**: 0/100\n- **前端综合**: 0/100\n- **端到端**: 0/100\n- **整体性能**: 0/100\n\n## 🎯 关键性能指标\n\n\n## 🔍 瓶颈分析\n\n## 💡 优化建议\n\n### 🚀 立即实施\n- 性能表现良好，继续保持\n\n### 🎯 长期优化\n- 引入Redis缓存层\n- 实现水平扩展架构\n- 建立完整监控告警体系\n\n## 📋 测试详情\n\n后端测试: ❌ 失败\n前端测试: ❌ 失败\n端到端测试: ❌ 失败\n"
+}

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { exportConfig, importConfig, downloadConfig, uploadConfig } from '@/api/config';
-import { PromptxyRule } from '@/types';
 
 /**
  * 导出配置的 Hook

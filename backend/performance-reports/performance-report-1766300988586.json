@@ -1,0 +1,86 @@
+{
+  "timestamp": "2025-12-21T07:08:28.517Z",
+  "tests": {
+    "connectivity": {
+      "gateway": true,
+      "api": true,
+      "gatewayResponse": {
+        "status": "ok"
+      },
+      "apiResponse": {
+        "status": "ok",
+        "service": "promptxy-api",
+        "timestamp": 1766300908530
+      }
+    },
+    "concurrent_100并发": {
+      "connections": 100,
+      "requests": 500,
+      "successful": 0,
+      "failed": 0,
+      "duration": "11835.31ms",
+      "rps": "0.00",
+      "avgLatency": "0.00ms"
+    },
+    "concurrent_500并发": {
+      "connections": 500,
+      "requests": 500,
+      "successful": 0,
+      "failed": 0,
+      "duration": "16972.67ms",
+      "rps": "0.00",
+      "avgLatency": "0.00ms"
+    },
+    "concurrent_1000并发": {
+      "connections": 1000,
+      "requests": 500,
+      "successful": 500,
+      "failed": 0,
+      "duration": "14700.73ms",
+      "rps": "34.01",
+      "avgLatency": "0.00ms"
+    },
+    "rule_engine_简单替换": {
+      "iterations": 100,
+      "avgLatency": "0.77ms",
+      "maxLatency": "4.54ms",
+      "throughput": "129355 req/s"
+    },
+    "rule_engine_复杂文本": {
+      "iterations": 100,
+      "avgLatency": "0.57ms",
+      "maxLatency": "1.47ms",
+      "throughput": "176567 req/s"
+    },
+    "database_write": {
+      "iterations": 100,
+      "successful": 100,
+      "avgLatency": "26.15ms",
+      "totalRecords": 3253,
+      "dbSize": "2924.00 KB"
+    },
+    "sse_stability": {
+      "connections": 10,
+      "active": 10,
+      "events": 32,
+      "errors": 0,
+      "stabilityRate": "100.0%"
+    },
+    "memory": {
+      "duration": "30s",
+      "samples": 30,
+      "max": "84.57 MB",
+      "avg": "84.57 MB",
+      "trend": "0.00 MB",
+      "leakRisk": "低"
+    }
+  },
+  "summary": {},
+  "recommendations": [
+    {
+      "priority": "中",
+      "issue": "数据库写入延迟: 26.15ms",
+      "suggestion": "考虑批量写入或异步队列"
+    }
+  ]
+}

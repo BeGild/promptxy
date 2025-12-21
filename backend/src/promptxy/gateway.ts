@@ -1,6 +1,5 @@
 import * as http from 'node:http';
 import { Readable } from 'node:stream';
-import { Database } from 'sqlite';
 import { mutateClaudeBody } from './adapters/claude.js';
 import { mutateCodexBody } from './adapters/codex.js';
 import { mutateGeminiBody } from './adapters/gemini.js';
@@ -63,7 +62,7 @@ function generateRequestId(): string {
   return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export function createGateway(config: PromptxyConfig, db: Database): http.Server {
+export function createGateway(config: PromptxyConfig): http.Server {
   const logger = createLogger({ debug: config.debug });
 
   return http.createServer(async (req, res) => {

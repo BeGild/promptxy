@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardBody, CardHeader, Button } from '@heroui/react';
 import { generateJSONDiff, highlightDiff } from '@/utils';
 
@@ -7,17 +7,42 @@ interface DiffViewerProps {
   modified: any;
 }
 
-export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) => {
+/**
+ * DiffViewer - 优化的差异查看器组件
+ * 使用 React.memo 避免不必要的重新渲染
+ * 使用 useMemo 优化计算密集型操作
+ */
+const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) => {
   const [viewMode, setViewMode] = useState<'side-by-side' | 'json'>('side-by-side');
 
-  const diff = generateJSONDiff(original, modified);
-  const { left, right } = highlightDiff(diff);
+  // 使用 useMemo 优化差异计算，只有当 original 或 modified 变化时才重新计算
+  const diff = useMemo(() => {
+    return generateJSONDiff(original, modified);
+  }, [original, modified]);
 
-  const originalStr = JSON.stringify(original, null, 2);
-  const modifiedStr = JSON.stringify(modified, null, 2);
+  // 使用 useMemo 优化高亮处理
+  const { left, right } = useMemo(() => {
+    return highlightDiff(diff);
+  }, [diff]);
 
-  // 检查是否有差异
-  const hasChanges = diff.some(d => d.type !== 'same');
+  // 使用 useMemo 优化 JSON 字符串化
+  const originalStr = useMemo(() => {
+    return JSON.stringify(original, null, 2);
+  }, [original]);
+
+  const modifiedStr = useMemo(() => {
+    return JSON.stringify(modified, null, 2);
+  }, [modified]);
+
+  // 使用 useMemo 优化差异检查
+  const hasChanges = useMemo(() => {
+    return diff.some(d => d.type !== 'same');
+  }, [diff]);
+
+  // 使用 useCallback 优化视图模式切换
+  const toggleViewMode = useCallback((mode: 'side-by-side' | 'json') => {
+    setViewMode(mode);
+  }, []);
 
   if (!hasChanges) {
     return (
@@ -37,7 +62,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
           <Button
             size="sm"
             variant={viewMode === 'side-by-side' ? 'flat' : 'light'}
-            onPress={() => setViewMode('side-by-side')}
+            onPress={() => toggleViewMode('side-by-side')}
             radius="lg"
             color={viewMode === 'side-by-side' ? 'primary' : 'default'}
           >
@@ -46,7 +71,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
           <Button
             size="sm"
             variant={viewMode === 'json' ? 'flat' : 'light'}
-            onPress={() => setViewMode('json')}
+            onPress={() => toggleViewMode('json')}
             radius="lg"
             color={viewMode === 'json' ? 'primary' : 'default'}
           >
@@ -131,3 +156,22 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified }) =>
     </div>
   );
 };
+
+/**
+ * 优化的 DiffViewer 组件，使用 React.memo 包裹
+ * 自定义比较函数确保只有在数据真正变化时才重新渲染
+ */
+export const DiffViewer = React.memo(DiffViewerComponent, (prevProps, nextProps) => {
+  // 深度比较原始数据
+  if (prevProps.original !== nextProps.original) {
+    return false;
+  }
+
+  // 深度比较修改数据
+  if (prevProps.modified !== nextProps.modified) {
+    return false;
+  }
+
+  // 所有数据相同，不需要重新渲染
+  return true;
+});

@@ -12,13 +12,9 @@ import {
   CleanupResponse,
   SSERequestEvent,
   RequestRecordResponse,
-  RequestListResponse,
   RuleValidationResult,
-  RuleOperationRequest,
-  RuleOperationResponse,
 } from './types.js';
 import {
-  insertRequestRecord,
   getRequestList,
   getRequestDetail,
   cleanupOldRequests,
@@ -632,7 +628,7 @@ async function serveStaticFile(
     });
     res.end(content);
     return true;
-  } catch (error) {
+  } catch {
     // 文件不存在或其他错误，返回 false 让其他路由处理
     return false;
   }

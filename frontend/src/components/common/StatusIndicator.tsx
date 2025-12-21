@@ -3,14 +3,12 @@ import { Chip } from '@heroui/react';
 
 interface StatusIndicatorProps {
   connected: boolean;
-  lastEvent: number | null;
   error?: string | null;
   showText?: boolean;
 }
 
 export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   connected,
-  lastEvent,
   error,
   showText = true,
 }) => {
