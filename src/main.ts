@@ -1,5 +1,5 @@
-import { loadConfig } from "./promptxy/config.js";
-import { createGateway } from "./promptxy/gateway.js";
+import { loadConfig } from './promptxy/config.js';
+import { createGateway } from './promptxy/gateway.js';
 
 async function main() {
   const config = await loadConfig();
@@ -16,9 +16,8 @@ async function main() {
     server.close(() => process.exit(0));
   };
 
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 void main();
-

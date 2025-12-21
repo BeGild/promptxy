@@ -1,4 +1,4 @@
-import { PromptxyRule, PromptxyOp } from "@/types";
+import { PromptxyRule, PromptxyOp } from '@/types';
 
 interface RuleValidationResult {
   valid: boolean;
@@ -14,37 +14,37 @@ export function validateRule(rule: PromptxyRule): RuleValidationResult {
   const warnings: string[] = [];
 
   // 基本字段验证
-  if (!rule.id || typeof rule.id !== "string") {
-    errors.push("规则ID是必需的");
+  if (!rule.id || typeof rule.id !== 'string') {
+    errors.push('规则ID是必需的');
   }
 
   if (!rule.when) {
-    errors.push("when 条件是必需的");
+    errors.push('when 条件是必需的');
   } else {
     if (!rule.when.client) {
-      errors.push("客户端类型是必需的");
+      errors.push('客户端类型是必需的');
     }
     if (!rule.when.field) {
-      errors.push("字段类型是必需的");
+      errors.push('字段类型是必需的');
     }
   }
 
   if (!rule.ops || !Array.isArray(rule.ops) || rule.ops.length === 0) {
-    errors.push("操作序列不能为空");
+    errors.push('操作序列不能为空');
   } else {
     // 验证每个操作
     for (let i = 0; i < rule.ops.length; i++) {
       const op = rule.ops[i];
       const opErrors = validateOp(op);
       if (opErrors.length > 0) {
-        errors.push(`操作 ${i + 1}: ${opErrors.join(", ")}`);
+        errors.push(`操作 ${i + 1}: ${opErrors.join(', ')}`);
       }
     }
   }
 
   // 警告
   if (rule.enabled === undefined) {
-    warnings.push("未指定启用状态，默认启用");
+    warnings.push('未指定启用状态，默认启用');
   }
 
   return {
@@ -60,46 +60,46 @@ export function validateRule(rule: PromptxyRule): RuleValidationResult {
 function validateOp(op: PromptxyOp): string[] {
   const errors: string[] = [];
 
-  if (!op || typeof op !== "object") {
-    return ["操作格式无效"];
+  if (!op || typeof op !== 'object') {
+    return ['操作格式无效'];
   }
 
   const type = (op as any).type;
   if (!type) {
-    return ["缺少操作类型"];
+    return ['缺少操作类型'];
   }
 
   switch (type) {
-    case "set":
-    case "append":
-    case "prepend":
-      if (!("text" in op) || typeof op.text !== "string") {
-        errors.push("需要 text 字段");
+    case 'set':
+    case 'append':
+    case 'prepend':
+      if (!('text' in op) || typeof op.text !== 'string') {
+        errors.push('需要 text 字段');
       }
       break;
 
-    case "replace":
-      if (!("match" in op || "regex" in op)) {
-        errors.push("需要 match 或 regex");
+    case 'replace':
+      if (!('match' in op || 'regex' in op)) {
+        errors.push('需要 match 或 regex');
       }
-      if (!("replacement" in op)) {
-        errors.push("需要 replacement");
-      }
-      break;
-
-    case "delete":
-      if (!("match" in op || "regex" in op)) {
-        errors.push("需要 match 或 regex");
+      if (!('replacement' in op)) {
+        errors.push('需要 replacement');
       }
       break;
 
-    case "insert_before":
-    case "insert_after":
-      if (!("regex" in op) || typeof (op as any).regex !== "string") {
-        errors.push("需要 regex");
+    case 'delete':
+      if (!('match' in op || 'regex' in op)) {
+        errors.push('需要 match 或 regex');
       }
-      if (!("text" in op) || typeof (op as any).text !== "string") {
-        errors.push("需要 text");
+      break;
+
+    case 'insert_before':
+    case 'insert_after':
+      if (!('regex' in op) || typeof (op as any).regex !== 'string') {
+        errors.push('需要 regex');
+      }
+      if (!('text' in op) || typeof (op as any).text !== 'string') {
+        errors.push('需要 text');
       }
       break;
 
@@ -108,7 +108,7 @@ function validateOp(op: PromptxyOp): string[] {
   }
 
   // 验证正则语法
-  if ("regex" in op && op.regex) {
+  if ('regex' in op && op.regex) {
     try {
       new RegExp(op.regex, (op as any).flags);
     } catch (e: any) {
@@ -162,12 +162,12 @@ export function checkRuleConflicts(rules: PromptxyRule[], newRule: PromptxyRule)
 export function createDefaultRule(): PromptxyRule {
   return {
     id: `rule-${Date.now()}`,
-    description: "",
+    description: '',
     when: {
-      client: "claude",
-      field: "system",
+      client: 'claude',
+      field: 'system',
     },
-    ops: [{ type: "append", text: "\n\n" }],
+    ops: [{ type: 'append', text: '\n\n' }],
     enabled: true,
   };
 }

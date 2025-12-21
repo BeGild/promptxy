@@ -1,11 +1,11 @@
-import { apiClient } from "./client";
-import { PromptxyRule, ConfigSyncResponse, RuleOperationResponse } from "@/types";
+import { apiClient } from './client';
+import { PromptxyRule, ConfigSyncResponse, RuleOperationResponse } from '@/types';
 
 /**
  * 获取所有规则
  */
 export async function getRules(): Promise<PromptxyRule[]> {
-  const response = await apiClient.get("/_promptxy/config");
+  const response = await apiClient.get('/_promptxy/config');
   return response.data.rules || [];
 }
 
@@ -13,7 +13,7 @@ export async function getRules(): Promise<PromptxyRule[]> {
  * 同步规则（保存）- 保留用于批量导入/导出场景
  */
 export async function syncRules(rules: PromptxyRule[]): Promise<ConfigSyncResponse> {
-  const response = await apiClient.post("/_promptxy/config/sync", { rules });
+  const response = await apiClient.post('/_promptxy/config/sync', { rules });
   return response.data;
 }
 
@@ -21,7 +21,7 @@ export async function syncRules(rules: PromptxyRule[]): Promise<ConfigSyncRespon
  * 创建规则 - 增量API
  */
 export async function createRule(rule: PromptxyRule): Promise<RuleOperationResponse> {
-  const response = await apiClient.post("/_promptxy/rules", { rule });
+  const response = await apiClient.post('/_promptxy/rules', { rule });
   return response.data;
 }
 
@@ -51,8 +51,15 @@ export async function batchUpdateRules(rules: PromptxyRule[]): Promise<ConfigSyn
 /**
  * 预览规则效果
  */
-export async function previewRule(body: any, client: string, field: string, model?: string, path?: string, method?: string) {
-  const response = await apiClient.post("/_promptxy/preview", {
+export async function previewRule(
+  body: any,
+  client: string,
+  field: string,
+  model?: string,
+  path?: string,
+  method?: string,
+) {
+  const response = await apiClient.post('/_promptxy/preview', {
     body,
     client,
     field,

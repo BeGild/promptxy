@@ -1,16 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAppStore } from "@/store";
-import { getRules, syncRules, createRule, updateRule, deleteRule, batchUpdateRules, previewRule } from "@/api/rules";
-import { PromptxyRule, PreviewRequest } from "@/types";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAppStore } from '@/store';
+import {
+  getRules,
+  syncRules,
+  createRule,
+  updateRule,
+  deleteRule,
+  batchUpdateRules,
+  previewRule,
+} from '@/api/rules';
+import { PromptxyRule, PreviewRequest } from '@/types';
 
 /**
  * 获取所有规则的 Hook
  */
 export function useRules() {
-  const loading = useAppStore((state) => state.loading.rules);
+  const loading = useAppStore(state => state.loading.rules);
 
   const query = useQuery({
-    queryKey: ["rules"],
+    queryKey: ['rules'],
     queryFn: async () => {
       const rules = await getRules();
       return rules;
@@ -32,14 +40,14 @@ export function useRules() {
  */
 export function useSaveRules() {
   const queryClient = useQueryClient();
-  const saveRules = useAppStore((state) => state.saveRules);
+  const saveRules = useAppStore(state => state.saveRules);
 
   return useMutation({
     mutationFn: async (rules: PromptxyRule[]) => {
       return await saveRules(rules);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -55,7 +63,7 @@ export function useCreateRule() {
       return await createRule(rule);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -71,7 +79,7 @@ export function useUpdateRule() {
       return await updateRule(rule);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -87,7 +95,7 @@ export function useDeleteRule() {
       return await deleteRule(ruleId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -103,7 +111,7 @@ export function useBatchUpdateRules() {
       return await batchUpdateRules(rules);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -120,7 +128,7 @@ export function usePreviewRule() {
         request.field,
         request.model,
         request.path,
-        request.method
+        request.method,
       );
     },
   });
@@ -132,7 +140,7 @@ export function usePreviewRule() {
 export function useRule(ruleId: string | null) {
   const { rules, isLoading } = useRules();
 
-  const rule = rules.find((r) => r.id === ruleId) || null;
+  const rule = rules.find(r => r.id === ruleId) || null;
 
   return {
     rule,
@@ -151,7 +159,7 @@ export function useCreateRuleIncremental() {
       return await createRule(rule);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -167,7 +175,7 @@ export function useUpdateRuleIncremental() {
       return await updateRule(rule);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }
@@ -183,7 +191,7 @@ export function useDeleteRuleIncremental() {
       return await deleteRule(ruleId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
     },
   });
 }

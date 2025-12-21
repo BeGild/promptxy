@@ -1,5 +1,7 @@
-import http from "node:http";
-import { Database } from "sqlite";
+import * as http from 'node:http';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { Database } from 'sqlite';
 import {
   PromptxyConfig,
   PromptxyRule,
@@ -14,7 +16,7 @@ import {
   RuleValidationResult,
   RuleOperationRequest,
   RuleOperationResponse,
-} from "./types.js";
+} from './types.js';
 import {
   insertRequestRecord,
   getRequestList,
@@ -23,10 +25,10 @@ import {
   deleteRequest,
   getDatabaseInfo,
   getRequestStats,
-} from "./database.js";
-import { saveConfig, loadConfig } from "./config.js";
-import { applyPromptRules } from "./rules/engine.js";
-import { readRequestBody } from "./http.js";
+} from './database.js';
+import { saveConfig, loadConfig } from './config.js';
+import { applyPromptRules } from './rules/engine.js';
+import { readRequestBody } from './http.js';
 
 // SSE 连接管理
 const sseConnections = new Set<http.ServerResponse>();
@@ -36,17 +38,17 @@ const sseConnections = new Set<http.ServerResponse>();
  */
 function handleSSE(req: http.IncomingMessage, res: http.ServerResponse): void {
   res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
   });
 
   // 发送连接确认
-  res.write("event: connected\ndata: {\"status\": \"ok\"}\n\n");
+  res.write('event: connected\ndata: {"status": "ok"}\n\n');
 
   sseConnections.add(res);
 
-  req.on("close", () => {
+  req.on('close', () => {
     sseConnections.delete(res);
   });
 }
@@ -71,8 +73,8 @@ export function broadcastRequest(data: SSERequestEvent): void {
 function sendJson(res: http.ServerResponse, status: number, data: any): void {
   const body = JSON.stringify(data);
   res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Content-Length": Buffer.byteLength(body),
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(body),
   });
   res.end(body);
 }
@@ -83,15 +85,15 @@ function sendJson(res: http.ServerResponse, status: number, data: any): void {
 async function handleGetRequests(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  url: URL
+  url: URL,
 ): Promise<void> {
   try {
-    const limit = Number(url.searchParams.get("limit")) || 50;
-    const offset = Number(url.searchParams.get("offset")) || 0;
-    const client = url.searchParams.get("client") || undefined;
-    const startTime = url.searchParams.get("startTime");
-    const endTime = url.searchParams.get("endTime");
-    const search = url.searchParams.get("search") || undefined;
+    const limit = Number(url.searchParams.get('limit')) || 50;
+    const offset = Number(url.searchParams.get('offset')) || 0;
+    const client = url.searchParams.get('client') || undefined;
+    const startTime = url.searchParams.get('startTime');
+    const endTime = url.searchParams.get('endTime');
+    const search = url.searchParams.get('search') || undefined;
 
     const result = await getRequestList({
       limit,
@@ -104,7 +106,7 @@ async function handleGetRequests(
 
     sendJson(res, 200, result);
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to get request list", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to get request list', message: error?.message });
   }
 }
 
@@ -114,13 +116,13 @@ async function handleGetRequests(
 async function handleGetRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  id: string
+  id: string,
 ): Promise<void> {
   try {
     const record = await getRequestDetail(id);
 
     if (!record) {
-      sendJson(res, 404, { error: "Request not found" });
+      sendJson(res, 404, { error: 'Request not found' });
       return;
     }
 
@@ -142,7 +144,7 @@ async function handleGetRequest(
 
     sendJson(res, 200, response);
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to get request detail", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to get request detail', message: error?.message });
   }
 }
 
@@ -152,7 +154,7 @@ async function handleGetRequest(
 function handleGetConfig(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  config: PromptxyConfig
+  config: PromptxyConfig,
 ): void {
   sendJson(res, 200, config);
 }
@@ -165,25 +167,25 @@ function validateRules(rules: PromptxyRule[]): RuleValidationResult {
   const warnings: string[] = [];
 
   if (!Array.isArray(rules)) {
-    return { valid: false, errors: ["Rules must be an array"], warnings: [] };
+    return { valid: false, errors: ['Rules must be an array'], warnings: [] };
   }
 
   for (const rule of rules) {
-    if (!rule.id || typeof rule.id !== "string") {
+    if (!rule.id || typeof rule.id !== 'string') {
       errors.push(`Rule missing or invalid id`);
       continue;
     }
 
-    if (!rule.when || typeof rule.when !== "object") {
+    if (!rule.when || typeof rule.when !== 'object') {
       errors.push(`Rule ${rule.id}: missing 'when' object`);
       continue;
     }
 
-    if (!rule.when.client || typeof rule.when.client !== "string") {
+    if (!rule.when.client || typeof rule.when.client !== 'string') {
       errors.push(`Rule ${rule.id}: invalid client`);
     }
 
-    if (!rule.when.field || typeof rule.when.field !== "string") {
+    if (!rule.when.field || typeof rule.when.field !== 'string') {
       errors.push(`Rule ${rule.id}: invalid field`);
     }
 
@@ -193,14 +195,14 @@ function validateRules(rules: PromptxyRule[]): RuleValidationResult {
     }
 
     for (const op of rule.ops) {
-      if (!op || typeof op !== "object" || typeof (op as any).type !== "string") {
+      if (!op || typeof op !== 'object' || typeof (op as any).type !== 'string') {
         errors.push(`Rule ${rule.id}: invalid op`);
         continue;
       }
 
       // 验证正则语法
       const opType = (op as any).type;
-      if (["replace", "delete", "insert_before", "insert_after"].includes(opType)) {
+      if (['replace', 'delete', 'insert_before', 'insert_after'].includes(opType)) {
         if ((op as any).regex) {
           try {
             new RegExp((op as any).regex, (op as any).flags);
@@ -231,7 +233,7 @@ async function handleConfigSync(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
-  currentRules: PromptxyRule[]
+  currentRules: PromptxyRule[],
 ): Promise<void> {
   try {
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 * 1024 });
@@ -241,7 +243,7 @@ async function handleConfigSync(
     const validation = validateRules(syncRequest.rules);
     if (!validation.valid) {
       sendJson(res, 400, {
-        error: "Validation failed",
+        error: 'Validation failed',
         errors: validation.errors,
         warnings: validation.warnings,
       });
@@ -262,13 +264,13 @@ async function handleConfigSync(
 
     sendJson(res, 200, {
       success: true,
-      message: "配置已更新并生效",
+      message: '配置已更新并生效',
       appliedRules: syncRequest.rules.length,
       warnings: validation.warnings,
     } as ConfigSyncResponse);
   } catch (error: any) {
     sendJson(res, 500, {
-      error: "Failed to sync config",
+      error: 'Failed to sync config',
       message: error?.message,
     });
   }
@@ -280,34 +282,33 @@ async function handleConfigSync(
 function handlePreview(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  rules: PromptxyRule[]
+  rules: PromptxyRule[],
 ): void {
   readRequestBody(req, { maxBytes: 10 * 1024 * 1024 })
-    .then((body) => {
+    .then(body => {
       const previewRequest: PreviewRequest = JSON.parse(body.toString());
 
-      if (!previewRequest.body || typeof previewRequest.body !== "object") {
-        sendJson(res, 400, { error: "Invalid body" });
+      if (!previewRequest.body || typeof previewRequest.body !== 'object') {
+        sendJson(res, 400, { error: 'Invalid body' });
         return;
       }
 
       // 应用规则
       let text: string;
-      if (previewRequest.field === "system") {
-        text = typeof previewRequest.body.system === "string"
-          ? previewRequest.body.system
-          : "";
+      if (previewRequest.field === 'system') {
+        text = typeof previewRequest.body.system === 'string' ? previewRequest.body.system : '';
       } else {
-        text = typeof previewRequest.body.instructions === "string"
-          ? previewRequest.body.instructions
-          : "";
+        text =
+          typeof previewRequest.body.instructions === 'string'
+            ? previewRequest.body.instructions
+            : '';
       }
 
       const ctx = {
         client: previewRequest.client,
         field: previewRequest.field,
-        method: previewRequest.method || "POST",
-        path: previewRequest.path || "/",
+        method: previewRequest.method || 'POST',
+        path: previewRequest.path || '/',
         model: previewRequest.model,
       };
 
@@ -315,7 +316,7 @@ function handlePreview(
 
       // 构建修改后的请求体
       const modifiedBody = { ...previewRequest.body };
-      if (previewRequest.field === "system") {
+      if (previewRequest.field === 'system') {
         modifiedBody.system = result.text;
       } else {
         modifiedBody.instructions = result.text;
@@ -329,8 +330,8 @@ function handlePreview(
 
       sendJson(res, 200, response);
     })
-    .catch((error) => {
-      sendJson(res, 500, { error: "Preview failed", message: error?.message });
+    .catch(error => {
+      sendJson(res, 500, { error: 'Preview failed', message: error?.message });
     });
 }
 
@@ -340,10 +341,10 @@ function handlePreview(
 async function handleCleanup(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  url: URL
+  url: URL,
 ): Promise<void> {
   try {
-    const keep = Number(url.searchParams.get("keep")) || 100;
+    const keep = Number(url.searchParams.get('keep')) || 100;
     const deleted = await cleanupOldRequests(keep);
 
     const info = await getDatabaseInfo();
@@ -354,7 +355,7 @@ async function handleCleanup(
       success: true,
     } as CleanupResponse);
   } catch (error: any) {
-    sendJson(res, 500, { error: "Cleanup failed", message: error?.message });
+    sendJson(res, 500, { error: 'Cleanup failed', message: error?.message });
   }
 }
 
@@ -364,32 +365,29 @@ async function handleCleanup(
 async function handleDeleteRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  id: string
+  id: string,
 ): Promise<void> {
   try {
     const success = await deleteRequest(id);
 
     if (!success) {
-      sendJson(res, 404, { error: "Request not found" });
+      sendJson(res, 404, { error: 'Request not found' });
       return;
     }
 
-    sendJson(res, 200, { success: true, message: "Request deleted" });
+    sendJson(res, 200, { success: true, message: 'Request deleted' });
   } catch (error: any) {
-    sendJson(res, 500, { error: "Delete failed", message: error?.message });
+    sendJson(res, 500, { error: 'Delete failed', message: error?.message });
   }
 }
 
 /**
  * 处理健康检查
  */
-function handleHealth(
-  req: http.IncomingMessage,
-  res: http.ServerResponse
-): void {
+function handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void {
   sendJson(res, 200, {
-    status: "ok",
-    service: "promptxy-api",
+    status: 'ok',
+    service: 'promptxy-api',
     timestamp: Date.now(),
   });
 }
@@ -397,10 +395,7 @@ function handleHealth(
 /**
  * 处理统计信息
  */
-async function handleStats(
-  req: http.IncomingMessage,
-  res: http.ServerResponse
-): Promise<void> {
+async function handleStats(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   try {
     const stats = await getRequestStats();
     const dbInfo = await getDatabaseInfo();
@@ -410,7 +405,7 @@ async function handleStats(
       database: dbInfo,
     });
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to get stats", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to get stats', message: error?.message });
   }
 }
 
@@ -419,13 +414,13 @@ async function handleStats(
  */
 async function handleDatabaseInfo(
   req: http.IncomingMessage,
-  res: http.ServerResponse
+  res: http.ServerResponse,
 ): Promise<void> {
   try {
     const info = await getDatabaseInfo();
     sendJson(res, 200, info);
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to get database info", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to get database info', message: error?.message });
   }
 }
 
@@ -456,7 +451,7 @@ function validateRule(rule: any): { valid: boolean; errors?: string[]; warnings?
 async function handleCreateRule(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  currentRules: PromptxyRule[]
+  currentRules: PromptxyRule[],
 ): Promise<void> {
   try {
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 * 1024 });
@@ -465,7 +460,7 @@ async function handleCreateRule(
     // 验证规则
     const validation = validateRule(rule);
     if (!validation.valid) {
-      sendJson(res, 400, { error: "Validation failed", ...validation });
+      sendJson(res, 400, { error: 'Validation failed', ...validation });
       return;
     }
 
@@ -477,11 +472,11 @@ async function handleCreateRule(
 
     sendJson(res, 200, {
       success: true,
-      message: "规则已创建",
+      message: '规则已创建',
       rule,
     });
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to create rule", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to create rule', message: error?.message });
   }
 }
 
@@ -492,24 +487,24 @@ async function handleUpdateRule(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   currentRules: PromptxyRule[],
-  url: URL
+  url: URL,
 ): Promise<void> {
   try {
-    const ruleId = url.pathname.split("/").pop();
+    const ruleId = url.pathname.split('/').pop();
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 * 1024 });
     const { rule } = JSON.parse(body.toString());
 
     // 验证规则
     const validation = validateRule(rule);
     if (!validation.valid) {
-      sendJson(res, 400, { error: "Validation failed", ...validation });
+      sendJson(res, 400, { error: 'Validation failed', ...validation });
       return;
     }
 
     // 查找并更新
-    const index = currentRules.findIndex((r) => r.id === ruleId);
+    const index = currentRules.findIndex(r => r.id === ruleId);
     if (index === -1) {
-      sendJson(res, 404, { error: "Rule not found" });
+      sendJson(res, 404, { error: 'Rule not found' });
       return;
     }
 
@@ -518,11 +513,11 @@ async function handleUpdateRule(
 
     sendJson(res, 200, {
       success: true,
-      message: "规则已更新",
+      message: '规则已更新',
       rule,
     });
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to update rule", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to update rule', message: error?.message });
   }
 }
 
@@ -533,15 +528,15 @@ async function handleDeleteRule(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   currentRules: PromptxyRule[],
-  url: URL
+  url: URL,
 ): Promise<void> {
   try {
-    const ruleId = url.pathname.split("/").pop();
+    const ruleId = url.pathname.split('/').pop();
 
     // 查找并删除
-    const index = currentRules.findIndex((r) => r.id === ruleId);
+    const index = currentRules.findIndex(r => r.id === ruleId);
     if (index === -1) {
-      sendJson(res, 404, { error: "Rule not found" });
+      sendJson(res, 404, { error: 'Rule not found' });
       return;
     }
 
@@ -551,11 +546,95 @@ async function handleDeleteRule(
 
     sendJson(res, 200, {
       success: true,
-      message: "规则已删除",
+      message: '规则已删除',
       rule: deletedRule,
     });
   } catch (error: any) {
-    sendJson(res, 500, { error: "Failed to delete rule", message: error?.message });
+    sendJson(res, 500, { error: 'Failed to delete rule', message: error?.message });
+  }
+}
+
+/**
+ * 获取 MIME 类型
+ */
+function getMimeType(extname: string): string {
+  const mimeTypes: Record<string, string> = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.js.map': 'application/json',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.eot': 'application/vnd.ms-fontobject',
+  };
+  return mimeTypes[extname] || 'application/octet-stream';
+}
+
+/**
+ * 处理静态文件服务
+ */
+async function serveStaticFile(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): Promise<boolean> {
+  // 只处理 GET 请求
+  if (req.method !== 'GET') {
+    return false;
+  }
+
+  // 静态文件目录
+  const publicDir = path.join(process.cwd(), 'public');
+
+  // 如果 public 目录不存在，返回 false
+  if (!fs.existsSync(publicDir)) {
+    return false;
+  }
+
+  // 构建文件路径
+  let filePath: string;
+  if (url.pathname === '/') {
+    filePath = path.join(publicDir, 'index.html');
+  } else {
+    filePath = path.join(publicDir, url.pathname);
+  }
+
+  // 安全检查：防止目录遍历
+  if (!filePath.startsWith(publicDir)) {
+    sendJson(res, 403, { error: 'Forbidden' });
+    return true;
+  }
+
+  try {
+    // 检查文件是否存在
+    const stats = await fs.promises.stat(filePath);
+    if (!stats.isFile()) {
+      return false;
+    }
+
+    // 读取文件
+    const content = await fs.promises.readFile(filePath);
+    const extname = path.extname(filePath);
+    const mimeType = getMimeType(extname);
+
+    // 发送文件
+    res.writeHead(200, {
+      'Content-Type': mimeType,
+      'Content-Length': content.length,
+      'Cache-Control': 'public, max-age=3600', // 缓存 1 小时
+    });
+    res.end(content);
+    return true;
+  } catch (error) {
+    // 文件不存在或其他错误，返回 false 让其他路由处理
+    return false;
   }
 }
 
@@ -565,43 +644,52 @@ async function handleDeleteRule(
 export function createApiServer(
   db: Database,
   config: PromptxyConfig,
-  currentRules: PromptxyRule[]
+  currentRules: PromptxyRule[],
 ): http.Server {
   return http.createServer(async (req, res) => {
     try {
       if (!req.url || !req.method) {
-        sendJson(res, 400, { error: "Invalid request" });
+        sendJson(res, 400, { error: 'Invalid request' });
         return;
       }
 
-      const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
+      const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
       // CORS 支持
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-      if (req.method === "OPTIONS") {
+      if (req.method === 'OPTIONS') {
         res.writeHead(200);
         res.end();
         return;
       }
 
+      // 静态文件服务（优先级最高，除了 API 路由）
+      // 如果不是 API 路由，尝试提供静态文件
+      if (!url.pathname.startsWith('/_promptxy/')) {
+        const served = await serveStaticFile(req, res, url);
+        if (served) {
+          return;
+        }
+      }
+
       // SSE 端点
-      if (req.method === "GET" && url.pathname === "/_promptxy/events") {
+      if (req.method === 'GET' && url.pathname === '/_promptxy/events') {
         handleSSE(req, res);
         return;
       }
 
       // 请求历史列表
-      if (req.method === "GET" && url.pathname === "/_promptxy/requests") {
+      if (req.method === 'GET' && url.pathname === '/_promptxy/requests') {
         await handleGetRequests(req, res, url);
         return;
       }
 
       // 请求详情
-      if (req.method === "GET" && url.pathname.startsWith("/_promptxy/requests/")) {
-        const id = url.pathname.split("/").pop();
+      if (req.method === 'GET' && url.pathname.startsWith('/_promptxy/requests/')) {
+        const id = url.pathname.split('/').pop();
         if (id) {
           await handleGetRequest(req, res, id);
           return;
@@ -609,8 +697,8 @@ export function createApiServer(
       }
 
       // 删除请求
-      if (req.method === "DELETE" && url.pathname.startsWith("/_promptxy/requests/")) {
-        const id = url.pathname.split("/").pop();
+      if (req.method === 'DELETE' && url.pathname.startsWith('/_promptxy/requests/')) {
+        const id = url.pathname.split('/').pop();
         if (id) {
           await handleDeleteRequest(req, res, id);
           return;
@@ -618,67 +706,67 @@ export function createApiServer(
       }
 
       // 配置读取
-      if (req.method === "GET" && url.pathname === "/_promptxy/config") {
+      if (req.method === 'GET' && url.pathname === '/_promptxy/config') {
         handleGetConfig(req, res, config);
         return;
       }
 
       // 配置同步
-      if (req.method === "POST" && url.pathname === "/_promptxy/config/sync") {
+      if (req.method === 'POST' && url.pathname === '/_promptxy/config/sync') {
         await handleConfigSync(req, res, config, currentRules);
         return;
       }
 
       // 规则管理路由
-      if (url.pathname === "/_promptxy/rules" && req.method === "POST") {
+      if (url.pathname === '/_promptxy/rules' && req.method === 'POST') {
         await handleCreateRule(req, res, currentRules);
         return;
       }
 
-      if (url.pathname.startsWith("/_promptxy/rules/") && req.method === "PUT") {
+      if (url.pathname.startsWith('/_promptxy/rules/') && req.method === 'PUT') {
         await handleUpdateRule(req, res, currentRules, url);
         return;
       }
 
-      if (url.pathname.startsWith("/_promptxy/rules/") && req.method === "DELETE") {
+      if (url.pathname.startsWith('/_promptxy/rules/') && req.method === 'DELETE') {
         await handleDeleteRule(req, res, currentRules, url);
         return;
       }
 
       // 预览
-      if (req.method === "POST" && url.pathname === "/_promptxy/preview") {
+      if (req.method === 'POST' && url.pathname === '/_promptxy/preview') {
         handlePreview(req, res, currentRules);
         return;
       }
 
       // 数据清理
-      if (req.method === "POST" && url.pathname === "/_promptxy/requests/cleanup") {
+      if (req.method === 'POST' && url.pathname === '/_promptxy/requests/cleanup') {
         await handleCleanup(req, res, url);
         return;
       }
 
       // 健康检查
-      if (req.method === "GET" && url.pathname === "/_promptxy/health") {
+      if (req.method === 'GET' && url.pathname === '/_promptxy/health') {
         handleHealth(req, res);
         return;
       }
 
       // 统计信息
-      if (req.method === "GET" && url.pathname === "/_promptxy/stats") {
+      if (req.method === 'GET' && url.pathname === '/_promptxy/stats') {
         await handleStats(req, res);
         return;
       }
 
       // 数据库信息
-      if (req.method === "GET" && url.pathname === "/_promptxy/database") {
+      if (req.method === 'GET' && url.pathname === '/_promptxy/database') {
         await handleDatabaseInfo(req, res);
         return;
       }
 
       // 404
-      sendJson(res, 404, { error: "Not Found", path: url.pathname });
+      sendJson(res, 404, { error: 'Not Found', path: url.pathname });
     } catch (error: any) {
-      sendJson(res, 500, { error: "Internal Server Error", message: error?.message });
+      sendJson(res, 500, { error: 'Internal Server Error', message: error?.message });
     }
   });
 }

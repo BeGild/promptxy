@@ -1,6 +1,7 @@
 ## 1. Implementation
 
 ### 1.1 Core Documentation
+
 - [x] 1.1.1 Create `README.md` with quick start guide
   - Installation steps
   - Configuration creation
@@ -20,12 +21,14 @@
   - Security best practices
 
 ### 1.2 Configuration Examples
+
 - [x] 1.2.1 Create `promptxy.config.json.example`
   - Complete configuration with comments
   - Example rules for each client type
   - Common patterns (replace, append, delete, insert, etc.)
 
 ### 1.3 Security & Troubleshooting
+
 - [x] 1.3.1 Document security model in usage guide
   - Localhost-only binding explanation
   - Credential handling (no storage)
@@ -38,11 +41,13 @@
 ## 2. Validation
 
 ### 2.1 Documentation Review
+
 - [x] 2.1.1 Verify all CLI configuration examples are accurate
 - [x] 2.1.2 Test all code snippets work as documented
 - [x] 2.1.3 Review for clarity and completeness
 
 ### 2.2 Integration Testing
+
 - [ ] 2.2.1 Follow README.md from scratch on clean environment
 - [ ] 2.2.2 Verify each CLI configuration example works
 - [ ] 2.2.3 Test all example configurations in promptxy.config.json.example

@@ -1,5 +1,5 @@
-import React from "react";
-import { Button, Card, CardBody } from "@heroui/react";
+import React from 'react';
+import { Button, Card, CardBody } from '@heroui/react';
 
 interface EmptyStateProps {
   icon?: string;
@@ -10,7 +10,7 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  icon = "📭",
+  icon = '📭',
   title,
   description,
   actionText,
@@ -21,12 +21,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <CardBody className="p-8 text-center space-y-4">
         <div className="text-6xl">{icon}</div>
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {title}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-            {description}
-          </p>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">{description}</p>
         </div>
         {actionText && onAction && (
           <Button

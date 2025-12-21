@@ -1,10 +1,10 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 
 /**
  * 导出配置
  */
 export async function exportConfig(): Promise<any> {
-  const response = await apiClient.get("/_promptxy/config");
+  const response = await apiClient.get('/_promptxy/config');
   return response.data;
 }
 
@@ -12,17 +12,17 @@ export async function exportConfig(): Promise<any> {
  * 导入配置
  */
 export async function importConfig(config: any): Promise<{ success: boolean; message: string }> {
-  const response = await apiClient.post("/_promptxy/config/sync", config);
+  const response = await apiClient.post('/_promptxy/config/sync', config);
   return response.data;
 }
 
 /**
  * 下载配置文件
  */
-export function downloadConfig(config: any, filename: string = "promptxy-config.json"): void {
-  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+export function downloadConfig(config: any, filename: string = 'promptxy-config.json'): void {
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -36,28 +36,28 @@ export function downloadConfig(config: any, filename: string = "promptxy-config.
  */
 export function uploadConfig(): Promise<any> {
   return new Promise((resolve, reject) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json,application/json";
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
 
-    input.onchange = (event) => {
+    input.onchange = event => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) {
-        reject(new Error("No file selected"));
+        reject(new Error('No file selected'));
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         try {
           const content = e.target?.result as string;
           const config = JSON.parse(content);
           resolve(config);
-        } catch (error) {
-          reject(new Error("Invalid JSON file"));
+        } catch {
+          reject(new Error('Invalid JSON file'));
         }
       };
-      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsText(file);
     };
 

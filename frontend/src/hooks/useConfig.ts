@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { exportConfig, importConfig, downloadConfig, uploadConfig } from "@/api/config";
-import { PromptxyRule } from "@/types";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { exportConfig, importConfig, downloadConfig, uploadConfig } from '@/api/config';
+import { PromptxyRule } from '@/types';
 
 /**
  * 导出配置的 Hook
@@ -24,8 +24,8 @@ export function useImportConfig() {
       return await importConfig(config);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rules"] });
-      queryClient.invalidateQueries({ queryKey: ["config"] });
+      queryClient.invalidateQueries({ queryKey: ['rules'] });
+      queryClient.invalidateQueries({ queryKey: ['config'] });
     },
   });
 }
@@ -57,7 +57,7 @@ export function useUploadConfig() {
  */
 export function useConfig() {
   const query = useQuery({
-    queryKey: ["config"],
+    queryKey: ['config'],
     queryFn: async () => {
       return await exportConfig();
     },

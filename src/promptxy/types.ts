@@ -1,29 +1,29 @@
-export type PromptxyClient = "claude" | "codex" | "gemini";
-export type PromptxyField = "system" | "instructions";
+export type PromptxyClient = 'claude' | 'codex' | 'gemini';
+export type PromptxyField = 'system' | 'instructions';
 
 export type PromptxyOpType =
-  | "set"
-  | "append"
-  | "prepend"
-  | "replace"
-  | "delete"
-  | "insert_before"
-  | "insert_after";
+  | 'set'
+  | 'append'
+  | 'prepend'
+  | 'replace'
+  | 'delete'
+  | 'insert_before'
+  | 'insert_after';
 
 export type PromptxyOp =
-  | { type: "set"; text: string }
-  | { type: "append"; text: string }
-  | { type: "prepend"; text: string }
+  | { type: 'set'; text: string }
+  | { type: 'append'; text: string }
+  | { type: 'prepend'; text: string }
   | {
-      type: "replace";
+      type: 'replace';
       match?: string;
       regex?: string;
       flags?: string;
       replacement: string;
     }
-  | { type: "delete"; match?: string; regex?: string; flags?: string }
-  | { type: "insert_before"; regex: string; flags?: string; text: string }
-  | { type: "insert_after"; regex: string; flags?: string; text: string };
+  | { type: 'delete'; match?: string; regex?: string; flags?: string }
+  | { type: 'insert_before'; regex: string; flags?: string; text: string }
+  | { type: 'insert_after'; regex: string; flags?: string; text: string };
 
 export type PromptxyRuleWhen = {
   client: PromptxyClient;
@@ -71,4 +71,3 @@ export type PromptxyRuleApplyResult = {
   text: string;
   matches: PromptxyRuleMatch[];
 };
-

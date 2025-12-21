@@ -27,7 +27,13 @@
   }
 
   body {
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+    font-family:
+      'Inter',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      'Roboto',
+      sans-serif;
     background-color: var(--bg-main);
     color: var(--text-primary);
     overflow: hidden;
@@ -56,7 +62,7 @@
   code,
   pre,
   .monospace {
-    font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
   }
 }
 
@@ -211,7 +217,9 @@
 
   /* 悬停提升效果 */
   .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .hover-lift:hover {
@@ -256,78 +264,78 @@
     transition: background-color 0.15s ease;
   }
 
-.table-row-hover:hover {
-  background-color: rgba(0, 122, 204, 0.05);
-}
-
-/* 按钮点击波纹效果 */
-@keyframes ripple {
-  0% {
-    transform: scale(0);
-    opacity: 1;
+  .table-row-hover:hover {
+    background-color: rgba(0, 122, 204, 0.05);
   }
-  100% {
-    transform: scale(4);
+
+  /* 按钮点击波纹效果 */
+  @keyframes ripple {
+    0% {
+      transform: scale(0);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+
+  .btn-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
     opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
   }
-}
 
-.btn-ripple {
-  position: relative;
-  overflow: hidden;
-}
+  .btn-ripple:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+  }
 
-.btn-ripple::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.5);
-  opacity: 0;
-  border-radius: 100%;
-  transform: scale(1, 1) translate(-50%);
-  transform-origin: 50% 50%;
-}
+  /* 卡片悬浮效果 */
+  .card-hover {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-.btn-ripple:focus:not(:active)::after {
-  animation: ripple 1s ease-out;
-}
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+  }
 
-/* 卡片悬浮效果 */
-.card-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  /* 状态指示器 - 连接状态 */
+  .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
 
-.card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-}
+  .status-connected {
+    background: #4ec9b0;
+    box-shadow: 0 0 8px rgba(78, 201, 176, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
 
-/* 状态指示器 - 连接状态 */
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 6px;
-}
+  .status-disconnected {
+    background: #f48771;
+  }
 
-.status-connected {
-  background: #4ec9b0;
-  box-shadow: 0 0 8px rgba(78, 201, 176, 0.6);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.status-disconnected {
-  background: #f48771;
-}
-
-.status-connecting {
-  background: #ce9178;
-  animation: pulse 1.5s ease-in-out infinite;
-}
+  .status-connecting {
+    background: #ce9178;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
 
   /* 骨架屏动画 */
   @keyframes shimmer {
@@ -369,7 +377,9 @@
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s, transform 0.2s;
+    transition:
+      opacity 0.2s,
+      transform 0.2s;
   }
 
   .tooltip:hover::before {

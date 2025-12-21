@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { HeroUIProvider } from "@heroui/react";
-import { Header, Sidebar } from "@/components/layout";
-import { RulesPage } from "@/pages/RulesPage";
-import { RequestsPage } from "@/pages/RequestsPage";
-import { PreviewPage } from "@/pages/PreviewPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { useUIStore, useAppStore } from "@/store";
-import { useSSE } from "@/hooks";
-import { checkHealth } from "@/api/client";
+import React, { useEffect, useState } from 'react';
+import { HeroUIProvider } from '@heroui/react';
+import { Header, Sidebar } from '@/components/layout';
+import { RulesPage } from '@/pages/RulesPage';
+import { RequestsPage } from '@/pages/RequestsPage';
+import { PreviewPage } from '@/pages/PreviewPage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { useUIStore, useAppStore } from '@/store';
+import { useSSE } from '@/hooks';
+import { checkHealth } from '@/api/client';
 
 function AppContent() {
-  const activeTab = useUIStore((state) => state.activeTab);
-  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
-  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
-  const checkConnection = useAppStore((state) => state.checkConnection);
-  const apiConnected = useAppStore((state) => state.apiConnected);
+  const activeTab = useUIStore(state => state.activeTab);
+  const sidebarCollapsed = useUIStore(state => state.sidebarCollapsed);
+  const toggleSidebar = useUIStore(state => state.toggleSidebar);
+  const checkConnection = useAppStore(state => state.checkConnection);
+  const apiConnected = useAppStore(state => state.apiConnected);
 
   const { isConnected: sseConnected } = useSSE();
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -31,13 +31,13 @@ function AppContent() {
   // 渲染对应页面
   const renderPage = () => {
     switch (activeTab) {
-      case "rules":
+      case 'rules':
         return <RulesPage />;
-      case "requests":
+      case 'requests':
         return <RequestsPage />;
-      case "preview":
+      case 'preview':
         return <PreviewPage />;
-      case "settings":
+      case 'settings':
         return <SettingsPage />;
       default:
         return <RulesPage />;
@@ -53,9 +53,7 @@ function AppContent() {
           sseConnected={sseConnected}
           apiConnected={apiConnected}
         />
-        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
-          {renderPage()}
-        </div>
+        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">{renderPage()}</div>
       </div>
     </div>
   );

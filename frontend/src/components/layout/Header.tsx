@@ -1,7 +1,15 @@
-import React from "react";
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Chip, Spacer } from "@heroui/react";
-import { StatusIndicator } from "@/components/common";
-import { useUIStore } from "@/store";
+import React from 'react';
+import {
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+  Button,
+  Chip,
+  Spacer,
+} from '@heroui/react';
+import { StatusIndicator } from '@/components/common';
+import { useUIStore } from '@/store';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -10,14 +18,14 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, apiConnected }) => {
-  const activeTab = useUIStore((state) => state.activeTab);
+  const activeTab = useUIStore(state => state.activeTab);
 
   const getTabLabel = (tab: string) => {
     const labels: Record<string, string> = {
-      rules: "📋 规则管理",
-      requests: "📡 请求监控",
-      preview: "🧪 预览测试",
-      settings: "⚙️ 设置",
+      rules: '📋 规则管理',
+      requests: '📡 请求监控',
+      preview: '🧪 预览测试',
+      settings: '⚙️ 设置',
     };
     return labels[tab] || tab;
   };
@@ -29,9 +37,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, a
           ☰
         </Button>
         <Spacer x={1} />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontWeight: 700, fontSize: "18px" }}>PromptXY</span>
-          <span style={{ fontSize: "12px", color: "var(--heroui-colors-text-secondary)" }}>v2.0</span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontWeight: 700, fontSize: '18px' }}>PromptXY</span>
+          <span style={{ fontSize: '12px', color: 'var(--heroui-colors-text-secondary)' }}>
+            v2.0
+          </span>
         </div>
       </NavbarBrand>
 
@@ -48,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, a
           <StatusIndicator
             connected={apiConnected}
             lastEvent={null}
-            error={!apiConnected ? "API未连接" : null}
+            error={!apiConnected ? 'API未连接' : null}
             showText={false}
           />
         </NavbarItem>
@@ -56,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sseConnected, a
           <StatusIndicator
             connected={sseConnected}
             lastEvent={null}
-            error={!sseConnected ? "SSE未连接" : null}
+            error={!sseConnected ? 'SSE未连接' : null}
             showText={false}
           />
         </NavbarItem>

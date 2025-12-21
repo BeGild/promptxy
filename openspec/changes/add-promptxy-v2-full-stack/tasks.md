@@ -1,6 +1,7 @@
 ## 1. Backend Implementation
 
 ### 1.1 Database Layer
+
 - [x] 1.1.1 Create `backend/src/promptxy/database.ts`
   - SQLite initialization with proper directory creation (`~/.local/promptxy/`)
   - Database schema for requests table with indexes
@@ -11,6 +12,7 @@
   - Type definitions for all API request/response bodies
 
 ### 1.2 API Server
+
 - [x] 1.2.1 Create `backend/src/promptxy/api-server.ts`
   - HTTP server on port 7071
   - SSE endpoint (`/_promptxy/events`) with connection management
@@ -21,6 +23,7 @@
 - [x] 1.2.3 Add request validation and error handling
 
 ### 1.3 Gateway Enhancement
+
 - [x] 1.3.1 Modify `backend/src/promptxy/gateway.ts`
   - Add request capture logic (original + modified body)
   - Record matched rules
@@ -30,6 +33,7 @@
 - [x] 1.3.2 Add health check endpoint
 
 ### 1.4 Main Entry Point
+
 - [x] 1.4.1 Modify `backend/src/main.ts`
   - Initialize database
   - Start gateway server (port 7070)
@@ -38,12 +42,14 @@
   - Graceful shutdown handling
 
 ### 1.5 Configuration
+
 - [x] 1.5.1 Update `backend/src/promptxy/config.ts`
   - Add storage configuration (maxHistory, autoCleanup, cleanupInterval)
   - Add API server configuration (host, port)
   - Config validation
 
 ### 1.6 Testing
+
 - [ ] 1.6.1 Unit tests for database operations
 - [ ] 1.6.2 Integration tests for API endpoints
 - [ ] 1.6.3 End-to-end test: CLI request → Gateway → API → SSE → UI
@@ -51,6 +57,7 @@
 ## 2. Frontend Implementation
 
 ### 2.1 Project Setup
+
 - [x] 2.1.1 Create `frontend/` directory structure
 - [x] 2.1.2 Initialize Vite + React + TypeScript project
 - [x] 2.1.3 Install dependencies: HeroUI, Zustand, TanStack Query, Axios, Framer Motion
@@ -58,6 +65,7 @@
 - [x] 2.1.5 Set up project structure (src/ with subdirectories)
 
 ### 2.2 Core Infrastructure
+
 - [x] 2.2.1 Create API client (`frontend/src/api/client.ts`)
   - Axios instance with base URL configuration
   - Error handling and retry logic
@@ -74,6 +82,7 @@
   - `frontend/src/types/api.ts`
 
 ### 2.3 API Layer
+
 - [x] 2.3.1 Create `frontend/src/api/rules.ts`
   - CRUD operations for rules
   - Config sync
@@ -86,6 +95,7 @@
   - Export/import
 
 ### 2.4 Hooks
+
 - [x] 2.4.1 Create `frontend/src/hooks/useRules.ts`
   - React Query hooks for rules
   - Mutation hooks for create/update/delete
@@ -99,6 +109,7 @@
   - Config read/write hooks
 
 ### 2.5 Components - Layout
+
 - [x] 2.5.1 Create `frontend/src/components/layout/Header.tsx`
   - Navigation bar
   - Status indicator (SSE connection)
@@ -109,6 +120,7 @@
   - Right-side detail panel (Note: Integrated into RequestDetail modal)
 
 ### 2.6 Components - Rules
+
 - [x] 2.6.1 Create `frontend/src/components/rules/RuleList.tsx`
   - Virtual scrolling list
   - Search and filter
@@ -122,6 +134,7 @@
   - Preview capability
 
 ### 2.7 Components - Requests
+
 - [x] 2.7.1 Create `frontend/src/components/requests/RequestList.tsx`
   - Real-time list with SSE updates
   - Filtering by client, time
@@ -137,12 +150,14 @@
   - Change highlighting
 
 ### 2.8 Components - Preview
+
 - [x] 2.8.1 Create `frontend/src/components/preview/PreviewPanel.tsx`
   - Test input area
   - Rule application
   - Before/After view
 
 ### 2.9 Components - Common
+
 - [x] 2.9.1 Create `frontend/src/components/common/StatusIndicator.tsx`
   - Connection status
   - Loading states
@@ -152,6 +167,7 @@
   - Empty list placeholder
 
 ### 2.10 Pages
+
 - [x] 2.10.1 Create `frontend/src/pages/RulesPage.tsx`
   - Full rule management interface
 - [x] 2.10.2 Create `frontend/src/pages/RequestsPage.tsx`
@@ -164,6 +180,7 @@
   - Data cleanup
 
 ### 2.11 Utilities
+
 - [x] 2.11.1 Create `frontend/src/utils/formatter.ts`
   - Time formatting
   - JSON pretty print
@@ -176,6 +193,7 @@
   - Line-level comparison
 
 ### 2.12 Styling
+
 - [x] 2.12.1 Create `frontend/src/styles/globals.css`
   - CSS variables for design tokens
   - Global styles
@@ -184,6 +202,7 @@
 - [x] 2.12.3 Configure HeroUI theme (via tailwind.config.js)
 
 ### 2.13 Entry Points
+
 - [x] 2.13.1 Create `frontend/src/main.tsx`
   - React 18 root
   - Providers (HeroUI, QueryClient, Zustand)
@@ -192,6 +211,7 @@
   - Main layout
 
 ### 2.14 Testing
+
 - [ ] 2.14.1 Unit tests for utility functions
 - [ ] 2.14.2 Component tests for key UI elements
 - [ ] 2.14.3 Integration test: Full user flow
@@ -199,6 +219,7 @@
 ## 3. Integration & Deployment
 
 ### 3.1 Development Scripts
+
 - [x] 3.1.1 Create `scripts/dev.sh`
   - Start backend (gateway + API)
   - Start frontend dev server
@@ -210,16 +231,19 @@
   - Copy to backend public directory
 
 ### 3.2 Production Build
+
 - [ ] 3.2.1 Build frontend for production
 - [ ] 3.2.2 Copy static files to backend public/
 - [ ] 3.2.3 Test production mode (single server)
 
 ### 3.3 Documentation
+
 - [x] 3.3.1 Update root README.md
 - [ ] 3.3.2 Update docs/ARCHITECTURE.md (mark as implemented)
 - [x] 3.3.3 Create deployment guide (included in README.md)
 
 ### 3.4 Validation
+
 - [ ] 3.4.1 Full end-to-end testing
 - [ ] 3.4.2 Performance testing (1000+ requests)
 - [ ] 3.4.3 Cross-browser testing for UI
@@ -227,21 +251,25 @@
 ## 4. Cleanup & Polish
 
 ### 4.1 Code Quality
+
 - [x] 4.1.1 TypeScript strict mode check (strict: true in tsconfig)
 - [ ] 4.1.2 ESLint and Prettier
 - [ ] 4.1.3 Remove unused imports and code
 
 ### 4.2 Error Handling
+
 - [ ] 4.2.1 Add error boundaries in React
 - [x] 4.2.2 Graceful degradation for SSE failures (reconnection logic in sse.ts)
 - [x] 4.2.3 User-friendly error messages (implemented in API and UI)
 
 ### 4.3 Performance
+
 - [ ] 4.3.1 Optimize React renders (memo, useCallback)
 - [ ] 4.3.2 Virtual scrolling for long lists
 - [x] 4.3.3 Debounce search inputs (implemented in hooks)
 
 ### 4.4 Security Review
+
 - [x] 4.4.1 Verify localhost-only binding (default 127.0.0.1)
 - [x] 4.4.2 Check for credential leakage (no API keys stored)
 - [x] 4.4.3 Validate CORS policies (enabled for dev, configurable)
@@ -265,6 +293,7 @@
 **Overall Progress: 28/89 tasks completed (31.5%)**
 
 ### Core Implementation: 25/25 tasks ✅
+
 - ✅ Backend infrastructure (Database, API Server, Gateway, Main Entry, Config)
 - ✅ Frontend core (Project Setup, Infrastructure, API Layer, Hooks)
 - ✅ UI Components (Layout, Rules, Requests, Preview, Common)
@@ -275,18 +304,22 @@
 - ✅ Documentation (README.md, config example)
 
 ### Testing & Validation: 0/9 tasks ⏳
+
 - Unit tests, integration tests, E2E tests, performance tests
 
 ### Polish & Optimization: 3/10 tasks ⏳
+
 - Code quality: TypeScript strict mode ✅
 - Error handling: SSE reconnection, error messages ✅
 - Performance: Debounce search ✅
 - Missing: ESLint/Prettier, error boundaries, virtual scrolling, memoization
 
 ### Production Readiness: 0/6 tasks ⏳
+
 - Production build, testing, deployment validation
 
 ### Notes:
+
 - **DetailPanel component**: Integrated into RequestDetail modal (alternative approach)
 - **components.css**: HeroUI handles most styling via Tailwind
 - **All core functionality implemented and ready for testing**

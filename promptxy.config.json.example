@@ -4,15 +4,15 @@
 
   // 监听配置
   "listen": {
-    "host": "127.0.0.1",  // 绑定主机（建议保持 localhost 以保证安全）
-    "port": 7070          // 监听端口
+    "host": "127.0.0.1", // 绑定主机（建议保持 localhost 以保证安全）
+    "port": 7070 // 监听端口
   },
 
   // 上游 API 地址
   "upstreams": {
-    "anthropic": "https://api.anthropic.com",  // Claude Code 上游
-    "openai": "https://api.openai.com",        // Codex CLI 上游
-    "gemini": "https://generativelanguage.googleapis.com"  // Gemini CLI 上游
+    "anthropic": "https://api.anthropic.com", // Claude Code 上游
+    "openai": "https://api.openai.com", // Codex CLI 上游
+    "gemini": "https://generativelanguage.googleapis.com" // Gemini CLI 上游
   },
 
   // 规则数组 - 按顺序执行
@@ -45,14 +45,18 @@
     {
       "id": "codex-insert-helpful",
       "when": { "client": "codex", "field": "instructions" },
-      "ops": [{ "type": "insert_after", "regex": "^You are", "text": " Always be helpful and detailed." }]
+      "ops": [
+        { "type": "insert_after", "regex": "^You are", "text": " Always be helpful and detailed." }
+      ]
     },
 
     // 示例 4：替换特定关键词
     {
       "id": "replace-concise",
       "when": { "client": "claude", "field": "system" },
-      "ops": [{ "type": "replace", "match": "be concise", "replacement": "be thorough and detailed" }]
+      "ops": [
+        { "type": "replace", "match": "be concise", "replacement": "be thorough and detailed" }
+      ]
     },
 
     // 示例 5：仅对特定模型生效

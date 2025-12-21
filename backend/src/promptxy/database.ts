@@ -1,9 +1,9 @@
-import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
-import path from "node:path";
-import os from "node:os";
-import { mkdir } from "node:fs/promises";
-import { RequestRecord, RequestListResponse } from "./types.js";
+import * as sqlite3 from 'sqlite3';
+import { open, Database } from 'sqlite';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import { mkdir } from 'node:fs/promises';
+import { RequestRecord, RequestListResponse } from './types.js';
 
 let dbInstance: Database | null = null;
 
@@ -12,8 +12,8 @@ let dbInstance: Database | null = null;
  */
 function getDbPath(): string {
   const homeDir = os.homedir();
-  const dataDir = path.join(homeDir, ".local", "promptxy");
-  return path.join(dataDir, "promptxy.db");
+  const dataDir = path.join(homeDir, '.local', 'promptxy');
+  return path.join(dataDir, 'promptxy.db');
 }
 
 /**
@@ -21,7 +21,7 @@ function getDbPath(): string {
  */
 function getDataDir(): string {
   const homeDir = os.homedir();
-  return path.join(homeDir, ".local", "promptxy");
+  return path.join(homeDir, '.local', 'promptxy');
 }
 
 /**
@@ -94,7 +94,7 @@ export async function initializeDatabase(): Promise<Database> {
  */
 export function getDatabase(): Database {
   if (!dbInstance) {
-    throw new Error("Database not initialized. Call initializeDatabase() first.");
+    throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
   return dbInstance;
 }
@@ -124,7 +124,7 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
       record.durationMs ?? null,
       record.responseHeaders ?? null,
       record.error ?? null,
-    ]
+    ],
   );
 }
 
@@ -162,12 +162,13 @@ export async function getRequestList(options: {
       search ? `%${search}%` : null,
       search ? `%${search}%` : null,
       search ? `%${search}%` : null,
-    ]
+    ],
   );
   const total = countResult?.count ?? 0;
 
   // 获取分页数据
-  const rows = await db.all<any[]>(`
+  const rows = await db.all<any[]>(
+    `
      SELECT
        id, timestamp, client, path, method,
        matched_rules, response_status, duration_ms, error
@@ -191,11 +192,11 @@ export async function getRequestList(options: {
       search ? `%${search}%` : null,
       limit,
       offset,
-    ]
+    ],
   );
 
   // 解析 matched_rules 为数组
-  const items = rows.map((row) => ({
+  const items = rows.map(row => ({
     id: row.id,
     timestamp: row.timestamp,
     client: row.client,
@@ -221,10 +222,7 @@ export async function getRequestList(options: {
 export async function getRequestDetail(id: string): Promise<RequestRecord | null> {
   const db = getDatabase();
 
-  const row = await db.get<any>(
-    `SELECT * FROM requests WHERE id = ?`,
-    [id]
-  );
+  const row = await db.get<any>(`SELECT * FROM requests WHERE id = ?`, [id]);
 
   if (!row) {
     return null;
@@ -253,9 +251,7 @@ export async function cleanupOldRequests(keep: number = 100): Promise<number> {
   const db = getDatabase();
 
   // 获取要删除的记录数
-  const countResult = await db.get<{ count: number }>(
-    `SELECT COUNT(*) as count FROM requests`
-  );
+  const countResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
   const total = countResult?.count ?? 0;
 
   if (total <= keep) {
@@ -270,7 +266,7 @@ export async function cleanupOldRequests(keep: number = 100): Promise<number> {
        ORDER BY timestamp DESC
        LIMIT ?
      )`,
-    [keep]
+    [keep],
   );
 
   return result.changes ?? 0;
@@ -287,14 +283,12 @@ export async function getRequestStats(): Promise<{
   const db = getDatabase();
 
   // 总数
-  const totalResult = await db.get<{ count: number }>(
-    `SELECT COUNT(*) as count FROM requests`
-  );
+  const totalResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
   const total = totalResult?.count ?? 0;
 
   // 按客户端分组
   const clientRows = await db.all<Array<{ client: string; count: number }>>(
-    `SELECT client, COUNT(*) as count FROM requests GROUP BY client`
+    `SELECT client, COUNT(*) as count FROM requests GROUP BY client`,
   );
   const byClient: Record<string, number> = {};
   for (const row of clientRows) {
@@ -304,7 +298,7 @@ export async function getRequestStats(): Promise<{
   // 最近24小时
   const recentResult = await db.get<{ count: number }>(
     `SELECT COUNT(*) as count FROM requests WHERE timestamp > ?`,
-    [Date.now() - 24 * 60 * 60 * 1000]
+    [Date.now() - 24 * 60 * 60 * 1000],
   );
   const recent = recentResult?.count ?? 0;
 
@@ -317,10 +311,7 @@ export async function getRequestStats(): Promise<{
 export async function deleteRequest(id: string): Promise<boolean> {
   const db = getDatabase();
 
-  const result = await db.run(
-    `DELETE FROM requests WHERE id = ?`,
-    [id]
-  );
+  const result = await db.run(`DELETE FROM requests WHERE id = ?`, [id]);
 
   return (result.changes ?? 0) > 0;
 }
@@ -336,14 +327,12 @@ export async function getDatabaseInfo(): Promise<{
   const dbPath = getDbPath();
   const db = getDatabase();
 
-  const countResult = await db.get<{ count: number }>(
-    `SELECT COUNT(*) as count FROM requests`
-  );
+  const countResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
 
   // 尝试获取文件大小
   let size = 0;
   try {
-    const { stat } = await import("node:fs/promises");
+    const { stat } = await import('node:fs/promises');
     const stats = await stat(dbPath);
     size = stats.size;
   } catch {
@@ -355,4 +344,19 @@ export async function getDatabaseInfo(): Promise<{
     size,
     recordCount: countResult?.count ?? 0,
   };
+}
+
+/**
+ * 重置数据库实例（仅用于测试）
+ * 关闭当前连接并清除实例，允许重新初始化
+ */
+export async function resetDatabaseForTest(): Promise<void> {
+  if (dbInstance) {
+    try {
+      await dbInstance.close();
+    } catch {
+      // 忽略关闭错误
+    }
+    dbInstance = null;
+  }
 }

@@ -1,13 +1,16 @@
 # Change: Implement PromptXY v2.0 Full Stack (Complete Architecture Rewrite)
 
 ## Why
+
 The current `promptxy` V1 implementation is a functional MVP with:
+
 - ✅ Rule-based prompt modification (7 operation types)
 - ✅ Support for Claude Code, Codex CLI, Gemini CLI
 - ✅ HTTP proxy gateway on port 7070
 - ✅ Configuration via JSON file
 
 However, V1 has significant usability gaps:
+
 1. **No request visibility** - Users cannot see what requests passed through
 2. **Manual config editing** - Must edit JSON files by hand, no validation
 3. **No real-time monitoring** - Cannot monitor requests as they happen
@@ -15,6 +18,7 @@ However, V1 has significant usability gaps:
 5. **No visual interface** - No way to manage rules without text editor
 
 ### V1 Code Structure to be Replaced
+
 ```
 Current V1 files (will be completely replaced):
 - src/main.ts (single server, no API)
@@ -28,13 +32,17 @@ Current V1 files (will be completely replaced):
 ```
 
 ### V2 Architecture
+
 The existing documentation (`docs/ARCHITECTURE.md`, `docs/BACKEND_API_EXTENSION.md`, `docs/WEB_UI_DESIGN.md`) outlines a complete v2.0 architecture that addresses all gaps:
+
 - **Backend**: SQLite database + REST API + SSE server (ports 7070 + 7071)
 - **Frontend**: React + HeroUI web interface
 - **Data Flow**: CLI → Gateway → Capture → Modify → Record → SSE → Web UI
 
 ### Migration Strategy
+
 **Complete replacement**: V1 gateway code will be refactored into V2 architecture:
+
 - Rule engine logic: ✅ Keep, refactor for V2
 - Adapter logic: ✅ Keep, refactor for V2
 - Gateway core: ❌ Replace with enhanced version (adds capture + SSE)
@@ -47,6 +55,7 @@ The existing documentation (`docs/ARCHITECTURE.md`, `docs/BACKEND_API_EXTENSION.
 ## What Changes
 
 ### Backend Changes (Complete Rewrite + Enhancement)
+
 - **New API Server** (port 7071): RESTful API for rule/request/config management
 - **Database Layer**: SQLite storage for request history with automatic cleanup
 - **SSE Server**: Real-time event streaming for new request notifications
@@ -60,6 +69,7 @@ The existing documentation (`docs/ARCHITECTURE.md`, `docs/BACKEND_API_EXTENSION.
   - `POST /_promptxy/requests/cleanup` - Manual data cleanup
 
 ### Frontend Changes (New Addition)
+
 - **New Web UI**: Single-page application for managing all aspects
 - **Pages**:
   - RulesPage: Visual rule list, editor, CRUD operations
@@ -72,12 +82,14 @@ The existing documentation (`docs/ARCHITECTURE.md`, `docs/BACKEND_API_EXTENSION.
 - **Desktop-Only**: Optimized for desktop browsers, no mobile support
 
 ### Architecture Changes
+
 - **Port Split**: Gateway on 7070, API on 7071 (production: unified on 7071)
 - **Data Flow**: CLI → Gateway (7070) → Capture → Modify → Forward → Record → SSE → UI
 - **Storage**: `~/.local/promptxy/promptxy.db` (SQLite) + `~/.local/promptxy/config.json`
 - **Deployment**: Separate dev mode (independent servers) and production mode (unified)
 
 ### Code Reuse from V1
+
 - ✅ **Rule Engine Logic**: `src/promptxy/rules/engine.ts` - Core algorithm preserved
 - ✅ **Adapter Logic**: `src/promptxy/adapters/*.ts` - Protocol-specific mutations preserved
 - ✅ **Type Definitions**: Enhanced from V1 types
@@ -89,10 +101,12 @@ The existing documentation (`docs/ARCHITECTURE.md`, `docs/BACKEND_API_EXTENSION.
 ## Impact
 
 ### Affected Specs (New)
+
 - `promptxy-backend-api` - Complete backend API specification
 - `promptxy-frontend-ui` - Complete frontend UI specification
 
 ### Affected Code
+
 - **New Files** (Backend):
   - `backend/src/promptxy/database.ts` - SQLite operations
   - `backend/src/promptxy/api-server.ts` - REST API server
@@ -106,28 +120,33 @@ The existing documentation (`docs/ARCHITECTURE.md`, `docs/BACKEND_API_EXTENSION.
   - `frontend/vite.config.ts` - Build configuration
 
 ### Compatibility
+
 - **Backward Compatible**: Existing gateway functionality unchanged
 - **New Capabilities**: Additive only, no breaking changes
 - **CLI Configuration**: No changes required for existing setups
 
 ### Security
+
 - **Localhost Only**: API server binds to 127.0.0.1 by default
 - **No Credential Storage**: API keys remain in CLI environment only
 - **Sensitive Header Filtering**: Logs exclude Authorization headers
 - **Data Retention**: Automatic cleanup of old request history
 
 ### Performance
+
 - **Database**: SQLite handles 1000+ requests efficiently with indexes
 - **Frontend**: Virtual scrolling for large request lists
 - **Real-time**: SSE is lightweight compared to WebSocket
 - **Memory**: Request history limited to 100 records by default
 
 ### Deployment
+
 - **Development**: Two separate servers (gateway + API + frontend dev server)
 - **Production**: Single binary serving API + static frontend files
 - **Build Process**: Frontend built to static files, served by backend
 
 ### Compatibility & Migration
+
 - **Backward Compatible**: V2.0 is a superset of V1 - all V1 functionality remains unchanged
 - **No Breaking Changes**: Existing CLI configurations work without modification
 - **Additive Only**: New features (UI, API, database) are completely optional

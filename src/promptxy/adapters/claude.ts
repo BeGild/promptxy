@@ -1,5 +1,5 @@
-import { applyPromptRules } from "../rules/engine.js";
-import { PromptxyRule, PromptxyRuleMatch, PromptxyRequestContext } from "../types.js";
+import { applyPromptRules } from '../rules/engine.js';
+import { PromptxyRule, PromptxyRuleMatch, PromptxyRequestContext } from '../types.js';
 
 type ClaudeSystemTextBlock = {
   type?: string;
@@ -8,13 +8,13 @@ type ClaudeSystemTextBlock = {
 };
 
 function extractModel(body: any): string | undefined {
-  return typeof body?.model === "string" ? body.model : undefined;
+  return typeof body?.model === 'string' ? body.model : undefined;
 }
 
 function coerceText(value: unknown): string | undefined {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-    return value.join("");
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+    return value.join('');
   }
   return undefined;
 }
@@ -27,12 +27,12 @@ export function mutateClaudeBody(options: {
 }): { body: any; matches: PromptxyRuleMatch[] } {
   const { body, method, path, rules } = options;
 
-  if (!body || typeof body !== "object") return { body, matches: [] };
+  if (!body || typeof body !== 'object') return { body, matches: [] };
   if (body.system === undefined || body.system === null) return { body, matches: [] };
 
   const model = extractModel(body);
-  const ctx: Omit<PromptxyRequestContext, "field"> = {
-    client: "claude",
+  const ctx: Omit<PromptxyRequestContext, 'field'> = {
+    client: 'claude',
     method,
     path,
     model,
@@ -40,8 +40,8 @@ export function mutateClaudeBody(options: {
 
   const matches: PromptxyRuleMatch[] = [];
 
-  if (typeof body.system === "string") {
-    const result = applyPromptRules(body.system, { ...ctx, field: "system" }, rules);
+  if (typeof body.system === 'string') {
+    const result = applyPromptRules(body.system, { ...ctx, field: 'system' }, rules);
     if (result.matches.length) {
       body.system = result.text;
       matches.push(...result.matches);
@@ -52,13 +52,13 @@ export function mutateClaudeBody(options: {
   if (Array.isArray(body.system)) {
     const blocks = body.system as ClaudeSystemTextBlock[];
     for (const block of blocks) {
-      if (!block || typeof block !== "object") continue;
-      if (block.type !== "text") continue;
+      if (!block || typeof block !== 'object') continue;
+      if (block.type !== 'text') continue;
 
       const text = coerceText(block.text);
       if (text === undefined) continue;
 
-      const result = applyPromptRules(text, { ...ctx, field: "system" }, rules);
+      const result = applyPromptRules(text, { ...ctx, field: 'system' }, rules);
       if (!result.matches.length) continue;
 
       block.text = result.text;
@@ -69,4 +69,3 @@ export function mutateClaudeBody(options: {
 
   return { body, matches: [] };
 }
-

@@ -1,6 +1,6 @@
-import React from "react";
-import { Card, CardBody, Button, Switch, Tooltip, Chip } from "@heroui/react";
-import { PromptxyRule } from "@/types";
+import React from 'react';
+import { Card, CardBody, Button, Switch, Tooltip, Chip } from '@heroui/react';
+import { PromptxyRule } from '@/types';
 
 interface RuleCardProps {
   rule: PromptxyRule;
@@ -16,8 +16,8 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
     <Card
       className={`border-2 transition-all duration-200 hover:shadow-lg ${
         enabled
-          ? "border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600"
-          : "border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600"
+          ? 'border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600'
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
       }`}
     >
       <CardBody className="p-4 space-y-3">
@@ -29,22 +29,22 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onTo
                 {rule.id}
               </h4>
               <Chip
-                color={enabled ? "success" : "default"}
-                variant={enabled ? "flat" : "bordered"}
+                color={enabled ? 'success' : 'default'}
+                variant={enabled ? 'flat' : 'bordered'}
                 size="sm"
                 className="font-medium"
               >
-                {enabled ? "已启用" : "已禁用"}
+                {enabled ? '已启用' : '已禁用'}
               </Chip>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Tooltip content={enabled ? "禁用规则" : "启用规则"}>
+            <Tooltip content={enabled ? '禁用规则' : '启用规则'}>
               <Switch
                 size="sm"
                 checked={enabled}
                 onChange={() => onToggle(rule)}
-                color={enabled ? "success" : "default"}
+                color={enabled ? 'success' : 'default'}
               />
             </Tooltip>
           </div>

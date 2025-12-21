@@ -1,19 +1,19 @@
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage } from 'node:http';
 
 const HOP_BY_HOP_HEADERS = new Set([
-  "connection",
-  "proxy-connection",
-  "keep-alive",
-  "transfer-encoding",
-  "te",
-  "trailer",
-  "upgrade",
-  "host",
+  'connection',
+  'proxy-connection',
+  'keep-alive',
+  'transfer-encoding',
+  'te',
+  'trailer',
+  'upgrade',
+  'host',
 ]);
 
 export async function readRequestBody(
   req: IncomingMessage,
-  options: { maxBytes: number }
+  options: { maxBytes: number },
 ): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let total = 0;
@@ -32,11 +32,11 @@ export async function readRequestBody(
 
 export function shouldParseJson(contentType: string | undefined): boolean {
   if (!contentType) return false;
-  return contentType.toLowerCase().includes("application/json");
+  return contentType.toLowerCase().includes('application/json');
 }
 
 export function cloneAndFilterRequestHeaders(
-  headers: IncomingMessage["headers"]
+  headers: IncomingMessage['headers'],
 ): Record<string, string> {
   const out: Record<string, string> = {};
 
@@ -44,16 +44,16 @@ export function cloneAndFilterRequestHeaders(
     if (value === undefined) continue;
     const lowerKey = key.toLowerCase();
     if (HOP_BY_HOP_HEADERS.has(lowerKey)) continue;
-    if (lowerKey === "content-length") continue;
+    if (lowerKey === 'content-length') continue;
 
     // Avoid upstream compression complexity for MVP.
-    if (lowerKey === "accept-encoding") continue;
+    if (lowerKey === 'accept-encoding') continue;
 
     // Node may provide value as string[]; join per RFC.
-    out[lowerKey] = Array.isArray(value) ? value.join(",") : value;
+    out[lowerKey] = Array.isArray(value) ? value.join(',') : value;
   }
 
-  out["accept-encoding"] = "identity";
+  out['accept-encoding'] = 'identity';
 
   return out;
 }
@@ -69,8 +69,8 @@ export function filterResponseHeaders(headers: Headers): Record<string, string> 
 }
 
 export function joinUrl(base: string, pathWithLeadingSlash: string, search: string): string {
-  const normalizedBase = base.replace(/\/+$/, "");
-  const normalizedPath = pathWithLeadingSlash.startsWith("/")
+  const normalizedBase = base.replace(/\/+$/, '');
+  const normalizedPath = pathWithLeadingSlash.startsWith('/')
     ? pathWithLeadingSlash
     : `/${pathWithLeadingSlash}`;
   return `${normalizedBase}${normalizedPath}${search}`;

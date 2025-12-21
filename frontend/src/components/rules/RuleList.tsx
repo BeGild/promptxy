@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { Input, Button, Spinner, Pagination, Chip, Select, SelectItem } from "@heroui/react";
-import { RuleCard } from "./RuleCard";
-import { EmptyState } from "@/components/common";
-import { PromptxyRule } from "@/types";
+import React, { useState } from 'react';
+import { Input, Button, Spinner, Pagination, Chip, Select, SelectItem } from '@heroui/react';
+import { RuleCard } from './RuleCard';
+import { EmptyState } from '@/components/common';
+import { PromptxyRule } from '@/types';
 
 interface RuleListProps {
   rules: PromptxyRule[];
@@ -21,17 +21,17 @@ export const RuleList: React.FC<RuleListProps> = ({
   onToggle,
   onNewRule,
 }) => {
-  const [search, setSearch] = useState("");
-  const [filterClient, setFilterClient] = useState<string>("all");
+  const [search, setSearch] = useState('');
+  const [filterClient, setFilterClient] = useState<string>('all');
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
   // 过滤规则
-  const filteredRules = rules.filter((rule) => {
+  const filteredRules = rules.filter(rule => {
     const matchSearch =
       rule.id.toLowerCase().includes(search.toLowerCase()) ||
-      (rule.description || "").toLowerCase().includes(search.toLowerCase());
-    const matchClient = filterClient === "all" || rule.when.client === filterClient;
+      (rule.description || '').toLowerCase().includes(search.toLowerCase());
+    const matchClient = filterClient === 'all' || rule.when.client === filterClient;
     return matchSearch && matchClient;
   });
 
@@ -66,21 +66,23 @@ export const RuleList: React.FC<RuleListProps> = ({
         <Input
           placeholder="🔍 搜索规则ID或描述..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={e => setSearch(e.target.value)}
           className="flex-1"
           radius="lg"
           classNames={{
-            inputWrapper: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+            inputWrapper:
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
           }}
         />
 
         <Select
           selectedKeys={[filterClient]}
-          onChange={(e) => setFilterClient(e.target.value)}
+          onChange={e => setFilterClient(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
           classNames={{
-            trigger: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+            trigger:
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -106,12 +108,7 @@ export const RuleList: React.FC<RuleListProps> = ({
           {filteredRules.length} 条
         </Chip>
         {search && (
-          <Button
-            size="sm"
-            variant="light"
-            onPress={() => setSearch("")}
-            className="h-6 px-2"
-          >
+          <Button size="sm" variant="light" onPress={() => setSearch('')} className="h-6 px-2">
             清除搜索
           </Button>
         )}
@@ -119,7 +116,7 @@ export const RuleList: React.FC<RuleListProps> = ({
 
       {/* 规则卡片列表 */}
       <div className="space-y-3">
-        {paginatedRules.map((rule) => (
+        {paginatedRules.map(rule => (
           <RuleCard
             key={rule.id}
             rule={rule}
@@ -140,9 +137,9 @@ export const RuleList: React.FC<RuleListProps> = ({
             color="primary"
             showShadow={true}
             classNames={{
-              wrapper: "gap-1",
-              item: "min-w-9 h-9",
-              cursor: "shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold",
+              wrapper: 'gap-1',
+              item: 'min-w-9 h-9',
+              cursor: 'shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold',
             }}
           />
         </div>

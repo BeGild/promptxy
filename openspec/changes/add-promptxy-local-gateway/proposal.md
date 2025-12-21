@@ -1,11 +1,13 @@
 # Change: Add local Prompt Gateway (`promptxy`)
 
 ## Why
+
 Claude Code、Codex CLI、Gemini CLI 都会在请求体里携带（或隐式依赖）“系统提示词/指令”。但各自的默认提示词规则并不总是符合我们的工作流需求（例如：需要对某段默认规则做替换、删除、或在特定位置追加自定义规则）。
 
 本变更新增一个本地（`localhost`）网关服务，让 3 个 CLI 通过 `base_url/endpoint` 指向本地，再由服务端基于规则引擎对请求体中的提示词字段做 **检索 + 增删改（CRUD）**，并将请求转发到真实上游 API，最终实现“无需修改 CLI 源码，即可定制系统规则”的目标。
 
 ## What Changes
+
 - 新增本地 HTTP 网关（默认只监听 `127.0.0.1`），作为 3 个 CLI 的统一入口。
 - 支持 3 类协议/客户端的请求接入与转发：
   - Claude Code（Anthropic Messages API：`/v1/messages`）
@@ -21,6 +23,7 @@ Claude Code、Codex CLI、Gemini CLI 都会在请求体里携带（或隐式依�
   - 认证信息完全透传 CLI 自带 header，不在 `promptxy` 配置中保存上游密钥
 
 ## Impact
+
 - Affected specs (new):
   - `promptxy-gateway`
   - `promptxy-rules`

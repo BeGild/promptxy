@@ -9,6 +9,7 @@
 ## 📋 API端点清单
 
 ### 1. SSE实时推送
+
 ```
 GET /_promptxy/events
 ```
@@ -16,6 +17,7 @@ GET /_promptxy/events
 **描述**：服务器推送新请求事件到Web UI
 
 **响应头**：
+
 ```
 Content-Type: text/event-stream
 Cache-Control: no-cache
@@ -23,6 +25,7 @@ Connection: keep-alive
 ```
 
 **事件格式**：
+
 ```text
 event: request
 data: {
@@ -35,6 +38,7 @@ data: {
 ```
 
 **实现逻辑**：
+
 ```typescript
 // 在gateway.ts的createGateway中
 const sseConnections: Set<http.ServerResponse> = new Set();
@@ -48,11 +52,11 @@ function broadcastRequest(data: RequestData) {
 }
 
 // SSE端点处理
-if (req.method === "GET" && url.pathname === "/_promptxy/events") {
+if (req.method === 'GET' && url.pathname === '/_promptxy/events') {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
+    Connection: 'keep-alive',
   });
 
   sseConnections.add(res);
@@ -68,11 +72,13 @@ if (req.method === "GET" && url.pathname === "/_promptxy/events") {
 ---
 
 ### 2. 请求历史列表
+
 ```
 GET /_promptxy/requests
 ```
 
 **查询参数**：
+
 - `limit` (可选, 默认50, 最大100) - 返回数量
 - `offset` (可选, 默认0) - 偏移量
 - `client` (可选) - 按客户端筛选 (claude/codex/gemini)
@@ -80,6 +86,7 @@ GET /_promptxy/requests
 - `endTime` (可选) - 结束时间戳
 
 **响应示例**：
+
 ```json
 {
   "total": 150,
@@ -96,13 +103,14 @@ GET /_promptxy/requests
       "responseStatus": 200,
       "durationMs": 234,
       "error": null
-    },
+    }
     // ... 更多项
   ]
 }
 ```
 
 **SQL查询**：
+
 ```sql
 SELECT
   id, timestamp, client, path, method,
@@ -119,11 +127,13 @@ LIMIT ? OFFSET ?;
 ---
 
 ### 3. 请求详情
+
 ```
 GET /_promptxy/requests/:id
 ```
 
 **响应示例**：
+
 ```json
 {
   "id": "req-20251220-143215-abc123",
@@ -134,21 +144,17 @@ GET /_promptxy/requests/:id
 
   "originalBody": {
     "model": "gpt-4",
-    "messages": [
-      {"role": "system", "content": "You are helpful"}
-    ]
+    "messages": [{ "role": "system", "content": "You are helpful" }]
   },
 
   "modifiedBody": {
     "model": "gpt-4",
-    "messages": [
-      {"role": "system", "content": "You are helpful\n\n## Custom Rules\n- Minimal"}
-    ]
+    "messages": [{ "role": "system", "content": "You are helpful\n\n## Custom Rules\n- Minimal" }]
   },
 
   "matchedRules": [
-    {"ruleId": "rule-001", "opType": "append"},
-    {"ruleId": "rule-002", "opType": "replace"}
+    { "ruleId": "rule-001", "opType": "append" },
+    { "ruleId": "rule-002", "opType": "replace" }
   ],
 
   "responseStatus": 200,
@@ -161,6 +167,7 @@ GET /_promptxy/requests/:id
 ```
 
 **SQL查询**：
+
 ```sql
 SELECT * FROM requests WHERE id = ?;
 ```
@@ -168,11 +175,13 @@ SELECT * FROM requests WHERE id = ?;
 ---
 
 ### 4. 配置读取
+
 ```
 GET /_promptxy/config
 ```
 
 **响应示例**：
+
 ```json
 {
   "listen": {
@@ -204,6 +213,7 @@ GET /_promptxy/config
 ```
 
 **实现**：
+
 ```typescript
 // 从config.json读取并返回
 const configPath = path.join(homeDir, '.local', 'promptxy', 'config.json');
@@ -214,11 +224,13 @@ return config;
 ---
 
 ### 5. 配置同步
+
 ```
 POST /_promptxy/config/sync
 ```
 
 **请求体**：
+
 ```json
 {
   "rules": [
@@ -228,15 +240,14 @@ POST /_promptxy/config/sync
         "client": "codex",
         "field": "instructions"
       },
-      "ops": [
-        {"type": "append", "text": "\n\n## Custom Rules\n- Minimal"}
-      ]
+      "ops": [{ "type": "append", "text": "\n\n## Custom Rules\n- Minimal" }]
     }
   ]
 }
 ```
 
 **响应**：
+
 ```json
 {
   "success": true,
@@ -246,9 +257,10 @@ POST /_promptxy/config/sync
 ```
 
 **实现逻辑**：
+
 ```typescript
 // 在gateway.ts中添加
-if (req.method === "POST" && url.pathname === "/_promptxy/config/sync") {
+if (req.method === 'POST' && url.pathname === '/_promptxy/config/sync') {
   const body = await readRequestBody(req);
   const newConfig = JSON.parse(body.toString());
 
@@ -263,12 +275,14 @@ if (req.method === "POST" && url.pathname === "/_promptxy/config/sync") {
   await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
   // 4. 返回成功
-  res.writeHead(200, {'Content-Type': 'application/json'});
-  res.end(JSON.stringify({
-    success: true,
-    message: "配置已更新并生效",
-    appliedRules: newConfig.rules.length
-  }));
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(
+    JSON.stringify({
+      success: true,
+      message: '配置已更新并生效',
+      appliedRules: newConfig.rules.length,
+    }),
+  );
 
   return;
 }
@@ -277,6 +291,7 @@ if (req.method === "POST" && url.pathname === "/_promptxy/config/sync") {
 ---
 
 ### 6. 清理旧数据
+
 ```
 POST /_promptxy/requests/cleanup
 ```
@@ -284,9 +299,11 @@ POST /_promptxy/requests/cleanup
 **描述**：手动触发数据清理
 
 **查询参数**：
+
 - `keep` (可选, 默认100) - 保留最近N条
 
 **响应**：
+
 ```json
 {
   "deleted": 50,
@@ -296,6 +313,7 @@ POST /_promptxy/requests/cleanup
 ```
 
 **实现**：
+
 ```sql
 -- 删除除最近N条之外的所有记录
 DELETE FROM requests
@@ -362,6 +380,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
 ### 1. 修改 gateway.ts
 
 **新增导入**：
+
 ```typescript
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
@@ -370,6 +389,7 @@ import os from 'os';
 ```
 
 **在createGateway中初始化数据库**：
+
 ```typescript
 export async function initializeDatabase() {
   const homeDir = os.homedir();
@@ -381,7 +401,7 @@ export async function initializeDatabase() {
   // 打开数据库
   const db = await open({
     filename: path.join(dataDir, 'promptxy.db'),
-    driver: sqlite3.Database
+    driver: sqlite3.Database,
   });
 
   // 初始化表
@@ -415,6 +435,7 @@ export async function initializeDatabase() {
 ```
 
 **在请求处理中记录数据**：
+
 ```typescript
 // 在gateway.ts的请求处理中
 const startTime = Date.now();
@@ -426,23 +447,20 @@ const duration = Date.now() - startTime;
 // 保存到数据库
 const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-await db.run(
-  `INSERT INTO requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  [
-    requestId,
-    Date.now(),
-    route.client,
-    upstreamPath,
-    req.method,
-    JSON.stringify(originalBody),  // 原始请求
-    JSON.stringify(jsonBody),      // 修改后
-    JSON.stringify(matches),       // 匹配规则
-    upstreamResponse.status,
-    duration,
-    JSON.stringify(Object.fromEntries(upstreamResponse.headers.entries())),
-    null
-  ]
-);
+await db.run(`INSERT INTO requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+  requestId,
+  Date.now(),
+  route.client,
+  upstreamPath,
+  req.method,
+  JSON.stringify(originalBody), // 原始请求
+  JSON.stringify(jsonBody), // 修改后
+  JSON.stringify(matches), // 匹配规则
+  upstreamResponse.status,
+  duration,
+  JSON.stringify(Object.fromEntries(upstreamResponse.headers.entries())),
+  null,
+]);
 
 // SSE推送
 broadcastRequest({
@@ -450,7 +468,7 @@ broadcastRequest({
   timestamp: Date.now(),
   client: route.client,
   path: upstreamPath,
-  method: req.method
+  method: req.method,
 });
 ```
 
@@ -516,7 +534,7 @@ function handleSSE(req: http.IncomingMessage, res: http.ServerResponse) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
+    Connection: 'keep-alive',
   });
 
   sseConnections.add(res);
@@ -540,10 +558,10 @@ export function broadcastRequest(data: any) {
 ### 3. 修改 main.ts
 
 ```typescript
-import { loadConfig } from "./promptxy/config.js";
-import { createGateway } from "./promptxy/gateway.js";
-import { initializeDatabase } from "./promptxy/database.js";
-import { createApiServer } from "./promptxy/api-server.js";
+import { loadConfig } from './promptxy/config.js';
+import { createGateway } from './promptxy/gateway.js';
+import { initializeDatabase } from './promptxy/database.js';
+import { createApiServer } from './promptxy/api-server.js';
 
 async function main() {
   const config = await loadConfig();
@@ -582,25 +600,31 @@ import { setInterval } from 'timers';
 
 function startAutoCleanup(db: Database) {
   // 每小时检查一次
-  setInterval(async () => {
-    try {
-      const maxHistory = 100;
+  setInterval(
+    async () => {
+      try {
+        const maxHistory = 100;
 
-      // 删除旧数据
-      await db.run(`
+        // 删除旧数据
+        await db.run(
+          `
         DELETE FROM requests
         WHERE id NOT IN (
           SELECT id FROM requests
           ORDER BY timestamp DESC
           LIMIT ?
         )
-      `, [maxHistory]);
+      `,
+          [maxHistory],
+        );
 
-      console.log(`[Cleanup] 保留最近 ${maxHistory} 条请求`);
-    } catch (error) {
-      console.error('[Cleanup] 失败:', error);
-    }
-  }, 60 * 60 * 1000); // 每小时
+        console.log(`[Cleanup] 保留最近 ${maxHistory} 条请求`);
+      } catch (error) {
+        console.error('[Cleanup] 失败:', error);
+      }
+    },
+    60 * 60 * 1000,
+  ); // 每小时
 }
 ```
 
@@ -609,18 +633,21 @@ function startAutoCleanup(db: Database) {
 ## 📝 后端实现清单
 
 ### 需要创建的文件
+
 - [ ] `src/promptxy/database.ts` - 数据库初始化与操作
 - [ ] `src/promptxy/api-server.ts` - API服务器
 - [ ] 修改 `src/promptxy/gateway.ts` - 添加请求记录与SSE推送
 - [ ] 修改 `src/main.ts` - 启动API服务器
 
 ### 需要安装的依赖
+
 ```bash
 npm install sqlite3
 npm install sqlite  # TypeScript封装
 ```
 
 ### 需要修改的配置
+
 - package.json: 添加依赖
 - tsconfig.json: 确认类型支持
 
@@ -629,6 +656,7 @@ npm install sqlite  # TypeScript封装
 ## ✅ 验证清单
 
 ### API测试
+
 ```
 1. GET /_promptxy/config
    ✓ 返回当前配置
@@ -652,6 +680,7 @@ npm install sqlite  # TypeScript封装
 ```
 
 ### 数据验证
+
 ```
 ✓ SQLite数据库在 ~/.local/promptxy/promptxy.db
 ✓ config.json在 ~/.local/promptxy/config.json

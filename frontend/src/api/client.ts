@@ -1,9 +1,9 @@
-import axios from "axios";
-import { ErrorResponse } from "@/types";
+import axios from 'axios';
+import { ErrorResponse } from '@/types';
 
 function joinBaseUrl(baseUrl: string, path: string): string {
-  const normalizedBase = baseUrl.replace(/\/+$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   return `${normalizedBase}${normalizedPath}`;
 }
 
@@ -12,44 +12,44 @@ const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL;
 
 // 创建 Axios 实例
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL ? joinBaseUrl(API_BASE_URL, "/") : undefined,
+  baseURL: API_BASE_URL ? joinBaseUrl(API_BASE_URL, '/') : undefined,
   timeout: 30000,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
 });
 
 // 请求拦截器
 apiClient.interceptors.request.use(
-  (config) => {
+  config => {
     return config;
   },
-  (error) => {
+  error => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // 响应拦截器
 apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     // 统一错误处理
     if (error.response) {
       const data = error.response.data as ErrorResponse;
-      return Promise.reject(new Error(data.message || data.error || "请求失败"));
+      return Promise.reject(new Error(data.message || data.error || '请求失败'));
     }
     if (error.request) {
-      return Promise.reject(new Error("无法连接到服务器"));
+      return Promise.reject(new Error('无法连接到服务器'));
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // 健康检查
 export async function checkHealth(): Promise<boolean> {
   try {
-    const response = await apiClient.get("/_promptxy/health");
-    return response.data.status === "ok";
+    const response = await apiClient.get('/_promptxy/health');
+    return response.data.status === 'ok';
   } catch {
     return false;
   }

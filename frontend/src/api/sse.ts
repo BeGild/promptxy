@@ -1,4 +1,4 @@
-import { SSERequestEvent, SSEConnectionStatus } from "@/types";
+import { SSERequestEvent, SSEConnectionStatus } from '@/types';
 
 export class SSEClient {
   private eventSource: EventSource | null = null;
@@ -12,7 +12,7 @@ export class SSEClient {
   constructor(
     url: string,
     onEvent: (event: SSERequestEvent) => void,
-    onStatusChange: (status: SSEConnectionStatus) => void
+    onStatusChange: (status: SSEConnectionStatus) => void,
   ) {
     this.url = url;
     this.onEvent = onEvent;
@@ -35,27 +35,27 @@ export class SSEClient {
         this.reconnectDelay = 3000; // 重置重连延迟
       };
 
-      this.eventSource.onmessage = (event) => {
+      this.eventSource.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
           this.onEvent(data);
           this.updateStatus({ connected: true, lastEvent: Date.now(), error: null });
         } catch (e) {
-          console.error("Failed to parse SSE event:", e);
+          console.error('Failed to parse SSE event:', e);
         }
       };
 
-      this.eventSource.addEventListener("request", (event: MessageEvent) => {
+      this.eventSource.addEventListener('request', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           this.onEvent(data);
           this.updateStatus({ connected: true, lastEvent: Date.now(), error: null });
         } catch (e) {
-          console.error("Failed to parse request event:", e);
+          console.error('Failed to parse request event:', e);
         }
       });
 
-      this.eventSource.addEventListener("connected", () => {
+      this.eventSource.addEventListener('connected', () => {
         this.updateStatus({ connected: true, lastEvent: Date.now(), error: null });
       });
 
@@ -64,7 +64,7 @@ export class SSEClient {
         this.eventSource = null;
 
         if (this.isManuallyClosed) {
-          this.updateStatus({ connected: false, lastEvent: null, error: "连接已关闭" });
+          this.updateStatus({ connected: false, lastEvent: null, error: '连接已关闭' });
           return;
         }
 
@@ -83,7 +83,7 @@ export class SSEClient {
         }, this.reconnectDelay);
       };
     } catch (error: any) {
-      this.updateStatus({ connected: false, lastEvent: null, error: error?.message || "连接失败" });
+      this.updateStatus({ connected: false, lastEvent: null, error: error?.message || '连接失败' });
     }
   }
 
@@ -93,7 +93,7 @@ export class SSEClient {
       this.eventSource.close();
       this.eventSource = null;
     }
-    this.updateStatus({ connected: false, lastEvent: null, error: "已断开连接" });
+    this.updateStatus({ connected: false, lastEvent: null, error: '已断开连接' });
   }
 
   private updateStatus(status: SSEConnectionStatus): void {

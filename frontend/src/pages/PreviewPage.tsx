@@ -1,5 +1,5 @@
-import React from "react";
-import { PreviewPanel } from "@/components/preview";
+import React from 'react';
+import { PreviewPanel } from '@/components/preview';
 
 export const PreviewPage: React.FC = () => {
   return (
@@ -10,9 +10,7 @@ export const PreviewPage: React.FC = () => {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
             实时预览
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            测试规则效果，实时查看请求修改结果
-          </p>
+          <p className="text-sm text-gray-500 mt-1">测试规则效果，实时查看请求修改结果</p>
         </div>
       </div>
 

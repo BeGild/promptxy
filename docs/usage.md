@@ -125,6 +125,7 @@ gemini "hello"
 #### 支持的字段
 
 `promptxy` 会自动识别并改写以下字段：
+
 - `system_instruction` (字符串格式)
 - `systemInstruction` (对象格式，包含 `parts` 数组)
 
@@ -144,16 +145,17 @@ gemini "hello"
 {
   "id": "规则唯一标识",
   "when": {
-    "client": "claude",           // 必需：claude | codex | gemini
-    "field": "system",            // 必需：system | instructions
-    "method": "POST",             // 可选：HTTP 方法
+    "client": "claude", // 必需：claude | codex | gemini
+    "field": "system", // 必需：system | instructions
+    "method": "POST", // 可选：HTTP 方法
     "pathRegex": "^/v1/messages", // 可选：路径正则
-    "modelRegex": "sonnet"        // 可选：模型名称正则
+    "modelRegex": "sonnet" // 可选：模型名称正则
   },
-  "ops": [                        // 操作数组，按顺序执行
+  "ops": [
+    // 操作数组，按顺序执行
     { "type": "append", "text": "..." }
   ],
-  "stop": false                   // 可选：是否在此规则后停止处理
+  "stop": false // 可选：是否在此规则后停止处理
 }
 ```
 
@@ -180,23 +182,32 @@ gemini "hello"
 #### 4. replace - 替换匹配内容
 
 **字符串匹配：**
+
 ```json
 { "type": "replace", "match": "old text", "replacement": "new text" }
 ```
 
 **正则匹配：**
+
 ```json
-{ "type": "replace", "regex": "file size.*?\\d+MB", "replacement": "no file size limit", "flags": "i" }
+{
+  "type": "replace",
+  "regex": "file size.*?\\d+MB",
+  "replacement": "no file size limit",
+  "flags": "i"
+}
 ```
 
 #### 5. delete - 删除匹配内容
 
 **字符串匹配：**
+
 ```json
 { "type": "delete", "match": "unwanted rule" }
 ```
 
 **正则匹配：**
+
 ```json
 { "type": "delete", "regex": "be concise", "flags": "i" }
 ```
@@ -216,23 +227,28 @@ gemini "hello"
 ### 匹配条件详解
 
 #### client (必需)
+
 - `claude` - 匹配 Claude Code 请求
 - `codex` - 匹配 Codex CLI 请求
 - `gemini` - 匹配 Gemini CLI 请求
 
 #### field (必需)
+
 - `system` - 用于 Claude 和 Gemini
 - `instructions` - 用于 Codex
 
 #### method (可选)
+
 - 如果指定，只匹配该 HTTP 方法的请求
 - 示例：`"method": "POST"`
 
 #### pathRegex (可选)
+
 - 正则表达式，匹配请求路径
 - 示例：`"^/v1/messages"` 匹配 Claude 的消息接口
 
 #### modelRegex (可选)
+
 - 正则表达式，匹配模型名称
 - 示例：`"sonnet|opus"` 匹配 Claude 的 sonnet 和 opus 模型
 
@@ -422,6 +438,7 @@ PROMPTXY_DEBUG=1 npm run dev
 ```
 
 这表示：
+
 - 客户端：`CLAUDE`
 - 方法：`POST`
 - 路径：`/v1/messages`
@@ -434,12 +451,14 @@ PROMPTXY_DEBUG=1 npm run dev
 #### 1. 规则不匹配
 
 **检查清单：**
+
 - ✅ `client` 是否正确（claude/codex/gemini）
 - ✅ `field` 是否正确（system/instructions）
 - ✅ 正则表达式是否正确（可使用在线正则测试工具）
 - ✅ 是否需要 `method`、`pathRegex` 或 `modelRegex` 条件
 
 **调试方法：**
+
 ```bash
 # 启用调试模式
 PROMPTXY_DEBUG=1 npm run dev
@@ -451,12 +470,14 @@ PROMPTXY_DEBUG=1 npm run dev
 #### 2. CLI 未通过网关
 
 **检查清单：**
+
 - ✅ 环境变量是否设置正确
 - ✅ 环境变量是否已导出（`export`）
 - ✅ 网关服务是否正在运行
 - ✅ 端口是否正确（默认 7070）
 
 **验证方法：**
+
 ```bash
 # 1. 检查环境变量
 echo $ANTHROPIC_BASE_URL  # Claude
@@ -475,6 +496,7 @@ curl http://127.0.0.1:7070/_promptxy/health
 **原因：** `promptxy` 不存储密钥，只透传认证信息
 
 **解决：**
+
 - 确保 CLI 自身已配置正确的 API Key
 - 检查 CLI 是否正确发送认证头
 - 验证上游 API 密钥有效
@@ -482,10 +504,12 @@ curl http://127.0.0.1:7070/_promptxy/health
 #### 4. 流式响应异常
 
 **可能原因：**
+
 - 网关未正确处理 SSE 流
 - 响应头被错误修改
 
 **验证：**
+
 ```bash
 # 检查响应头
 curl -v http://127.0.0.1:7070/_promptxy/health
@@ -510,6 +534,7 @@ curl http://127.0.0.1:7070/_promptxy/health
 ```
 
 **示例：**
+
 ```
 [promptxy] CLAUDE POST /v1/messages -> https://api.anthropic.com (rules=force-chinese,remove-limit ops=3)
 ```
@@ -517,6 +542,7 @@ curl http://127.0.0.1:7070/_promptxy/health
 #### 敏感信息保护
 
 `promptxy` **永远不会**在日志中打印：
+
 - `Authorization` 头的值
 - `x-goog-api-key` 头的值
 - 任何包含 `key`、`token`、`secret` 的请求头值

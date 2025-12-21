@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
 
 interface UIState {
   // 模态框状态
@@ -14,7 +14,7 @@ interface UIState {
 
   // UI 状态
   sidebarCollapsed: boolean;
-  activeTab: "rules" | "requests" | "preview" | "settings";
+  activeTab: 'rules' | 'requests' | 'preview' | 'settings';
 
   // 操作
   openRuleEditor: (ruleId?: string | null) => void;
@@ -25,7 +25,7 @@ interface UIState {
   closePreview: () => void;
   openSettings: () => void;
   closeSettings: () => void;
-  setActiveTab: (tab: "rules" | "requests" | "preview" | "settings") => void;
+  setActiveTab: (tab: 'rules' | 'requests' | 'preview' | 'settings') => void;
   toggleSidebar: () => void;
   reset: () => void;
 }
@@ -38,7 +38,7 @@ const initialState = {
   selectedRuleId: null,
   selectedRequestId: null,
   sidebarCollapsed: false,
-  activeTab: "rules" as const,
+  activeTab: 'rules' as const,
 };
 
 export const useUIStore = create<UIState>()(
@@ -77,20 +77,19 @@ export const useUIStore = create<UIState>()(
         openSettings: () => set({ isSettingsOpen: true }),
         closeSettings: () => set({ isSettingsOpen: false }),
 
-        setActiveTab: (tab) => set({ activeTab: tab }),
+        setActiveTab: tab => set({ activeTab: tab }),
 
-        toggleSidebar: () =>
-          set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+        toggleSidebar: () => set(state => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
         reset: () => set(initialState),
       }),
       {
-        name: "promptxy-ui-state",
-        partialize: (state) => ({
+        name: 'promptxy-ui-state',
+        partialize: state => ({
           sidebarCollapsed: state.sidebarCollapsed,
           activeTab: state.activeTab,
         }),
-      }
-    )
-  )
+      },
+    ),
+  ),
 );

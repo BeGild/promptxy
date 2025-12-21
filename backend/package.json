@@ -8,15 +8,33 @@
     "dev": "tsx --watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:integration": "vitest run tests/integration/ --config=vitest.integration.config.ts",
+    "test:integration:watch": "vitest tests/integration/ --config=vitest.integration.config.ts",
+    "test:integration:verbose": "vitest run tests/integration/ --config=vitest.integration.config.ts --reporter=verbose",
+    "test:integration:coverage": "vitest run tests/integration/ --config=vitest.integration.config.ts --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "sqlite3": "^5.1.7",
-    "sqlite": "^4.2.1"
+    "sqlite": "^4.2.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "@types/node": "^24.3.1",
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^24.10.4",
+    "@typescript-eslint/eslint-plugin": "^8.50.0",
+    "@typescript-eslint/parser": "^8.50.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.7.4",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.0.16"
   }
 }

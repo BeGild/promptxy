@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Input,
   Textarea,
@@ -10,9 +10,9 @@ import {
   CardBody,
   Chip,
   Divider,
-} from "@heroui/react";
-import { PromptxyRule, PromptxyOp, PromptxyOpType } from "@/types";
-import { validateRule, createDefaultRule, generateUUID } from "@/utils";
+} from '@heroui/react';
+import { PromptxyRule, PromptxyOp, PromptxyOpType } from '@/types';
+import { validateRule, createDefaultRule, generateUUID } from '@/utils';
 
 interface RuleEditorProps {
   rule?: PromptxyRule | null;
@@ -22,34 +22,33 @@ interface RuleEditorProps {
 }
 
 const CLIENT_OPTIONS = [
-  { value: "claude", label: "Claude" },
-  { value: "codex", label: "Codex" },
-  { value: "gemini", label: "Gemini" },
+  { value: 'claude', label: 'Claude' },
+  { value: 'codex', label: 'Codex' },
+  { value: 'gemini', label: 'Gemini' },
 ];
 
 const FIELD_OPTIONS = [
-  { value: "system", label: "System" },
-  { value: "instructions", label: "Instructions" },
+  { value: 'system', label: 'System' },
+  { value: 'instructions', label: 'Instructions' },
 ];
 
 const OP_TYPE_OPTIONS = [
-  { value: "set", label: "Set (设置)" },
-  { value: "append", label: "Append (追加)" },
-  { value: "prepend", label: "Prepend (前置)" },
-  { value: "replace", label: "Replace (替换)" },
-  { value: "delete", label: "Delete (删除)" },
-  { value: "insert_before", label: "Insert Before (前插)" },
-  { value: "insert_after", label: "Insert After (后插)" },
+  { value: 'set', label: 'Set (设置)' },
+  { value: 'append', label: 'Append (追加)' },
+  { value: 'prepend', label: 'Prepend (前置)' },
+  { value: 'replace', label: 'Replace (替换)' },
+  { value: 'delete', label: 'Delete (删除)' },
+  { value: 'insert_before', label: 'Insert Before (前插)' },
+  { value: 'insert_after', label: 'Insert After (后插)' },
 ];
 
-export const RuleEditor: React.FC<RuleEditorProps> = ({
-  rule,
-  onSave,
-  onCancel,
-  onPreview,
-}) => {
+export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, onPreview }) => {
   const [formData, setFormData] = useState<PromptxyRule>(rule || createDefaultRule());
-  const [validation, setValidation] = useState({ valid: true, errors: [] as string[], warnings: [] as string[] });
+  const [validation, setValidation] = useState({
+    valid: true,
+    errors: [] as string[],
+    warnings: [] as string[],
+  });
 
   useEffect(() => {
     if (rule) {
@@ -63,9 +62,9 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
   }, [formData]);
 
   const updateField = (path: string, value: any) => {
-    setFormData((prev) => {
+    setFormData(prev => {
       const newData = { ...prev };
-      const keys = path.split(".");
+      const keys = path.split('.');
       let current: any = newData;
       for (let i = 0; i < keys.length - 1; i++) {
         current[keys[i]] = { ...current[keys[i]] };
@@ -77,22 +76,22 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
   };
 
   const addOp = () => {
-    const newOp: PromptxyOp = { type: "append", text: "" };
-    setFormData((prev) => ({
+    const newOp: PromptxyOp = { type: 'append', text: '' };
+    setFormData(prev => ({
       ...prev,
       ops: [...prev.ops, newOp],
     }));
   };
 
   const updateOp = (index: number, updates: any) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       ops: prev.ops.map((op, i) => (i === index ? ({ ...op, ...updates } as PromptxyOp) : op)),
     }));
   };
 
   const removeOp = (index: number) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       ops: prev.ops.filter((_, i) => i !== index),
     }));
@@ -111,7 +110,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
   };
 
   const generateNewId = () => {
-    setFormData((prev) => ({ ...prev, id: `rule-${generateUUID()}` }));
+    setFormData(prev => ({ ...prev, id: `rule-${generateUUID()}` }));
   };
 
   return (
@@ -149,7 +148,9 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
         <CardBody className="space-y-3">
           <div className="flex items-center gap-2">
             <h4 className="text-lg font-bold">基本信息</h4>
-            <Chip color="primary" variant="flat" size="sm">必填</Chip>
+            <Chip color="primary" variant="flat" size="sm">
+              必填
+            </Chip>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-2">
@@ -157,7 +158,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                 label="规则ID"
                 placeholder="rule-xxx"
                 value={formData.id}
-                onChange={(e) => updateField("id", e.target.value)}
+                onChange={e => updateField('id', e.target.value)}
                 isRequired
                 radius="lg"
               />
@@ -177,8 +178,8 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
           <Textarea
             label="描述 (可选)"
             placeholder="描述这条规则的作用..."
-            value={formData.description || ""}
-            onChange={(e) => updateField("description", e.target.value)}
+            value={formData.description || ''}
+            onChange={e => updateField('description', e.target.value)}
             radius="lg"
             minRows={2}
           />
@@ -195,49 +196,45 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
             <Select
               label="客户端"
               selectedKeys={[formData.when.client]}
-              onChange={(e) => updateField("when.client", e.target.value)}
+              onChange={e => updateField('when.client', e.target.value)}
               radius="lg"
               isRequired
             >
-              {CLIENT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value}>
-                  {opt.label}
-                </SelectItem>
+              {CLIENT_OPTIONS.map(opt => (
+                <SelectItem key={opt.value}>{opt.label}</SelectItem>
               ))}
             </Select>
             <Select
               label="字段"
               selectedKeys={[formData.when.field]}
-              onChange={(e) => updateField("when.field", e.target.value)}
+              onChange={e => updateField('when.field', e.target.value)}
               radius="lg"
               isRequired
             >
-              {FIELD_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value}>
-                  {opt.label}
-                </SelectItem>
+              {FIELD_OPTIONS.map(opt => (
+                <SelectItem key={opt.value}>{opt.label}</SelectItem>
               ))}
             </Select>
             <Input
               label="HTTP方法 (可选)"
               placeholder="GET, POST..."
-              value={formData.when.method || ""}
-              onChange={(e) => updateField("when.method", e.target.value || undefined)}
+              value={formData.when.method || ''}
+              onChange={e => updateField('when.method', e.target.value || undefined)}
               radius="lg"
             />
             <Input
               label="路径正则 (可选)"
               placeholder="^/v1/messages$"
-              value={formData.when.pathRegex || ""}
-              onChange={(e) => updateField("when.pathRegex", e.target.value || undefined)}
+              value={formData.when.pathRegex || ''}
+              onChange={e => updateField('when.pathRegex', e.target.value || undefined)}
               radius="lg"
             />
             <div className="md:col-span-2">
               <Input
                 label="模型正则 (可选)"
                 placeholder="claude-3"
-                value={formData.when.modelRegex || ""}
-                onChange={(e) => updateField("when.modelRegex", e.target.value || undefined)}
+                value={formData.when.modelRegex || ''}
+                onChange={e => updateField('when.modelRegex', e.target.value || undefined)}
                 radius="lg"
               />
             </div>
@@ -256,13 +253,14 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
               {formData.ops.length} 个操作
             </Chip>
           </div>
-          <div className="text-sm text-gray-500">
-            按顺序执行操作，支持拖拽调整顺序（暂未实现）
-          </div>
+          <div className="text-sm text-gray-500">按顺序执行操作，支持拖拽调整顺序（暂未实现）</div>
 
           <div className="space-y-3">
             {formData.ops.map((op, index) => (
-              <Card key={index} className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700">
+              <Card
+                key={index}
+                className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700"
+              >
                 <CardBody className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -289,26 +287,24 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                       <Select
                         label="类型"
                         selectedKeys={[op.type]}
-                        onChange={(e) => updateOp(index, { type: e.target.value as PromptxyOpType })}
+                        onChange={e => updateOp(index, { type: e.target.value as PromptxyOpType })}
                         radius="lg"
                         isRequired
                       >
-                        {OP_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value}>
-                            {opt.label}
-                          </SelectItem>
+                        {OP_TYPE_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value}>{opt.label}</SelectItem>
                         ))}
                       </Select>
                     </div>
 
                     {/* 动态字段 */}
-                    {(op.type === "set" || op.type === "append" || op.type === "prepend") && (
+                    {(op.type === 'set' || op.type === 'append' || op.type === 'prepend') && (
                       <div className="md:col-span-2">
                         <Textarea
                           label="文本"
                           placeholder="输入文本内容..."
-                          value={op.text || ""}
-                          onChange={(e) => updateOp(index, { text: e.target.value })}
+                          value={op.text || ''}
+                          onChange={e => updateOp(index, { text: e.target.value })}
                           radius="lg"
                           minRows={1}
                           isRequired
@@ -316,14 +312,14 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                       </div>
                     )}
 
-                    {(op.type === "replace" || op.type === "delete") && (
+                    {(op.type === 'replace' || op.type === 'delete') && (
                       <>
                         <div>
                           <Input
                             label="匹配文本 (可选)"
                             placeholder="要匹配的文本"
-                            value={op.match || ""}
-                            onChange={(e) => updateOp(index, { match: e.target.value || undefined })}
+                            value={op.match || ''}
+                            onChange={e => updateOp(index, { match: e.target.value || undefined })}
                             radius="lg"
                           />
                         </div>
@@ -331,8 +327,8 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                           <Input
                             label="正则表达式 (可选)"
                             placeholder="pattern"
-                            value={op.regex || ""}
-                            onChange={(e) => updateOp(index, { regex: e.target.value || undefined })}
+                            value={op.regex || ''}
+                            onChange={e => updateOp(index, { regex: e.target.value || undefined })}
                             radius="lg"
                           />
                         </div>
@@ -340,18 +336,18 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                           <Input
                             label="正则标志 (可选)"
                             placeholder="gi"
-                            value={op.flags || ""}
-                            onChange={(e) => updateOp(index, { flags: e.target.value || undefined })}
+                            value={op.flags || ''}
+                            onChange={e => updateOp(index, { flags: e.target.value || undefined })}
                             radius="lg"
                           />
                         </div>
-                        {op.type === "replace" && (
+                        {op.type === 'replace' && (
                           <div className="md:col-span-3">
                             <Input
                               label="替换为"
                               placeholder="替换后的文本"
-                              value={op.replacement || ""}
-                              onChange={(e) => updateOp(index, { replacement: e.target.value })}
+                              value={op.replacement || ''}
+                              onChange={e => updateOp(index, { replacement: e.target.value })}
                               radius="lg"
                               isRequired
                             />
@@ -360,14 +356,14 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                       </>
                     )}
 
-                    {(op.type === "insert_before" || op.type === "insert_after") && (
+                    {(op.type === 'insert_before' || op.type === 'insert_after') && (
                       <>
                         <div className="md:col-span-2">
                           <Input
                             label="正则表达式"
                             placeholder="pattern"
-                            value={op.regex || ""}
-                            onChange={(e) => updateOp(index, { regex: e.target.value })}
+                            value={op.regex || ''}
+                            onChange={e => updateOp(index, { regex: e.target.value })}
                             radius="lg"
                             isRequired
                           />
@@ -376,8 +372,8 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                           <Input
                             label="正则标志 (可选)"
                             placeholder="gi"
-                            value={op.flags || ""}
-                            onChange={(e) => updateOp(index, { flags: e.target.value || undefined })}
+                            value={op.flags || ''}
+                            onChange={e => updateOp(index, { flags: e.target.value || undefined })}
                             radius="lg"
                           />
                         </div>
@@ -385,8 +381,8 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
                           <Textarea
                             label="插入文本"
                             placeholder="要插入的文本"
-                            value={op.text || ""}
-                            onChange={(e) => updateOp(index, { text: e.target.value })}
+                            value={op.text || ''}
+                            onChange={e => updateOp(index, { text: e.target.value })}
                             radius="lg"
                             minRows={1}
                             isRequired
@@ -400,12 +396,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
             ))}
           </div>
 
-          <Button
-            variant="flat"
-            onPress={addOp}
-            className="w-full"
-            color="primary"
-          >
+          <Button variant="flat" onPress={addOp} className="w-full" color="primary">
             + 添加操作
           </Button>
         </CardBody>
@@ -420,13 +411,13 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({
           <div className="flex flex-col gap-2">
             <Checkbox
               checked={formData.stop || false}
-              onChange={(e) => updateField("stop", e.target.checked)}
+              onChange={e => updateField('stop', e.target.checked)}
             >
               在此规则后停止执行 (stop)
             </Checkbox>
             <Checkbox
               checked={formData.enabled !== false}
-              onChange={(e) => updateField("enabled", e.target.checked)}
+              onChange={e => updateField('enabled', e.target.checked)}
               color="success"
             >
               启用此规则

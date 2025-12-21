@@ -66,21 +66,25 @@ refence/
 ### 3.1 `claude-code-router`（结论：适合 Claude Code，但不是统一入口）
 
 观察要点：
+
 - 通过设置 `ANTHROPIC_BASE_URL` 把 Claude Code 请求指到本地服务（显式 base_url，而非 MITM）。
 - 具备改写 `system` 的实际实现点（例如按 `<env>` 分割替换）。
 
 结论：
+
 - 对 Claude Code 友好、扩展方式清晰（plugin/transformer/agent）。
 - 但它的定位更偏“Claude Code 专用路由器”，不是面向 3 个 CLI 的统一网关。
 
 ### 3.2 `claude-relay-service`（结论：覆盖面广，但对本地 MVP 偏重）
 
 观察要点：
+
 - 提供更“可运营”的中继服务形态（多账号/Redis/Web 面板/限流统计等）。
 - 也支持 Codex CLI/Gemini CLI 等接入方式（通过 base_url 指向中继服务）。
 - 内部存在对 Codex `instructions` 的固定注入/验证逻辑；如果要做“自由替换”，需要额外兼容其校验策略（尤其前缀不宜破坏）。
 
 结论：
+
 - 功能强、覆盖广，但对于“本地只做 prompt 改写”而言成本偏高（引入 Redis/账号体系/管理面板等复杂度）。
 
 ---
@@ -90,18 +94,21 @@ refence/
 ### 4.1 决策：选择“显式 base_url 网关”，不做 MITM
 
 原因：
+
 - 3 个 CLI 都能通过配置 `base_url/endpoint` 指向本地。
 - MITM 的维护成本高，且在不同平台/网络环境更脆弱。
 
 ### 4.2 决策：做一个“统一规则引擎”，通过适配器支持不同协议
 
 原因：
+
 - Claude/Codex/Gemini 的“提示词字段”位置不同，但最终都能归一成“文本改写”。
 - 把协议差异封装在 adapter 中，规则引擎保持纯粹（便于测试与迭代）。
 
 ### 4.3 决策：认证头完全透传，不存储任何上游密钥
 
 原因：
+
 - MVP 先解决“提示词改写”，不引入密钥管理的风险与复杂度。
 - 本地运行更易控，且避免误记录敏感信息。
 
@@ -112,17 +119,20 @@ refence/
 为了“只改提示词、其余透传”，本项目在 MVP 中把改写面限定在以下字段：
 
 ### 5.1 Claude Code（Anthropic Messages API）
+
 - 入口：`POST /v1/messages`
 - 改写字段：`body.system`
   - 支持 string
   - 支持 text blocks array（仅改 `type: "text"` 的 `text`，保留非 text block）
 
 ### 5.2 Codex CLI（OpenAI Responses API）
+
 - 入口：`POST /openai/v1/responses`（由本地前缀 `/openai` 映射）
 - 改写字段：`body.instructions`（string）
 - 风险提示：Codex 侧可能依赖前缀校验，建议优先使用“insert_after 固定前缀”而非整体替换。
 
 ### 5.3 Gemini CLI（Gemini API Key 模式）
+
 - 入口：`POST /gemini/v1beta/...:generateContent`（由本地前缀 `/gemini` 映射）
 - 改写字段：`body.system_instruction` / `body.systemInstruction`
 
@@ -143,6 +153,7 @@ refence/
 - `insert_after`（regex）
 
 重要原则：
+
 - **有序执行**：规则按配置顺序；同一规则的 ops 按声明顺序。
 - **可预测**：不匹配则 no-op，不破坏请求转发。
 
@@ -159,6 +170,7 @@ refence/
   - `tasks.md`：实施任务清单与验证项
 
 建议在后续新增能力时，优先新增 OpenSpec change，并明确是否属于：
+
 - 新 capability（ADDED）
 - 修改既有行为（MODIFIED）
 
@@ -173,4 +185,3 @@ refence/
 - 更丰富的匹配条件（按 path/method/model/session/project 等）
 - 提供请求/响应的可选审计日志（需严格脱敏与本地存储策略）
 - 多用户共享部署（需要鉴权、隔离、限额、可观测）
-

@@ -54,6 +54,7 @@
 **说明**：服务绑定的主机地址
 
 **安全建议**：
+
 - 保持默认 `127.0.0.1` 以限制本地访问
 - 仅在受信任网络中使用 `0.0.0.0`
 
@@ -65,6 +66,7 @@
 **说明**：服务监听的端口号
 
 **示例**：
+
 ```json
 "listen": { "host": "127.0.0.1", "port": 8080 }
 ```
@@ -96,6 +98,7 @@
 **说明**：Gemini CLI 的上游 API
 
 **示例**：
+
 ```json
 "upstreams": {
   "anthropic": "https://api.anthropic.com",
@@ -161,11 +164,13 @@
 **说明**：启用调试模式，打印规则匹配详情
 
 **调试模式行为**：
+
 - 打印每个请求的规则匹配情况
 - 显示应用的规则 ID 和操作数量
 - **不会**打印敏感信息（Authorization、API Key 等）
 
 **示例**：
+
 ```json
 "debug": true
 ```
@@ -176,15 +181,15 @@
 
 所有配置项都可以通过环境变量覆盖，优先级：**环境变量 > 配置文件 > 默认值**
 
-| 环境变量 | 配置项 | 示例值 | 说明 |
-|----------|--------|--------|------|
-| `PROMPTXY_HOST` | `listen.host` | `127.0.0.1` | 绑定主机 |
-| `PROMPTXY_PORT` | `listen.port` | `7070` | 监听端口 |
-| `PROMPTXY_UPSTREAM_ANTHROPIC` | `upstreams.anthropic` | `https://api.anthropic.com` | Claude 上游 |
-| `PROMPTXY_UPSTREAM_OPENAI` | `upstreams.openai` | `https://api.openai.com` | Codex 上游 |
-| `PROMPTXY_UPSTREAM_GEMINI` | `upstreams.gemini` | `https://generativelanguage.googleapis.com` | Gemini 上游 |
-| `PROMPTXY_DEBUG` | `debug` | `1` 或 `true` | 调试模式 |
-| `PROMPTXY_CONFIG` | - | `/path/to/config.json` | 配置文件路径 |
+| 环境变量                      | 配置项                | 示例值                                      | 说明         |
+| ----------------------------- | --------------------- | ------------------------------------------- | ------------ |
+| `PROMPTXY_HOST`               | `listen.host`         | `127.0.0.1`                                 | 绑定主机     |
+| `PROMPTXY_PORT`               | `listen.port`         | `7070`                                      | 监听端口     |
+| `PROMPTXY_UPSTREAM_ANTHROPIC` | `upstreams.anthropic` | `https://api.anthropic.com`                 | Claude 上游  |
+| `PROMPTXY_UPSTREAM_OPENAI`    | `upstreams.openai`    | `https://api.openai.com`                    | Codex 上游   |
+| `PROMPTXY_UPSTREAM_GEMINI`    | `upstreams.gemini`    | `https://generativelanguage.googleapis.com` | Gemini 上游  |
+| `PROMPTXY_DEBUG`              | `debug`               | `1` 或 `true`                               | 调试模式     |
+| `PROMPTXY_CONFIG`             | -                     | `/path/to/config.json`                      | 配置文件路径 |
 
 **使用示例**：
 
@@ -243,11 +248,13 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **替换匹配内容**
 
 **字符串匹配：**
+
 ```json
 { "type": "replace", "match": "old text", "replacement": "new text" }
 ```
 
 **正则匹配：**
+
 ```json
 {
   "type": "replace",
@@ -258,6 +265,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 ```
 
 **参数说明**：
+
 - `match`：精确字符串匹配（不能与 `regex` 同时使用）
 - `regex`：正则表达式匹配
 - `flags`：正则标志（如 `i` 忽略大小写，`g` 全局替换）
@@ -272,16 +280,19 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **删除匹配内容**
 
 **字符串匹配：**
+
 ```json
 { "type": "delete", "match": "unwanted rule" }
 ```
 
 **正则匹配：**
+
 ```json
 { "type": "delete", "regex": "be concise", "flags": "i" }
 ```
 
 **参数说明**：
+
 - `match`：精确字符串匹配（不能与 `regex` 同时使用）
 - `regex`：正则表达式匹配
 - `flags`：正则标志
@@ -299,6 +310,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 ```
 
 **参数说明**：
+
 - `regex`：必需，用于定位插入位置
 - `text`：必需，要插入的文本
 - `flags`：可选，正则标志
@@ -316,6 +328,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 ```
 
 **参数说明**：
+
 - `regex`：必需，用于定位插入位置
 - `text`：必需，要插入的文本
 - `flags`：可选，正则标志
@@ -334,6 +347,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **说明**：指定规则适用的 CLI 客户端
 
 **示例**：
+
 ```json
 { "client": "claude" }
 ```
@@ -348,11 +362,13 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **说明**：指定要改写的请求字段
 
 **对应关系**：
+
 - Claude Code → `system`
 - Codex CLI → `instructions`
 - Gemini CLI → `system`
 
 **示例**：
+
 ```json
 { "client": "claude", "field": "system" }
 ```
@@ -367,6 +383,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **说明**：HTTP 请求方法过滤
 
 **示例**：
+
 ```json
 { "client": "claude", "field": "system", "method": "POST" }
 ```
@@ -381,6 +398,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **说明**：请求路径正则匹配
 
 **示例**：
+
 ```json
 { "client": "claude", "field": "system", "pathRegex": "^/v1/messages$" }
 ```
@@ -395,6 +413,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 **说明**：模型名称正则匹配
 
 **示例**：
+
 ```json
 { "client": "claude", "field": "system", "modelRegex": "sonnet|opus" }
 ```
@@ -406,6 +425,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 ### 本地绑定
 
 **推荐配置**：
+
 ```json
 {
   "listen": {
@@ -416,6 +436,7 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 ```
 
 **原因**：
+
 - 防止局域网其他设备访问
 - 避免暴露到公网
 - 符合最小权限原则
@@ -425,11 +446,13 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 ### 凭据处理
 
 **重要原则**：
+
 - ❌ **不在配置文件中存储 API Key**
 - ✅ **完全依赖 CLI 自身的认证信息**
 - ✅ **认证头自动透传到上游**
 
 **配置示例**（正确方式）：
+
 ```json
 {
   "upstreams": {
@@ -461,23 +484,23 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 interface PromptxyConfig {
   listen: {
     host: string;
-    port: number;  // 1-65535
+    port: number; // 1-65535
   };
   upstreams: {
-    anthropic: string;  // 必须是有效 URL
-    openai: string;     // 必须是有效 URL
-    gemini: string;     // 必须是有效 URL
+    anthropic: string; // 必须是有效 URL
+    openai: string; // 必须是有效 URL
+    gemini: string; // 必须是有效 URL
   };
   rules: Array<{
     id: string;
     when: {
-      client: "claude" | "codex" | "gemini";
-      field: "system" | "instructions";
+      client: 'claude' | 'codex' | 'gemini';
+      field: 'system' | 'instructions';
       method?: string;
       pathRegex?: string;
       modelRegex?: string;
     };
-    ops: Array<any>;  // 非空数组
+    ops: Array<any>; // 非空数组
     stop?: boolean;
   }>;
   debug?: boolean;
@@ -493,11 +516,13 @@ npm run dev
 ```
 
 **验证失败示例**：
+
 ```
 Error: config.listen.port must be an integer in [1, 65535]
 ```
 
 **修复后**：
+
 ```
 promptxy listening on http://127.0.0.1:7070
 ```
@@ -600,6 +625,7 @@ PROMPTXY_DEBUG=1 npm run dev
 ### 多环境配置
 
 **开发环境** (`promptxy.config.dev.json`)：
+
 ```json
 {
   "listen": { "host": "127.0.0.1", "port": 7070 },
@@ -609,6 +635,7 @@ PROMPTXY_DEBUG=1 npm run dev
 ```
 
 **生产环境** (`promptxy.config.prod.json`)：
+
 ```json
 {
   "listen": { "host": "127.0.0.1", "port": 7070 },
@@ -618,6 +645,7 @@ PROMPTXY_DEBUG=1 npm run dev
 ```
 
 切换环境：
+
 ```bash
 PROMPTXY_CONFIG=promptxy.config.prod.json npm run start
 ```

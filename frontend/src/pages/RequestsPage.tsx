@@ -1,10 +1,9 @@
-import React, { useState } from "react";
-import { useDisclosure, Card, CardBody, Chip } from "@heroui/react";
-import { RequestList } from "@/components/requests";
-import { RequestDetail } from "@/components/requests";
-import { Modal } from "@/components/common";
-import { useRequests, useRequestDetail, useDeleteRequest } from "@/hooks";
-import { RequestFilters } from "@/types";
+import React, { useState } from 'react';
+import { useDisclosure, Card, CardBody, Chip } from '@heroui/react';
+import { RequestList, RequestDetail } from '@/components/requests';
+import { Modal } from '@/components/common';
+import { useRequests, useRequestDetail, useDeleteRequest } from '@/hooks';
+import { RequestFilters } from '@/types';
 
 export const RequestsPage: React.FC = () => {
   const [page, setPage] = useState(1);
@@ -50,9 +49,7 @@ export const RequestsPage: React.FC = () => {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             请求监控
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            实时查看经过代理的请求历史和修改详情
-          </p>
+          <p className="text-sm text-gray-500 mt-1">实时查看经过代理的请求历史和修改详情</p>
         </div>
         <div className="flex gap-2">
           <Chip color="secondary" variant="flat" size="sm">
@@ -82,9 +79,7 @@ export const RequestsPage: React.FC = () => {
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/10 border-none">
           <CardBody className="p-4">
             <div className="text-sm text-purple-700 dark:text-purple-300 font-medium">当前页码</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {page}
-            </div>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{page}</div>
           </CardBody>
         </Card>
         <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/10 border-none">
@@ -112,18 +107,8 @@ export const RequestsPage: React.FC = () => {
       />
 
       {/* 请求详情模态框 */}
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title="请求详情"
-        size="4xl"
-        backdrop="blur"
-      >
-        <RequestDetail
-          request={request || null}
-          isLoading={detailLoading}
-          onClose={handleClose}
-        />
+      <Modal isOpen={isOpen} onClose={handleClose} title="请求详情" size="4xl" backdrop="blur">
+        <RequestDetail request={request || null} isLoading={detailLoading} onClose={handleClose} />
       </Modal>
     </div>
   );

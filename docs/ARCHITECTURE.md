@@ -111,6 +111,7 @@ promptxy/
 ## 🎯 核心设计原则
 
 ### 1. 前后端分离但统一部署
+
 - **开发时**：独立开发，独立启动
 - **部署时**：合并为一个包，统一管理
 - **通信**：HTTP API + SSE实时推送
@@ -168,6 +169,7 @@ promptxy/
 ### 后端API端点（端口7071）
 
 #### 1. 规则管理
+
 ```
 GET    /api/rules              # 获取所有规则
 POST   /api/rules              # 创建规则
@@ -178,6 +180,7 @@ POST   /api/rules/batch        # 批量操作
 ```
 
 #### 2. 请求历史
+
 ```
 GET    /api/requests           # 获取请求列表（分页、筛选）
 GET    /api/requests/:id       # 获取请求详情
@@ -186,11 +189,13 @@ DELETE /api/requests/:id       # 删除单个请求
 ```
 
 #### 3. 实时推送
+
 ```
 GET    /api/events             # SSE连接（新请求推送）
 ```
 
 #### 4. 配置管理
+
 ```
 GET    /api/config             # 获取配置
 POST   /api/config/sync        # 同步配置（立即生效）
@@ -199,6 +204,7 @@ POST   /api/config/import      # 导入配置
 ```
 
 #### 5. 预览测试
+
 ```
 POST   /api/preview            # 预览规则效果
 ```
@@ -233,10 +239,10 @@ data: {
 ```json
 {
   "dependencies": {
-    "express": "^4.18.2",        // Web框架
-    "sqlite3": "^5.1.6",         // SQLite数据库
-    "sqlite": "^4.1.2",          // SQLite TypeScript封装
-    "cors": "^2.8.5"             // 跨域支持
+    "express": "^4.18.2", // Web框架
+    "sqlite3": "^5.1.6", // SQLite数据库
+    "sqlite": "^4.1.2", // SQLite TypeScript封装
+    "cors": "^2.8.5" // 跨域支持
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -256,12 +262,12 @@ data: {
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@heroui/react": "^2.2.0",      // HeroUI组件库
+    "@heroui/react": "^2.2.0", // HeroUI组件库
     "@heroui/system": "^2.2.0",
-    "framer-motion": "^10.16.0",    // 动画库
-    "zustand": "^4.4.0",            // 状态管理
+    "framer-motion": "^10.16.0", // 动画库
+    "zustand": "^4.4.0", // 状态管理
     "@tanstack/react-query": "^5.0.0", // 数据获取
-    "axios": "^1.6.0"               // HTTP客户端
+    "axios": "^1.6.0" // HTTP客户端
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
@@ -284,8 +290,8 @@ data: {
 
 ```typescript
 interface Rule {
-  id: string;              // 唯一标识
-  description?: string;    // 描述
+  id: string; // 唯一标识
+  description?: string; // 描述
 
   when: {
     client: 'claude' | 'codex' | 'gemini';
@@ -305,10 +311,10 @@ interface Rule {
     | { type: 'insert_after'; regex: string; flags?: string; text: string }
   >;
 
-  stop?: boolean;          // 是否在此后停止
-  enabled: boolean;        // 是否启用
-  createdAt: number;       // 创建时间
-  updatedAt: number;       // 更新时间
+  stop?: boolean; // 是否在此后停止
+  enabled: boolean; // 是否启用
+  createdAt: number; // 创建时间
+  updatedAt: number; // 更新时间
 }
 ```
 
@@ -325,8 +331,8 @@ interface RequestRecord {
   method: string;
 
   // 请求体
-  originalBody: any;       // 原始请求
-  modifiedBody: any;       // 修改后请求
+  originalBody: any; // 原始请求
+  modifiedBody: any; // 修改后请求
 
   // 规则匹配
   matchedRules: Array<{
@@ -348,12 +354,12 @@ interface RequestRecord {
 interface Config {
   listen: {
     host: string;
-    port: number;          // 代理端口 7070
+    port: number; // 代理端口 7070
   };
 
   api: {
     host: string;
-    port: number;          // API端口 7071
+    port: number; // API端口 7071
   };
 
   upstreams: {
@@ -365,8 +371,8 @@ interface Config {
   rules: Rule[];
 
   storage: {
-    maxHistory: number;    // 100
-    autoCleanup: boolean;  // true
+    maxHistory: number; // 100
+    autoCleanup: boolean; // true
     cleanupInterval: number; // 小时
   };
 
@@ -448,6 +454,7 @@ WHERE id NOT IN (
 ### 页面1：规则列表 (RulesPage)
 
 **组件结构：**
+
 ```
 <Page>
   <Header title="规则管理" actions={[新建, 批量操作]} />
@@ -481,6 +488,7 @@ WHERE id NOT IN (
 ```
 
 **HeroUI组件使用：**
+
 - `@heroui/input` - 搜索框
 - `@heroui/select` - 筛选器
 - `@heroui/card` - 规则卡片
@@ -491,6 +499,7 @@ WHERE id NOT IN (
 ### 页面2：请求详情 (RequestDetail)
 
 **组件结构：**
+
 ```
 <Modal open={true} onClose={close}>
   <Modal.Header>
@@ -613,6 +622,7 @@ WHERE id NOT IN (
 ### 开发环境
 
 **1. 启动后端**
+
 ```bash
 cd backend
 npm install
@@ -620,6 +630,7 @@ npm run dev  # 监听模式，端口7070 + 7071
 ```
 
 **2. 启动前端**
+
 ```bash
 cd frontend
 npm install
@@ -627,6 +638,7 @@ npm run dev  # Vite开发服务器，默认5173
 ```
 
 **3. 配置代理**
+
 ```bash
 # Claude Code
 export ANTHROPIC_BASE_URL="http://127.0.0.1:7070"
@@ -639,6 +651,7 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:7070/gemini"
 ```
 
 **4. 访问Web UI**
+
 ```
 http://localhost:5173
 ```
@@ -665,21 +678,25 @@ npm start
 ## 🎯 关键设计决策
 
 ### 1. 为什么分开开发但统一部署？
+
 - **开发体验**：前端热重载，后端独立重启
 - **部署简单**：最终一个进程，一个端口
 - **维护方便**：清晰的代码分离
 
 ### 2. 为什么使用SSE而不是WebSocket？
+
 - **单向通信**：只需要服务器推送新请求
 - **实现简单**：原生支持，无需额外库
 - **资源友好**：连接数限制更少
 
 ### 3. 为什么使用SQLite而不是文件JSON？
+
 - **查询能力**：支持分页、筛选、索引
 - **并发安全**：避免文件锁问题
 - **性能**：100条记录查询毫秒级
 
 ### 4. 为什么使用HeroUI？
+
 - **组件丰富**：表单、表格、模态框等开箱即用
 - **美观专业**：符合开发者工具审美
 - **TypeScript友好**：完整类型支持

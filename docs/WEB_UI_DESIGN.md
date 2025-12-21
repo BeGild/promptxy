@@ -8,6 +8,7 @@
 ## 🎯 核心功能理解
 
 ### 后端已实现（无需修改）
+
 ```
 ┌─────────────┐
 │ CLI工具     │
@@ -35,30 +36,35 @@
 ### Web UI需要补充的功能
 
 #### 1. **请求捕获与查看** ⭐⭐⭐
+
 - 实时捕获经过代理的请求
 - 保存原始请求体
 - 保存修改后的请求体
 - 显示匹配的规则和修改详情
 
 #### 2. **规则可视化编辑** ⭐⭐⭐
+
 - 图形化界面创建/编辑规则
 - 条件配置（client/field/method/pathRegex/modelRegex）
 - 操作配置（7种操作类型）
 - 实时验证规则语法
 
 #### 3. **请求-规则关联预览** ⭐⭐⭐
+
 - 选择历史请求
 - 应用当前规则集
 - 显示：原始 → 修改后的对比
 - 显示哪些规则被触发
 
 #### 4. **持久化存储** ⭐⭐
+
 - 规则配置持久化（JSON文件）
 - 请求历史保存（可配置保留数量）
 - 修改记录审计
 - 导出/导入功能
 
 #### 5. **调试与分析** ⭐
+
 - 请求统计（频率、成功率）
 - 规则命中分析
 - 性能监控
@@ -73,6 +79,7 @@
 #### A. 规则管理 (Rule Management)
 
 **1. 规则列表**
+
 - 显示所有规则卡片
 - 按client分类筛选
 - 搜索规则ID/描述
@@ -80,6 +87,7 @@
 - 快速启用/禁用
 
 **2. 规则编辑器**
+
 - **条件部分**：
   - client选择器（claude/codex/gemini）
   - field选择器（system/instructions）
@@ -94,6 +102,7 @@
   - 操作顺序调整（拖拽）
 
 **3. 规则验证**
+
 - 正则语法检查
 - 必填字段验证
 - 冲突检测（相同条件的规则）
@@ -102,12 +111,14 @@
 #### B. 请求捕获与查看 (Request Capture)
 
 **1. 实时请求流**
+
 - WebSocket或SSE实时显示新请求
 - 显示请求时间、客户端、路径
 - 显示规则匹配数量
 - 点击查看详情
 
 **2. 请求详情**
+
 - **原始请求体**：完整JSON
 - **修改后请求体**：完整JSON
 - **差异高亮**：使用颜色标记修改处
@@ -115,6 +126,7 @@
 - **响应信息**：状态码、耗时、错误信息
 
 **3. 历史记录**
+
 - 分页列表（可配置保留数量）
 - 按时间/客户端/规则筛选
 - 搜索请求内容
@@ -123,12 +135,14 @@
 #### C. 预览与测试 (Preview & Test)
 
 **1. 规则预览**
+
 - 输入测试请求（或选择历史）
 - 应用当前规则集
 - 显示每一步修改过程
 - 显示最终结果
 
 **2. 沙盒测试**
+
 - 独立测试环境
 - 支持自定义请求体
 - 逐条启用/禁用规则
@@ -137,16 +151,19 @@
 #### D. 数据管理 (Data Management)
 
 **1. 配置持久化**
+
 - 自动保存规则到JSON文件
 - 支持多个配置文件切换
 - 配置版本管理
 
 **2. 数据导出/导入**
+
 - 导出规则（JSON格式）
 - 导出请求历史（JSON/CSV）
 - 导入配置（合并/覆盖模式）
 
 **3. 数据清理**
+
 - 自动清理旧请求（保留最近N条）
 - 手动清理历史
 - 备份与恢复
@@ -154,23 +171,27 @@
 ### 非功能需求
 
 #### 性能
+
 - 支持1000+规则不卡顿
 - 请求列表虚拟滚动
 - 搜索响应 < 500ms
 - 实时捕获不阻塞代理
 
 #### 可用性
+
 - 三断点响应式（移动端友好）
 - 键盘快捷键
 - 清晰的错误提示
 - 操作可撤销
 
 #### 可靠性
+
 - 数据自动保存（防丢失）
 - 异常恢复机制
 - 请求捕获失败不影响代理
 
 #### 安全性
+
 - 本地运行，不暴露公网
 - 敏感信息脱敏显示
 - 数据导出加密选项
@@ -182,11 +203,13 @@
 ### 设计灵感
 
 #### 参考风格
+
 1. **Postman** - API调试工具的经典布局
 2. **Fiddler/Charles** - 代理工具的请求捕获
 3. **VS Code** - 配置编辑的清晰层级
 
 #### 设计原则
+
 - **专业性**：开发者工具的严谨感
 - **清晰度**：请求/响应/规则的三栏布局
 - **实时性**：状态指示、实时更新
@@ -195,33 +218,35 @@
 ### 视觉系统
 
 #### 色彩系统
+
 ```css
 /* 主题色 - 专业开发者工具蓝 */
---primary: #007acc;        /* VS Code蓝 */
+--primary: #007acc; /* VS Code蓝 */
 --primary-hover: #0098ff;
---bg-main: #1e1e1e;        /* 深色背景 */
---bg-panel: #252526;       /* 面板背景 */
---bg-card: #2d2d30;        /* 卡片背景 */
---border: #3e3e42;         /* 边框色 */
---text-primary: #cccccc;   /* 主文本 */
+--bg-main: #1e1e1e; /* 深色背景 */
+--bg-panel: #252526; /* 面板背景 */
+--bg-card: #2d2d30; /* 卡片背景 */
+--border: #3e3e42; /* 边框色 */
+--text-primary: #cccccc; /* 主文本 */
 --text-secondary: #858585; /* 次要文本 */
 
 /* 语义色 */
---success: #4ec9b0;        /* 成功、启用 */
---warning: #ce9178;        /* 警告、修改 */
---error: #f48771;          /* 错误、禁用 */
---info: #569cd6;           /* 信息、匹配 */
+--success: #4ec9b0; /* 成功、启用 */
+--warning: #ce9178; /* 警告、修改 */
+--error: #f48771; /* 错误、禁用 */
+--info: #569cd6; /* 信息、匹配 */
 
 /* 差异高亮 */
---diff-added: #037a09;     /* 新增 */
---diff-removed: #7a1921;   /* 删除 */
---diff-modified: #6a4d00;  /* 修改 */
+--diff-added: #037a09; /* 新增 */
+--diff-removed: #7a1921; /* 删除 */
+--diff-modified: #6a4d00; /* 修改 */
 ```
 
 #### 字体系统
+
 ```css
---font-mono: 'JetBrains Mono', 'Fira Code', monospace;  /* 代码 */
---font-sans: 'Inter', system-ui, sans-serif;            /* UI */
+--font-mono: 'JetBrains Mono', 'Fira Code', monospace; /* 代码 */
+--font-sans: 'Inter', system-ui, sans-serif; /* UI */
 --font-size-xs: 12px;
 --font-size-sm: 13px;
 --font-size-base: 14px;
@@ -230,6 +255,7 @@
 ```
 
 #### 间距系统
+
 ```css
 --space-1: 4px;
 --space-2: 8px;
@@ -242,6 +268,7 @@
 ### 页面布局
 
 #### 主界面布局 (三栏式)
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Header (48px)                                                   │
@@ -262,6 +289,7 @@
 ```
 
 #### 规则编辑器模态框
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 编辑规则 - rule-001                             [✕] [ESC]   │
@@ -296,6 +324,7 @@
 ```
 
 #### 请求详情视图
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 请求详情 - 2025-12-20 14:32:15                    [✕]      │
@@ -400,6 +429,7 @@ promptxy/
 ### 数据存储架构
 
 **后端存储（SQLite）：**
+
 ```
 ~/.local/promptxy/
 ├── config.json              # 规则配置文件
@@ -425,6 +455,7 @@ promptxy/
 ```
 
 **前端存储（IndexedDB）：**
+
 ```
 数据库: promptxy_ui
 版本: 1
@@ -440,6 +471,7 @@ Store: offline_requests (缓存，可清空)
 ```
 
 **数据同步策略：**
+
 - 前端修改规则 → 立即POST到后端 → 后端保存到config.json + 内存生效
 - 前端读取规则 → GET /config（始终从后端读取最新）
 - 请求历史 → 后端SQLite是唯一真实数据源
@@ -448,6 +480,7 @@ Store: offline_requests (缓存，可清空)
 ### 请求捕获与展示流程
 
 **实时捕获（SSE）：**
+
 ```
 后端代理逻辑：
 1. 捕获原始请求 → 存入SQLite
@@ -464,6 +497,7 @@ Web UI：
 ```
 
 **历史查看：**
+
 ```
 Web UI → GET /_promptxy/requests?limit=50&offset=0
 后端 → 查询SQLite返回数据
@@ -471,6 +505,7 @@ Web UI → 渲染列表，点击查看详情
 ```
 
 **差异对比：**
+
 ```
 数据源：
 - original_body: 原始请求JSON
@@ -487,6 +522,7 @@ Web UI → 渲染列表，点击查看详情
 ### 配置同步机制
 
 **即时生效流程：**
+
 ```
 Web UI编辑规则 → 点击保存
 ↓
@@ -507,6 +543,7 @@ Web UI：
 ```
 
 **双向同步：**
+
 ```
 启动时：
 Web UI → GET /config
@@ -520,6 +557,7 @@ Web UI → GET /config
 ### 差异对比实现
 
 **左右视图设计：**
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ 差异对比 - 请求ID: abc-123                              │
@@ -551,6 +589,7 @@ Web UI → GET /config
 ```
 
 **差异算法：**
+
 ```javascript
 function generateDiff(original, modified) {
   // 1. 解析JSON
@@ -564,7 +603,7 @@ function generateDiff(original, modified) {
   return {
     left: formatJSON(origObj, diff, 'removed'),
     right: formatJSON(modObj, diff, 'added'),
-    markers: diff.markers
+    markers: diff.markers,
   };
 }
 ```
@@ -572,6 +611,7 @@ function generateDiff(original, modified) {
 ### 数据保留策略
 
 **自动清理：**
+
 ```
 后端定时任务：
 - 每小时检查一次
@@ -586,6 +626,7 @@ Web UI：
 ```
 
 **导出/导入：**
+
 ```
 导出：
 - 规则配置 → JSON文件
@@ -600,21 +641,23 @@ Web UI：
 ### 规则编辑器
 
 **动态表单逻辑：**
+
 ```javascript
 const opTypeFields = {
-  'set': ['text'],
-  'append': ['text'],
-  'prepend': ['text'],
-  'replace': ['match', 'regex', 'flags', 'replacement'],
-  'delete': ['match', 'regex', 'flags'],
-  'insert_before': ['regex', 'flags', 'text'],
-  'insert_after': ['regex', 'flags', 'text']
+  set: ['text'],
+  append: ['text'],
+  prepend: ['text'],
+  replace: ['match', 'regex', 'flags', 'replacement'],
+  delete: ['match', 'regex', 'flags'],
+  insert_before: ['regex', 'flags', 'text'],
+  insert_after: ['regex', 'flags', 'text'],
 };
 ```
 
 ### 差异对比算法
 
 **简单行级对比：**
+
 ```javascript
 function diffLines(original, modified) {
   const origLines = original.split('\n');
@@ -626,6 +669,7 @@ function diffLines(original, modified) {
 ```
 
 **JSON路径对比：**
+
 ```javascript
 // 识别具体修改的JSON路径
 // 例如: messages[0].content → 添加了文本
@@ -636,34 +680,40 @@ function diffLines(original, modified) {
 ## 🚀 开发优先级
 
 ### Phase 1: MVP (1周)
+
 - ✅ 规则列表展示与编辑
 - ✅ 基础请求捕获与查看
 - ✅ 本地存储（IndexedDB）
 - ✅ 简单预览功能
 
 **验收标准：**
+
 - 可以创建/编辑/删除规则
 - 能看到经过代理的请求
 - 数据刷新不丢失
 
 ### Phase 2: 增强 (1周)
+
 - ✅ 差异对比可视化
 - ✅ 请求筛选与搜索
 - ✅ 规则测试沙盒
 - ✅ 导出/导入功能
 
 **验收标准：**
+
 - 清晰看到修改前后差异
 - 快速找到历史请求
 - 可以离线测试规则
 
 ### Phase 3: 优化 (1周)
+
 - ✅ 实时推送（SSE）
 - ✅ 性能优化（虚拟滚动）
 - ✅ 键盘快捷键
 - ✅ 响应式适配
 
 **验收标准：**
+
 - 1000+请求流畅
 - 移动端可用
 - 键盘操作高效
@@ -719,6 +769,7 @@ function diffLines(original, modified) {
 ## 🎯 核心用户故事
 
 ### 故事1：调试规则
+
 ```
 作为：开发者
 想要：知道为什么某个请求被修改了
@@ -732,6 +783,7 @@ function diffLines(original, modified) {
 ```
 
 ### 故事2：创建新规则
+
 ```
 作为：开发者
 想要：添加一条新规则
@@ -747,6 +799,7 @@ function diffLines(original, modified) {
 ```
 
 ### 故事3：分析历史请求
+
 ```
 作为：开发者
 想要：找出某个问题的原因
@@ -765,23 +818,29 @@ function diffLines(original, modified) {
 ## 🔍 技术挑战与解决方案
 
 ### 挑战1：实时性
+
 **问题**：如何实时显示新请求？
 **方案**：SSE + 日志文件轮询
+
 - 后端写入JSONL日志
 - Web UI通过EventSource读取
 - 增量更新UI
 
 ### 挑战2：性能
+
 **问题**：大量请求/规则导致卡顿？
 **方案**：
+
 - 虚拟滚动（只渲染可见项）
 - 分页加载（每次50条）
 - Web Workers处理diff计算
 - IndexedDB索引优化
 
 ### 挑战3：数据同步
+
 **问题**：Web UI和后端配置如何同步？
 **方案**：
+
 - 规则修改时同时保存到：
   1. IndexedDB（Web UI）
   2. JSON文件（后端配置）
@@ -789,8 +848,10 @@ function diffLines(original, modified) {
 - 冲突时提示用户
 
 ### 挑战4：差异展示
+
 **问题**：如何清晰展示JSON修改？
 **方案**：
+
 - JSON格式化+语法高亮
 - 行级diff（+/-标记）
 - 路径高亮（messages[0].content）
@@ -801,6 +862,7 @@ function diffLines(original, modified) {
 ## 📝 实现清单
 
 ### HTML结构
+
 - [ ] 主容器（三栏布局）
 - [ ] 规则列表页
 - [ ] 规则编辑器模态框
@@ -810,6 +872,7 @@ function diffLines(original, modified) {
 - [ ] 设置页面
 
 ### CSS样式
+
 - [ ] 设计系统变量
 - [ ] 布局系统（Grid/Flex）
 - [ ] 组件样式（按钮、卡片、表单）
@@ -818,6 +881,7 @@ function diffLines(original, modified) {
 - [ ] 动效过渡
 
 ### JavaScript功能
+
 - [ ] IndexedDB封装
 - [ ] 规则CRUD操作
 - [ ] 请求捕获与展示
@@ -837,6 +901,7 @@ function diffLines(original, modified) {
 3. **迭代优化**：根据使用反馈调整
 
 **关键问题需要确认：**
+
 - 后端是否需要提供新的API端点？（如日志读取、配置同步）
 - 是否需要WebSocket还是SSE足够？
 - 请求历史保留数量上限？

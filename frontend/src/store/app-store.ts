@@ -1,9 +1,9 @@
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
-import { PromptxyRule, RequestListItem, SSEConnectionStatus } from "@/types";
-import { getRules, syncRules } from "@/api/rules";
-import { getRequests, getStats } from "@/api/requests";
-import { checkHealth } from "@/api/client";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
+import { PromptxyRule, RequestListItem, SSEConnectionStatus } from '@/types';
+import { getRules, syncRules } from '@/api/rules';
+import { getRequests, getStats } from '@/api/requests';
+import { checkHealth } from '@/api/client';
 
 interface AppState {
   // 数据状态
@@ -76,20 +76,20 @@ export const useAppStore = create<AppState>()(
 
     // 加载规则
     loadRules: async () => {
-      set((state) => ({ loading: { ...state.loading, rules: true } }));
+      set(state => ({ loading: { ...state.loading, rules: true } }));
       try {
         const rules = await getRules();
         set({ rules, errors: { ...get().errors, rules: null } });
       } catch (error: any) {
         set({ errors: { ...get().errors, rules: error.message } });
       } finally {
-        set((state) => ({ loading: { ...state.loading, rules: false } }));
+        set(state => ({ loading: { ...state.loading, rules: false } }));
       }
     },
 
     // 保存规则
     saveRules: async (rules: PromptxyRule[]) => {
-      set((state) => ({ loading: { ...state.loading, saving: true } }));
+      set(state => ({ loading: { ...state.loading, saving: true } }));
       try {
         await syncRules(rules);
         set({
@@ -100,13 +100,13 @@ export const useAppStore = create<AppState>()(
         set({ errors: { ...get().errors, save: error.message } });
         throw error;
       } finally {
-        set((state) => ({ loading: { ...state.loading, saving: false } }));
+        set(state => ({ loading: { ...state.loading, saving: false } }));
       }
     },
 
     // 加载请求列表
     loadRequests: async (page = 1) => {
-      set((state) => ({ loading: { ...state.loading, requests: true } }));
+      set(state => ({ loading: { ...state.loading, requests: true } }));
       try {
         const result = await getRequests({}, page, 50);
         set({
@@ -118,20 +118,20 @@ export const useAppStore = create<AppState>()(
       } catch (error: any) {
         set({ errors: { ...get().errors, requests: error.message } });
       } finally {
-        set((state) => ({ loading: { ...state.loading, requests: false } }));
+        set(state => ({ loading: { ...state.loading, requests: false } }));
       }
     },
 
     // 加载统计
     loadStats: async () => {
-      set((state) => ({ loading: { ...state.loading, stats: true } }));
+      set(state => ({ loading: { ...state.loading, stats: true } }));
       try {
         const stats = await getStats();
         set({ stats, errors: { ...get().errors, stats: null } });
       } catch (error: any) {
         set({ errors: { ...get().errors, stats: error.message } });
       } finally {
-        set((state) => ({ loading: { ...state.loading, stats: false } }));
+        set(state => ({ loading: { ...state.loading, stats: false } }));
       }
     },
 
@@ -148,7 +148,7 @@ export const useAppStore = create<AppState>()(
 
     // 添加新请求（来自 SSE）
     addNewRequest: (request: RequestListItem) => {
-      set((state) => ({
+      set(state => ({
         requests: [request, ...state.requests].slice(0, 50),
         requestTotal: state.requestTotal + 1,
       }));
@@ -188,5 +188,5 @@ export const useAppStore = create<AppState>()(
         requestTotal: 0,
       });
     },
-  }))
+  })),
 );

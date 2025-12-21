@@ -1,10 +1,24 @@
-import React from "react";
-import { HeroUIProvider, Button, Card, Navbar, Chip, Badge, Spacer, Divider, CardBody, CardHeader, NavbarBrand, NavbarContent, NavbarItem } from "@heroui/react";
+import React from 'react';
+import {
+  HeroUIProvider,
+  Button,
+  Card,
+  Navbar,
+  Chip,
+  Badge,
+  Spacer,
+  Divider,
+  CardBody,
+  CardHeader,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+} from '@heroui/react';
 
 export default function TestHeroUI() {
   return (
     <HeroUIProvider>
-      <div style={{ padding: "20px", fontFamily: "system-ui" }}>
+      <div style={{ padding: '20px', fontFamily: 'system-ui' }}>
         <h1>HeroUI v2.8.6 测试</h1>
 
         <Spacer y={1} />
@@ -21,20 +35,26 @@ export default function TestHeroUI() {
 
         <Spacer y={1} />
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <Chip color="primary" variant="flat">测试 Chip</Chip>
-          <Badge content="5" color="primary">通知</Badge>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <Chip color="primary" variant="flat">
+            测试 Chip
+          </Chip>
+          <Badge content="5" color="primary">
+            通知
+          </Badge>
         </div>
 
         <Spacer y={1} />
 
         <Navbar>
           <NavbarBrand>
-            <p style={{ fontWeight: "bold" }}>测试导航栏</p>
+            <p style={{ fontWeight: 'bold' }}>测试导航栏</p>
           </NavbarBrand>
           <NavbarContent justify="end">
             <NavbarItem>
-              <Button color="primary" size="sm">登录</Button>
+              <Button color="primary" size="sm">
+                登录
+              </Button>
             </NavbarItem>
           </NavbarContent>
         </Navbar>

@@ -3,7 +3,7 @@
  */
 
 export interface ConfigSyncRequest {
-  rules: import("./rule").PromptxyRule[];
+  rules: import('./rule').PromptxyRule[];
 }
 
 export interface ConfigSyncResponse {
@@ -15,8 +15,8 @@ export interface ConfigSyncResponse {
 
 export interface PreviewRequest {
   body: any;
-  client: import("./rule").PromptxyClient;
-  field: import("./rule").PromptxyField;
+  client: import('./rule').PromptxyClient;
+  field: import('./rule').PromptxyField;
   method?: string;
   path?: string;
   model?: string;
@@ -63,7 +63,7 @@ export interface SSERequestEvent {
 }
 
 export interface HealthCheckResponse {
-  status: "ok" | "error";
+  status: 'ok' | 'error';
   service: string;
   timestamp: number;
 }
@@ -75,13 +75,13 @@ export interface ErrorResponse {
 
 // 规则操作相关类型
 export interface RuleOperationRequest {
-  rule: import("./rule").PromptxyRule;
+  rule: import('./rule').PromptxyRule;
 }
 
 export interface RuleOperationResponse {
   success: boolean;
   message: string;
-  rule?: import("./rule").PromptxyRule;
+  rule?: import('./rule').PromptxyRule;
   errors?: string[];
   warnings?: string[];
 }

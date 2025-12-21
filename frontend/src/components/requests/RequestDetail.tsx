@@ -1,8 +1,8 @@
-import React from "react";
-import { Card, CardBody, Chip, Button, Badge, Spinner, Divider } from "@heroui/react";
-import { RequestRecord } from "@/types";
-import { formatTime, formatDuration, getStatusColor, formatClient } from "@/utils";
-import { DiffViewer } from "./DiffViewer";
+import React from 'react';
+import { Card, CardBody, Chip, Button, Badge, Spinner, Divider } from '@heroui/react';
+import { RequestRecord } from '@/types';
+import { formatTime, formatDuration, getStatusColor, formatClient } from '@/utils';
+import { DiffViewer } from './DiffViewer';
 
 interface RequestDetailProps {
   request: RequestRecord | null;
@@ -29,7 +29,9 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
     return (
       <div className="p-8 text-center space-y-4">
         <div className="text-lg font-medium text-gray-600">未找到请求详情</div>
-        <Button onPress={onClose} radius="lg">关闭</Button>
+        <Button onPress={onClose} radius="lg">
+          关闭
+        </Button>
       </div>
     );
   }
@@ -77,13 +79,13 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
                 variant="flat"
                 className="font-medium"
               >
-                {request.responseStatus || "N/A"}
+                {request.responseStatus || 'N/A'}
               </Chip>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-gray-500 min-w-[60px]">耗时:</span>
               <span className="font-medium">
-                {request.durationMs ? formatDuration(request.durationMs) : "-"}
+                {request.durationMs ? formatDuration(request.durationMs) : '-'}
               </span>
             </div>
           </div>
@@ -97,7 +99,10 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
             <h4 className="text-lg font-bold">匹配规则</h4>
             <div className="flex flex-wrap gap-2">
               {request.matchedRules.map((match, i) => (
-                <div key={i} className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900/30 px-2 py-1 rounded-lg">
+                <div
+                  key={i}
+                  className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900/30 px-2 py-1 rounded-lg"
+                >
                   <Badge color="secondary" variant="flat" size="sm" className="text-xs">
                     {match.ruleId}
                   </Badge>

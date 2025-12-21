@@ -1,14 +1,14 @@
-import { loadConfig, getConfigDir } from "./promptxy/config.js";
-import { createGateway } from "./promptxy/gateway.js";
-import { initializeDatabase } from "./promptxy/database.js";
-import { createApiServer } from "./promptxy/api-server.js";
-import { createLogger } from "./promptxy/logger.js";
-import { setInterval } from "node:timers";
-import { mkdir } from "node:fs/promises";
-import path from "node:path";
+import { loadConfig, getConfigDir } from './promptxy/config.js';
+import { createGateway } from './promptxy/gateway.js';
+import { initializeDatabase } from './promptxy/database.js';
+import { createApiServer } from './promptxy/api-server.js';
+import { createLogger } from './promptxy/logger.js';
+import { setInterval } from 'node:timers';
+import { mkdir } from 'node:fs/promises';
+import * as path from 'node:path';
 
 async function startAutoCleanup(intervalHours: number, maxHistory: number): Promise<void> {
-  const { cleanupOldRequests } = await import("./promptxy/database.js");
+  const { cleanupOldRequests } = await import('./promptxy/database.js');
   const logger = createLogger({ debug: true });
 
   // 立即执行一次清理
@@ -22,16 +22,19 @@ async function startAutoCleanup(intervalHours: number, maxHistory: number): Prom
   }
 
   // 定时执行
-  setInterval(async () => {
-    try {
-      const deleted = await cleanupOldRequests(maxHistory);
-      if (deleted > 0) {
-        logger.info(`[Cleanup] 自动清理: 删除 ${deleted} 条旧记录，保留 ${maxHistory} 条`);
+  setInterval(
+    async () => {
+      try {
+        const deleted = await cleanupOldRequests(maxHistory);
+        if (deleted > 0) {
+          logger.info(`[Cleanup] 自动清理: 删除 ${deleted} 条旧记录，保留 ${maxHistory} 条`);
+        }
+      } catch (error: any) {
+        logger.info(`[Cleanup] 自动清理失败: ${error?.message}`);
       }
-    } catch (error: any) {
-      logger.info(`[Cleanup] 自动清理失败: ${error?.message}`);
-    }
-  }, intervalHours * 60 * 60 * 1000);
+    },
+    intervalHours * 60 * 60 * 1000,
+  );
 }
 
 async function main() {
@@ -60,7 +63,9 @@ async function main() {
 
   // 启动网关服务器
   gatewayServer.listen(config.listen.port, config.listen.host, () => {
-    logger.info(`[PromptXY] Gateway listening on http://${config.listen.host}:${config.listen.port}`);
+    logger.info(
+      `[PromptXY] Gateway listening on http://${config.listen.host}:${config.listen.port}`,
+    );
   });
 
   // 启动 API 服务器
@@ -79,14 +84,14 @@ async function main() {
     });
   };
 
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 
   // 输出配置信息
   logger.info(`[PromptXY] 配置目录: ${configDir}`);
   logger.info(`[PromptXY] 存储限制: 最近 ${config.storage.maxHistory} 条请求`);
   logger.info(`[PromptXY] 规则数量: ${config.rules.length}`);
-  logger.info(`[PromptXY] 调试模式: ${config.debug ? "开启" : "关闭"}`);
+  logger.info(`[PromptXY] 调试模式: ${config.debug ? '开启' : '关闭'}`);
 }
 
 void main();

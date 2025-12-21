@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Button,
   useDisclosure,
@@ -9,12 +9,12 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter
-} from "@heroui/react";
-import { RuleList, RuleEditor } from "@/components/rules";
-import { useRules, useSaveRules, useDeleteRule } from "@/hooks";
-import { PromptxyRule } from "@/types";
-import { validateRule } from "@/utils";
+  ModalFooter,
+} from '@heroui/react';
+import { RuleList, RuleEditor } from '@/components/rules';
+import { useRules, useSaveRules, useDeleteRule } from '@/hooks';
+import { PromptxyRule } from '@/types';
+import { validateRule } from '@/utils';
 
 export const RulesPage: React.FC = () => {
   const { rules, isLoading, refetch } = useRules();
@@ -28,9 +28,9 @@ export const RulesPage: React.FC = () => {
   const handleNewRule = () => {
     const newRule: PromptxyRule = {
       id: `rule-${Date.now()}`,
-      description: "",
-      when: { client: "claude", field: "system" },
-      ops: [{ type: "append", text: "\n\n" }],
+      description: '',
+      when: { client: 'claude', field: 'system' },
+      ops: [{ type: 'append', text: '\n\n' }],
       enabled: true,
     };
     setEditingRule(newRule);
@@ -39,7 +39,7 @@ export const RulesPage: React.FC = () => {
 
   // 处理编辑规则
   const handleEdit = (ruleId: string) => {
-    const rule = rules.find((r) => r.id === ruleId);
+    const rule = rules.find(r => r.id === ruleId);
     if (rule) {
       setEditingRule({ ...rule });
       onOpen();
@@ -61,7 +61,7 @@ export const RulesPage: React.FC = () => {
   // 处理切换启用状态
   const handleToggle = async (rule: PromptxyRule) => {
     const updatedRule = { ...rule, enabled: !rule.enabled };
-    const updatedRules = rules.map((r) => (r.id === rule.id ? updatedRule : r));
+    const updatedRules = rules.map(r => (r.id === rule.id ? updatedRule : r));
     try {
       await saveRulesMutation.mutateAsync(updatedRules);
       refetch();
@@ -74,17 +74,17 @@ export const RulesPage: React.FC = () => {
   const handleSave = async (rule: PromptxyRule) => {
     const validation = validateRule(rule);
     if (!validation.valid) {
-      alert(`验证失败:\n${validation.errors.join("\n")}`);
+      alert(`验证失败:\n${validation.errors.join('\n')}`);
       return;
     }
 
     // 检查是否已存在
-    const existingIndex = rules.findIndex((r) => r.id === rule.id);
+    const existingIndex = rules.findIndex(r => r.id === rule.id);
     let updatedRules: PromptxyRule[];
 
     if (existingIndex >= 0) {
       // 更新现有规则
-      updatedRules = rules.map((r) => (r.id === rule.id ? rule : r));
+      updatedRules = rules.map(r => (r.id === rule.id ? rule : r));
     } else {
       // 添加新规则
       updatedRules = [...rules, rule];
@@ -172,15 +172,9 @@ export const RulesPage: React.FC = () => {
         scrollBehavior="outside"
       >
         <ModalContent>
-          <ModalHeader>
-            {editingRule ? "编辑规则" : "新建规则"}
-          </ModalHeader>
+          <ModalHeader>{editingRule ? '编辑规则' : '新建规则'}</ModalHeader>
           <ModalBody>
-            <RuleEditor
-              rule={editingRule}
-              onSave={handleSave}
-              onCancel={handleCancel}
-            />
+            <RuleEditor rule={editingRule} onSave={handleSave} onCancel={handleCancel} />
           </ModalBody>
         </ModalContent>
       </Modal>

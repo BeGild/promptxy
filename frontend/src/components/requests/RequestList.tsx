@@ -1,8 +1,23 @@
-import React from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Button, Input, Pagination, Spinner, Badge, Select, SelectItem } from "@heroui/react";
-import { EmptyState } from "@/components/common";
-import { RequestListItem, RequestFilters } from "@/types";
-import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from "@/utils";
+import React from 'react';
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Chip,
+  Button,
+  Input,
+  Pagination,
+  Spinner,
+  Badge,
+  Select,
+  SelectItem,
+} from '@heroui/react';
+import { EmptyState } from '@/components/common';
+import { RequestListItem, RequestFilters } from '@/types';
+import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from '@/utils';
 
 interface RequestListProps {
   requests: RequestListItem[];
@@ -29,7 +44,6 @@ export const RequestList: React.FC<RequestListProps> = ({
   onRefresh,
   onDelete,
 }) => {
-
   const totalPages = Math.ceil(total / 50);
 
   // 处理搜索变化
@@ -40,7 +54,7 @@ export const RequestList: React.FC<RequestListProps> = ({
   // 处理客户端筛选变化
   const handleClientChange = (value: string) => {
     const newFilters = { ...filters };
-    if (value === "all") {
+    if (value === 'all') {
       delete newFilters.client;
     } else {
       newFilters.client = value;
@@ -80,22 +94,24 @@ export const RequestList: React.FC<RequestListProps> = ({
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
           placeholder="🔍 搜索ID或路径..."
-          value={filters.search || ""}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          value={filters.search || ''}
+          onChange={e => handleSearchChange(e.target.value)}
           className="flex-1"
           radius="lg"
           classNames={{
-            inputWrapper: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+            inputWrapper:
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
           }}
         />
 
         <Select
-          selectedKeys={[filters.client || "all"]}
-          onChange={(e) => handleClientChange(e.target.value)}
+          selectedKeys={[filters.client || 'all']}
+          onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
           classNames={{
-            trigger: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+            trigger:
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -121,12 +137,7 @@ export const RequestList: React.FC<RequestListProps> = ({
           {requests.length} / {total} 条
         </Chip>
         {filters.search && (
-          <Button
-            size="sm"
-            variant="light"
-            onPress={clearSearch}
-            className="h-6 px-2"
-          >
+          <Button size="sm" variant="light" onPress={clearSearch} className="h-6 px-2">
             清除搜索
           </Button>
         )}
@@ -136,11 +147,11 @@ export const RequestList: React.FC<RequestListProps> = ({
       <Table
         aria-label="请求历史表"
         selectionMode="single"
-        onRowAction={(key) => onRowClick(key as string)}
+        onRowAction={key => onRowClick(key as string)}
         classNames={{
-          wrapper: "shadow-md rounded-xl border border-gray-200 dark:border-gray-700",
-          th: "bg-gray-50 dark:bg-gray-800 text-sm font-semibold",
-          tr: "hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
+          wrapper: 'shadow-md rounded-xl border border-gray-200 dark:border-gray-700',
+          th: 'bg-gray-50 dark:bg-gray-800 text-sm font-semibold',
+          tr: 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
         }}
       >
         <TableHeader>
@@ -158,7 +169,7 @@ export const RequestList: React.FC<RequestListProps> = ({
           isLoading={isLoading}
           emptyContent={<div className="py-12 text-center text-gray-500">暂无数据</div>}
         >
-          {(item) => (
+          {item => (
             <TableRow key={item.id} className="cursor-pointer">
               <TableCell className="text-sm">{formatRelativeTime(item.timestamp)}</TableCell>
               <TableCell>
@@ -179,7 +190,7 @@ export const RequestList: React.FC<RequestListProps> = ({
               <TableCell>
                 {item.matchedRules && item.matchedRules.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {item.matchedRules.slice(0, 3).map((ruleId) => (
+                    {item.matchedRules.slice(0, 3).map(ruleId => (
                       <Chip
                         key={ruleId}
                         size="sm"
@@ -207,11 +218,11 @@ export const RequestList: React.FC<RequestListProps> = ({
                   variant="flat"
                   className="font-medium"
                 >
-                  {item.responseStatus || "N/A"}
+                  {item.responseStatus || 'N/A'}
                 </Chip>
               </TableCell>
               <TableCell className="text-sm">
-                {item.durationMs ? formatDuration(item.durationMs) : "-"}
+                {item.durationMs ? formatDuration(item.durationMs) : '-'}
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
@@ -249,9 +260,9 @@ export const RequestList: React.FC<RequestListProps> = ({
             color="primary"
             showShadow={true}
             classNames={{
-              wrapper: "gap-1",
-              item: "min-w-9 h-9",
-              cursor: "shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold",
+              wrapper: 'gap-1',
+              item: 'min-w-9 h-9',
+              cursor: 'shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold',
             }}
           />
         </div>

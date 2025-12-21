@@ -1,16 +1,14 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
+import { Card, CardBody, Button, Input, Badge, Spinner, Divider } from '@heroui/react';
 import {
-  Card,
-  CardBody,
-  Button,
-  Input,
-  Badge,
-  Spinner,
-  Divider,
-} from "@heroui/react";
-import { useConfig, useExportConfig, useImportConfig, useDownloadConfig, useUploadConfig } from "@/hooks";
-import { useCleanupRequests, useStats } from "@/hooks/useRequests";
-import { formatBytes } from "@/utils";
+  useConfig,
+  useExportConfig,
+  useImportConfig,
+  useDownloadConfig,
+  useUploadConfig,
+} from '@/hooks';
+import { useCleanupRequests, useStats } from '@/hooks/useRequests';
+import { formatBytes } from '@/utils';
 
 export const SettingsPanel: React.FC = () => {
   const { config, isLoading: configLoading } = useConfig();
@@ -21,7 +19,7 @@ export const SettingsPanel: React.FC = () => {
   const { upload } = useUploadConfig();
   const cleanupMutation = useCleanupRequests();
 
-  const [keepCount, setKeepCount] = useState("100");
+  const [keepCount, setKeepCount] = useState('100');
 
   // 导出配置
   const handleExport = async () => {
@@ -35,7 +33,7 @@ export const SettingsPanel: React.FC = () => {
       const conf = await upload();
       if (conf) {
         await importMutation.mutateAsync(conf);
-        alert("配置导入成功！");
+        alert('配置导入成功！');
       }
     } catch (error: any) {
       alert(`导入失败: ${error?.message}`);
@@ -85,7 +83,13 @@ export const SettingsPanel: React.FC = () => {
                   <div className="flex flex-wrap gap-2 mt-2">
                     {stats?.byClient &&
                       Object.entries(stats.byClient).map(([client, count]) => (
-                        <Badge key={client} color="secondary" variant="flat" size="sm" className="font-medium">
+                        <Badge
+                          key={client}
+                          color="secondary"
+                          variant="flat"
+                          size="sm"
+                          className="font-medium"
+                        >
                           {formatClient(client)}: {count}
                         </Badge>
                       ))}
@@ -100,7 +104,7 @@ export const SettingsPanel: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500">数据库大小:</span>
                   <Badge color="warning" variant="flat" size="sm" className="font-bold">
-                    {stats?.database?.size ? formatBytes(stats.database.size) : "0 B"}
+                    {stats?.database?.size ? formatBytes(stats.database.size) : '0 B'}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
@@ -129,7 +133,7 @@ export const SettingsPanel: React.FC = () => {
                   radius="lg"
                   className="shadow-md hover:shadow-lg transition-shadow"
                 >
-                  {exportMutation.isPending ? "导出中..." : "导出配置"}
+                  {exportMutation.isPending ? '导出中...' : '导出配置'}
                 </Button>
                 <Button
                   color="secondary"
@@ -138,7 +142,7 @@ export const SettingsPanel: React.FC = () => {
                   radius="lg"
                   className="shadow-md hover:shadow-lg transition-shadow"
                 >
-                  {importMutation.isPending ? "导入中..." : "导入配置"}
+                  {importMutation.isPending ? '导入中...' : '导入配置'}
                 </Button>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
@@ -161,10 +165,11 @@ export const SettingsPanel: React.FC = () => {
                     label="保留最近条数"
                     placeholder="100"
                     value={keepCount}
-                    onChange={(e) => setKeepCount(e.target.value)}
+                    onChange={e => setKeepCount(e.target.value)}
                     radius="lg"
                     classNames={{
-                      inputWrapper: "shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+                      inputWrapper:
+                        'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
                     }}
                   />
                 </div>
@@ -175,7 +180,7 @@ export const SettingsPanel: React.FC = () => {
                   radius="lg"
                   className="shadow-md hover:shadow-lg transition-shadow"
                 >
-                  {cleanupMutation.isPending ? "清理中..." : "清理"}
+                  {cleanupMutation.isPending ? '清理中...' : '清理'}
                 </Button>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
@@ -203,9 +208,13 @@ export const SettingsPanel: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">端口:</span>
-                  <Badge color="primary" variant="flat" size="sm">Gateway(7070)</Badge>
+                  <Badge color="primary" variant="flat" size="sm">
+                    Gateway(7070)
+                  </Badge>
                   <span>|</span>
-                  <Badge color="primary" variant="flat" size="sm">API(7071)</Badge>
+                  <Badge color="primary" variant="flat" size="sm">
+                    API(7071)
+                  </Badge>
                 </div>
               </div>
             </CardBody>
@@ -219,9 +228,9 @@ export const SettingsPanel: React.FC = () => {
 // Helper function to format client names
 function formatClient(client: string): string {
   const clientMap: Record<string, string> = {
-    claude: "Claude",
-    codex: "Codex",
-    gemini: "Gemini",
+    claude: 'Claude',
+    codex: 'Codex',
+    gemini: 'Gemini',
   };
   return clientMap[client] || client;
 }

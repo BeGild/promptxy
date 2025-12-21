@@ -1,16 +1,23 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAppStore } from "@/store";
-import { getRequests, getRequestDetail, deleteRequest, cleanupRequests, getStats, getDatabaseInfo } from "@/api/requests";
-import { RequestFilters } from "@/types";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAppStore } from '@/store';
+import {
+  getRequests,
+  getRequestDetail,
+  deleteRequest,
+  cleanupRequests,
+  getStats,
+  getDatabaseInfo,
+} from '@/api/requests';
+import { RequestFilters } from '@/types';
 
 /**
  * 获取请求列表的 Hook
  */
 export function useRequests(filters: RequestFilters = {}, page: number = 1) {
-  const loading = useAppStore((state) => state.loading.requests);
+  const loading = useAppStore(state => state.loading.requests);
 
   const query = useQuery({
-    queryKey: ["requests", filters, page],
+    queryKey: ['requests', filters, page],
     queryFn: async () => {
       return await getRequests(filters, page, 50);
     },
@@ -31,9 +38,9 @@ export function useRequests(filters: RequestFilters = {}, page: number = 1) {
  */
 export function useRequestDetail(id: string | null) {
   const query = useQuery({
-    queryKey: ["request", id],
+    queryKey: ['request', id],
     queryFn: async () => {
-      if (!id) throw new Error("No request ID");
+      if (!id) throw new Error('No request ID');
       return await getRequestDetail(id);
     },
     enabled: !!id,
@@ -59,8 +66,8 @@ export function useDeleteRequest() {
       return await deleteRequest(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 }
@@ -76,8 +83,8 @@ export function useCleanupRequests() {
       return await cleanupRequests(keep);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 }
@@ -86,10 +93,10 @@ export function useCleanupRequests() {
  * 获取统计信息的 Hook
  */
 export function useStats() {
-  const loading = useAppStore((state) => state.loading.stats);
+  const loading = useAppStore(state => state.loading.stats);
 
   const query = useQuery({
-    queryKey: ["stats"],
+    queryKey: ['stats'],
     queryFn: async () => {
       return await getStats();
     },
@@ -110,7 +117,7 @@ export function useStats() {
  */
 export function useDatabaseInfo() {
   const query = useQuery({
-    queryKey: ["database"],
+    queryKey: ['database'],
     queryFn: async () => {
       return await getDatabaseInfo();
     },

@@ -1,5 +1,12 @@
-import React, { ReactNode } from "react";
-import { Modal as HeroModal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from "@heroui/react";
+import React, { ReactNode } from 'react';
+import {
+  Modal as HeroModal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+} from '@heroui/react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -7,8 +14,8 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
-  backdrop?: "opaque" | "blur" | "transparent";
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+  backdrop?: 'opaque' | 'blur' | 'transparent';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -17,8 +24,8 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   footer,
-  size = "lg",
-  backdrop = "blur",
+  size = 'lg',
+  backdrop = 'blur',
 }) => {
   return (
     <HeroModal
@@ -30,14 +37,10 @@ export const Modal: React.FC<ModalProps> = ({
       scrollBehavior="outside"
     >
       <ModalContent>
-        {(onCloseModal) => (
+        {onCloseModal => (
           <>
-            <ModalHeader>
-              {title}
-            </ModalHeader>
-            <ModalBody>
-              {children}
-            </ModalBody>
+            <ModalHeader>{title}</ModalHeader>
+            <ModalBody>{children}</ModalBody>
             {footer && <ModalFooter>{footer}</ModalFooter>}
           </>
         )}
