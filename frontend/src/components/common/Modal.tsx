@@ -27,15 +27,20 @@ export const Modal: React.FC<ModalProps> = ({
       size={size}
       backdrop={backdrop}
       placement="center"
+      scrollBehavior="outside"
     >
       <ModalContent>
-        <ModalHeader>
-          {title}
-        </ModalHeader>
-        <ModalBody>
-          {children}
-        </ModalBody>
-        {footer && <ModalFooter>{footer}</ModalFooter>}
+        {(onCloseModal) => (
+          <>
+            <ModalHeader>
+              {title}
+            </ModalHeader>
+            <ModalBody>
+              {children}
+            </ModalBody>
+            {footer && <ModalFooter>{footer}</ModalFooter>}
+          </>
+        )}
       </ModalContent>
     </HeroModal>
   );

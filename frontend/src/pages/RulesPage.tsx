@@ -1,7 +1,17 @@
 import React, { useState } from "react";
-import { Button, useDisclosure, Card, CardBody, Chip } from "@heroui/react";
+import {
+  Button,
+  useDisclosure,
+  Card,
+  CardBody,
+  Chip,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter
+} from "@heroui/react";
 import { RuleList, RuleEditor } from "@/components/rules";
-import { Modal } from "@/components/common";
 import { useRules, useSaveRules, useDeleteRule } from "@/hooks";
 import { PromptxyRule } from "@/types";
 import { validateRule } from "@/utils";
@@ -156,15 +166,23 @@ export const RulesPage: React.FC = () => {
       <Modal
         isOpen={isOpen}
         onClose={handleCancel}
-        title={editingRule ? "编辑规则" : "新建规则"}
+        placement="center"
         size="2xl"
         backdrop="blur"
+        scrollBehavior="outside"
       >
-        <RuleEditor
-          rule={editingRule}
-          onSave={handleSave}
-          onCancel={handleCancel}
-        />
+        <ModalContent>
+          <ModalHeader>
+            {editingRule ? "编辑规则" : "新建规则"}
+          </ModalHeader>
+          <ModalBody>
+            <RuleEditor
+              rule={editingRule}
+              onSave={handleSave}
+              onCancel={handleCancel}
+            />
+          </ModalBody>
+        </ModalContent>
       </Modal>
     </div>
   );
