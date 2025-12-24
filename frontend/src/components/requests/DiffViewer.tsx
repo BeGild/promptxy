@@ -30,6 +30,11 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
     return JSON.stringify(original, null, 2);
   }, [original]);
 
+  // 使用 useMemo 优化原始请求逐行显示（用于无改写情况）
+  const originalLines = useMemo(() => {
+    return originalStr.split('\n');
+  }, [originalStr]);
+
   const modifiedStr = useMemo(() => {
     return JSON.stringify(modified, null, 2);
   }, [modified]);
@@ -44,19 +49,20 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
     setViewMode(mode);
   }, []);
 
-  if (!hasChanges) {
-    return (
-      <Card className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700">
-        <CardBody className="p-4 text-center text-gray-500">无修改 - 请求未被规则改变</CardBody>
-      </Card>
-    );
-  }
+  // 无改写状态标识
+  const isNoChanges = !hasChanges;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-500">
-          {viewMode === 'side-by-side' ? '左右对比视图' : 'JSON 格式化视图'}
+          {isNoChanges
+            ? viewMode === 'side-by-side'
+              ? '原始请求（无改写）'
+              : 'JSON 格式化视图'
+            : viewMode === 'side-by-side'
+              ? '左右对比视图'
+              : 'JSON 格式化视图'}
         </span>
         <div className="flex gap-2">
           <Button
@@ -88,15 +94,17 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
             </CardHeader>
             <CardBody className="p-0">
               <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50">
-                {left.map((line, i) => (
+                {(isNoChanges ? originalLines : left).map((line, i) => (
                   <div
                     key={i}
                     className={`whitespace-pre-wrap ${
-                      line.startsWith('-')
-                        ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10'
-                        : line.startsWith('~')
-                          ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
-                          : 'text-gray-700 dark:text-gray-300'
+                      isNoChanges
+                        ? 'text-gray-700 dark:text-gray-300'
+                        : line.startsWith('-')
+                          ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10'
+                          : line.startsWith('~')
+                            ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
+                            : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {line}
@@ -111,15 +119,17 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
             </CardHeader>
             <CardBody className="p-0">
               <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50">
-                {right.map((line, i) => (
+                {(isNoChanges ? originalLines : right).map((line, i) => (
                   <div
                     key={i}
                     className={`whitespace-pre-wrap ${
-                      line.startsWith('+')
-                        ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10'
-                        : line.startsWith('~')
-                          ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
-                          : 'text-gray-700 dark:text-gray-300'
+                      isNoChanges
+                        ? 'text-gray-700 dark:text-gray-300'
+                        : line.startsWith('+')
+                          ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10'
+                          : line.startsWith('~')
+                            ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
+                            : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {line}
@@ -143,11 +153,11 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           </Card>
           <Card className="border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
-              <b className="text-sm">修改后</b>
+              <b className="text-sm">{isNoChanges ? '原始请求' : '修改后'}</b>
             </CardHeader>
             <CardBody className="p-0">
               <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50 text-gray-700 dark:text-gray-300">
-                {modifiedStr}
+                {isNoChanges ? originalStr : modifiedStr}
               </pre>
             </CardBody>
           </Card>
