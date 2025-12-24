@@ -1,5 +1,6 @@
-import React from 'react';
-import { Card, CardBody, Chip, Button, Badge, Spinner, Divider } from '@heroui/react';
+import React, { useCallback } from 'react';
+import { Card, CardBody, CardHeader, Chip, Button, Badge, Spinner, Divider } from '@heroui/react';
+import { Copy } from 'lucide-react';
 import { RequestRecord } from '@/types';
 import { formatTime, formatDuration, getStatusColor, formatClient } from '@/utils';
 import { DiffViewer } from './DiffViewer';
@@ -17,6 +18,16 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
   onClose,
   onReplay,
 }) => {
+  // 复制到剪贴板
+  const copyToClipboard = useCallback(async (content: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      console.log(`${label} 已复制到剪贴板`);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -139,10 +150,55 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
       {/* 响应头 */}
       {request.responseHeaders && (
         <Card className="border border-gray-200 dark:border-gray-700">
+          <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+            <div className="flex items-center justify-between w-full">
+              <h5 className="text-md font-bold">响应头</h5>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => copyToClipboard(JSON.stringify(request.responseHeaders, null, 2), '响应头')}
+                className="min-w-6 h-6"
+              >
+                <Copy size={14} />
+              </Button>
+            </div>
+          </CardHeader>
           <CardBody className="space-y-2">
-            <h5 className="text-md font-bold">响应头</h5>
             <pre className="font-mono text-xs bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg overflow-x-auto">
               {JSON.stringify(request.responseHeaders, null, 2)}
+            </pre>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* 响应体 */}
+      {request.responseBody && (
+        <Card className="border border-gray-200 dark:border-gray-700">
+          <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+            <div className="flex items-center justify-between w-full">
+              <h5 className="text-md font-bold">响应体</h5>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => copyToClipboard(
+                  typeof request.responseBody === 'string'
+                    ? request.responseBody
+                    : JSON.stringify(request.responseBody, null, 2),
+                  '响应体'
+                )}
+                className="min-w-6 h-6"
+              >
+                <Copy size={14} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-2">
+            <pre className="font-mono text-xs bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg overflow-x-auto max-h-[300px] overflow-y-auto">
+              {typeof request.responseBody === 'string'
+                ? request.responseBody
+                : JSON.stringify(request.responseBody, null, 2)}
             </pre>
           </CardBody>
         </Card>

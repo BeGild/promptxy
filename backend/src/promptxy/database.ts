@@ -65,6 +65,7 @@ export async function initializeDatabase(): Promise<Database> {
       response_status INTEGER,
       duration_ms INTEGER,
       response_headers TEXT,
+      response_body TEXT,
       error TEXT
     );
 
@@ -85,6 +86,21 @@ export async function initializeDatabase(): Promise<Database> {
       ('auto_cleanup', 'true'),
       ('cleanup_interval_hours', '1');
   `);
+
+  // 数据库迁移：为已有数据库添加 response_body 列
+  try {
+    // 检查列是否存在
+    const tableInfo = await dbInstance.all(
+      `PRAGMA table_info(requests)`
+    );
+    const hasResponseBody = tableInfo.some((col: any) => col.name === 'response_body');
+
+    if (!hasResponseBody) {
+      await dbInstance.exec(`ALTER TABLE requests ADD COLUMN response_body TEXT`);
+    }
+  } catch {
+    // 忽略迁移错误，可能是新数据库
+  }
 
   return dbInstance;
 }
@@ -109,8 +125,8 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
     `INSERT INTO requests (
       id, timestamp, client, path, method,
       original_body, modified_body, matched_rules,
-      response_status, duration_ms, response_headers, error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      response_status, duration_ms, response_headers, response_body, error
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.id,
       record.timestamp,
@@ -123,6 +139,7 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
       record.responseStatus ?? null,
       record.durationMs ?? null,
       record.responseHeaders ?? null,
+      record.responseBody ?? null,
       record.error ?? null,
     ],
   );
@@ -240,6 +257,7 @@ export async function getRequestDetail(id: string): Promise<RequestRecord | null
     responseStatus: row.response_status ?? undefined,
     durationMs: row.duration_ms ?? undefined,
     responseHeaders: row.response_headers ?? undefined,
+    responseBody: row.response_body ?? undefined,
     error: row.error ?? undefined,
   };
 }

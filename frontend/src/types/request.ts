@@ -14,6 +14,7 @@ export interface RequestRecord {
   responseStatus?: number;
   durationMs?: number;
   responseHeaders?: Record<string, string>;
+  responseBody?: any;
   error?: string;
 }
 

@@ -131,6 +131,7 @@ export interface RequestRecord {
   responseStatus?: number;
   durationMs?: number;
   responseHeaders?: string; // JSON 字符串
+  responseBody?: string; // JSON 字符串
   error?: string;
 }
 
@@ -147,6 +148,7 @@ export interface RequestRecordResponse {
   responseStatus?: number;
   durationMs?: number;
   responseHeaders?: Record<string, string>;
+  responseBody?: any;
   error?: string;
 }
 

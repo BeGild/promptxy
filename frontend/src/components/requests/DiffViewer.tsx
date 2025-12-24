@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardBody, CardHeader, Button } from '@heroui/react';
+import { Copy } from 'lucide-react';
 import { generateJSONDiff, highlightDiff } from '@/utils';
 
 interface DiffViewerProps {
@@ -49,6 +50,17 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
     setViewMode(mode);
   }, []);
 
+  // 复制到剪贴板
+  const copyToClipboard = useCallback(async (content: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      // 可选：添加复制成功提示
+      console.log(`${label} 已复制到剪贴板`);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  }, []);
+
   // 无改写状态标识
   const isNoChanges = !hasChanges;
 
@@ -90,7 +102,18 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Card className="border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
-              <b className="text-sm">原始请求</b>
+              <div className="flex items-center justify-between w-full">
+                <b className="text-sm">原始请求</b>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => copyToClipboard(originalStr, '原始请求')}
+                  className="min-w-6 h-6"
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
             </CardHeader>
             <CardBody className="p-0">
               <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50">
@@ -115,7 +138,18 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           </Card>
           <Card className="border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
-              <b className="text-sm">修改后请求</b>
+              <div className="flex items-center justify-between w-full">
+                <b className="text-sm">修改后请求</b>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => copyToClipboard(isNoChanges ? originalStr : modifiedStr, '修改后请求')}
+                  className="min-w-6 h-6"
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
             </CardHeader>
             <CardBody className="p-0">
               <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50">
@@ -143,7 +177,18 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Card className="border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
-              <b className="text-sm">原始</b>
+              <div className="flex items-center justify-between w-full">
+                <b className="text-sm">原始</b>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => copyToClipboard(originalStr, '原始请求')}
+                  className="min-w-6 h-6"
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
             </CardHeader>
             <CardBody className="p-0">
               <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50 text-gray-700 dark:text-gray-300">
@@ -153,7 +198,18 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           </Card>
           <Card className="border border-gray-200 dark:border-gray-700">
             <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
-              <b className="text-sm">{isNoChanges ? '原始请求' : '修改后'}</b>
+              <div className="flex items-center justify-between w-full">
+                <b className="text-sm">{isNoChanges ? '原始请求' : '修改后'}</b>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => copyToClipboard(isNoChanges ? originalStr : modifiedStr, isNoChanges ? '原始请求' : '修改后请求')}
+                  className="min-w-6 h-6"
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
             </CardHeader>
             <CardBody className="p-0">
               <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50 text-gray-700 dark:text-gray-300">

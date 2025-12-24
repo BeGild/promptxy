@@ -144,12 +144,24 @@ async function handleGetRequest(
       responseStatus: record.responseStatus,
       durationMs: record.durationMs,
       responseHeaders: record.responseHeaders ? JSON.parse(record.responseHeaders) : undefined,
+      responseBody: record.responseBody ? safeParseJson(record.responseBody) : undefined,
       error: record.error,
     };
 
     sendJson(res, 200, response);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get request detail', message: error?.message });
+  }
+}
+
+/**
+ * 安全解析 JSON，如果失败则返回原始字符串
+ */
+function safeParseJson(str: string): any {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return str;
   }
 }
 

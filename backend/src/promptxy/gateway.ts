@@ -273,41 +273,82 @@ export function createGateway(config: PromptxyConfig): http.Server {
         return;
       }
 
-      Readable.fromWeb(upstreamResponse.body as any).pipe(res);
+      // 收集响应体用于记录（同时流式传递给客户端）
+      const responseBodyChunks: Buffer[] = [];
+      const upstreamStream = Readable.fromWeb(upstreamResponse.body as any);
 
-      // 记录请求到数据库（异步，不阻塞响应）
+      upstreamStream.on('data', (chunk: Buffer) => {
+        responseBodyChunks.push(chunk);
+      });
+
+      upstreamStream.pipe(res);
+
+      // 记录请求到数据库（在响应流结束后）
       const duration = Date.now() - startTime;
-      requestId = generateRequestId();
+      const savedRequestId = generateRequestId();
+      requestId = savedRequestId;
 
-      // 准备记录数据
-      const record: RequestRecord = {
-        id: requestId,
-        timestamp: Date.now(),
-        client: matchedRoute.client,
-        path: upstreamPath,
-        method: method,
-        originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
-        modifiedBody: jsonBody
-          ? JSON.stringify(jsonBody)
-          : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
-        matchedRules: JSON.stringify(matches),
-        responseStatus: upstreamResponse.status,
-        durationMs: duration,
-        responseHeaders: JSON.stringify(
-          Object.fromEntries(Array.from(upstreamResponse.headers.entries())),
-        ),
-        error: undefined,
-      };
+      // 保存响应状态和头信息（在回调外，避免 TypeScript 类型问题）
+      const responseStatus = upstreamResponse.status;
+      const responseHeadersStr = JSON.stringify(
+        Object.fromEntries(Array.from(upstreamResponse.headers.entries())),
+      );
 
-      // 异步保存到数据库
-      insertRequestRecord(record).catch(err => {
-        logger.debug(`[promptxy] Failed to save request record: ${err?.message}`);
+      // 保存请求路径和客户端信息
+      const savedClient = matchedRoute.client;
+      const savedPath = upstreamPath;
+      const savedJsonBody = jsonBody;
+
+      // 监听响应流结束，保存包含响应体的记录
+      upstreamStream.on('end', () => {
+        const responseBodyBuffer = Buffer.concat(responseBodyChunks);
+        let responseBodyStr: string | undefined;
+
+        // 尝试解析为 JSON，如果失败则保存原始文本
+        const contentType = upstreamResponse?.headers?.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          try {
+            const jsonBody = JSON.parse(responseBodyBuffer.toString('utf-8'));
+            responseBodyStr = JSON.stringify(jsonBody);
+          } catch {
+            responseBodyStr = responseBodyBuffer.toString('utf-8');
+          }
+        } else {
+          // 非 JSON 响应，限制保存大小（最多 10KB）
+          const maxSize = 10 * 1024;
+          responseBodyStr = responseBodyBuffer.length > maxSize
+            ? responseBodyBuffer.subarray(0, maxSize).toString('utf-8') + '... (truncated)'
+            : responseBodyBuffer.toString('utf-8');
+        }
+
+        const record: RequestRecord = {
+          id: savedRequestId,
+          timestamp: Date.now(),
+          client: savedClient,
+          path: savedPath,
+          method: method,
+          originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+          modifiedBody: savedJsonBody
+            ? JSON.stringify(savedJsonBody)
+            : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+          matchedRules: JSON.stringify(matches),
+          responseStatus: responseStatus,
+          durationMs: duration,
+          responseHeaders: responseHeadersStr,
+          responseBody: responseBodyStr,
+          error: undefined,
+        };
+
+        // 异步保存到数据库
+        insertRequestRecord(record).catch(err => {
+          logger.debug(`[promptxy] Failed to save request record: ${err?.message}`);
+        });
       });
 
       // SSE 广播
       const sseData: SSERequestEvent = {
-        id: requestId,
-        timestamp: record.timestamp,
+        id: savedRequestId,
+        timestamp: Date.now(),
         client: matchedRoute.client,
         path: upstreamPath,
         method: method,
