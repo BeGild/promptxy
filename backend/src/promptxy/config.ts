@@ -1,12 +1,12 @@
 import { access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { PromptxyConfig, PromptxyRule } from './types.js';
+import { PromptxyConfig, PromptxyRule, Supplier, PathMapping } from './types.js';
 
 type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
   api?: Partial<PromptxyConfig['api']>;
-  upstreams?: Partial<PromptxyConfig['upstreams']>;
+  suppliers?: Supplier[];
   storage?: Partial<PromptxyConfig['storage']>;
   rules?: PromptxyRule[];
 };
@@ -20,11 +20,32 @@ const DEFAULT_CONFIG: PromptxyConfig = {
     host: '127.0.0.1',
     port: 7071,
   },
-  upstreams: {
-    anthropic: 'https://api.anthropic.com',
-    openai: 'https://api.openai.com',
-    gemini: 'https://generativelanguage.googleapis.com',
-  },
+  suppliers: [
+    {
+      id: 'claude-anthropic',
+      name: 'Claude (Anthropic)',
+      baseUrl: 'https://api.anthropic.com',
+      localPrefix: '/claude',
+      pathMappings: [],
+      enabled: true,
+    },
+    {
+      id: 'openai-official',
+      name: 'OpenAI Official',
+      baseUrl: 'https://api.openai.com',
+      localPrefix: '/openai',
+      pathMappings: [],
+      enabled: true,
+    },
+    {
+      id: 'gemini-google',
+      name: 'Gemini (Google)',
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      localPrefix: '/gemini',
+      pathMappings: [],
+      enabled: true,
+    },
+  ],
   rules: [],
   storage: {
     maxHistory: 100,
@@ -74,6 +95,109 @@ export function assertUrl(label: string, value: string): void {
   }
 }
 
+/**
+ * 验证路径映射规则
+ */
+function assertPathMappings(label: string, mappings?: PathMapping[]): void {
+  if (!mappings || mappings.length === 0) {
+    return;
+  }
+
+  if (!Array.isArray(mappings)) {
+    throw new Error(`${label}.pathMappings must be an array`);
+  }
+
+  for (let i = 0; i < mappings.length; i++) {
+    const mapping = mappings[i];
+    const mappingLabel = `${label}.pathMappings[${i}]`;
+
+    if (!mapping || typeof mapping !== 'object') {
+      throw new Error(`${mappingLabel} must be an object`);
+    }
+
+    if (typeof mapping.from !== 'string' || !mapping.from) {
+      throw new Error(`${mappingLabel}.from must be a non-empty string`);
+    }
+
+    if (typeof mapping.to !== 'string' || !mapping.to) {
+      throw new Error(`${mappingLabel}.to must be a non-empty string`);
+    }
+
+    if (mapping.type !== undefined) {
+      if (!['exact', 'prefix', 'regex'].includes(mapping.type)) {
+        throw new Error(`${mappingLabel}.type must be one of: exact, prefix, regex`);
+      }
+
+      // 验证正则语法
+      if (mapping.type === 'regex') {
+        try {
+          new RegExp(mapping.from);
+        } catch (e: any) {
+          throw new Error(`${mappingLabel}.from is an invalid regex: ${e.message}`);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * 验证供应商配置
+ */
+export function assertSupplier(label: string, supplier: Supplier): void {
+  if (!supplier || typeof supplier !== 'object') {
+    throw new Error(`${label} must be an object`);
+  }
+
+  if (!supplier.id || typeof supplier.id !== 'string') {
+    throw new Error(`${label}.id must be a non-empty string`);
+  }
+
+  if (!supplier.name || typeof supplier.name !== 'string') {
+    throw new Error(`${label}.name must be a non-empty string`);
+  }
+
+  assertUrl(`${label}.baseUrl`, supplier.baseUrl);
+
+  if (!supplier.localPrefix || typeof supplier.localPrefix !== 'string') {
+    throw new Error(`${label}.localPrefix must be a non-empty string`);
+  }
+
+  if (!supplier.localPrefix.startsWith('/')) {
+    throw new Error(`${label}.localPrefix must start with '/'`);
+  }
+
+  if (typeof supplier.enabled !== 'boolean') {
+    throw new Error(`${label}.enabled must be a boolean`);
+  }
+
+  assertPathMappings(label, supplier.pathMappings);
+}
+
+/**
+ * 验证供应商路径冲突
+ */
+export function assertSupplierPathConflicts(suppliers: Supplier[]): void {
+  const enabledByPrefix = new Map<string, Supplier[]>();
+
+  for (const supplier of suppliers) {
+    if (supplier.enabled) {
+      if (!enabledByPrefix.has(supplier.localPrefix)) {
+        enabledByPrefix.set(supplier.localPrefix, []);
+      }
+      enabledByPrefix.get(supplier.localPrefix)!.push(supplier);
+    }
+  }
+
+  for (const [prefix, suppliersForPrefix] of enabledByPrefix) {
+    if (suppliersForPrefix.length > 1) {
+      throw new Error(
+        `Local prefix '${prefix}' is used by multiple enabled suppliers: ` +
+        suppliersForPrefix.map(s => s.name).join(', ')
+      );
+    }
+  }
+}
+
 function assertConfig(config: PromptxyConfig): PromptxyConfig {
   if (!config.listen || typeof config.listen !== 'object') {
     throw new Error(`config.listen must be an object`);
@@ -110,12 +234,20 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     throw new Error(`config.api.port must be an integer in [1, 65535]`);
   }
 
-  if (!config.upstreams || typeof config.upstreams !== 'object') {
-    throw new Error(`config.upstreams must be an object`);
+  if (!config.suppliers || !Array.isArray(config.suppliers)) {
+    throw new Error(`config.suppliers must be an array`);
   }
-  assertUrl('config.upstreams.anthropic', config.upstreams.anthropic);
-  assertUrl('config.upstreams.openai', config.upstreams.openai);
-  assertUrl('config.upstreams.gemini', config.upstreams.gemini);
+
+  if (config.suppliers.length === 0) {
+    throw new Error(`config.suppliers must contain at least one supplier`);
+  }
+
+  for (let i = 0; i < config.suppliers.length; i++) {
+    assertSupplier(`config.suppliers[${i}]`, config.suppliers[i]);
+  }
+
+  // 验证路径冲突
+  assertSupplierPathConflicts(config.suppliers);
 
   if (!config.rules || !Array.isArray(config.rules)) {
     throw new Error(`config.rules must be an array`);
@@ -185,11 +317,7 @@ function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyCon
       host: incoming.api?.host ?? base.api.host,
       port: incoming.api?.port ?? base.api.port,
     },
-    upstreams: {
-      anthropic: incoming.upstreams?.anthropic ?? base.upstreams.anthropic,
-      openai: incoming.upstreams?.openai ?? base.upstreams.openai,
-      gemini: incoming.upstreams?.gemini ?? base.upstreams.gemini,
-    },
+    suppliers: incoming.suppliers ?? base.suppliers,
     rules: incoming.rules ?? base.rules,
     storage: {
       maxHistory: incoming.storage?.maxHistory ?? base.storage.maxHistory,
@@ -208,10 +336,6 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
   const apiHost = process.env.PROMPTXY_API_HOST;
   const apiPort = parsePort(process.env.PROMPTXY_API_PORT);
 
-  const anthropic = process.env.PROMPTXY_UPSTREAM_ANTHROPIC;
-  const openai = process.env.PROMPTXY_UPSTREAM_OPENAI;
-  const gemini = process.env.PROMPTXY_UPSTREAM_GEMINI;
-
   const maxHistory = parsePort(process.env.PROMPTXY_MAX_HISTORY);
   const autoCleanup = parseBoolean(process.env.PROMPTXY_AUTO_CLEANUP);
   const cleanupInterval = parsePort(process.env.PROMPTXY_CLEANUP_INTERVAL);
@@ -226,11 +350,7 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
       host: apiHost ?? config.api.host,
       port: apiPort ?? config.api.port,
     },
-    upstreams: {
-      anthropic: anthropic ?? config.upstreams.anthropic,
-      openai: openai ?? config.upstreams.openai,
-      gemini: gemini ?? config.upstreams.gemini,
-    },
+    suppliers: config.suppliers, // 供应商不支持环境变量覆盖
     storage: {
       maxHistory: maxHistory ?? config.storage.maxHistory,
       autoCleanup: autoCleanup ?? config.storage.autoCleanup,
@@ -242,7 +362,7 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
 
 async function findConfigPath(): Promise<string | undefined> {
   const fromEnv = process.env.PROMPTXY_CONFIG;
-  if (fromEnv) return fromEnv;
+  if (fromEnv && await fileExists(fromEnv)) return fromEnv;
 
   const cwdCandidate = path.join(process.cwd(), 'promptxy.config.json');
   if (await fileExists(cwdCandidate)) return cwdCandidate;

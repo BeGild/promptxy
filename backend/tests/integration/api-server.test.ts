@@ -496,7 +496,7 @@ describe('API Server Integration Tests', () => {
 
       expect(body.listen).toBeDefined();
       expect(body.api).toBeDefined();
-      expect(body.upstreams).toBeDefined();
+      expect(body.suppliers).toBeDefined();
       expect(body.rules).toBeDefined();
       expect(body.storage).toBeDefined();
       expect(body.debug).toBeDefined();
@@ -697,6 +697,288 @@ describe('API Server Integration Tests', () => {
       expect(body.size).toBeDefined();
       expect(body.recordCount).toBeDefined();
       expect(typeof body.recordCount).toBe('number');
+    });
+  });
+
+  describe('Suppliers API', () => {
+    describe('GET /_promptxy/suppliers', () => {
+      it('应该获取所有供应商', async () => {
+        const response = await apiClient.get('/_promptxy/suppliers');
+
+        expect(response.status).toBe(200);
+        const body = JSON.parse(response.body);
+
+        expect(Array.isArray(body.suppliers)).toBe(true);
+        expect(body.suppliers.length).toBeGreaterThan(0);
+
+        // 验证供应商结构
+        const firstSupplier = body.suppliers[0];
+        expect(firstSupplier.id).toBeDefined();
+        expect(firstSupplier.name).toBeDefined();
+        expect(firstSupplier.baseUrl).toBeDefined();
+        expect(firstSupplier.localPrefix).toBeDefined();
+        expect(typeof firstSupplier.enabled).toBe('boolean');
+      });
+
+      it('应该包含默认的三个供应商', async () => {
+        const response = await apiClient.get('/_promptxy/suppliers');
+        const body = JSON.parse(response.body);
+
+        const ids = body.suppliers.map((s: any) => s.id);
+        expect(ids).toContain('claude-anthropic');
+        expect(ids).toContain('openai-official');
+        expect(ids).toContain('gemini-google');
+      });
+    });
+
+    describe('POST /_promptxy/suppliers', () => {
+      it('应该创建新供应商', async () => {
+        const newSupplier = {
+          supplier: {
+            name: 'Test Supplier',
+            baseUrl: 'https://test.example.com',
+            localPrefix: '/test',
+            enabled: true,
+          },
+        };
+
+        const response = await apiClient.post('/_promptxy/suppliers', newSupplier);
+
+        expect(response.status).toBe(200);
+        const body = JSON.parse(response.body);
+
+        expect(body.success).toBe(true);
+        expect(body.supplier.id).toBeDefined();
+        expect(body.supplier.name).toBe('Test Supplier');
+        expect(body.supplier.localPrefix).toBe('/test');
+      });
+
+      it('应该拒绝相同 localPrefix 的已启用供应商', async () => {
+        // 尝试创建与默认供应商冲突的供应商
+        const duplicateSupplier = {
+          supplier: {
+            name: 'Duplicate Claude',
+            baseUrl: 'https://other.com',
+            localPrefix: '/claude',
+            enabled: true,
+          },
+        };
+
+        const response = await apiClient.post('/_promptxy/suppliers', duplicateSupplier);
+
+        expect(response.status).toBe(400);
+        const body = JSON.parse(response.body);
+
+        expect(body.message).toBeDefined();
+        expect(body.message).toContain('Local prefix');
+      });
+
+      it('应该允许相同 localPrefix 但禁用的供应商', async () => {
+        const disabledSupplier = {
+          supplier: {
+            name: 'Disabled Claude',
+            baseUrl: 'https://other.com',
+            localPrefix: '/claude',
+            enabled: false,
+          },
+        };
+
+        const response = await apiClient.post('/_promptxy/suppliers', disabledSupplier);
+
+        expect(response.status).toBe(200);
+        const body = JSON.parse(response.body);
+
+        expect(body.success).toBe(true);
+        expect(body.supplier.enabled).toBe(false);
+      });
+
+      it('应该拒绝无效的 baseUrl', async () => {
+        const invalidSupplier = {
+          supplier: {
+            name: 'Invalid URL',
+            baseUrl: 'not-a-valid-url',
+            localPrefix: '/invalid',
+            enabled: true,
+          },
+        };
+
+        const response = await apiClient.post('/_promptxy/suppliers', invalidSupplier);
+
+        expect(response.status).toBe(400);
+        const body = JSON.parse(response.body);
+
+        expect(body.message).toBeDefined();
+      });
+
+      it('应该拒绝无效的 localPrefix（缺少前导斜杠）', async () => {
+        const invalidPrefixSupplier = {
+          supplier: {
+            name: 'Invalid Prefix',
+            baseUrl: 'https://test.com',
+            localPrefix: 'invalid-prefix',
+            enabled: true,
+          },
+        };
+
+        const response = await apiClient.post('/_promptxy/suppliers', invalidPrefixSupplier);
+
+        expect(response.status).toBe(400);
+        const body = JSON.parse(response.body);
+
+        expect(body.message).toBeDefined();
+        expect(body.message).toContain('localPrefix');
+      });
+    });
+
+    describe('PUT /_promptxy/suppliers/:id', () => {
+      it('应该更新供应商信息', async () => {
+        // 先创建一个供应商，获取返回的 ID
+        const createResponse = await apiClient.post('/_promptxy/suppliers', {
+          supplier: {
+            name: 'Original Name',
+            baseUrl: 'https://original.com',
+            localPrefix: '/update-test',
+            enabled: true,
+          },
+        });
+
+        const createdBody = JSON.parse(createResponse.body);
+        const supplierId = createdBody.supplier.id;
+
+        // 更新供应商 - 请求体格式应为 { supplier: {...} }
+        const updatedData = {
+          supplier: {
+            id: supplierId,
+            name: 'Updated Name',
+            baseUrl: 'https://updated.com',
+            localPrefix: '/update-test',
+            enabled: false,
+          },
+        };
+
+        const response = await apiClient.put(`/_promptxy/suppliers/${supplierId}`, updatedData);
+
+        expect(response.status).toBe(200);
+        const body = JSON.parse(response.body);
+
+        expect(body.success).toBe(true);
+        expect(body.supplier.name).toBe('Updated Name');
+        expect(body.supplier.baseUrl).toBe('https://updated.com');
+        expect(body.supplier.enabled).toBe(false);
+      });
+
+      it('应该拒绝更新不存在的供应商', async () => {
+        const response = await apiClient.put('/_promptxy/suppliers/non-existent', {
+          supplier: {
+            id: 'non-existent',
+            name: 'Non-existent',
+            baseUrl: 'https://test.com',
+            localPrefix: '/test',
+            enabled: true,
+          },
+        });
+
+        expect(response.status).toBe(404);
+      });
+    });
+
+    describe('DELETE /_promptxy/suppliers/:id', () => {
+      it('应该删除指定供应商', async () => {
+        // 先创建一个供应商，获取返回的 ID
+        const createResponse = await apiClient.post('/_promptxy/suppliers', {
+          supplier: {
+            name: 'To Delete',
+            baseUrl: 'https://delete.com',
+            localPrefix: '/delete-test',
+            enabled: true,
+          },
+        });
+
+        const createdBody = JSON.parse(createResponse.body);
+        const supplierId = createdBody.supplier.id;
+
+        // 删除供应商
+        const response = await apiClient.delete(`/_promptxy/suppliers/${supplierId}`);
+
+        expect(response.status).toBe(200);
+        const body = JSON.parse(response.body);
+
+        expect(body.success).toBe(true);
+
+        // 验证供应商已被删除
+        const getResponse = await apiClient.get('/_promptxy/suppliers');
+        const getBody = JSON.parse(getResponse.body);
+        expect(getBody.suppliers.find((s: any) => s.id === supplierId)).toBeUndefined();
+      });
+
+      it('应该拒绝删除不存在的供应商', async () => {
+        const response = await apiClient.delete('/_promptxy/suppliers/non-existent');
+
+        expect(response.status).toBe(404);
+      });
+    });
+
+    describe('POST /_promptxy/suppliers/:id/toggle', () => {
+      it('应该切换供应商启用状态', async () => {
+        // 先创建一个禁用的供应商，获取返回的 ID
+        const createResponse = await apiClient.post('/_promptxy/suppliers', {
+          supplier: {
+            name: 'Toggle Test',
+            baseUrl: 'https://toggle.com',
+            localPrefix: '/toggle-test',
+            enabled: false,
+          },
+        });
+
+        const createdBody = JSON.parse(createResponse.body);
+        const supplierId = createdBody.supplier.id;
+
+        // 启用供应商
+        const enableResponse = await apiClient.post(`/_promptxy/suppliers/${supplierId}/toggle`, {
+          enabled: true,
+        });
+
+        expect(enableResponse.status).toBe(200);
+        const enableBody = JSON.parse(enableResponse.body);
+        expect(enableBody.success).toBe(true);
+        expect(enableBody.supplier.enabled).toBe(true);
+
+        // 禁用供应商
+        const disableResponse = await apiClient.post(`/_promptxy/suppliers/${supplierId}/toggle`, {
+          enabled: false,
+        });
+
+        expect(disableResponse.status).toBe(200);
+        const disableBody = JSON.parse(disableResponse.body);
+        expect(disableBody.success).toBe(true);
+        expect(disableBody.supplier.enabled).toBe(false);
+      });
+
+      it('应该拒绝启用冲突的供应商', async () => {
+        // 创建一个与默认供应商冲突的供应商，但禁用
+        const createResponse = await apiClient.post('/_promptxy/suppliers', {
+          supplier: {
+            name: 'Conflict Test',
+            baseUrl: 'https://conflict.com',
+            localPrefix: '/claude',
+            enabled: false,
+          },
+        });
+
+        const createdBody = JSON.parse(createResponse.body);
+        const supplierId = createdBody.supplier.id;
+
+        // 尝试启用（应该失败，因为 /claude 已被默认供应商使用）
+        const response = await apiClient.post(`/_promptxy/suppliers/${supplierId}/toggle`, {
+          enabled: true,
+        });
+
+        expect(response.status).toBe(400);
+        const body = JSON.parse(response.body);
+
+        expect(body.message).toBeDefined();
+        expect(body.message).toContain('Local prefix');
+      });
     });
   });
 

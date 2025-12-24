@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { loadConfig, saveConfig, getConfigDir } from '../../src/promptxy/config.js';
-import { PromptxyConfig } from '../../src/promptxy/types.js';
+import { PromptxyConfig, Supplier } from '../../src/promptxy/types.js';
 import { writeFile, mkdir, rm, access } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,21 +9,53 @@ import path from 'node:path';
 const TEST_CONFIG_DIR = path.join(os.homedir(), '.promptxy-test');
 const TEST_CONFIG_PATH = path.join(TEST_CONFIG_DIR, 'config.json');
 
+// 默认供应商
+const DEFAULT_SUPPLIERS: Supplier[] = [
+  {
+    id: 'claude-anthropic',
+    name: 'Claude (Anthropic)',
+    baseUrl: 'https://api.anthropic.com',
+    localPrefix: '/claude',
+    pathMappings: [],
+    enabled: true,
+  },
+  {
+    id: 'openai-official',
+    name: 'OpenAI Official',
+    baseUrl: 'https://api.openai.com',
+    localPrefix: '/openai',
+    pathMappings: [],
+    enabled: true,
+  },
+  {
+    id: 'gemini-google',
+    name: 'Gemini (Google)',
+    baseUrl: 'https://generativelanguage.googleapis.com',
+    localPrefix: '/gemini',
+    pathMappings: [],
+    enabled: true,
+  },
+];
+
+// 保存原始环境变量
+const ORIGINAL_HOME = process.env.HOME;
+const ORIGINAL_XDG_DATA_HOME = process.env.XDG_DATA_HOME;
+
 describe('Config Module', () => {
   async function cleanup() {
     try {
       await rm(TEST_CONFIG_DIR, { recursive: true, force: true });
     } catch {}
-    // 清理环境变量
+    // 设置 HOME 环境变量指向测试目录，确保测试不读取用户的实际配置文件
+    // 这会同时影响 findConfigPath 对 ~/.promptxy/config.json 的查找
+    process.env.HOME = TEST_CONFIG_DIR;
+    delete process.env.XDG_DATA_HOME;
     delete process.env.PROMPTXY_CONFIG;
     delete process.env.PROMPTXY_HOST;
     delete process.env.PROMPTXY_PORT;
     delete process.env.PROMPTXY_DEBUG;
     delete process.env.PROMPTXY_API_HOST;
     delete process.env.PROMPTXY_API_PORT;
-    delete process.env.PROMPTXY_UPSTREAM_ANTHROPIC;
-    delete process.env.PROMPTXY_UPSTREAM_OPENAI;
-    delete process.env.PROMPTXY_UPSTREAM_GEMINI;
     delete process.env.PROMPTXY_MAX_HISTORY;
     delete process.env.PROMPTXY_AUTO_CLEANUP;
     delete process.env.PROMPTXY_CLEANUP_INTERVAL;
@@ -35,6 +67,9 @@ describe('Config Module', () => {
 
   afterAll(async () => {
     await cleanup();
+    // 恢复原始环境变量
+    process.env.HOME = ORIGINAL_HOME;
+    process.env.XDG_DATA_HOME = ORIGINAL_XDG_DATA_HOME;
   });
 
   beforeEach(async () => {
@@ -53,9 +88,11 @@ describe('Config Module', () => {
       expect(config.listen.port).toBe(7070);
       expect(config.api.host).toBe('127.0.0.1');
       expect(config.api.port).toBe(7071);
-      expect(config.upstreams.anthropic).toBe('https://api.anthropic.com');
-      expect(config.upstreams.openai).toBe('https://api.openai.com');
-      expect(config.upstreams.gemini).toBe('https://generativelanguage.googleapis.com');
+      expect(config.suppliers).toHaveLength(3);
+      expect(config.suppliers[0].id).toBe('claude-anthropic');
+      expect(config.suppliers[0].localPrefix).toBe('/claude');
+      expect(config.suppliers[1].localPrefix).toBe('/openai');
+      expect(config.suppliers[2].localPrefix).toBe('/gemini');
       expect(config.rules).toEqual([]);
       expect(config.storage.maxHistory).toBe(100);
       expect(config.storage.autoCleanup).toBe(true);
@@ -126,9 +163,6 @@ describe('Config Module', () => {
       process.env.PROMPTXY_DEBUG = 'true';
       process.env.PROMPTXY_API_HOST = '10.0.0.1';
       process.env.PROMPTXY_API_PORT = '8888';
-      process.env.PROMPTXY_UPSTREAM_ANTHROPIC = 'https://custom-anthropic.example.com';
-      process.env.PROMPTXY_UPSTREAM_OPENAI = 'https://custom-openai.example.com';
-      process.env.PROMPTXY_UPSTREAM_GEMINI = 'https://custom-gemini.example.com';
       process.env.PROMPTXY_MAX_HISTORY = '500';
       process.env.PROMPTXY_AUTO_CLEANUP = 'false';
       process.env.PROMPTXY_CLEANUP_INTERVAL = '24';
@@ -140,9 +174,7 @@ describe('Config Module', () => {
       expect(config.debug).toBe(true);
       expect(config.api.host).toBe('10.0.0.1');
       expect(config.api.port).toBe(8888);
-      expect(config.upstreams.anthropic).toBe('https://custom-anthropic.example.com');
-      expect(config.upstreams.openai).toBe('https://custom-openai.example.com');
-      expect(config.upstreams.gemini).toBe('https://custom-gemini.example.com');
+      expect(config.suppliers).toHaveLength(3);
       expect(config.storage.maxHistory).toBe(500);
       expect(config.storage.autoCleanup).toBe(false);
       expect(config.storage.cleanupInterval).toBe(24);
@@ -172,6 +204,7 @@ describe('Config Module', () => {
       await mkdir(TEST_CONFIG_DIR, { recursive: true });
       const invalidConfig = {
         listen: { host: '127.0.0.1', port: 99999 },
+        suppliers: DEFAULT_SUPPLIERS,
       };
       await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
       process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
@@ -186,6 +219,7 @@ describe('Config Module', () => {
       const invalidConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: -1 },
+        suppliers: DEFAULT_SUPPLIERS,
       };
       await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
       process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
@@ -195,21 +229,75 @@ describe('Config Module', () => {
       );
     });
 
-    it('should reject invalid upstream URLs', async () => {
+    it('should reject invalid supplier base URL', async () => {
       await mkdir(TEST_CONFIG_DIR, { recursive: true });
       const invalidConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: 7071 },
-        upstreams: {
-          anthropic: 'not-a-url',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: [
+          {
+            id: 'test',
+            name: 'Test',
+            baseUrl: 'not-a-url',
+            localPrefix: '/test',
+            enabled: true,
+          },
+        ],
       };
       await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
       process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
 
-      await expect(loadConfig()).rejects.toThrow('config.upstreams.anthropic must be a valid URL');
+      await expect(loadConfig()).rejects.toThrow(
+        'config.suppliers[0].baseUrl must be a valid URL',
+      );
+    });
+
+    it('should reject suppliers with empty suppliers array', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      const invalidConfig = {
+        listen: { host: '127.0.0.1', port: 7070 },
+        api: { host: '127.0.0.1', port: 7071 },
+        suppliers: [],
+      };
+      await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      await expect(loadConfig()).rejects.toThrow(
+        'config.suppliers must contain at least one supplier',
+      );
+    });
+
+    it('should reject suppliers with duplicate enabled localPrefix', async () => {
+      // 创建独立的测试子目录，避免与cleanup冲突
+      const testDir = path.join(TEST_CONFIG_DIR, 'duplicate-test');
+      const testPath = path.join(testDir, 'config.json');
+      await mkdir(testDir, { recursive: true });
+      const invalidConfig = {
+        listen: { host: '127.0.0.1', port: 7070 },
+        api: { host: '127.0.0.1', port: 7071 },
+        suppliers: [
+          {
+            id: 'supplier-1',
+            name: 'Supplier 1',
+            baseUrl: 'https://api.example.com',
+            localPrefix: '/claude',
+            enabled: true,
+          },
+          {
+            id: 'supplier-2',
+            name: 'Supplier 2',
+            baseUrl: 'https://api2.example.com',
+            localPrefix: '/claude',
+            enabled: true,
+          },
+        ],
+      };
+      await writeFile(testPath, JSON.stringify(invalidConfig));
+      process.env.PROMPTXY_CONFIG = testPath;
+
+      await expect(loadConfig()).rejects.toThrow(
+        "Local prefix '/claude' is used by multiple enabled suppliers",
+      );
     });
 
     it('should reject invalid rules structure', async () => {
@@ -217,11 +305,7 @@ describe('Config Module', () => {
       const invalidConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: 7071 },
-        upstreams: {
-          anthropic: 'https://api.anthropic.com',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: DEFAULT_SUPPLIERS,
         rules: [{ id: 'test' }], // Missing when and ops
       };
       await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
@@ -235,11 +319,7 @@ describe('Config Module', () => {
       const invalidConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: 7071 },
-        upstreams: {
-          anthropic: 'https://api.anthropic.com',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: DEFAULT_SUPPLIERS,
         rules: [],
         storage: { maxHistory: -1 },
       };
@@ -250,21 +330,73 @@ describe('Config Module', () => {
         'config.storage.maxHistory must be a positive integer',
       );
     });
+
+    it('should reject invalid localPrefix (missing leading slash)', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      const invalidConfig = {
+        listen: { host: '127.0.0.1', port: 7070 },
+        api: { host: '127.0.0.1', port: 7071 },
+        suppliers: [
+          {
+            id: 'test',
+            name: 'Test',
+            baseUrl: 'https://api.example.com',
+            localPrefix: 'invalid-prefix',
+            enabled: true,
+          },
+        ],
+      };
+      await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      await expect(loadConfig()).rejects.toThrow(
+        'config.suppliers[0].localPrefix must start with',
+      );
+    });
+
+    it('should reject invalid pathMapping regex', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      const invalidConfig = {
+        listen: { host: '127.0.0.1', port: 7070 },
+        api: { host: '127.0.0.1', port: 7071 },
+        suppliers: [
+          {
+            id: 'test',
+            name: 'Test',
+            baseUrl: 'https://api.example.com',
+            localPrefix: '/test',
+            pathMappings: [
+              {
+                from: '[invalid(regex',
+                to: '/target',
+                type: 'regex',
+              },
+            ],
+            enabled: true,
+          },
+        ],
+      };
+      await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      await expect(loadConfig()).rejects.toThrow(
+        'config.suppliers[0].pathMappings[0].from is an invalid regex',
+      );
+    });
   });
 
   describe('Configuration Saving', () => {
     it('should save config to default location', async () => {
-      await mkdir(TEST_CONFIG_DIR, { recursive: true });
-      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+      // 创建独立的保存测试目录，避免与HOME环境变量冲突
+      const saveTestDir = path.join(TEST_CONFIG_DIR, 'save-test');
+      const saveTestPath = path.join(saveTestDir, 'config.json');
+      await mkdir(saveTestDir, { recursive: true });
+      process.env.PROMPTXY_CONFIG = saveTestPath;
 
       const config: PromptxyConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: 7071 },
-        upstreams: {
-          anthropic: 'https://api.anthropic.com',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: DEFAULT_SUPPLIERS,
         rules: [
           {
             id: 'save-test',
@@ -279,11 +411,11 @@ describe('Config Module', () => {
       await saveConfig(config);
 
       // 验证文件存在
-      await access(TEST_CONFIG_PATH);
+      await access(saveTestPath);
 
       // 验证内容
       const savedContent = await import('node:fs/promises').then(({ readFile }) =>
-        readFile(TEST_CONFIG_PATH, 'utf-8'),
+        readFile(saveTestPath, 'utf-8'),
       );
       const parsed = JSON.parse(savedContent);
 
@@ -301,11 +433,7 @@ describe('Config Module', () => {
       const config: PromptxyConfig = {
         listen: { host: '0.0.0.0', port: 8080 },
         api: { host: '0.0.0.0', port: 8081 },
-        upstreams: {
-          anthropic: 'https://api.anthropic.com',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: DEFAULT_SUPPLIERS,
         rules: [],
         storage: { maxHistory: 100, autoCleanup: true, cleanupInterval: 1 },
         debug: false,
@@ -328,11 +456,7 @@ describe('Config Module', () => {
       const config: PromptxyConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: 7071 },
-        upstreams: {
-          anthropic: 'https://api.anthropic.com',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: DEFAULT_SUPPLIERS,
         rules: [],
         storage: { maxHistory: 100, autoCleanup: true, cleanupInterval: 1 },
         debug: false,
@@ -364,14 +488,13 @@ describe('Config Module', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty rules array', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
       const config: PromptxyConfig = {
         listen: { host: '127.0.0.1', port: 7070 },
         api: { host: '127.0.0.1', port: 7071 },
-        upstreams: {
-          anthropic: 'https://api.anthropic.com',
-          openai: 'https://api.openai.com',
-          gemini: 'https://generativelanguage.googleapis.com',
-        },
+        suppliers: DEFAULT_SUPPLIERS,
         rules: [],
         storage: { maxHistory: 100, autoCleanup: true, cleanupInterval: 1 },
         debug: false,
@@ -409,14 +532,108 @@ describe('Config Module', () => {
         ],
       };
 
-      await mkdir(TEST_CONFIG_DIR, { recursive: true });
-      await writeFile(TEST_CONFIG_PATH, JSON.stringify(complexConfig));
-      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+      // 创建独立的测试子目录，避免与cleanup冲突
+      const complexTestDir = path.join(TEST_CONFIG_DIR, 'complex-test');
+      const complexTestPath = path.join(complexTestDir, 'config.json');
+      await mkdir(complexTestDir, { recursive: true });
+      await writeFile(complexTestPath, JSON.stringify(complexConfig));
+      process.env.PROMPTXY_CONFIG = complexTestPath;
 
       const config = await loadConfig();
       expect(config.rules[0].ops).toHaveLength(7);
       expect(config.rules[0].stop).toBe(true);
       expect(config.rules[0].enabled).toBe(true);
+    });
+
+    it('should handle suppliers with pathMappings', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      const configWithMappings: Partial<PromptxyConfig> = {
+        suppliers: [
+          {
+            id: 'test-supplier',
+            name: 'Test Supplier',
+            baseUrl: 'https://api.example.com',
+            localPrefix: '/test',
+            pathMappings: [
+              {
+                from: '/v1/',
+                to: '/api/v1/',
+                type: 'prefix',
+              },
+              {
+                from: '^/old/(.+)$',
+                to: '/new/$1',
+                type: 'regex',
+              },
+            ],
+            enabled: true,
+          },
+        ],
+      };
+
+      await writeFile(TEST_CONFIG_PATH, JSON.stringify(configWithMappings));
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const config = await loadConfig();
+      expect(config.suppliers).toHaveLength(1);
+      expect(config.suppliers[0].pathMappings).toHaveLength(2);
+    });
+  });
+
+  describe('Supplier Features', () => {
+    it('should allow multiple suppliers with same localPrefix if only one is enabled', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      const config: Partial<PromptxyConfig> = {
+        suppliers: [
+          {
+            id: 'claude-prod',
+            name: 'Claude Production',
+            baseUrl: 'https://api.anthropic.com',
+            localPrefix: '/claude',
+            enabled: true,
+          },
+          {
+            id: 'claude-test',
+            name: 'Claude Test',
+            baseUrl: 'https://test.example.com',
+            localPrefix: '/claude',
+            enabled: false,
+          },
+        ],
+      };
+
+      await writeFile(TEST_CONFIG_PATH, JSON.stringify(config));
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const loaded = await loadConfig();
+      expect(loaded.suppliers).toHaveLength(2);
+      expect(loaded.suppliers.filter(s => s.enabled)).toHaveLength(1);
+    });
+
+    it('should support all pathMapping types', async () => {
+      await mkdir(TEST_CONFIG_DIR, { recursive: true });
+      const config: Partial<PromptxyConfig> = {
+        suppliers: [
+          {
+            id: 'test',
+            name: 'Test',
+            baseUrl: 'https://api.example.com',
+            localPrefix: '/test',
+            pathMappings: [
+              { from: '/exact', to: '/replacement', type: 'exact' },
+              { from: '/prefix', to: '/new-prefix', type: 'prefix' },
+              { from: '^/regex/(.+)$', to: '/mapped/$1', type: 'regex' },
+            ],
+            enabled: true,
+          },
+        ],
+      };
+
+      await writeFile(TEST_CONFIG_PATH, JSON.stringify(config));
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const loaded = await loadConfig();
+      expect(loaded.suppliers[0].pathMappings).toHaveLength(3);
     });
   });
 });

@@ -67,6 +67,27 @@ export type PromptxyRule = {
 // 配置类型
 // ============================================================================
 
+/**
+ * 路径映射规则
+ */
+export interface PathMapping {
+  from: string;
+  to: string;
+  type?: 'exact' | 'prefix' | 'regex';
+}
+
+/**
+ * 供应商配置
+ */
+export interface Supplier {
+  id: string;                  // 唯一标识
+  name: string;                // 显示名称
+  baseUrl: string;             // 上游地址
+  localPrefix: string;         // 本地路径前缀（如 /claude）
+  pathMappings?: PathMapping[]; // 路径映射规则
+  enabled: boolean;            // 是否启用
+}
+
 export type PromptxyConfig = {
   listen: {
     host: string;
@@ -76,11 +97,7 @@ export type PromptxyConfig = {
     host: string;
     port: number;
   };
-  upstreams: {
-    anthropic: string;
-    openai: string;
-    gemini: string;
-  };
+  suppliers: Supplier[];
   rules: PromptxyRule[];
   storage: {
     maxHistory: number;
@@ -256,24 +273,53 @@ export interface RuleValidationResult {
 }
 
 // ============================================================================
-// 上游配置类型
+// 供应商配置类型
 // ============================================================================
 
-// 上游配置更新请求
-export interface UpstreamsUpdateRequest {
-  anthropic?: string;
-  openai?: string;
-  gemini?: string;
-}
-
-// 上游配置响应
-export interface UpstreamsFetchResponse {
+// 供应商获取响应
+export interface SuppliersFetchResponse {
   success: boolean;
-  upstreams: PromptxyConfig['upstreams'];
+  suppliers: Supplier[];
 }
 
-export interface UpstreamsUpdateResponse {
+// 供应商创建请求
+export interface SupplierCreateRequest {
+  supplier: Omit<Supplier, 'id'>;
+}
+
+// 供应商创建响应
+export interface SupplierCreateResponse {
   success: boolean;
   message: string;
-  upstreams: PromptxyConfig['upstreams'];
+  supplier: Supplier;
+}
+
+// 供应商更新请求
+export interface SupplierUpdateRequest {
+  supplier: Supplier;
+}
+
+// 供应商更新响应
+export interface SupplierUpdateResponse {
+  success: boolean;
+  message: string;
+  supplier: Supplier;
+}
+
+// 供应商删除响应
+export interface SupplierDeleteResponse {
+  success: boolean;
+  message: string;
+}
+
+// 供应商切换请求
+export interface SupplierToggleRequest {
+  enabled: boolean;
+}
+
+// 供应商切换响应
+export interface SupplierToggleResponse {
+  success: boolean;
+  message: string;
+  supplier: Supplier;
 }

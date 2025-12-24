@@ -17,24 +17,93 @@ import {
   PromptxyRuleMatch,
   RequestRecord,
   SSERequestEvent,
+  Supplier,
+  PathMapping,
 } from './types.js';
 import { insertRequestRecord } from './database.js';
 import { broadcastRequest } from './api-server.js';
 
 type RouteInfo = {
   client: PromptxyClient;
-  prefix: '' | '/openai' | '/gemini';
+  localPrefix: string;
   upstreamBaseUrl: string;
+  pathMappings?: PathMapping[];
 };
 
-function getRouteInfo(pathname: string, config: PromptxyConfig): RouteInfo {
-  if (pathname === '/openai' || pathname.startsWith('/openai/')) {
-    return { client: 'codex', prefix: '/openai', upstreamBaseUrl: config.upstreams.openai };
+/**
+ * 应用路径映射规则
+ */
+function applyPathMappings(path: string, mappings?: PathMapping[]): string {
+  if (!mappings || mappings.length === 0) {
+    return path;
   }
-  if (pathname === '/gemini' || pathname.startsWith('/gemini/')) {
-    return { client: 'gemini', prefix: '/gemini', upstreamBaseUrl: config.upstreams.gemini };
+
+  let result = path;
+
+  for (const mapping of mappings) {
+    const type = mapping.type || 'prefix';
+
+    if (type === 'exact') {
+      if (path === mapping.from) {
+        return mapping.to;
+      }
+    } else if (type === 'prefix') {
+      if (path.startsWith(mapping.from)) {
+        result = path.replace(mapping.from, mapping.to);
+        break; // 找到匹配的前缀映射后立即返回
+      }
+    } else if (type === 'regex') {
+      try {
+        const regex = new RegExp(mapping.from);
+        if (regex.test(path)) {
+          result = path.replace(regex, mapping.to);
+          break; // 找到匹配的正则映射后立即返回
+        }
+      } catch {
+        // 正则无效，跳过此映射
+        continue;
+      }
+    }
   }
-  return { client: 'claude', prefix: '', upstreamBaseUrl: config.upstreams.anthropic };
+
+  return result;
+}
+
+/**
+ * 根据 localPrefix 查找供应商
+ * 按 localPrefix 长度降序排序，优先匹配更长的前缀
+ */
+function findSupplierByPath(pathname: string, suppliers: Supplier[]): RouteInfo | null {
+  // 获取已启用的供应商，按 localPrefix 长度降序排序
+  const enabledSuppliers = suppliers
+    .filter(s => s.enabled)
+    .sort((a, b) => b.localPrefix.length - a.localPrefix.length);
+
+  for (const supplier of enabledSuppliers) {
+    const prefix = supplier.localPrefix;
+
+    // 精确匹配或前缀匹配
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      // 根据 localPrefix 推断 client 类型
+      let client: PromptxyClient;
+      if (prefix === '/openai' || prefix.startsWith('/openai')) {
+        client = 'codex';
+      } else if (prefix === '/gemini' || prefix.startsWith('/gemini')) {
+        client = 'gemini';
+      } else {
+        client = 'claude';
+      }
+
+      return {
+        client,
+        localPrefix: prefix,
+        upstreamBaseUrl: supplier.baseUrl,
+        pathMappings: supplier.pathMappings,
+      };
+    }
+  }
+
+  return null;
 }
 
 function stripPrefix(pathname: string, prefix: string): string {
@@ -70,7 +139,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
     let requestId: string | undefined;
     let originalBodyBuffer: Buffer | undefined;
     let jsonBody: any | undefined;
-    let route: RouteInfo | undefined;
+    let route: RouteInfo | null = null;
     let upstreamPath: string | undefined;
     let matches: PromptxyRuleMatch[] = [];
     const warnings: string[] = [];
@@ -93,9 +162,26 @@ export function createGateway(config: PromptxyConfig): http.Server {
         return;
       }
 
-      route = getRouteInfo(url.pathname, config);
-      upstreamPath = stripPrefix(url.pathname, route.prefix);
-      const upstreamUrl = joinUrl(route.upstreamBaseUrl, upstreamPath, url.search);
+      route = findSupplierByPath(url.pathname, config.suppliers);
+
+      if (!route) {
+        // 没有匹配的供应商，返回 404
+        jsonError(res, 404, {
+          error: 'No supplier found for this path',
+          path: url.pathname,
+        });
+        return;
+      }
+
+      // TypeScript 类型守卫：从这里开始 route 一定不是 null
+      const matchedRoute: RouteInfo = route;
+
+      upstreamPath = stripPrefix(url.pathname, matchedRoute.localPrefix);
+
+      // 应用路径映射
+      upstreamPath = applyPathMappings(upstreamPath, matchedRoute.pathMappings);
+
+      const upstreamUrl = joinUrl(matchedRoute.upstreamBaseUrl, upstreamPath, url.search);
 
       const headers = cloneAndFilterRequestHeaders(req.headers);
 
@@ -118,7 +204,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
       }
 
       if (jsonBody && typeof jsonBody === 'object') {
-        if (route.client === 'claude') {
+        if (matchedRoute.client === 'claude') {
           const result = mutateClaudeBody({
             body: jsonBody,
             method: method,
@@ -127,7 +213,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
           });
           jsonBody = result.body;
           matches = result.matches;
-        } else if (route.client === 'codex') {
+        } else if (matchedRoute.client === 'codex') {
           const result = mutateCodexBody({
             body: jsonBody,
             method: method,
@@ -137,7 +223,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
           jsonBody = result.body;
           matches = result.matches;
           warnings.push(...result.warnings);
-        } else if (route.client === 'gemini') {
+        } else if (matchedRoute.client === 'gemini') {
           const result = mutateGeminiBody({
             body: jsonBody,
             method: method,
@@ -151,7 +237,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
 
       if (config.debug) {
         logger.debug(
-          `[promptxy] ${route.client.toUpperCase()} ${method} ${url.pathname} -> ${upstreamUrl} (${summarizeMatches(
+          `[promptxy] ${matchedRoute.client.toUpperCase()} ${method} ${url.pathname} -> ${upstreamUrl} (${summarizeMatches(
             matches,
           )}${warnings.length ? ` warnings=${warnings.length}` : ''})`,
         );
@@ -197,7 +283,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
       const record: RequestRecord = {
         id: requestId,
         timestamp: Date.now(),
-        client: route.client,
+        client: matchedRoute.client,
         path: upstreamPath,
         method: method,
         originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
@@ -222,7 +308,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
       const sseData: SSERequestEvent = {
         id: requestId,
         timestamp: record.timestamp,
-        client: route.client,
+        client: matchedRoute.client,
         path: upstreamPath,
         method: method,
         matchedRules: matches.map(m => m.ruleId),

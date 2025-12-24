@@ -37,11 +37,32 @@ describe('Gateway Integration Tests', () => {
   beforeAll(async () => {
     // 初始化测试配置（不包含上游服务器端口）
     config = await createTestConfig({
-      upstreams: {
-        anthropic: 'http://127.0.0.1:9999', // 临时值，会在 beforeEach 中更新
-        openai: 'http://127.0.0.1:9999',
-        gemini: 'http://127.0.0.1:9999',
-      },
+      suppliers: [
+        {
+          id: 'claude-test',
+          name: 'Claude Test',
+          baseUrl: 'http://127.0.0.1:9999', // 临时值，会在 beforeEach 中更新
+          localPrefix: '/claude',
+          pathMappings: [],
+          enabled: true,
+        },
+        {
+          id: 'openai-test',
+          name: 'OpenAI Test',
+          baseUrl: 'http://127.0.0.1:9999',
+          localPrefix: '/openai',
+          pathMappings: [],
+          enabled: true,
+        },
+        {
+          id: 'gemini-test',
+          name: 'Gemini Test',
+          baseUrl: 'http://127.0.0.1:9999',
+          localPrefix: '/gemini',
+          pathMappings: [],
+          enabled: true,
+        },
+      ],
       rules: [
         createTestRule('gateway-rule-1', 'claude', 'instructions', [
           { type: 'append', text: ' [GATEWAY-MODIFIED]' },
@@ -75,11 +96,9 @@ describe('Gateway Integration Tests', () => {
     });
 
     // 更新配置指向新的模拟上游服务器
-    config.upstreams = {
-      anthropic: `http://127.0.0.1:${mockUpstreamPort}`,
-      openai: `http://127.0.0.1:${mockUpstreamPort}`,
-      gemini: `http://127.0.0.1:${mockUpstreamPort}`,
-    };
+    config.suppliers[0].baseUrl = `http://127.0.0.1:${mockUpstreamPort}`;
+    config.suppliers[1].baseUrl = `http://127.0.0.1:${mockUpstreamPort}`;
+    config.suppliers[2].baseUrl = `http://127.0.0.1:${mockUpstreamPort}`;
 
     // 启动服务器
     servers = await startTestServers(config, db);
@@ -527,8 +546,8 @@ describe('Gateway Integration Tests', () => {
       }
     });
 
-    it('应该处理根路径请求', async () => {
-      const response = await gatewayClient.post('/', { test: 'data' });
+    it('应该处理精确匹配 localPrefix 的请求', async () => {
+      const response = await gatewayClient.post('/claude', { test: 'data' });
 
       // 应该路由到 claude
       expect(response.status).toBeDefined();
@@ -541,6 +560,159 @@ describe('Gateway Integration Tests', () => {
       const list = await getRequestList({ limit: 10 });
       const item = list.items[0];
       expect(item.client).toBe('claude');
+    });
+  });
+
+  describe('Path Mapping', () => {
+    it('应该支持 exact 类型路径映射', async () => {
+      // 直接更新第一个供应商的路径映射
+      config.suppliers[0].pathMappings = [
+        { from: '/exact-path', to: '/mapped-exact', type: 'exact' },
+      ];
+
+      // 重启服务器以应用新配置
+      await servers.shutdown();
+      servers = await startTestServers(config, db);
+      gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
+
+      const response = await gatewayClient.post('/claude/exact-path', { test: 'data' });
+
+      expect(response.status).toBeDefined();
+
+      // 验证请求被记录
+      await waitForCondition(async () => {
+        const list = await getRequestList({ limit: 10 });
+        return list.total > 0;
+      }, 1000);
+
+      const list = await getRequestList({ limit: 10 });
+      const item = list.items[0];
+      expect(item.path).toBe('/mapped-exact');
+    });
+
+    it('应该支持 prefix 类型路径映射', async () => {
+      config.suppliers[0].pathMappings = [
+        { from: '/v1/', to: '/api/v1/', type: 'prefix' },
+      ];
+
+      await servers.shutdown();
+      servers = await startTestServers(config, db);
+      gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
+
+      const response = await gatewayClient.post('/claude/v1/messages', { test: 'data' });
+
+      expect(response.status).toBeDefined();
+
+      await waitForCondition(async () => {
+        const list = await getRequestList({ limit: 10 });
+        return list.total > 0;
+      }, 1000);
+
+      const list = await getRequestList({ limit: 10 });
+      const item = list.items[0];
+      expect(item.path).toBe('/api/v1/messages');
+    });
+
+    it('应该支持 regex 类型路径映射', async () => {
+      config.suppliers[0].pathMappings = [
+        { from: '^/old/([^/]+)$', to: '/new/$1', type: 'regex' },
+      ];
+
+      await servers.shutdown();
+      servers = await startTestServers(config, db);
+      gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
+
+      // 使用匹配的路径：/claude/old/something -> /new/something
+      const response = await gatewayClient.post('/claude/old/value123', { test: 'data' });
+
+      expect(response.status).toBeDefined();
+
+      await waitForCondition(async () => {
+        const list = await getRequestList({ limit: 10 });
+        return list.total > 0;
+      }, 1000);
+
+      const list = await getRequestList({ limit: 10 });
+      const item = list.items[0];
+      // regex 应该将 /old/value123 映射为 /new/value123
+      expect(item.path).toBe('/new/value123');
+    });
+
+    it('应该在第一个匹配后停止应用后续映射', async () => {
+      config.suppliers[0].pathMappings = [
+        { from: '/v1/', to: '/first/', type: 'prefix' },
+        { from: '/v1/', to: '/second/', type: 'prefix' },
+      ];
+
+      await servers.shutdown();
+      servers = await startTestServers(config, db);
+      gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
+
+      const response = await gatewayClient.post('/claude/v1/data', { test: 'data' });
+
+      expect(response.status).toBeDefined();
+
+      await waitForCondition(async () => {
+        const list = await getRequestList({ limit: 10 });
+        return list.total > 0;
+      }, 1000);
+
+      const list = await getRequestList({ limit: 10 });
+      const item = list.items[0];
+      expect(item.path).toBe('/first/data');
+    });
+
+    it('应该在无匹配映射时使用原路径', async () => {
+      config.suppliers[0].pathMappings = [
+        { from: '/specific', to: '/mapped', type: 'exact' },
+      ];
+
+      await servers.shutdown();
+      servers = await startTestServers(config, db);
+      gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
+
+      const response = await gatewayClient.post('/claude/other-path', { test: 'data' });
+
+      expect(response.status).toBeDefined();
+
+      await waitForCondition(async () => {
+        const list = await getRequestList({ limit: 10 });
+        return list.total > 0;
+      }, 1000);
+
+      const list = await getRequestList({ limit: 10 });
+      const item = list.items[0];
+      expect(item.path).toBe('/other-path');
+    });
+
+    it('应该支持按 localPrefix 长度优先匹配', async () => {
+      // 添加一个更长的前缀供应商
+      config.suppliers.push({
+        id: 'claude-v1',
+        name: 'Claude V1',
+        baseUrl: `http://127.0.0.1:${mockUpstreamPort}`,
+        localPrefix: '/claude/v1',
+        pathMappings: [],
+        enabled: true,
+      });
+
+      await servers.shutdown();
+      servers = await startTestServers(config, db);
+      gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
+
+      const response = await gatewayClient.post('/claude/v1/messages', { test: 'data' });
+
+      expect(response.status).toBeDefined();
+
+      await waitForCondition(async () => {
+        const list = await getRequestList({ limit: 10 });
+        return list.total > 0;
+      }, 1000);
+
+      const list = await getRequestList({ limit: 10 });
+      const item = list.items[0];
+      // 应该匹配更长的前缀 /claude/v1，所以 innerPath 是 /messages
+      expect(item.path).toBe('/messages');
     });
   });
 });

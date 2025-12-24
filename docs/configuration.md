@@ -22,11 +22,20 @@
     "host": "127.0.0.1",
     "port": 7070
   },
-  "upstreams": {
-    "anthropic": "https://api.anthropic.com",
-    "openai": "https://api.openai.com",
-    "gemini": "https://generativelanguage.googleapis.com"
+  "api": {
+    "host": "127.0.0.1",
+    "port": 7071
   },
+  "suppliers": [
+    {
+      "id": "claude-anthropic",
+      "name": "Claude (Anthropic)",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "pathMappings": [],
+      "enabled": true
+    }
+  ],
   "rules": [
     {
       "id": "example-rule",
@@ -34,6 +43,11 @@
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     }
   ],
+  "storage": {
+    "maxHistory": 100,
+    "autoCleanup": true,
+    "cleanupInterval": 1
+  },
   "debug": false
 }
 ```
@@ -51,7 +65,7 @@
 
 **类型**：`string`
 **默认值**：`"127.0.0.1"`
-**说明**：服务绑定的主机地址
+**说明**：网关服务绑定的主机地址
 
 **安全建议**：
 
@@ -63,7 +77,7 @@
 **类型**：`number`
 **默认值**：`7070`
 **范围**：`1-65535`
-**说明**：服务监听的端口号
+**说明**：网关服务监听的端口号
 
 **示例**：
 
@@ -73,39 +87,135 @@
 
 ---
 
-### upstreams
+### api
 
 **类型**：`object`
 **必需**：是
-**说明**：三个 AI 服务的上游 API 地址
 
-#### anthropic
+#### host
 
-**类型**：`string` (URL)
-**默认值**：`"https://api.anthropic.com"`
-**说明**：Claude Code 的上游 API
+**类型**：`string`
+**默认值**：`"127.0.0.1"`
+**说明**：API 服务绑定的主机地址
 
-#### openai
+#### port
 
-**类型**：`string` (URL)
-**默认值**：`"https://api.openai.com"`
-**说明**：Codex CLI 的上游 API
-
-#### gemini
-
-**类型**：`string` (URL)
-**默认值**：`"https://generativelanguage.googleapis.com"`
-**说明**：Gemini CLI 的上游 API
+**类型**：`number`
+**默认值**：`7071`
+**范围**：`1-65535`
+**说明**：API 服务监听的端口号
 
 **示例**：
 
 ```json
-"upstreams": {
-  "anthropic": "https://api.anthropic.com",
-  "openai": "https://api.openai.com",
-  "gemini": "https://generativelanguage.googleapis.com"
+"api": { "host": "127.0.0.1", "port": 7071 }
+```
+
+---
+
+### suppliers
+
+**类型**：`array<Supplier>`
+**必需**：是
+**说明**：上游供应商配置数组，支持配置多个供应商并灵活切换
+
+#### Supplier 对象结构
+
+```typescript
+{
+  id: string;              // 必需：供应商唯一标识
+  name: string;            // 必需：显示名称
+  baseUrl: string;         // 必需：上游 API 地址
+  localPrefix: string;     // 必需：本地路径前缀（如 /claude）
+  pathMappings?: Array<{   // 可选：路径映射规则
+    from: string;
+    to: string;
+    type?: 'exact' | 'prefix' | 'regex';
+  }>;
+  enabled: boolean;        // 必需：是否启用
 }
 ```
+
+#### 配置说明
+
+- **id**：供应商的唯一标识符，自动生成或手动指定
+- **name**：显示在 UI 中的供应商名称
+- **baseUrl**：上游 API 的完整地址
+- **localPrefix**：本地访问路径前缀，必须以 `/` 开头
+- **pathMappings**：路径映射规则，用于转换请求路径
+- **enabled**：控制供应商是否启用，相同 `localPrefix` 的供应商不能同时启用
+
+#### 路径映射规则
+
+**type: 'prefix'** (默认)
+
+前缀匹配替换，常用于路径前缀转换：
+
+```json
+{
+  "from": "/v1/",
+  "to": "/api/v1/",
+  "type": "prefix"
+}
+```
+
+**type: 'exact'**
+
+精确匹配替换：
+
+```json
+{
+  "from": "/messages",
+  "to": "/chat/completions",
+  "type": "exact"
+}
+```
+
+**type: 'regex'**
+
+正则表达式匹配替换：
+
+```json
+{
+  "from": "^/v1/(.+)$",
+  "to": "/api/v1/$1",
+  "type": "regex"
+}
+```
+
+#### 路由匹配规则
+
+请求会按以下规则匹配供应商：
+
+1. 只考虑 `enabled: true` 的供应商
+2. 按 `localPrefix` 长度降序排序（优先匹配更长的前缀）
+3. 第一个匹配的供应商将处理请求
+4. 相同 `localPrefix` 的供应商不能同时启用（会报错）
+
+**示例**：
+
+```json
+"suppliers": [
+  {
+    "id": "claude-official",
+    "name": "Claude Official",
+    "baseUrl": "https://api.anthropic.com",
+    "localPrefix": "/claude",
+    "enabled": true
+  },
+  {
+    "id": "claude-test",
+    "name": "Claude Test",
+    "baseUrl": "https://test.example.com",
+    "localPrefix": "/claude",
+    "enabled": false
+  }
+]
+```
+
+访问 `/claude/v1/messages` 时：
+- 如果 `claude-official` 启用，请求转发到 `https://api.anthropic.com/v1/messages`
+- 如果 `claude-test` 启用，请求转发到 `https://test.example.com/v1/messages`
 
 ---
 
@@ -179,17 +289,18 @@
 
 ## 🎛️ 环境变量覆盖
 
-所有配置项都可以通过环境变量覆盖，优先级：**环境变量 > 配置文件 > 默认值**
+部分配置项可以通过环境变量覆盖，优先级：**环境变量 > 配置文件 > 默认值**
 
-| 环境变量                      | 配置项                | 示例值                                      | 说明         |
-| ----------------------------- | --------------------- | ------------------------------------------- | ------------ |
-| `PROMPTXY_HOST`               | `listen.host`         | `127.0.0.1`                                 | 绑定主机     |
-| `PROMPTXY_PORT`               | `listen.port`         | `7070`                                      | 监听端口     |
-| `PROMPTXY_UPSTREAM_ANTHROPIC` | `upstreams.anthropic` | `https://api.anthropic.com`                 | Claude 上游  |
-| `PROMPTXY_UPSTREAM_OPENAI`    | `upstreams.openai`    | `https://api.openai.com`                    | Codex 上游   |
-| `PROMPTXY_UPSTREAM_GEMINI`    | `upstreams.gemini`    | `https://generativelanguage.googleapis.com` | Gemini 上游  |
-| `PROMPTXY_DEBUG`              | `debug`               | `1` 或 `true`                               | 调试模式     |
-| `PROMPTXY_CONFIG`             | -                     | `/path/to/config.json`                      | 配置文件路径 |
+| 环境变量                  | 配置项           | 示例值                    | 说明         |
+| ------------------------- | ---------------- | ------------------------- | ------------ |
+| `PROMPTXY_HOST`           | `listen.host`    | `127.0.0.1`               | 绑定主机     |
+| `PROMPTXY_PORT`           | `listen.port`    | `7070`                    | 监听端口     |
+| `PROMPTXY_API_HOST`       | `api.host`       | `127.0.0.1`               | API 主机     |
+| `PROMPTXY_API_PORT`       | `api.port`       | `7071`                    | API 端口     |
+| `PROMPTXY_DEBUG`          | `debug`          | `1` 或 `true`             | 调试模式     |
+| `PROMPTXY_CONFIG`         | -                | `/path/to/config.json`    | 配置文件路径 |
+
+**注意**：供应商（suppliers）配置不支持环境变量覆盖，请通过配置文件或 Web UI 管理。
 
 **使用示例**：
 
@@ -486,11 +597,22 @@ interface PromptxyConfig {
     host: string;
     port: number; // 1-65535
   };
-  upstreams: {
-    anthropic: string; // 必须是有效 URL
-    openai: string; // 必须是有效 URL
-    gemini: string; // 必须是有效 URL
+  api: {
+    host: string;
+    port: number; // 1-65535
   };
+  suppliers: Array<{
+    id: string;
+    name: string;
+    baseUrl: string; // 必须是有效 URL
+    localPrefix: string; // 必须以 / 开头
+    pathMappings?: Array<{
+      from: string;
+      to: string;
+      type?: 'exact' | 'prefix' | 'regex';
+    }>;
+    enabled: boolean;
+  }>;
   rules: Array<{
     id: string;
     when: {
@@ -503,6 +625,11 @@ interface PromptxyConfig {
     ops: Array<any>; // 非空数组
     stop?: boolean;
   }>;
+  storage: {
+    maxHistory: number;
+    autoCleanup: boolean;
+    cleanupInterval: number;
+  };
   debug?: boolean;
 }
 ```
@@ -518,13 +645,18 @@ npm run dev
 **验证失败示例**：
 
 ```
-Error: config.listen.port must be an integer in [1, 65535]
+Error: config.suppliers must contain at least one supplier
+```
+
+```
+Error: Local prefix '/claude' is used by multiple enabled suppliers: Claude Official, Claude Test
 ```
 
 **修复后**：
 
 ```
 promptxy listening on http://127.0.0.1:7070
+promptxy-api listening on http://127.0.0.1:7071
 ```
 
 ---
@@ -536,6 +668,16 @@ promptxy listening on http://127.0.0.1:7070
 ```bash
 curl http://127.0.0.1:7070/_promptxy/health
 # {"status":"ok"}
+```
+
+### 测试供应商路由
+
+```bash
+# 测试 Claude 供应商（假设 localPrefix 为 /claude）
+curl http://127.0.0.1:7070/claude/v1/messages
+
+# 测试 OpenAI 供应商（假设 localPrefix 为 /openai）
+curl http://127.0.0.1:7070/openai/v1/chat/completions
 ```
 
 ### 调试模式测试
@@ -557,12 +699,22 @@ PROMPTXY_DEBUG=1 npm run dev
 ```json
 {
   "listen": { "host": "127.0.0.1", "port": 7070 },
-  "upstreams": {
-    "anthropic": "https://api.anthropic.com",
-    "openai": "https://api.openai.com",
-    "gemini": "https://generativelanguage.googleapis.com"
-  },
+  "api": { "host": "127.0.0.1", "port": 7071 },
+  "suppliers": [
+    {
+      "id": "claude-anthropic",
+      "name": "Claude (Anthropic)",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "enabled": true
+    }
+  ],
   "rules": [],
+  "storage": {
+    "maxHistory": 100,
+    "autoCleanup": true,
+    "cleanupInterval": 1
+  },
   "debug": false
 }
 ```
@@ -575,11 +727,36 @@ PROMPTXY_DEBUG=1 npm run dev
     "host": "127.0.0.1",
     "port": 7070
   },
-  "upstreams": {
-    "anthropic": "https://api.anthropic.com",
-    "openai": "https://api.openai.com",
-    "gemini": "https://generativelanguage.googleapis.com"
+  "api": {
+    "host": "127.0.0.1",
+    "port": 7071
   },
+  "suppliers": [
+    {
+      "id": "claude-official",
+      "name": "Claude Official",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "pathMappings": [],
+      "enabled": true
+    },
+    {
+      "id": "claude-test",
+      "name": "Claude Test",
+      "baseUrl": "https://test.example.com",
+      "localPrefix": "/claude",
+      "pathMappings": [],
+      "enabled": false
+    },
+    {
+      "id": "openai-official",
+      "name": "OpenAI Official",
+      "baseUrl": "https://api.openai.com",
+      "localPrefix": "/openai",
+      "pathMappings": [],
+      "enabled": true
+    }
+  ],
   "rules": [
     {
       "id": "force-chinese-all",
@@ -590,16 +767,13 @@ PROMPTXY_DEBUG=1 npm run dev
       "id": "remove-codex-limit",
       "when": { "client": "codex", "field": "instructions" },
       "ops": [{ "type": "delete", "regex": "be concise", "flags": "i" }]
-    },
-    {
-      "id": "gemini-custom",
-      "when": { "client": "gemini", "field": "system" },
-      "ops": [
-        { "type": "prepend", "text": "CUSTOM: " },
-        { "type": "append", "text": " Always be helpful." }
-      ]
     }
   ],
+  "storage": {
+    "maxHistory": 100,
+    "autoCleanup": true,
+    "cleanupInterval": 1
+  },
   "debug": true
 }
 ```
@@ -608,19 +782,66 @@ PROMPTXY_DEBUG=1 npm run dev
 
 ## 🔧 高级配置
 
-### 自定义上游地址
+### 使用路径映射
 
-如果你使用自建的 API 代理或镜像：
+如果你的上游 API 路径结构与标准不同：
 
 ```json
 {
-  "upstreams": {
-    "anthropic": "https://my-proxy.example.com/anthropic",
-    "openai": "https://my-proxy.example.com/openai",
-    "gemini": "https://my-proxy.example.com/gemini"
-  }
+  "suppliers": [
+    {
+      "id": "custom-proxy",
+      "name": "Custom Proxy",
+      "baseUrl": "https://proxy.example.com",
+      "localPrefix": "/claude",
+      "pathMappings": [
+        {
+          "from": "/v1/",
+          "to": "/api/v1/",
+          "type": "prefix"
+        }
+      ],
+      "enabled": true
+    }
+  ]
 }
 ```
+
+访问 `/claude/v1/messages` 时，实际请求路径变为 `https://proxy.example.com/api/v1/messages`。
+
+### 多供应商快速切换
+
+配置多个相同 `localPrefix` 的供应商，通过 `enabled` 字段快速切换：
+
+```json
+{
+  "suppliers": [
+    {
+      "id": "claude-prod",
+      "name": "Claude Production",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "enabled": true
+    },
+    {
+      "id": "claude-staging",
+      "name": "Claude Staging",
+      "baseUrl": "https://staging.example.com",
+      "localPrefix": "/claude",
+      "enabled": false
+    },
+    {
+      "id": "claude-dev",
+      "name": "Claude Development",
+      "baseUrl": "https://dev.example.com",
+      "localPrefix": "/claude",
+      "enabled": false
+    }
+  ]
+}
+```
+
+通过 Web UI 或修改配置文件中的 `enabled` 字段即可切换供应商。
 
 ### 多环境配置
 

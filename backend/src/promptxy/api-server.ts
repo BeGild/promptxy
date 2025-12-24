@@ -13,9 +13,15 @@ import {
   SSERequestEvent,
   RequestRecordResponse,
   RuleValidationResult,
-  UpstreamsUpdateRequest,
-  UpstreamsFetchResponse,
-  UpstreamsUpdateResponse,
+  Supplier,
+  SuppliersFetchResponse,
+  SupplierCreateRequest,
+  SupplierCreateResponse,
+  SupplierUpdateRequest,
+  SupplierUpdateResponse,
+  SupplierDeleteResponse,
+  SupplierToggleRequest,
+  SupplierToggleResponse,
 } from './types.js';
 import {
   getRequestList,
@@ -25,7 +31,7 @@ import {
   getDatabaseInfo,
   getRequestStats,
 } from './database.js';
-import { saveConfig, loadConfig, assertUrl } from './config.js';
+import { saveConfig, loadConfig, assertUrl, assertSupplier, assertSupplierPathConflicts } from './config.js';
 import { applyPromptRules } from './rules/engine.js';
 import { readRequestBody } from './http.js';
 
@@ -424,59 +430,212 @@ async function handleDatabaseInfo(
 }
 
 /**
- * 处理获取上游配置
+ * 处理获取供应商列表
  */
-async function handleGetUpstreams(
+async function handleGetSuppliers(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
 ): Promise<void> {
-  const response: UpstreamsFetchResponse = {
+  const response: SuppliersFetchResponse = {
     success: true,
-    upstreams: config.upstreams,
+    suppliers: config.suppliers,
   };
   sendJson(res, 200, response);
 }
 
 /**
- * 处理更新上游配置
+ * 生成唯一 ID
  */
-async function handleUpdateUpstreams(
+function generateId(): string {
+  return `supplier-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * 处理创建供应商
+ */
+async function handleCreateSupplier(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
 ): Promise<void> {
   try {
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
-    const updateRequest: UpstreamsUpdateRequest = JSON.parse(body.toString());
+    const { supplier: supplierData }: SupplierCreateRequest = JSON.parse(body.toString());
 
-    // 验证并更新配置
-    if (updateRequest.anthropic !== undefined) {
-      assertUrl('upstreams.anthropic', updateRequest.anthropic);
-      config.upstreams.anthropic = updateRequest.anthropic;
-    }
-    if (updateRequest.openai !== undefined) {
-      assertUrl('upstreams.openai', updateRequest.openai);
-      config.upstreams.openai = updateRequest.openai;
-    }
-    if (updateRequest.gemini !== undefined) {
-      assertUrl('upstreams.gemini', updateRequest.gemini);
-      config.upstreams.gemini = updateRequest.gemini;
-    }
+    // 创建新供应商，生成 ID
+    const newSupplier: Supplier = {
+      ...supplierData,
+      id: generateId(),
+    };
 
-    // 保存到文件
+    // 验证供应商
+    assertSupplier('newSupplier', newSupplier);
+
+    // 创建临时列表检查冲突
+    const tempSuppliers = [...config.suppliers, newSupplier];
+    assertSupplierPathConflicts(tempSuppliers);
+
+    // 添加到配置
+    config.suppliers.push(newSupplier);
+
+    // 保存配置
     await saveConfig(config);
 
-    const response: UpstreamsUpdateResponse = {
+    const response: SupplierCreateResponse = {
       success: true,
-      message: '上游配置已更新并立即生效',
-      upstreams: config.upstreams,
+      message: '供应商已创建',
+      supplier: newSupplier,
     };
     sendJson(res, 200, response);
   } catch (error: any) {
     sendJson(res, 400, {
       success: false,
-      message: error?.message || '更新上游配置失败',
+      message: error?.message || '创建供应商失败',
+    });
+  }
+}
+
+/**
+ * 处理更新供应商
+ */
+async function handleUpdateSupplier(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+  url: URL,
+): Promise<void> {
+  try {
+    const supplierId = url.pathname.split('/').pop();
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const { supplier }: SupplierUpdateRequest = JSON.parse(body.toString());
+
+    // 验证供应商
+    assertSupplier(`supplier.${supplierId}`, supplier);
+
+    // 查找供应商
+    const index = config.suppliers.findIndex(s => s.id === supplierId);
+    if (index === -1) {
+      sendJson(res, 404, { success: false, message: '供应商不存在' });
+      return;
+    }
+
+    // 创建临时列表检查冲突（排除当前供应商）
+    const tempSuppliers = config.suppliers.filter(s => s.id !== supplierId);
+    tempSuppliers.push(supplier);
+    assertSupplierPathConflicts(tempSuppliers);
+
+    // 更新配置
+    config.suppliers[index] = supplier;
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: SupplierUpdateResponse = {
+      success: true,
+      message: '供应商已更新',
+      supplier,
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '更新供应商失败',
+    });
+  }
+}
+
+/**
+ * 处理删除供应商
+ */
+async function handleDeleteSupplier(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+  url: URL,
+): Promise<void> {
+  try {
+    const supplierId = url.pathname.split('/').pop();
+
+    // 查找供应商
+    const index = config.suppliers.findIndex(s => s.id === supplierId);
+    if (index === -1) {
+      sendJson(res, 404, { success: false, message: '供应商不存在' });
+      return;
+    }
+
+    // 检查是否是最后一个供应商
+    if (config.suppliers.length <= 1) {
+      sendJson(res, 400, { success: false, message: '不能删除最后一个供应商' });
+      return;
+    }
+
+    // 删除供应商
+    const deletedSupplier = config.suppliers.splice(index, 1)[0];
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: SupplierDeleteResponse = {
+      success: true,
+      message: '供应商已删除',
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '删除供应商失败',
+    });
+  }
+}
+
+/**
+ * 处理切换供应商启用状态
+ */
+async function handleToggleSupplier(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+  url: URL,
+): Promise<void> {
+  try {
+    // 路径格式: /_promptxy/suppliers/:id/toggle
+    const supplierId = url.pathname.split('/').slice(-2, -1)[0];
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const { enabled }: SupplierToggleRequest = JSON.parse(body.toString());
+
+    // 查找供应商
+    const index = config.suppliers.findIndex(s => s.id === supplierId);
+    if (index === -1) {
+      sendJson(res, 404, { success: false, message: '供应商不存在' });
+      return;
+    }
+
+    // 更新启用状态
+    config.suppliers[index].enabled = enabled;
+
+    // 检查冲突
+    try {
+      assertSupplierPathConflicts(config.suppliers);
+    } catch (error: any) {
+      // 恢复原状态
+      config.suppliers[index].enabled = !enabled;
+      throw error;
+    }
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: SupplierToggleResponse = {
+      success: true,
+      message: enabled ? '供应商已启用' : '供应商已禁用',
+      supplier: config.suppliers[index],
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '切换供应商状态失败',
     });
   }
 }
@@ -774,15 +933,33 @@ export function createApiServer(
         return;
       }
 
-      // 获取上游配置
-      if (req.method === 'GET' && url.pathname === '/_promptxy/config/upstreams') {
-        await handleGetUpstreams(req, res, config);
+      // 获取供应商列表
+      if (req.method === 'GET' && url.pathname === '/_promptxy/suppliers') {
+        await handleGetSuppliers(req, res, config);
         return;
       }
 
-      // 更新上游配置
-      if (req.method === 'POST' && url.pathname === '/_promptxy/config/upstreams') {
-        await handleUpdateUpstreams(req, res, config);
+      // 创建供应商
+      if (req.method === 'POST' && url.pathname === '/_promptxy/suppliers') {
+        await handleCreateSupplier(req, res, config);
+        return;
+      }
+
+      // 更新供应商
+      if (req.method === 'PUT' && url.pathname.startsWith('/_promptxy/suppliers/')) {
+        await handleUpdateSupplier(req, res, config, url);
+        return;
+      }
+
+      // 删除供应商
+      if (req.method === 'DELETE' && url.pathname.startsWith('/_promptxy/suppliers/')) {
+        await handleDeleteSupplier(req, res, config, url);
+        return;
+      }
+
+      // 切换供应商状态
+      if (req.method === 'POST' && url.pathname.startsWith('/_promptxy/suppliers/') && url.pathname.endsWith('/toggle')) {
+        await handleToggleSupplier(req, res, config, url);
         return;
       }
 

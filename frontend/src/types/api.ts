@@ -86,7 +86,7 @@ export interface RuleOperationResponse {
   warnings?: string[];
 }
 
-// 上游配置相关类型
+// 上游配置相关类型（已弃用，保留用于向后兼容）
 export interface UpstreamsConfig {
   anthropic: string;
   openai: string;
@@ -108,4 +108,76 @@ export interface UpstreamsUpdateResponse {
 export interface UpstreamsFetchResponse {
   success: boolean;
   upstreams: UpstreamsConfig;
+}
+
+// ============================================================================
+// 供应商配置类型
+// ============================================================================
+
+export interface PathMapping {
+  from: string;
+  to: string;
+  type?: 'exact' | 'prefix' | 'regex';
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  baseUrl: string;
+  localPrefix: string;
+  pathMappings?: PathMapping[];
+  enabled: boolean;
+}
+
+export interface SuppliersFetchResponse {
+  success: boolean;
+  suppliers: Supplier[];
+}
+
+export interface SupplierCreateRequest {
+  supplier: Omit<Supplier, 'id'>;
+}
+
+export interface SupplierCreateResponse {
+  success: boolean;
+  message: string;
+  supplier: Supplier;
+}
+
+export interface SupplierUpdateRequest {
+  supplier: Supplier;
+}
+
+export interface SupplierUpdateResponse {
+  success: boolean;
+  message: string;
+  supplier: Supplier;
+}
+
+export interface SupplierDeleteResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface SupplierToggleRequest {
+  enabled: boolean;
+}
+
+export interface SupplierToggleResponse {
+  success: boolean;
+  message: string;
+  supplier: Supplier;
+}
+
+export interface CommonPrefix {
+  prefix: string;
+  suppliers: Supplier[];
+  color: string;
+}
+
+export interface CommonPrefixOption {
+  prefix: string;
+  label: string;
+  description: string;
+  color: string;
 }

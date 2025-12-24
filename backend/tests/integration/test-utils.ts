@@ -49,11 +49,32 @@ export async function createTestConfig(
       host: '127.0.0.1',
       port: 0, // 使用随机端口
     },
-    upstreams: {
-      anthropic: 'https://api.anthropic.com',
-      openai: 'https://api.openai.com',
-      gemini: 'https://generativelanguage.googleapis.com',
-    },
+    suppliers: [
+      {
+        id: 'claude-anthropic',
+        name: 'Claude (Anthropic)',
+        baseUrl: 'https://api.anthropic.com',
+        localPrefix: '/claude',
+        pathMappings: [],
+        enabled: true,
+      },
+      {
+        id: 'openai-official',
+        name: 'OpenAI Official',
+        baseUrl: 'https://api.openai.com',
+        localPrefix: '/openai',
+        pathMappings: [],
+        enabled: true,
+      },
+      {
+        id: 'gemini-google',
+        name: 'Gemini (Google)',
+        baseUrl: 'https://generativelanguage.googleapis.com',
+        localPrefix: '/gemini',
+        pathMappings: [],
+        enabled: true,
+      },
+    ],
     rules: [],
     storage: {
       maxHistory: 100,

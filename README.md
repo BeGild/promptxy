@@ -126,7 +126,7 @@ npm start
 ### Claude Code
 
 ```bash
-export ANTHROPIC_BASE_URL="http://127.0.0.1:7070"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:7070/claude"
 ```
 
 ### Codex CLI
@@ -141,9 +141,11 @@ export OPENAI_BASE_URL="http://127.0.0.1:7070/openai"
 export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:7070/gemini"
 ```
 
+> **注意**：v2.0 开始，所有 CLI 配置都必须带上路径前缀（`/claude`、`/openai`、`/gemini`）。
+
 ## 📝 配置文件
 
-配置文件位置: `~/.local/promptxy/config.json`
+配置文件位置: `~/.promptxy/config.json` 或项目根目录 `promptxy.config.json`
 
 ```json
 {
@@ -155,11 +157,32 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:7070/gemini"
     "host": "127.0.0.1",
     "port": 7071
   },
-  "upstreams": {
-    "anthropic": "https://api.anthropic.com",
-    "openai": "https://api.openai.com",
-    "gemini": "https://generativelanguage.googleapis.com"
-  },
+  "suppliers": [
+    {
+      "id": "claude-anthropic",
+      "name": "Claude (Anthropic)",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "pathMappings": [],
+      "enabled": true
+    },
+    {
+      "id": "openai-official",
+      "name": "OpenAI Official",
+      "baseUrl": "https://api.openai.com",
+      "localPrefix": "/openai",
+      "pathMappings": [],
+      "enabled": true
+    },
+    {
+      "id": "gemini-google",
+      "name": "Gemini (Google)",
+      "baseUrl": "https://generativelanguage.googleapis.com",
+      "localPrefix": "/gemini",
+      "pathMappings": [],
+      "enabled": true
+    }
+  ],
   "rules": [
     {
       "id": "rule-001",

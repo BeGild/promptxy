@@ -41,11 +41,32 @@ describe('End-to-End Flow Integration Tests', () => {
   beforeAll(async () => {
     // 创建初始配置（不包含上游服务器端口）
     config = await createTestConfig({
-      upstreams: {
-        anthropic: 'http://127.0.0.1:9999', // 临时值，会在 beforeEach 中更新
-        openai: 'http://127.0.0.1:9999',
-        gemini: 'http://127.0.0.1:9999',
-      },
+      suppliers: [
+        {
+          id: 'claude-e2e',
+          name: 'Claude E2E',
+          baseUrl: 'http://127.0.0.1:9999', // 临时值，会在 beforeEach 中更新
+          localPrefix: '/claude',
+          pathMappings: [],
+          enabled: true,
+        },
+        {
+          id: 'openai-e2e',
+          name: 'OpenAI E2E',
+          baseUrl: 'http://127.0.0.1:9999',
+          localPrefix: '/openai',
+          pathMappings: [],
+          enabled: true,
+        },
+        {
+          id: 'gemini-e2e',
+          name: 'Gemini E2E',
+          baseUrl: 'http://127.0.0.1:9999',
+          localPrefix: '/gemini',
+          pathMappings: [],
+          enabled: true,
+        },
+      ],
       rules: [
         createTestRule('e2e-rule-1', 'claude', 'instructions', [
           { type: 'append', text: ' [E2E]' },
@@ -81,11 +102,9 @@ describe('End-to-End Flow Integration Tests', () => {
     });
 
     // 更新配置指向新的模拟上游服务器
-    config.upstreams = {
-      anthropic: `http://127.0.0.1:${mockUpstreamPort}`,
-      openai: `http://127.0.0.1:${mockUpstreamPort}`,
-      gemini: `http://127.0.0.1:${mockUpstreamPort}`,
-    };
+    config.suppliers[0].baseUrl = `http://127.0.0.1:${mockUpstreamPort}`;
+    config.suppliers[1].baseUrl = `http://127.0.0.1:${mockUpstreamPort}`;
+    config.suppliers[2].baseUrl = `http://127.0.0.1:${mockUpstreamPort}`;
     servers = await startTestServers(config, db);
     gatewayClient = new HttpClient(`http://127.0.0.1:${servers.gatewayPort}`);
     apiClient = new HttpClient(`http://127.0.0.1:${servers.apiPort}`);
@@ -184,8 +203,8 @@ describe('End-to-End Flow Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // 2. 临时修改上游为无效地址
-      const originalUpstream = config.upstreams.anthropic;
-      config.upstreams.anthropic = 'http://127.0.0.1:1';
+      const originalUpstream = config.suppliers[0].baseUrl;
+      config.suppliers[0].baseUrl = 'http://127.0.0.1:1';
 
       try {
         // 3. 发送请求（应该失败）
@@ -211,7 +230,7 @@ describe('End-to-End Flow Integration Tests', () => {
         expect(detail!.error).toBeDefined();
         expect(detail!.responseStatus).toBeUndefined();
       } finally {
-        config.upstreams.anthropic = originalUpstream;
+        config.suppliers[0].baseUrl = originalUpstream;
         sseConnection.close();
       }
     });
@@ -290,7 +309,7 @@ describe('End-to-End Flow Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // 2. 准备混合请求
-      const originalUpstream = config.upstreams.anthropic;
+      const originalUpstream = config.suppliers[0].baseUrl;
       const promises = [];
 
       // 前 3 个应该成功
@@ -299,7 +318,7 @@ describe('End-to-End Flow Integration Tests', () => {
       }
 
       // 临时修改上游为失败
-      config.upstreams.anthropic = 'http://127.0.0.1:1';
+      config.suppliers[0].baseUrl = 'http://127.0.0.1:1';
 
       // 后 2 个应该失败
       for (let i = 0; i < 2; i++) {
@@ -321,7 +340,7 @@ describe('End-to-End Flow Integration Tests', () => {
       expect(failCount).toBe(2);
 
       // 5. 恢复上游并等待所有记录
-      config.upstreams.anthropic = originalUpstream;
+      config.suppliers[0].baseUrl = originalUpstream;
 
       await waitForCondition(async () => {
         const list = await getRequestList({ limit: 100 });

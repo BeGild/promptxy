@@ -6,10 +6,96 @@
 
 ## 📋 目录
 
+- [供应商管理](#供应商管理)
 - [CLI 配置详解](#cli-配置详解)
 - [规则引擎语法](#规则引擎语法)
 - [常见用例](#常见用例)
 - [调试与故障排查](#调试与故障排查)
+
+---
+
+## 供应商管理
+
+### 什么是供应商
+
+供应商（Supplier）是 promptxy v2.0 引入的新概念，用于管理多个上游 API 地址。每个供应商包含：
+
+- **id**：唯一标识符
+- **name**：显示名称
+- **baseUrl**：上游 API 地址
+- **localPrefix**：本地路径前缀（如 `/claude`、`/openai`）
+- **pathMappings**：路径映射规则（可选）
+- **enabled**：是否启用
+
+### 供应商管理方式
+
+#### 方式 1：配置文件
+
+编辑 `promptxy.config.json`：
+
+```json
+{
+  "suppliers": [
+    {
+      "id": "claude-official",
+      "name": "Claude Official",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "enabled": true
+    },
+    {
+      "id": "claude-test",
+      "name": "Claude Test",
+      "baseUrl": "https://test.example.com",
+      "localPrefix": "/claude",
+      "enabled": false
+    }
+  ]
+}
+```
+
+#### 方式 2：Web UI
+
+访问 `http://127.0.0.1:7071`（API 服务器地址），进入设置页面：
+
+1. 查看当前供应商列表
+2. 点击开关快速启用/禁用供应商
+3. 点击"添加供应商"创建新供应商
+4. 点击"编辑"修改现有供应商
+5. 点击"删除"移除供应商
+
+### 路径前缀规则
+
+- 相同 `localPrefix` 的供应商**不能同时启用**
+- 切换供应商：只需禁用当前供应商，启用另一个
+- 支持自定义前缀：如 `/custom`、`/test` 等
+
+### 快速切换场景
+
+#### 场景 1：在官方 API 和测试环境之间切换
+
+```json
+{
+  "suppliers": [
+    {
+      "id": "claude-prod",
+      "name": "Claude Production",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "enabled": true
+    },
+    {
+      "id": "claude-staging",
+      "name": "Claude Staging",
+      "baseUrl": "https://staging.example.com",
+      "localPrefix": "/claude",
+      "enabled": false
+    }
+  ]
+}
+```
+
+切换时，只需将 `enabled` 值互换即可。
 
 ---
 
@@ -19,10 +105,10 @@
 
 #### 配置方式
 
-通过环境变量设置：
+通过环境变量设置（**注意：需要带 /claude 前缀**）：
 
 ```bash
-export ANTHROPIC_BASE_URL="http://127.0.0.1:7070"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:7070/claude"
 ```
 
 #### 永久配置
@@ -31,7 +117,7 @@ export ANTHROPIC_BASE_URL="http://127.0.0.1:7070"
 
 ```bash
 # promptxy for Claude Code
-export ANTHROPIC_BASE_URL="http://127.0.0.1:7070"
+export ANTHROPIC_BASE_URL="http://127.0.0.1:7070/claude"
 ```
 
 #### 验证配置
@@ -46,9 +132,11 @@ claude -p "hello"
 
 #### 预期行为
 
-- 请求会先发送到 `promptxy`
+- 请求会先发送到 `promptxy` 的 `/claude` 路径
 - `promptxy` 根据规则修改 `system` 字段
-- 修改后的请求转发到 `https://api.anthropic.com`
+- 修改后的请求转发到配置的上游地址
+
+> **⚠️ 重要变更**：v2.0 开始，所有 AI CLI 配置都必须带上路径前缀（`/claude`、`/openai`、`/gemini`）。
 
 ---
 
@@ -90,6 +178,7 @@ codex "hello"
 - 必须使用 `/openai` 前缀
 - Codex 可能依赖 `instructions` 字段的前缀，建议使用 `insert_after` 而非整体替换
 - 认证信息会自动透传，无需在 `promptxy` 配置中保存
+- 可以通过 Web UI 设置页面快速切换不同的 OpenAI 兼容上游
 
 ---
 
@@ -134,6 +223,7 @@ gemini "hello"
 - 必须使用 `/gemini` 前缀
 - 支持 Gemini API Key 模式（当前不支持 Gemini Code Assist/GCA 模式）
 - API Key 通过 `x-goog-api-key` 或查询参数透传
+- 可以通过 Web UI 管理多个 Gemini 上游并快速切换
 
 ---
 

@@ -3,6 +3,15 @@ import type {
   UpstreamsUpdateRequest,
   UpstreamsUpdateResponse,
   UpstreamsFetchResponse,
+  Supplier,
+  SuppliersFetchResponse,
+  SupplierCreateRequest,
+  SupplierCreateResponse,
+  SupplierUpdateRequest,
+  SupplierUpdateResponse,
+  SupplierDeleteResponse,
+  SupplierToggleRequest,
+  SupplierToggleResponse,
 } from '@/types/api';
 
 /**
@@ -85,5 +94,59 @@ export async function updateUpstreams(
   config: UpstreamsUpdateRequest,
 ): Promise<UpstreamsUpdateResponse> {
   const response = await apiClient.post('/_promptxy/config/upstreams', config);
+  return response.data;
+}
+
+// ============================================================================
+// 供应商管理 API
+// ============================================================================
+
+/**
+ * 获取供应商列表
+ */
+export async function fetchSuppliers(): Promise<SuppliersFetchResponse> {
+  const response = await apiClient.get('/_promptxy/suppliers');
+  return response.data;
+}
+
+/**
+ * 创建供应商
+ */
+export async function createSupplier(
+  request: SupplierCreateRequest,
+): Promise<SupplierCreateResponse> {
+  const response = await apiClient.post('/_promptxy/suppliers', request);
+  return response.data;
+}
+
+/**
+ * 更新供应商
+ */
+export async function updateSupplier(
+  supplierId: string,
+  request: SupplierUpdateRequest,
+): Promise<SupplierUpdateResponse> {
+  const response = await apiClient.put(`/_promptxy/suppliers/${supplierId}`, request);
+  return response.data;
+}
+
+/**
+ * 删除供应商
+ */
+export async function deleteSupplier(
+  supplierId: string,
+): Promise<SupplierDeleteResponse> {
+  const response = await apiClient.delete(`/_promptxy/suppliers/${supplierId}`);
+  return response.data;
+}
+
+/**
+ * 切换供应商启用状态
+ */
+export async function toggleSupplier(
+  supplierId: string,
+  request: SupplierToggleRequest,
+): Promise<SupplierToggleResponse> {
+  const response = await apiClient.post(`/_promptxy/suppliers/${supplierId}/toggle`, request);
   return response.data;
 }
