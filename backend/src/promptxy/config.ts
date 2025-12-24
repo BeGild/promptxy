@@ -48,7 +48,7 @@ const DEFAULT_CONFIG: PromptxyConfig = {
   ],
   rules: [],
   storage: {
-    maxHistory: 100,
+    maxHistory: 1000,
     autoCleanup: true,
     cleanupInterval: 1, // hours
   },

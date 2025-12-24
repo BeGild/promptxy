@@ -82,7 +82,7 @@ export async function initializeDatabase(): Promise<Database> {
 
     -- 插入默认设置
     INSERT OR IGNORE INTO settings (key, value) VALUES
-      ('max_history', '100'),
+      ('max_history', '1000'),
       ('auto_cleanup', 'true'),
       ('cleanup_interval_hours', '1');
   `);
