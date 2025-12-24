@@ -13,6 +13,9 @@ import {
   SSERequestEvent,
   RequestRecordResponse,
   RuleValidationResult,
+  UpstreamsUpdateRequest,
+  UpstreamsFetchResponse,
+  UpstreamsUpdateResponse,
 } from './types.js';
 import {
   getRequestList,
@@ -22,7 +25,7 @@ import {
   getDatabaseInfo,
   getRequestStats,
 } from './database.js';
-import { saveConfig, loadConfig } from './config.js';
+import { saveConfig, loadConfig, assertUrl } from './config.js';
 import { applyPromptRules } from './rules/engine.js';
 import { readRequestBody } from './http.js';
 
@@ -421,6 +424,64 @@ async function handleDatabaseInfo(
 }
 
 /**
+ * 处理获取上游配置
+ */
+async function handleGetUpstreams(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+): Promise<void> {
+  const response: UpstreamsFetchResponse = {
+    success: true,
+    upstreams: config.upstreams,
+  };
+  sendJson(res, 200, response);
+}
+
+/**
+ * 处理更新上游配置
+ */
+async function handleUpdateUpstreams(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+): Promise<void> {
+  try {
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const updateRequest: UpstreamsUpdateRequest = JSON.parse(body.toString());
+
+    // 验证并更新配置
+    if (updateRequest.anthropic !== undefined) {
+      assertUrl('upstreams.anthropic', updateRequest.anthropic);
+      config.upstreams.anthropic = updateRequest.anthropic;
+    }
+    if (updateRequest.openai !== undefined) {
+      assertUrl('upstreams.openai', updateRequest.openai);
+      config.upstreams.openai = updateRequest.openai;
+    }
+    if (updateRequest.gemini !== undefined) {
+      assertUrl('upstreams.gemini', updateRequest.gemini);
+      config.upstreams.gemini = updateRequest.gemini;
+    }
+
+    // 保存到文件
+    await saveConfig(config);
+
+    const response: UpstreamsUpdateResponse = {
+      success: true,
+      message: '上游配置已更新并立即生效',
+      upstreams: config.upstreams,
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '更新上游配置失败',
+    });
+  }
+}
+
+/**
  * 保存当前规则到配置文件
  */
 async function saveCurrentRules(rules: PromptxyRule[]): Promise<void> {
@@ -710,6 +771,18 @@ export function createApiServer(
       // 配置同步
       if (req.method === 'POST' && url.pathname === '/_promptxy/config/sync') {
         await handleConfigSync(req, res, config, currentRules);
+        return;
+      }
+
+      // 获取上游配置
+      if (req.method === 'GET' && url.pathname === '/_promptxy/config/upstreams') {
+        await handleGetUpstreams(req, res, config);
+        return;
+      }
+
+      // 更新上游配置
+      if (req.method === 'POST' && url.pathname === '/_promptxy/config/upstreams') {
+        await handleUpdateUpstreams(req, res, config);
         return;
       }
 

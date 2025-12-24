@@ -85,3 +85,27 @@ export interface RuleOperationResponse {
   errors?: string[];
   warnings?: string[];
 }
+
+// 上游配置相关类型
+export interface UpstreamsConfig {
+  anthropic: string;
+  openai: string;
+  gemini: string;
+}
+
+export interface UpstreamsUpdateRequest {
+  anthropic?: string;
+  openai?: string;
+  gemini?: string;
+}
+
+export interface UpstreamsUpdateResponse {
+  success: boolean;
+  message: string;
+  upstreams: UpstreamsConfig;
+}
+
+export interface UpstreamsFetchResponse {
+  success: boolean;
+  upstreams: UpstreamsConfig;
+}

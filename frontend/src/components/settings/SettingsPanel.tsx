@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardBody, Button, Input, Badge, Spinner, Divider } from '@heroui/react';
 import {
   useConfig,
@@ -6,6 +6,8 @@ import {
   useImportConfig,
   useDownloadConfig,
   useUploadConfig,
+  useUpstreams,
+  useUpdateUpstreams,
 } from '@/hooks';
 import { useCleanupRequests, useStats } from '@/hooks/useRequests';
 import { formatBytes } from '@/utils';
@@ -20,6 +22,57 @@ export const SettingsPanel: React.FC = () => {
   const cleanupMutation = useCleanupRequests();
 
   const [keepCount, setKeepCount] = useState('100');
+
+  // 上游配置
+  const { data: upstreamsData } = useUpstreams();
+  const updateUpstreamsMutation = useUpdateUpstreams();
+
+  // 上游配置表单状态
+  const [upstreams, setUpstreams] = useState({
+    anthropic: '',
+    openai: '',
+    gemini: '',
+  });
+
+  // 当获取到配置时初始化表单
+  useEffect(() => {
+    if (upstreamsData?.upstreams) {
+      setUpstreams(upstreamsData.upstreams);
+    }
+  }, [upstreamsData]);
+
+  // URL 验证
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  // 保存上游配置
+  const handleSaveUpstreams = async () => {
+    if (!isValidUrl(upstreams.anthropic)) {
+      alert('Anthropic API 地址格式无效');
+      return;
+    }
+    if (!isValidUrl(upstreams.openai)) {
+      alert('OpenAI API 地址格式无效');
+      return;
+    }
+    if (!isValidUrl(upstreams.gemini)) {
+      alert('Gemini API 地址格式无效');
+      return;
+    }
+
+    try {
+      const result = await updateUpstreamsMutation.mutateAsync(upstreams);
+      alert(result.message || '上游配置已保存并立即生效！');
+    } catch (error: any) {
+      alert(`保存失败: ${error?.message}`);
+    }
+  };
 
   // 导出配置
   const handleExport = async () => {
@@ -113,6 +166,70 @@ export const SettingsPanel: React.FC = () => {
                     {stats?.database?.recordCount || 0}
                   </Badge>
                 </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Divider />
+
+          {/* 上游配置 */}
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardBody className="space-y-3">
+              <h4 className="text-lg font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                上游配置
+              </h4>
+              <div className="space-y-3">
+                <Input
+                  label="Anthropic API"
+                  placeholder="https://api.anthropic.com"
+                  value={upstreams.anthropic}
+                  onChange={e => setUpstreams({ ...upstreams, anthropic: e.target.value })}
+                  radius="lg"
+                  isRequired
+                  classNames={{
+                    inputWrapper:
+                      'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                  }}
+                />
+                <Input
+                  label="OpenAI API"
+                  placeholder="https://api.openai.com"
+                  value={upstreams.openai}
+                  onChange={e => setUpstreams({ ...upstreams, openai: e.target.value })}
+                  radius="lg"
+                  isRequired
+                  classNames={{
+                    inputWrapper:
+                      'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                  }}
+                />
+                <Input
+                  label="Gemini API"
+                  placeholder="https://generativelanguage.googleapis.com"
+                  value={upstreams.gemini}
+                  onChange={e => setUpstreams({ ...upstreams, gemini: e.target.value })}
+                  radius="lg"
+                  isRequired
+                  classNames={{
+                    inputWrapper:
+                      'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                  }}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  color="success"
+                  variant="flat"
+                  onPress={handleSaveUpstreams}
+                  isLoading={updateUpstreamsMutation.isPending}
+                  radius="lg"
+                  className="shadow-md hover:shadow-lg transition-shadow"
+                >
+                  {updateUpstreamsMutation.isPending ? '保存中...' : '保存配置'}
+                </Button>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
+                保存后配置立即生效，无需重启服务。
               </div>
             </CardBody>
           </Card>

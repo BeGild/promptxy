@@ -62,7 +62,7 @@ function parsePort(value: string | undefined): number | undefined {
   return parsed;
 }
 
-function assertUrl(label: string, value: string): void {
+export function assertUrl(label: string, value: string): void {
   let parsed: URL;
   try {
     parsed = new URL(value);

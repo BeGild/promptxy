@@ -1,4 +1,9 @@
 import { apiClient } from './client';
+import type {
+  UpstreamsUpdateRequest,
+  UpstreamsUpdateResponse,
+  UpstreamsFetchResponse,
+} from '@/types/api';
 
 /**
  * 导出配置
@@ -63,4 +68,22 @@ export function uploadConfig(): Promise<any> {
 
     input.click();
   });
+}
+
+/**
+ * 获取上游配置
+ */
+export async function fetchUpstreams(): Promise<UpstreamsFetchResponse> {
+  const response = await apiClient.get('/_promptxy/config/upstreams');
+  return response.data;
+}
+
+/**
+ * 更新上游配置
+ */
+export async function updateUpstreams(
+  config: UpstreamsUpdateRequest,
+): Promise<UpstreamsUpdateResponse> {
+  const response = await apiClient.post('/_promptxy/config/upstreams', config);
+  return response.data;
 }

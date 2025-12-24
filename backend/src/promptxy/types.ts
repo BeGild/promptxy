@@ -254,3 +254,26 @@ export interface RuleValidationResult {
   errors: string[];
   warnings: string[];
 }
+
+// ============================================================================
+// 上游配置类型
+// ============================================================================
+
+// 上游配置更新请求
+export interface UpstreamsUpdateRequest {
+  anthropic?: string;
+  openai?: string;
+  gemini?: string;
+}
+
+// 上游配置响应
+export interface UpstreamsFetchResponse {
+  success: boolean;
+  upstreams: PromptxyConfig['upstreams'];
+}
+
+export interface UpstreamsUpdateResponse {
+  success: boolean;
+  message: string;
+  upstreams: PromptxyConfig['upstreams'];
+}
