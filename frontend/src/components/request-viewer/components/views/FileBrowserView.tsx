@@ -1,12 +1,15 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import {
   Panel,
   Group,
   Separator,
+  useDefaultLayout,
 } from 'react-resizable-panels';
 import type { ViewNode } from '../../types';
 import FileTree from '../file-tree/FileTree';
 import FileContentPanel from '../file-tree/FileContentPanel';
+import PathBreadcrumb from '../file-tree/PathBreadcrumb';
 
 interface FileBrowserViewProps {
   /** 视图树根节点 */
@@ -14,7 +17,8 @@ interface FileBrowserViewProps {
 }
 
 const STORAGE_KEY_PANEL_SIZES = 'request-viewer:panel-sizes';
-const DEFAULT_LAYOUT = { 'tree-panel': 30, 'content-panel': 70 };
+const DEFAULT_LAYOUT: Record<string, number> = { tree: 30, content: 70 };
+const RESIZABLE_PANELS_STORAGE_PREFIX = 'react-resizable-panels:';
 
 /**
  * 文件浏览器风格的视图组件
@@ -25,22 +29,46 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   const [selectedNode, setSelectedNode] = useState<ViewNode>(viewTree);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // 从 localStorage 恢复面板宽度
-  const [defaultLayout, setDefaultLayout] = useState<typeof DEFAULT_LAYOUT>(DEFAULT_LAYOUT);
+  // 自定义 storage：让 useDefaultLayout 仍然写入我们既有的 localStorage key（不引入新的前缀 key）
+  const panelLayoutStorage = useMemo(() => {
+    return {
+      getItem: (key: string) => {
+        const normalizedKey = key.startsWith(RESIZABLE_PANELS_STORAGE_PREFIX)
+          ? key.slice(RESIZABLE_PANELS_STORAGE_PREFIX.length)
+          : key;
+        const value = localStorage.getItem(normalizedKey);
+        if (!value) return null;
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY_PANEL_SIZES);
-    if (stored) {
-      try {
-        const layout = JSON.parse(stored);
-        if (typeof layout === 'object' && layout !== null) {
-          setDefaultLayout(layout);
+        // 防御：忽略无效/不匹配的 layout，避免 Group 初始化时被库直接丢弃导致“恢复不生效”
+        try {
+          const parsed = JSON.parse(value);
+          if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            typeof parsed.tree === 'number' &&
+            typeof parsed.content === 'number'
+          ) {
+            return value;
+          }
+        } catch (e) {
+          // ignore
         }
-      } catch (e) {
-        // 忽略解析错误，使用默认值
-      }
-    }
+        return null;
+      },
+      setItem: (key: string, value: string) => {
+        const normalizedKey = key.startsWith(RESIZABLE_PANELS_STORAGE_PREFIX)
+          ? key.slice(RESIZABLE_PANELS_STORAGE_PREFIX.length)
+          : key;
+        localStorage.setItem(normalizedKey, value);
+      },
+    };
   }, []);
+
+  const { defaultLayout: persistedLayout, onLayoutChange: handleLayoutChange } = useDefaultLayout({
+    id: STORAGE_KEY_PANEL_SIZES,
+    storage: panelLayoutStorage,
+  });
+  const defaultLayout = persistedLayout ?? DEFAULT_LAYOUT;
 
   /**
    * 处理节点选中
@@ -50,98 +78,99 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   }, []);
 
   /**
-   * 处理面板宽度变化
+   * 处理全屏切换
    */
-  const handleLayoutChange = useCallback((layout: Record<string, number>) => {
-    localStorage.setItem(STORAGE_KEY_PANEL_SIZES, JSON.stringify(layout));
+  const handleToggleFullScreen = useCallback(() => {
+    setIsFullScreen(prev => !prev);
   }, []);
 
-  // 缓存面板配置
-  const treePanelConfig = useMemo(() => ({
-    id: 'tree-panel' as const,
-    minSize: 15,
-    maxSize: 50,
-    defaultSize: defaultLayout['tree-panel'] ?? 30,
-  }), [defaultLayout]);
+  // 处理 ESC 键退出全屏
+  useEffect(() => {
+    if (isFullScreen) {
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsFullScreen(false);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isFullScreen]);
 
-  const contentPanelConfig = useMemo(() => ({
-    id: 'content-panel' as const,
-    minSize: 50,
-    defaultSize: defaultLayout['content-panel'] ?? 70,
-  }), [defaultLayout]);
+  const content = (
+    <Group
+      orientation="horizontal"
+      defaultLayout={defaultLayout}
+      onLayoutChange={handleLayoutChange}
+      className="h-full min-h-0 w-full"
+    >
+      {/* 左侧：文件树 */}
+      <Panel
+        id="tree"
+        minSize="15%"
+        maxSize="50%"
+        className={isFullScreen ? 'bg-gray-50 dark:bg-gray-800' : ''}
+      >
+        <FileTree
+          rootNode={viewTree}
+          onNodeSelect={handleNodeSelect}
+          initialSelectedId={selectedNode.id}
+          defaultExpandDepth={1}
+        />
+      </Panel>
 
-  return (
-    <div className="h-full bg-white dark:bg-gray-900">
-      {!isFullScreen ? (
-        /* 正常模式：使用 Group 实现可拖拽调整宽度的分割布局 */
-        <Group
-          orientation="horizontal"
-          defaultLayout={defaultLayout}
-          onLayoutChange={handleLayoutChange}
-        >
-          {/* 左侧：文件树 */}
-          <Panel
-            {...treePanelConfig}
-            className="border-r border-gray-200 dark:border-gray-700"
-          >
-            <FileTree
-              rootNode={viewTree}
-              onNodeSelect={handleNodeSelect}
-              initialSelectedId={viewTree.id}
-              defaultExpandDepth={1}
-            />
-          </Panel>
+      {/* 分割条 */}
+      <Separator
+        className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+      >
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-gray-200 dark:bg-gray-700 group-data-[separator=hover]:bg-blue-500 group-data-[separator=active]:bg-blue-600 transition-colors" />
+      </Separator>
 
-          {/* 分割条 */}
-          <Separator
-            className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors cursor-col-resize"
-          />
-
-          {/* 右侧：内容面板 */}
-          <Panel {...contentPanelConfig}>
+      {/* 右侧：内容面板 */}
+      <Panel
+        id="content"
+        minSize="50%"
+      >
+        <div className="h-full flex flex-col">
+          {/* 头部：面包屑 + 全屏按钮 */}
+          <div className={`flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
+            <div className="flex-1 overflow-hidden">
+              <PathBreadcrumb path={selectedNode.path} />
+            </div>
+            <button
+              onClick={handleToggleFullScreen}
+              className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-2"
+              title={isFullScreen ? '退出全屏 (ESC)' : '全屏'}
+            >
+              {isFullScreen ? (
+                <>
+                  <Minimize2 size={16} />
+                  <span className="text-sm">退出全屏</span>
+                </>
+              ) : (
+                <Maximize2 size={16} />
+              )}
+            </button>
+          </div>
+          {/* 内容面板 */}
+          <div className="flex-1 overflow-hidden">
             <FileContentPanel
               selectedNode={selectedNode}
-              onFullScreenChange={setIsFullScreen}
+              isFullScreen={isFullScreen}
             />
-          </Panel>
-        </Group>
-      ) : (
-        /* 全屏模式：左右分栏但占满整个视口 */
-        <div className="fixed inset-0 z-50 flex">
-          <Group
-            orientation="horizontal"
-            defaultLayout={defaultLayout}
-            onLayoutChange={handleLayoutChange}
-          >
-            {/* 左侧：文件树 */}
-            <Panel
-              {...treePanelConfig}
-              className="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-            >
-              <FileTree
-                rootNode={viewTree}
-                onNodeSelect={handleNodeSelect}
-                initialSelectedId={selectedNode.id}
-                defaultExpandDepth={1}
-              />
-            </Panel>
-
-            {/* 分割条 */}
-            <Separator
-              className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors cursor-col-resize"
-            />
-
-            {/* 右侧：内容面板 */}
-            <Panel {...contentPanelConfig}>
-              <FileContentPanel
-                selectedNode={selectedNode}
-                isFullScreen={true}
-                onFullScreenChange={setIsFullScreen}
-              />
-            </Panel>
-          </Group>
+          </div>
         </div>
-      )}
+      </Panel>
+    </Group>
+  );
+
+  return isFullScreen ? (
+    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
+      {content}
+    </div>
+  ) : (
+    <div className="h-full min-h-0 bg-white dark:bg-gray-900">
+      {content}
     </div>
   );
 });

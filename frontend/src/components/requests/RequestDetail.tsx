@@ -132,7 +132,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
       {/* 请求详情 - 使用新的 RequestDetailPanel */}
       <div className="space-y-2">
         <h4 className="text-lg font-bold">请求详情</h4>
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden h-[50vh]">
           <RequestDetailPanel
             request={request.modifiedBody}
             originalRequest={request.originalBody}

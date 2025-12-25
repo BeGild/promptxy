@@ -238,7 +238,7 @@ const FileTree: React.FC<FileTreeProps> = ({
   return (
     <div
       ref={containerRef}
-      className="h-full overflow-y-auto overflow-x-auto focus-outline-none"
+      className="h-full min-h-0 overflow-auto overscroll-contain focus-outline-none"
       tabIndex={0}
     >
       <FileTreeNode
