@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ViewNode } from '../../types';
-import { DiffStatus } from '../../types';
+import { DiffStatus, NodeType } from '../../types';
 import PrimitiveRenderer from '../renderers/PrimitiveRenderer';
-import StringLongRenderer from '../renderers/StringLongRenderer';
+import MarkdownRenderer from '../renderers/MarkdownRenderer';
+import { diffMarkdown, type MarkdownDiffResult, type ParagraphDiff } from '../../utils/diff';
 
 interface DiffViewProps {
   originalTree: ViewNode;
@@ -12,10 +13,12 @@ interface DiffViewProps {
 /**
  * 差异对比视图
  * 并排对比原始请求和修改后请求
+ * 支持 Markdown 段落级 diff
  */
 const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
   const [showChangesOnly, setShowChangesOnly] = useState(true);
   const [currentDiffIndex, setCurrentDiffIndex] = useState(0);
+  const [markdownDiffs, setMarkdownDiffs] = useState<Map<string, MarkdownDiffResult>>(new Map());
 
   // 收集所有有变化的节点
   const collectDiffNodes = (node: ViewNode, diffs: ViewNode[] = []): ViewNode[] => {
@@ -29,6 +32,60 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
   };
 
   const diffNodes = collectDiffNodes(modifiedTree);
+
+  // 查找节点的原始值
+  const findOriginalNode = (tree: ViewNode | undefined, targetPath: string): ViewNode | undefined => {
+    if (!tree) return undefined;
+    if (tree.path === targetPath) return tree;
+    if (tree.children) {
+      for (const child of tree.children) {
+        const found = findOriginalNode(child, targetPath);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  };
+
+  // 计算段落级 diff
+  useEffect(() => {
+    const computeMarkdownDiffs = async () => {
+      const diffs = new Map<string, MarkdownDiffResult>();
+
+      // 遍历所有节点，查找 Markdown 类型且状态为 MODIFIED 的节点
+      const traverse = async (modNode: ViewNode, origNode: ViewNode | undefined) => {
+        // 只对 Markdown 类型且修改的节点进行段落级 diff
+        if (modNode.type === NodeType.MARKDOWN &&
+            modNode.diffStatus === DiffStatus.MODIFIED &&
+            origNode &&
+            typeof modNode.value === 'string' &&
+            typeof origNode.value === 'string') {
+          try {
+            const result = await diffMarkdown(
+              origNode.value,
+              modNode.value,
+              { showChangesOnly }
+            );
+            diffs.set(modNode.id, result);
+          } catch (error) {
+            console.error('Failed to compute paragraph diff:', error);
+          }
+        }
+
+        // 递归处理子节点
+        if (modNode.children) {
+          for (const child of modNode.children) {
+            const origChild = origNode?.children?.find(c => c.path === child.path);
+            await traverse(child, origChild);
+          }
+        }
+      };
+
+      await traverse(modifiedTree, originalTree);
+      setMarkdownDiffs(diffs);
+    };
+
+    computeMarkdownDiffs();
+  }, [modifiedTree, originalTree, showChangesOnly]);
 
   const nextDiff = () => {
     if (currentDiffIndex < diffNodes.length - 1) {
@@ -56,6 +113,63 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
     }
   };
 
+  // 渲染段落级差异
+  const renderParagraphDiff = (nodeId: string, diffResult: MarkdownDiffResult): React.ReactNode => {
+    const { paragraphs, totalOriginal, totalModified, changedCount } = diffResult;
+
+    return (
+      <div className="space-y-1">
+        {/* 差异统计 */}
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          段落级对比: {changedCount}/{paragraphs.length} 个段落有变化
+          (原文 {totalOriginal} 段 → 修改后 {totalModified} 段)
+        </div>
+
+        {/* 段落列表 */}
+        {paragraphs.map((para) => {
+          const colorClass = {
+            same: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30',
+            added: 'border-green-500 bg-green-50 dark:bg-green-900/20',
+            removed: 'border-red-500 bg-red-50 dark:bg-red-900/20',
+            modified: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20',
+            moved: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20',
+          }[para.type];
+
+          const label = {
+            same: '无变化',
+            added: '新增',
+            removed: '删除',
+            modified: '修改',
+            moved: `移动 (来自段落 ${para.movedFrom})`,
+          }[para.type];
+
+          if (showChangesOnly && para.type === 'same') {
+            return null;
+          }
+
+          return (
+            <div key={para.id} className={`border-l-2 ${colorClass} pl-3 py-2 rounded`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {label}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  段落 {para.index + 1}
+                  {para.originalIndex !== undefined && ` (原: ${para.originalIndex + 1})`}
+                </span>
+              </div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                <code className="bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded block overflow-x-auto">
+                  {para.content}
+                </code>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // 递归渲染节点
   const renderNode = (
     originalNode: ViewNode | undefined,
@@ -76,6 +190,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
     }
 
     const marginStyle = { marginLeft: `${depth * 16}px` };
+    const hasMarkdownDiff = markdownDiffs.has(modifiedNode.id);
 
     return (
       <div key={modifiedNode.id} className="py-1">
@@ -107,16 +222,27 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
                 {modifiedNode.label}
               </span>
               {renderDiffIndicator(modifiedNode.diffStatus)}
+              {hasMarkdownDiff && (
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  段落级对比
+                </span>
+              )}
             </div>
-            <PrimitiveRenderer node={modifiedNode} />
+
+            {/* 如果有段落级 diff，显示段落对比；否则显示原始内容 */}
+            {hasMarkdownDiff ? (
+              renderParagraphDiff(modifiedNode.id, markdownDiffs.get(modifiedNode.id)!)
+            ) : (
+              <PrimitiveRenderer node={modifiedNode} />
+            )}
           </div>
         </div>
 
         {/* 子节点 */}
         {modifiedNode.children && modifiedNode.children.length > 0 && (
           <div className="mt-2">
-            {modifiedNode.children.map((child, index) => {
-              const originalChild = originalNode?.children?.[index];
+            {modifiedNode.children.map((child) => {
+              const originalChild = originalNode?.children?.find(c => c.path === child.path);
               return renderNode(originalChild, child, depth + 1);
             })}
           </div>
@@ -142,6 +268,11 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {diffNodes.length} 个变化
           </span>
+          {markdownDiffs.size > 0 && (
+            <span className="text-xs text-blue-600 dark:text-blue-400">
+              {markdownDiffs.size} 个 Markdown 段落级对比
+            </span>
+          )}
         </div>
 
         {diffNodes.length > 0 && (
