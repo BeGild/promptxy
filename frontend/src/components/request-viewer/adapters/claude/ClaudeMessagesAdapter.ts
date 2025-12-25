@@ -1,0 +1,223 @@
+import type { RequestAdapter } from '../../types/adapter';
+import type { RequestMetadata, ViewNode, FieldConfig, ViewGroup } from '../../types';
+import { buildTreeFromPath } from '../utils/treeBuilder';
+import { NodeType } from '../../types';
+
+/**
+ * Claude Messages API 请求类型
+ */
+export interface ClaudeMessagesRequest {
+  model: string;
+  messages: Array<{
+    role: string;
+    content: Array<{ type: string; text?: string; [key: string]: any }>;
+  }>;
+  system?: Array<{ type: string; text?: string; [key: string]: any }>;
+  tools?: Array<any>;
+  max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  [key: string]: any;
+}
+
+/**
+ * Claude Messages API 适配器
+ */
+export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesRequest> {
+  readonly name = 'claude-messages';
+  readonly version = '1.0.0';
+
+  private fieldConfigs = new Map<string, FieldConfig>();
+
+  constructor() {
+    this.initializeFieldConfigs();
+  }
+
+  /**
+   * 初始化字段配置
+   */
+  private initializeFieldConfigs(): void {
+    // System prompt 配置
+    this.fieldConfigs.set('system', {
+      path: 'system',
+      type: NodeType.ARRAY,
+      collapsible: true,
+      defaultCollapsed: false, // 默认展开，因为是关注重点
+      metadata: { label: 'System Prompt', icon: '📝' },
+    });
+
+    // System 数组中的文本配置
+    this.fieldConfigs.set('system.*.text', {
+      path: 'system.*.text',
+      type: NodeType.MARKDOWN,
+      collapsible: true,
+      defaultCollapsed: false, // 默认展开，便于阅读
+      metadata: { label: 'System Prompt 片段' },
+    });
+
+    // Messages 配置
+    this.fieldConfigs.set('messages', {
+      path: 'messages',
+      type: NodeType.ARRAY,
+      collapsible: true,
+      defaultCollapsed: false, // 默认展开前几条
+      metadata: { label: 'Messages', icon: '💬' },
+    });
+
+    // Messages 中的文本内容配置
+    this.fieldConfigs.set('messages.*.content.*.text', {
+      path: 'messages.*.content.*.text',
+      type: NodeType.STRING_LONG,
+      collapsible: true,
+      defaultCollapsed: true, // 用户消息默认折叠
+      metadata: { label: '消息文本' },
+    });
+
+    // Tools 配置
+    this.fieldConfigs.set('tools', {
+      path: 'tools',
+      type: NodeType.ARRAY,
+      collapsible: true,
+      defaultCollapsed: true, // 默认折叠
+      metadata: { label: 'Tools', icon: '🔧' },
+    });
+
+    // Tool input_schema 配置
+    this.fieldConfigs.set('tools.*.input_schema', {
+      path: 'tools.*.input_schema',
+      type: NodeType.JSON,
+      collapsible: true,
+      defaultCollapsed: true,
+      metadata: { label: 'Input Schema' },
+    });
+  }
+
+  /**
+   * 判断是否支持该请求格式
+   */
+  supports(request: any): request is ClaudeMessagesRequest {
+    return (
+      request &&
+      typeof request === 'object' &&
+      typeof request.model === 'string' &&
+      Array.isArray(request.messages)
+    );
+  }
+
+  /**
+   * 提取请求元数据
+   */
+  extractMetadata(request: ClaudeMessagesRequest): RequestMetadata {
+    const metadata: RequestMetadata = {
+      model: request.model,
+      messageCount: request.messages?.length ?? 0,
+      toolCount: request.tools?.length ?? 0,
+    };
+
+    // 计算 system prompt 长度
+    if (request.system && Array.isArray(request.system)) {
+      metadata.systemPromptLength = request.system.reduce(
+        (sum, item) => sum + (item.text?.length ?? 0),
+        0
+      );
+    }
+
+    return metadata;
+  }
+
+  /**
+   * 构建视图树
+   */
+  buildViewTree(request: ClaudeMessagesRequest, original?: ClaudeMessagesRequest): ViewNode {
+    return buildTreeFromPath(request, {
+      fieldConfigs: this.fieldConfigs,
+      original,
+    });
+  }
+
+  /**
+   * 获取字段配置
+   */
+  getFieldConfig(path: string): FieldConfig | undefined {
+    // 精确匹配
+    if (this.fieldConfigs.has(path)) {
+      return this.fieldConfigs.get(path);
+    }
+
+    // 通配符匹配（如 "messages.*.content.*.text"）
+    for (const [key, config] of this.fieldConfigs.entries()) {
+      if (this.matchesWildcard(key, path)) {
+        return config;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * 通配符匹配
+   */
+  private matchesWildcard(pattern: string, path: string): boolean {
+    const patternParts = pattern.split('.');
+    const pathParts = path.split('.');
+
+    if (patternParts.length !== pathParts.length) {
+      return false;
+    }
+
+    return patternParts.every((part, index) => {
+      return part === '*' || part === pathParts[index];
+    });
+  }
+
+  /**
+   * 获取视图分组
+   */
+  getGroups(viewTree: ViewNode): ViewGroup[] {
+    const groups: ViewGroup[] = [];
+
+    // 基本信息
+    groups.push({
+      id: 'basic',
+      label: '基本信息',
+      icon: '📋',
+      nodePaths: ['model', 'max_tokens', 'temperature', 'top_p'],
+      description: '请求的基本参数',
+    });
+
+    // System Prompt
+    if (viewTree.children?.some(child => child.path === 'system')) {
+      groups.push({
+        id: 'system',
+        label: 'System Prompt',
+        icon: '📝',
+        nodePaths: ['system'],
+        description: '系统提示词，定义 AI 的行为和角色',
+      });
+    }
+
+    // Messages
+    if (viewTree.children?.some(child => child.path === 'messages')) {
+      groups.push({
+        id: 'messages',
+        label: 'Messages',
+        icon: '💬',
+        nodePaths: ['messages'],
+        description: '用户和助手之间的对话历史',
+      });
+    }
+
+    // Tools
+    if (viewTree.children?.some(child => child.path === 'tools')) {
+      groups.push({
+        id: 'tools',
+        label: 'Tools',
+        icon: '🔧',
+        nodePaths: ['tools'],
+        description: '可用的工具和函数',
+      });
+    }
+
+    return groups;
+  }
+}

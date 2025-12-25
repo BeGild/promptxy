@@ -3,7 +3,7 @@ import { Card, CardBody, CardHeader, Chip, Button, Badge, Spinner, Divider } fro
 import { Copy } from 'lucide-react';
 import { RequestRecord } from '@/types';
 import { formatTime, formatDuration, getStatusColor, formatClient } from '@/utils';
-import { DiffViewer } from './DiffViewer';
+import { RequestDetailPanel } from '@/components/request-viewer';
 
 interface RequestDetailProps {
   request: RequestRecord | null;
@@ -129,10 +129,17 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 
       <Divider />
 
-      {/* 差异对比 */}
+      {/* 请求详情 - 使用新的 RequestDetailPanel */}
       <div className="space-y-2">
-        <h4 className="text-lg font-bold">请求差异</h4>
-        <DiffViewer original={request.originalBody} modified={request.modifiedBody} />
+        <h4 className="text-lg font-bold">请求详情</h4>
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <RequestDetailPanel
+            request={request.modifiedBody}
+            originalRequest={request.originalBody}
+            responseStatus={request.responseStatus}
+            responseDuration={request.durationMs}
+          />
+        </div>
       </div>
 
       {/* 错误信息 */}
