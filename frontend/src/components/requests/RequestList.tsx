@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import {
   Table,
   TableHeader,
@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
 import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from '@/utils';
 import { RequestListVirtual } from './RequestListVirtual';
+import { PathAutocomplete } from './PathAutocomplete';
 
 interface RequestListProps {
   requests: RequestListItem[];
@@ -57,13 +58,42 @@ const RequestListComponent: React.FC<RequestListProps> = ({
     return Math.ceil(total / 50);
   }, [total]);
 
-  // 使用 useCallback 优化事件处理函数
+  // 本地搜索状态（用于防抖）
+  const [localSearch, setLocalSearch] = useState(filters.search || '');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // 当外部 filters 变化时同步本地状态
+  useEffect(() => {
+    setLocalSearch(filters.search || '');
+  }, [filters.search]);
+
+  // 使用 useCallback 优化事件处理函数，带 300ms 防抖
   const handleSearchChange = useCallback(
     (value: string) => {
-      onFiltersChange({ ...filters, search: value });
+      setLocalSearch(value);
+      setIsSearching(true);
+
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+
+      searchTimerRef.current = setTimeout(() => {
+        onFiltersChange({ ...filters, search: value });
+        setIsSearching(false);
+      }, 300);
     },
     [filters, onFiltersChange],
   );
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
 
   // 处理客户端筛选变化
   const handleClientChange = useCallback(
@@ -81,6 +111,11 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 
   // 清除搜索
   const clearSearch = useCallback(() => {
+    setLocalSearch('');
+    setIsSearching(false);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
     const newFilters = { ...filters };
     delete newFilters.search;
     onFiltersChange(newFilters);
@@ -156,16 +191,11 @@ const RequestListComponent: React.FC<RequestListProps> = ({
     <div className="space-y-4">
       {/* 工具栏 */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
-        <Input
-          placeholder="🔍 搜索ID或路径..."
-          value={filters.search || ''}
-          onChange={e => handleSearchChange(e.target.value)}
+        <PathAutocomplete
+          value={localSearch}
+          onChange={handleSearchChange}
+          isLoading={isSearching}
           className="flex-1"
-          radius="lg"
-          classNames={{
-            inputWrapper:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-          }}
         />
 
         <Select
@@ -200,7 +230,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         <Chip color="secondary" variant="flat" size="sm">
           {statsDisplay.showing} / {statsDisplay.total} 条
         </Chip>
-        {filters.search && (
+        {localSearch && (
           <Button size="sm" variant="light" onPress={clearSearch} className="h-6 px-2">
             清除搜索
           </Button>

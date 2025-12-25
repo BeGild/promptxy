@@ -181,3 +181,9 @@ export interface CommonPrefixOption {
   description: string;
   color: string;
 }
+
+// 路径列表响应
+export interface PathsResponse {
+  paths: string[];
+  count: number;
+}

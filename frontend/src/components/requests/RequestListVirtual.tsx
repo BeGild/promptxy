@@ -12,6 +12,7 @@ import { List, ListImperativeAPI } from 'react-window';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
 import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from '@/utils';
+import { PathAutocomplete } from './PathAutocomplete';
 
 interface RequestListVirtualProps {
   requests: RequestListItem[];
@@ -201,7 +202,9 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
   // 搜索状态
   const [localSearch, setLocalSearch] = useState(filters.search || '');
   const [isScrolling, setIsScrolling] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<ListImperativeAPI | null>(null);
 
   // 分页计算
@@ -245,11 +248,18 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
   const handleSearchChange = useCallback(
     (value: string) => {
       setLocalSearch(value);
-      // 防抖处理，避免频繁触发
-      const timer = setTimeout(() => {
+      setIsSearching(true);
+
+      // 清除之前的定时器
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+
+      // 设置新的防抖定时器
+      searchTimerRef.current = setTimeout(() => {
         onFiltersChange({ ...filters, search: value });
+        setIsSearching(false);
       }, 300);
-      return () => clearTimeout(timer);
     },
     [filters, onFiltersChange],
   );
@@ -271,6 +281,10 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
 
   const clearSearch = useCallback(() => {
     setLocalSearch('');
+    setIsSearching(false);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
     const newFilters = { ...filters };
     delete newFilters.search;
     onFiltersChange(newFilters);
@@ -314,6 +328,9 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
       if (scrollTimerRef.current) {
         clearTimeout(scrollTimerRef.current);
       }
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
     };
   }, []);
 
@@ -322,16 +339,11 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     <>
       {/* 工具栏 */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
-        <Input
-          placeholder="🔍 搜索ID或路径..."
+        <PathAutocomplete
           value={localSearch}
-          onChange={e => handleSearchChange(e.target.value)}
+          onChange={handleSearchChange}
+          isLoading={isSearching}
           className="flex-1"
-          radius="lg"
-          classNames={{
-            inputWrapper:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-          }}
         />
 
         <Select
@@ -366,7 +378,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         <Chip color="secondary" variant="flat" size="sm">
           {statsDisplay.showing} / {statsDisplay.total} 条
         </Chip>
-        {filters.search && (
+        {localSearch && (
           <Button size="sm" variant="light" onPress={clearSearch} className="h-6 px-2">
             清除搜索
           </Button>

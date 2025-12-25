@@ -6,6 +6,7 @@ import {
   CleanupResponse,
   RequestStats,
   DatabaseInfo,
+  PathsResponse,
 } from '@/types';
 
 /**
@@ -67,4 +68,13 @@ export async function getStats(): Promise<RequestStats> {
 export async function getDatabaseInfo(): Promise<DatabaseInfo> {
   const response = await apiClient.get('/_promptxy/database');
   return response.data;
+}
+
+/**
+ * 获取唯一路径列表
+ */
+export async function getPaths(prefix?: string): Promise<string[]> {
+  const params = prefix ? `?prefix=${encodeURIComponent(prefix)}` : '';
+  const response = await apiClient.get<PathsResponse>(`/_promptxy/paths${params}`);
+  return response.data.paths;
 }

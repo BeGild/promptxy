@@ -3,7 +3,7 @@ import { open, Database } from 'sqlite';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { mkdir } from 'node:fs/promises';
-import { RequestRecord, RequestListResponse } from './types.js';
+import { RequestRecord, RequestListResponse, PathsResponse } from './types.js';
 
 let dbInstance: Database | null = null;
 
@@ -73,6 +73,7 @@ export async function initializeDatabase(): Promise<Database> {
     CREATE INDEX IF NOT EXISTS idx_timestamp ON requests(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_client ON requests(client);
     CREATE INDEX IF NOT EXISTS idx_client_timestamp ON requests(client, timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_path ON requests(path);
 
     -- 设置表
     CREATE TABLE IF NOT EXISTS settings (
@@ -146,6 +147,30 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
 }
 
 /**
+ * 获取唯一路径列表
+ */
+export async function getUniquePaths(prefix?: string): Promise<PathsResponse> {
+  const db = getDatabase();
+
+  let sql = 'SELECT DISTINCT path FROM requests';
+  const params: any[] = [];
+
+  if (prefix) {
+    sql += ' WHERE path LIKE ?';
+    params.push(`${prefix}%`);
+  }
+
+  sql += ' ORDER BY path ASC';
+
+  const rows = await db.all<Array<{ path: string }>>(sql, params);
+
+  return {
+    paths: rows.map(r => r.path),
+    count: rows.length,
+  };
+}
+
+/**
  * 获取请求列表（带分页和筛选）
  */
 export async function getRequestList(options: {
@@ -161,13 +186,35 @@ export async function getRequestList(options: {
   const offset = options.offset ?? 0;
   const search = options.search ?? null;
 
+  // 判断是否为路径搜索（以 / 开头）
+  const isPathSearch = search && search.startsWith('/');
+
+  // 构建搜索条件
+  let searchCondition: string;
+  let searchParams: (string | null)[];
+
+  if (isPathSearch) {
+    // 路径前缀匹配
+    searchCondition = '(? IS NULL OR path LIKE ?)';
+    searchParams = [search, `${search}%`];
+  } else {
+    // ID/路径/请求体模糊匹配
+    searchCondition = '(? IS NULL OR id LIKE ? OR path LIKE ? OR original_body LIKE ?)';
+    searchParams = [
+      search,
+      search ? `%${search}%` : null,
+      search ? `%${search}%` : null,
+      search ? `%${search}%` : null,
+    ];
+  }
+
   // 计算总数
   const countResult = await db.get<{ count: number }>(
     `SELECT COUNT(*) as count FROM requests
      WHERE (? IS NULL OR client = ?)
        AND (? IS NULL OR timestamp >= ?)
        AND (? IS NULL OR timestamp <= ?)
-       AND (? IS NULL OR id LIKE ? OR path LIKE ? OR original_body LIKE ?)`,
+       AND ${searchCondition}`,
     [
       options.client ?? null,
       options.client ?? null,
@@ -175,10 +222,7 @@ export async function getRequestList(options: {
       options.startTime ?? null,
       options.endTime ?? null,
       options.endTime ?? null,
-      search,
-      search ? `%${search}%` : null,
-      search ? `%${search}%` : null,
-      search ? `%${search}%` : null,
+      ...searchParams,
     ],
   );
   const total = countResult?.count ?? 0;
@@ -193,7 +237,7 @@ export async function getRequestList(options: {
      WHERE (? IS NULL OR client = ?)
        AND (? IS NULL OR timestamp >= ?)
        AND (? IS NULL OR timestamp <= ?)
-       AND (? IS NULL OR id LIKE ? OR path LIKE ? OR original_body LIKE ?)
+       AND ${searchCondition}
      ORDER BY timestamp DESC
      LIMIT ? OFFSET ?`,
     [
@@ -203,10 +247,7 @@ export async function getRequestList(options: {
       options.startTime ?? null,
       options.endTime ?? null,
       options.endTime ?? null,
-      search,
-      search ? `%${search}%` : null,
-      search ? `%${search}%` : null,
-      search ? `%${search}%` : null,
+      ...searchParams,
       limit,
       offset,
     ],

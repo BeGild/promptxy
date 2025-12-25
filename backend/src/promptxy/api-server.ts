@@ -30,6 +30,7 @@ import {
   deleteRequest,
   getDatabaseInfo,
   getRequestStats,
+  getUniquePaths,
 } from './database.js';
 import { saveConfig, loadConfig, assertUrl, assertSupplier, assertSupplierPathConflicts } from './config.js';
 import { applyPromptRules } from './rules/engine.js';
@@ -112,6 +113,23 @@ async function handleGetRequests(
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get request list', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取路径列表
+ */
+async function handleGetPaths(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): Promise<void> {
+  try {
+    const prefix = url.searchParams.get('prefix') || undefined;
+    const result = await getUniquePaths(prefix);
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get paths', message: error?.message });
   }
 }
 
@@ -912,6 +930,12 @@ export function createApiServer(
       // 请求历史列表
       if (req.method === 'GET' && url.pathname === '/_promptxy/requests') {
         await handleGetRequests(req, res, url);
+        return;
+      }
+
+      // 路径列表
+      if (req.method === 'GET' && url.pathname === '/_promptxy/paths') {
+        await handleGetPaths(req, res, url);
         return;
       }
 

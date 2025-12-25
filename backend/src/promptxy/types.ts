@@ -325,3 +325,9 @@ export interface SupplierToggleResponse {
   message: string;
   supplier: Supplier;
 }
+
+// 路径列表响应
+export interface PathsResponse {
+  paths: string[];
+  count: number;
+}
