@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -18,6 +18,8 @@ interface InlineNodeRendererProps {
   node: ViewNode;
   /** 标题（显示在内容区顶部） */
   title?: string;
+  /** 是否显示 Markdown 预览（默认 false 显示纯文本） */
+  isMarkdownPreview?: boolean;
 }
 
 /**
@@ -99,6 +101,31 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ 
       >
         {markdownContent}
       </ReactMarkdown>
+    </div>
+  );
+};
+
+/**
+ * 纯文本渲染器
+ * 显示为可编辑的文本框，无需存储
+ */
+const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+  const [content, setContent] = useState(String(node.value));
+
+  // 当节点变化时更新内容
+  useEffect(() => {
+    setContent(String(node.value));
+  }, [node.value]);
+
+  return (
+    <div className="px-4 py-2 h-full flex flex-col">
+      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        className="flex-1 w-full min-h-0 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        spellCheck={false}
+      />
     </div>
   );
 };
@@ -220,18 +247,25 @@ const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string }> = ({
  * 根据节点类型选择合适的渲染方式
  * 去掉外层容器样式，适合在内容面板中使用
  */
-const InlineNodeRendererInternal: React.FC<InlineNodeRendererProps> = ({ node, title }) => {
+const InlineNodeRendererInternal: React.FC<InlineNodeRendererProps> = ({
+  node,
+  title,
+  isMarkdownPreview = false
+}) => {
   // 数值数组特殊处理
   if (node.type === NodeType.ARRAY && Array.isArray(node.value) && isNumericArray(node.value)) {
     return <NumericArrayRenderer node={node} title={title} />;
   }
 
+  // MARKDOWN 和 STRING_LONG 根据 isMarkdownPreview 切换渲染方式
+  if (node.type === NodeType.MARKDOWN || node.type === NodeType.STRING_LONG) {
+    return isMarkdownPreview
+      ? <InlineMarkdownRenderer node={node} title={title} />
+      : <PlainTextRenderer node={node} title={title} />;
+  }
+
   // 根据节点类型选择渲染器
   switch (node.type) {
-    case NodeType.MARKDOWN:
-    case NodeType.STRING_LONG:
-      return <InlineMarkdownRenderer node={node} title={title} />;
-
     case NodeType.JSON:
       return <InlineJsonRenderer node={node} title={title} />;
 

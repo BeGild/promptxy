@@ -7,6 +7,7 @@ import {
   useDefaultLayout,
 } from 'react-resizable-panels';
 import type { ViewNode } from '../../types';
+import { NodeType } from '../../types';
 import FileTree from '../file-tree/FileTree';
 import FileContentPanel from '../file-tree/FileContentPanel';
 import PathBreadcrumb from '../file-tree/PathBreadcrumb';
@@ -28,6 +29,7 @@ const RESIZABLE_PANELS_STORAGE_PREFIX = 'react-resizable-panels:';
 const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }) => {
   const [selectedNode, setSelectedNode] = useState<ViewNode>(viewTree);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isMarkdownPreview, setIsMarkdownPreview] = useState(false);
 
   // 自定义 storage：让 useDefaultLayout 仍然写入我们既有的 localStorage key（不引入新的前缀 key）
   const panelLayoutStorage = useMemo(() => {
@@ -75,6 +77,8 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
    */
   const handleNodeSelect = useCallback((node: ViewNode) => {
     setSelectedNode(node);
+    // 切换节点时重置为纯文本模式
+    setIsMarkdownPreview(false);
   }, []);
 
   /**
@@ -132,31 +136,59 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
         minSize="50%"
       >
         <div className="h-full flex flex-col">
-          {/* 头部：面包屑 + 全屏按钮 */}
+          {/* 头部：面包屑 + 预览切换 + 全屏按钮 */}
           <div className={`flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
             <div className="flex-1 overflow-hidden">
               <PathBreadcrumb path={selectedNode.path} />
             </div>
-            <button
-              onClick={handleToggleFullScreen}
-              className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-2"
-              title={isFullScreen ? '退出全屏 (ESC)' : '全屏'}
-            >
-              {isFullScreen ? (
-                <>
-                  <Minimize2 size={16} />
-                  <span className="text-sm">退出全屏</span>
-                </>
-              ) : (
-                <Maximize2 size={16} />
+            <div className="flex items-center gap-2">
+              {/* 预览切换按钮 - 仅对 MARKDOWN 和 STRING_LONG 类型显示 */}
+              {[NodeType.MARKDOWN, NodeType.STRING_LONG].includes(selectedNode.type) && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsMarkdownPreview(false)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                      !isMarkdownPreview
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    纯文本
+                  </button>
+                  <button
+                    onClick={() => setIsMarkdownPreview(true)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                      isMarkdownPreview
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    预览
+                  </button>
+                </div>
               )}
-            </button>
+              <button
+                onClick={handleToggleFullScreen}
+                className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-2"
+                title={isFullScreen ? '退出全屏 (ESC)' : '全屏'}
+              >
+                {isFullScreen ? (
+                  <>
+                    <Minimize2 size={16} />
+                    <span className="text-sm">退出全屏</span>
+                  </>
+                ) : (
+                  <Maximize2 size={16} />
+                )}
+              </button>
+            </div>
           </div>
           {/* 内容面板 */}
           <div className="flex-1 overflow-hidden">
             <FileContentPanel
               selectedNode={selectedNode}
               isFullScreen={isFullScreen}
+              isMarkdownPreview={isMarkdownPreview}
             />
           </div>
         </div>
