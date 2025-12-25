@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardBody, Button, Input, Badge, Spinner, Divider } from '@heroui/react';
 import {
   useConfig,
@@ -10,6 +10,7 @@ import {
 import { useCleanupRequests, useStats } from '@/hooks/useRequests';
 import { SupplierManagement } from './SupplierManagement';
 import { formatBytes } from '@/utils';
+import { fetchSettings, updateSettings } from '@/api/config';
 
 export const SettingsPanel: React.FC = () => {
   const { isLoading: configLoading } = useConfig();
@@ -21,6 +22,24 @@ export const SettingsPanel: React.FC = () => {
   const cleanupMutation = useCleanupRequests();
 
   const [keepCount, setKeepCount] = useState('100');
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  // 初始化：从后端读取设置
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const result = await fetchSettings();
+        if (result.success && result.settings.max_history) {
+          setKeepCount(result.settings.max_history);
+        }
+      } catch {
+        // 忽略错误，使用默认值
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
 
   // 导出配置
   const handleExport = async () => {
@@ -41,16 +60,32 @@ export const SettingsPanel: React.FC = () => {
     }
   };
 
+  // 保存设置
+  const handleSaveSettings = async () => {
+    try {
+      await updateSettings({ max_history: keepCount });
+    } catch (error: any) {
+      alert(`保存设置失败: ${error?.message}`);
+    }
+  };
+
   // 清理数据
   const handleCleanup = async () => {
     const count = parseInt(keepCount) || 100;
+    // 先保存设置
+    await handleSaveSettings();
     if (confirm(`确定要清理旧数据吗？将保留最近 ${count} 条请求。`)) {
       const result = await cleanupMutation.mutateAsync(count);
       alert(`清理完成！删除了 ${result.deleted} 条记录，剩余 ${result.remaining} 条。`);
     }
   };
 
-  const isLoading = configLoading || statsLoading;
+  // 处理输入框失去焦点时保存设置
+  const handleKeepCountBlur = () => {
+    handleSaveSettings();
+  };
+
+  const isLoading = configLoading || statsLoading || settingsLoading;
 
   return (
     <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
@@ -172,6 +207,7 @@ export const SettingsPanel: React.FC = () => {
                     placeholder="100"
                     value={keepCount}
                     onChange={e => setKeepCount(e.target.value)}
+                    onBlur={handleKeepCountBlur}
                     radius="lg"
                     classNames={{
                       inputWrapper:

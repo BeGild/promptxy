@@ -150,3 +150,25 @@ export async function toggleSupplier(
   const response = await apiClient.post(`/_promptxy/suppliers/${supplierId}/toggle`, request);
   return response.data;
 }
+
+// ============================================================================
+// 设置管理 API
+// ============================================================================
+
+/**
+ * 获取所有设置
+ */
+export async function fetchSettings(): Promise<{ success: boolean; settings: Record<string, string> }> {
+  const response = await apiClient.get('/_promptxy/settings');
+  return response.data;
+}
+
+/**
+ * 更新设置
+ */
+export async function updateSettings(
+  settings: Record<string, string>,
+): Promise<{ success: boolean; message: string }> {
+  const response = await apiClient.post('/_promptxy/settings', { settings });
+  return response.data;
+}

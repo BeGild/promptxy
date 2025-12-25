@@ -406,6 +406,36 @@ export async function getDatabaseInfo(): Promise<{
 }
 
 /**
+ * 获取单个设置值
+ */
+export async function getSetting(key: string): Promise<string | null> {
+  const db = getDatabase();
+  const result = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [key]);
+  return result?.value ?? null;
+}
+
+/**
+ * 获取所有设置
+ */
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const db = getDatabase();
+  const rows = await db.all<Array<{ key: string; value: string }>>(`SELECT key, value FROM settings`);
+  const settings: Record<string, string> = {};
+  for (const row of rows) {
+    settings[row.key] = row.value;
+  }
+  return settings;
+}
+
+/**
+ * 更新设置值
+ */
+export async function updateSetting(key: string, value: string): Promise<void> {
+  const db = getDatabase();
+  await db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
+}
+
+/**
  * 重置数据库实例（仅用于测试）
  * 关闭当前连接并清除实例，允许重新初始化
  */

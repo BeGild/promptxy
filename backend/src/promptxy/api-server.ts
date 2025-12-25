@@ -31,6 +31,9 @@ import {
   getDatabaseInfo,
   getRequestStats,
   getUniquePaths,
+  getAllSettings,
+  getSetting,
+  updateSetting,
 } from './database.js';
 import { saveConfig, loadConfig, assertUrl, assertSupplier, assertSupplierPathConflicts } from './config.js';
 import { applyPromptRules } from './rules/engine.js';
@@ -379,7 +382,16 @@ async function handleCleanup(
   url: URL,
 ): Promise<void> {
   try {
-    const keep = Number(url.searchParams.get('keep')) || 100;
+    // 优先使用传入的 keep 参数，否则使用数据库中的 max_history 设置
+    const keepParam = url.searchParams.get('keep');
+    let keep = 100;
+    if (keepParam) {
+      keep = Number(keepParam) || 100;
+    } else {
+      const maxHistory = await getSetting('max_history');
+      keep = maxHistory ? Number(maxHistory) : 100;
+    }
+
     const deleted = await cleanupOldRequests(keep);
 
     const info = await getDatabaseInfo();
@@ -391,6 +403,48 @@ async function handleCleanup(
     } as CleanupResponse);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Cleanup failed', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取设置
+ */
+async function handleGetSettings(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const settings = await getAllSettings();
+    sendJson(res, 200, { success: true, settings });
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get settings', message: error?.message });
+  }
+}
+
+/**
+ * 处理更新设置
+ */
+async function handleUpdateSettings(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const { settings } = JSON.parse(body.toString());
+
+    if (!settings || typeof settings !== 'object') {
+      sendJson(res, 400, { success: false, message: 'Invalid settings object' });
+      return;
+    }
+
+    // 更新每个设置
+    for (const [key, value] of Object.entries(settings)) {
+      await updateSetting(key, String(value));
+    }
+
+    sendJson(res, 200, { success: true, message: '设置已更新' });
+  } catch (error: any) {
+    sendJson(res, 500, { success: false, message: error?.message || '更新设置失败' });
   }
 }
 
@@ -1024,6 +1078,18 @@ export function createApiServer(
       // 数据清理
       if (req.method === 'POST' && url.pathname === '/_promptxy/requests/cleanup') {
         await handleCleanup(req, res, url);
+        return;
+      }
+
+      // 获取设置
+      if (req.method === 'GET' && url.pathname === '/_promptxy/settings') {
+        await handleGetSettings(req, res);
+        return;
+      }
+
+      // 更新设置
+      if (req.method === 'POST' && url.pathname === '/_promptxy/settings') {
+        await handleUpdateSettings(req, res);
         return;
       }
 
