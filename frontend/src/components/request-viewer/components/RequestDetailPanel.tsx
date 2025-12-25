@@ -4,7 +4,7 @@ import { RenderMode } from '../types';
 import { AdapterRegistry } from '../adapters/Registry';
 import { ClaudeMessagesAdapter } from '../adapters/claude/ClaudeMessagesAdapter';
 import SummaryView from './views/SummaryView';
-import FullView from './views/FullView';
+import FileBrowserView from './views/FileBrowserView';
 import DiffView from './views/DiffView';
 
 interface RequestDetailPanelProps {
@@ -178,21 +178,25 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
       </div>
 
       {/* 视图内容 */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-hidden">
         {viewMode === RenderMode.SUMMARY && groups.length > 0 && (
-          <SummaryView viewTree={viewTree} groups={groups} />
+          <div className="h-full overflow-auto p-4">
+            <SummaryView viewTree={viewTree} groups={groups} />
+          </div>
         )}
         {viewMode === RenderMode.FULL && (
-          <FullView viewTree={viewTree} />
+          <FileBrowserView viewTree={viewTree} />
         )}
         {viewMode === RenderMode.DIFF && (
-          originalTree ? (
-            <DiffView originalTree={originalTree} modifiedTree={viewTree} />
-          ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-              无原始请求，无法显示差异对比
-            </div>
-          )
+          <div className="h-full overflow-auto p-4">
+            {originalTree ? (
+              <DiffView originalTree={originalTree} modifiedTree={viewTree} />
+            ) : (
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                无原始请求，无法显示差异对比
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
