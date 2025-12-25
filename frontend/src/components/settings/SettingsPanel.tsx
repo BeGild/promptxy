@@ -226,7 +226,7 @@ export const SettingsPanel: React.FC = () => {
                 </Button>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
-                ⏰ 自动清理: 每小时清理一次，保留最近100条（可在配置中修改）
+                ⏰ 自动清理: 每小时清理一次，保留最近 {keepCount} 条（可在上方修改）
               </div>
             </CardBody>
           </Card>
