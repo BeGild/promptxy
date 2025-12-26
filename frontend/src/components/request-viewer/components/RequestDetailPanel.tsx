@@ -31,7 +31,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
   responseStatus,
   responseDuration,
 }) => {
-  const [viewMode, setViewMode] = useState<RenderMode>(RenderMode.SUMMARY);
+  const [viewMode, setViewMode] = useState<RenderMode>(RenderMode.FULL);
   const [adapter, setAdapter] = useState<RequestAdapter | undefined>(providedAdapter);
   const [viewTree, setViewTree] = useState<ViewNode | undefined>();
   const [originalTree, setOriginalTree] = useState<ViewNode | undefined>();
