@@ -52,7 +52,6 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
       type: NodeType.MARKDOWN,
       collapsible: true,
       defaultCollapsed: false, // 默认展开，便于阅读
-      metadata: { label: 'System Prompt 片段' },
     });
 
     // Messages 配置
@@ -70,7 +69,6 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
       type: NodeType.STRING_LONG,
       collapsible: true,
       defaultCollapsed: true, // 用户消息默认折叠
-      metadata: { label: '消息文本' },
     });
 
     // Tools 配置
@@ -85,54 +83,66 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
     // ===== 数组元素标签优化配置 =====
     // 注意：树路径以 "root" 开头，所以配置需要包含 root 前缀
 
-    // 1. Tools 数组元素 - 使用 name 属性
+    // 1. Tools 数组元素 - 使用 name 属性 + 索引
     this.fieldConfigs.set('root.tools.*', {
       path: 'root.tools.*',
       metadata: {
         labelGenerator: (value: any, path: string) => {
+          const parts = path.split('.');
+          const index = parts.pop() ?? '?';
+          let label = index;
           if (value?.name && typeof value.name === 'string' && value.name.trim()) {
-            return value.name.trim();
+            label = `${index}[${value.name.trim()}]`;
           }
-          return path.split('.').pop() ?? path;
+          return label;
         },
       },
     });
 
-    // 2. Messages 数组元素 - 使用 role 属性
+    // 2. Messages 数组元素 - 使用 role 属性 + 索引
     this.fieldConfigs.set('root.messages.*', {
       path: 'root.messages.*',
       metadata: {
         labelGenerator: (value: any, path: string) => {
+          const parts = path.split('.');
+          const index = parts.pop() ?? '?';
+          let label = index;
           if (value?.role && typeof value.role === 'string' && value.role.trim()) {
-            return value.role.trim();
+            label = `${index}[${value.role.trim()}]`;
           }
-          return path.split('.').pop() ?? path;
+          return label;
         },
       },
     });
 
-    // 3. Messages.Content 数组元素 - 使用 type 属性
+    // 3. Messages.Content 数组元素 - 使用 type 属性 + 索引
     this.fieldConfigs.set('root.messages.*.content.*', {
       path: 'root.messages.*.content.*',
       metadata: {
         labelGenerator: (value: any, path: string) => {
+          const parts = path.split('.');
+          const index = parts.pop() ?? '?';
+          let label = index;
           if (value?.type && typeof value.type === 'string' && value.type.trim()) {
-            return value.type.trim();
+            label = `${index}[${value.type.trim()}]`;
           }
-          return path.split('.').pop() ?? path;
+          return label;
         },
       },
     });
 
-    // 4. System 数组元素 - 使用 type 属性
+    // 4. System 数组元素 - 使用 type 属性 + 索引
     this.fieldConfigs.set('root.system.*', {
       path: 'root.system.*',
       metadata: {
         labelGenerator: (value: any, path: string) => {
+          const parts = path.split('.');
+          const index = parts.pop() ?? '?';
+          let label = index;
           if (value?.type && typeof value.type === 'string' && value.type.trim()) {
-            return value.type.trim();
+            label = `${index}[${value.type.trim()}]`;
           }
-          return path.split('.').pop() ?? path;
+          return label;
         },
       },
     });
@@ -160,7 +170,6 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
       type: NodeType.MARKDOWN,
       collapsible: true,
       defaultCollapsed: false,
-      metadata: { label: 'System Prompt 片段' },
     });
 
     this.fieldConfigs.set('root.messages', {
@@ -176,7 +185,6 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
       type: NodeType.STRING_LONG,
       collapsible: true,
       defaultCollapsed: true,
-      metadata: { label: '消息文本' },
     });
 
     this.fieldConfigs.set('root.tools', {
