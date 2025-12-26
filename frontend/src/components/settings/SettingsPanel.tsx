@@ -142,7 +142,7 @@ export const SettingsPanel: React.FC = () => {
   const isLoading = configLoading || statsLoading || settingsLoading;
 
   return (
-    <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
+    <div className="space-y-4">
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
           <Spinner color="primary">加载配置中...</Spinner>
