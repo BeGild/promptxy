@@ -13,6 +13,7 @@ import {
 } from '@heroui/react';
 import { PromptxyRule, PromptxyOp, PromptxyOpType } from '@/types';
 import { validateRule, createDefaultRule, generateUUID } from '@/utils';
+import { HelpTooltip } from './HelpTooltip';
 
 interface RuleEditorProps {
   rule?: PromptxyRule | null;
@@ -325,7 +326,12 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                         </div>
                         <div>
                           <Input
-                            label="正则表达式 (可选)"
+                            label={
+                              <div className="flex items-center gap-1">
+                                <span>正则表达式 (可选)</span>
+                                <HelpTooltip type="regex" />
+                              </div>
+                            }
                             placeholder="pattern"
                             value={op.regex || ''}
                             onChange={e => updateOp(index, { regex: e.target.value || undefined })}
@@ -334,7 +340,12 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                         </div>
                         <div>
                           <Input
-                            label="正则标志 (可选)"
+                            label={
+                              <div className="flex items-center gap-1">
+                                <span>正则标志 (可选)</span>
+                                <HelpTooltip type="flags" />
+                              </div>
+                            }
                             placeholder="gi"
                             value={op.flags || ''}
                             onChange={e => updateOp(index, { flags: e.target.value || undefined })}
@@ -360,7 +371,12 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                       <>
                         <div className="md:col-span-2">
                           <Input
-                            label="正则表达式"
+                            label={
+                              <div className="flex items-center gap-1">
+                                <span>正则表达式</span>
+                                <HelpTooltip type="regex" />
+                              </div>
+                            }
                             placeholder="pattern"
                             value={op.regex || ''}
                             onChange={e => updateOp(index, { regex: e.target.value })}
@@ -370,7 +386,12 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                         </div>
                         <div>
                           <Input
-                            label="正则标志 (可选)"
+                            label={
+                              <div className="flex items-center gap-1">
+                                <span>正则标志 (可选)</span>
+                                <HelpTooltip type="flags" />
+                              </div>
+                            }
                             placeholder="gi"
                             value={op.flags || ''}
                             onChange={e => updateOp(index, { flags: e.target.value || undefined })}
