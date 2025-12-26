@@ -64,9 +64,9 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, on
             <Tooltip content={enabled ? '禁用规则' : '启用规则'}>
               <Switch
                 size="sm"
-                checked={enabled}
-                onChange={handleSwitchChange}
-                color={enabled ? 'success' : 'default'}
+                isSelected={enabled}
+                onValueChange={handleSwitchChange}
+                color="success"
               />
             </Tooltip>
           </div>
@@ -142,25 +142,5 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, on
 
 /**
  * 优化的 RuleCard 组件，使用 React.memo 包裹
- * 自定义比较函数确保只有在必要时才重新渲染
  */
-export const RuleCard = React.memo(RuleCardComponent, (prevProps, nextProps) => {
-  // 比较 rule 对象引用
-  if (prevProps.rule !== nextProps.rule) {
-    return false; // 需要重新渲染
-  }
-
-  // 比较回调函数引用（通常这些应该是稳定的）
-  if (prevProps.onEdit !== nextProps.onEdit) {
-    return false;
-  }
-  if (prevProps.onDelete !== nextProps.onDelete) {
-    return false;
-  }
-  if (prevProps.onToggle !== nextProps.onToggle) {
-    return false;
-  }
-
-  // 所有引用都相同，不需要重新渲染
-  return true;
-});
+export const RuleCard = React.memo(RuleCardComponent);

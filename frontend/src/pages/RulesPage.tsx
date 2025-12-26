@@ -9,12 +9,14 @@ import {
   ModalHeader,
   ModalBody,
 } from '@heroui/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { RuleList, RuleEditor } from '@/components/rules';
 import { useRules, useSaveRules, useDeleteRule } from '@/hooks';
 import { PromptxyRule } from '@/types';
 import { validateRule } from '@/utils';
 
 export const RulesPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const { rules, isLoading, refetch } = useRules();
   const saveRulesMutation = useSaveRules();
   const deleteRuleMutation = useDeleteRule();
@@ -56,14 +58,26 @@ export const RulesPage: React.FC = () => {
     }
   };
 
-  // 处理切换启用状态
+  // 处理切换启用状态（使用乐观更新）
   const handleToggle = async (rule: PromptxyRule) => {
-    const updatedRule = { ...rule, enabled: !rule.enabled };
+    // 立即更新缓存，UI 会立即响应
+    const newEnabled = !rule.enabled;
+    queryClient.setQueryData(['rules'], (oldRules: PromptxyRule[] | undefined) => {
+      if (!oldRules) return [];
+      return oldRules.map(r => (r.id === rule.id ? { ...r, enabled: newEnabled } : r));
+    });
+
+    // 然后调用 API
+    const updatedRule = { ...rule, enabled: newEnabled };
     const updatedRules = rules.map(r => (r.id === rule.id ? updatedRule : r));
     try {
       await saveRulesMutation.mutateAsync(updatedRules);
-      refetch();
     } catch (error: any) {
+      // 如果失败，回滚状态
+      queryClient.setQueryData(['rules'], (oldRules: PromptxyRule[] | undefined) => {
+        if (!oldRules) return [];
+        return oldRules.map(r => (r.id === rule.id ? { ...r, enabled: rule.enabled } : r));
+      });
       alert(`更新失败: ${error?.message}`);
     }
   };
