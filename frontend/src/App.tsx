@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { HeroUIProvider } from '@heroui/react';
-import { Header, Sidebar } from '@/components/layout';
+import { Header } from '@/components/layout';
 import { RulesPage } from '@/pages/RulesPage';
 import { RequestsPage } from '@/pages/RequestsPage';
 import { PreviewPage } from '@/pages/PreviewPage';
@@ -11,8 +11,6 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 function AppContent() {
   const activeTab = useUIStore(state => state.activeTab);
-  const sidebarCollapsed = useUIStore(state => state.sidebarCollapsed);
-  const toggleSidebar = useUIStore(state => state.toggleSidebar);
   const checkConnection = useAppStore(state => state.checkConnection);
   const apiConnected = useAppStore(state => state.apiConnected);
 
@@ -45,24 +43,17 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-      <Sidebar collapsed={sidebarCollapsed} onClose={() => {}} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header
-          onToggleSidebar={toggleSidebar}
-          sseConnected={sseConnected}
-          apiConnected={apiConnected}
-        />
-        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
-          {/* 页面级错误边界 - 捕获页面渲染错误 */}
-          <ErrorBoundary
-            onError={(error, errorInfo) => {
-              console.error('页面错误边界捕获:', error, errorInfo);
-            }}
-          >
-            {renderPage()}
-          </ErrorBoundary>
-        </div>
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+      <Header sseConnected={sseConnected} apiConnected={apiConnected} />
+      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
+        {/* 页面级错误边界 - 捕获页面渲染错误 */}
+        <ErrorBoundary
+          onError={(error, errorInfo) => {
+            console.error('页面错误边界捕获:', error, errorInfo);
+          }}
+        >
+          {renderPage()}
+        </ErrorBoundary>
       </div>
     </div>
   );

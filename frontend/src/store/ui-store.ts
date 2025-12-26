@@ -38,7 +38,7 @@ const initialState = {
   isSettingsOpen: false,
   selectedRuleId: null,
   selectedRequestId: null,
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   activeTab: 'rules' as const,
 };
 
@@ -127,7 +127,6 @@ export const useUIStore = create<UIState>()(
       {
         name: 'promptxy-ui-state',
         partialize: state => ({
-          sidebarCollapsed: state.sidebarCollapsed,
           activeTab: state.activeTab,
         }),
       },
