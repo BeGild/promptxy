@@ -50,7 +50,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
   return (
     <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
       {/* 基本信息 */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
         <CardBody className="space-y-3">
           <h4 className="text-lg font-bold">基本信息</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -105,7 +105,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 
       {/* 匹配规则 */}
       {request.matchedRules && request.matchedRules.length > 0 && (
-        <Card className="border border-gray-200 dark:border-gray-700">
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
           <CardBody className="space-y-3">
             <h4 className="text-lg font-bold">匹配规则</h4>
             <div className="flex flex-wrap gap-2">
@@ -144,7 +144,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 
       {/* 错误信息 */}
       {request.error && (
-        <Card className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <Card className="border border-red-200/50 dark:border-red-800/30 bg-gradient-to-br from-white to-red-50/30 dark:from-gray-800 dark:to-red-900/10">
           <CardBody className="space-y-2">
             <div className="font-bold text-red-700 dark:text-red-400">错误信息</div>
             <div className="font-mono text-xs text-red-600 dark:text-red-300 bg-white/50 dark:bg-black/20 p-2 rounded">
@@ -156,8 +156,8 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 
       {/* 响应头 */}
       {request.responseHeaders && (
-        <Card className="border border-gray-200 dark:border-gray-700">
-          <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+          <CardHeader className="bg-blue-50/50 dark:bg-blue-900/20 border-b border-blue-200/50 dark:border-blue-800/30 py-2">
             <div className="flex items-center justify-between w-full">
               <h5 className="text-md font-bold">响应头</h5>
               <Button
@@ -181,8 +181,8 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
 
       {/* 响应体 */}
       {request.responseBody && (
-        <Card className="border border-gray-200 dark:border-gray-700">
-          <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+          <CardHeader className="bg-blue-50/50 dark:bg-blue-900/20 border-b border-blue-200/50 dark:border-blue-800/30 py-2">
             <div className="flex items-center justify-between w-full">
               <h5 className="text-md font-bold">响应体</h5>
               <Button

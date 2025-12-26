@@ -152,7 +152,7 @@ export const SettingsPanel: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 统计信息 - 占据全宽或 2/3 */}
-          <Card className="lg:col-span-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <Card className="lg:col-span-3 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
                 <BarChart3 className="text-blue-600 dark:text-blue-400" size={24} />
@@ -218,7 +218,7 @@ export const SettingsPanel: React.FC = () => {
           </div>
 
           {/* 配置管理 */}
-          <Card className="lg:col-span-1 border border-gray-200 dark:border-gray-700 shadow-sm h-full">
+          <Card className="lg:col-span-1 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 h-full">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
                 <Settings size={24} className="text-purple-600 dark:text-purple-400" />
@@ -255,7 +255,7 @@ export const SettingsPanel: React.FC = () => {
           </Card>
 
           {/* 数据清理 */}
-          <Card className="lg:col-span-1 border border-gray-200 dark:border-gray-700 shadow-sm h-full">
+          <Card className="lg:col-span-1 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 h-full">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
                 <Trash2 size={24} className="text-red-600 dark:text-red-400" />
@@ -295,7 +295,7 @@ export const SettingsPanel: React.FC = () => {
           </Card>
 
           {/* 关于 */}
-          <Card className="lg:col-span-1 border border-gray-200 dark:border-gray-700 shadow-sm h-full">
+          <Card className="lg:col-span-1 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 h-full">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
                 <Info size={24} className="text-gray-600 dark:text-gray-400" />
@@ -325,7 +325,7 @@ export const SettingsPanel: React.FC = () => {
           </Card>
 
           {/* 路径过滤 - 占据全宽 */}
-          <Card className="lg:col-span-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <Card className="lg:col-span-3 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
                 <Filter size={24} className="text-amber-600 dark:text-amber-400" />

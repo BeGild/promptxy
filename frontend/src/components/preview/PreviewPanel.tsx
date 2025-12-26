@@ -51,7 +51,7 @@ export const PreviewPanel: React.FC = () => {
     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
       {/* 输入区域 */}
       <div style={{ flex: 1, minWidth: '300px' }}>
-        <Card style={{ padding: '16px', height: '100%' }}>
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10" style={{ padding: '16px', height: '100%' }}>
           <h4 style={{ marginBottom: '12px' }}>测试输入</h4>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -133,7 +133,7 @@ export const PreviewPanel: React.FC = () => {
 
       {/* 输出区域 */}
       <div style={{ flex: 1, minWidth: '300px' }}>
-        <Card style={{ padding: '16px', height: '100%' }}>
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10" style={{ padding: '16px', height: '100%' }}>
           <h4 style={{ marginBottom: '12px' }}>预览结果</h4>
 
           {previewMutation.isPending && (
@@ -144,10 +144,9 @@ export const PreviewPanel: React.FC = () => {
 
           {previewMutation.isError && (
             <Card
+              className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10"
               style={{
                 padding: '12px',
-                backgroundColor: 'rgba(244, 135, 113, 0.1)',
-                border: '1px solid var(--heroui-colors-danger)',
               }}
             >
               <div style={{ color: 'var(--heroui-colors-danger)' }}>
@@ -158,7 +157,7 @@ export const PreviewPanel: React.FC = () => {
 
           {result && (
             <>
-              <Card style={{ padding: '12px', marginBottom: '8px' }}>
+              <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10" style={{ padding: '12px', marginBottom: '8px' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
                   原始文本:
                 </div>
@@ -178,7 +177,7 @@ export const PreviewPanel: React.FC = () => {
                 </div>
               </Card>
 
-              <Card style={{ padding: '12px', marginBottom: '8px' }}>
+              <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10" style={{ padding: '12px', marginBottom: '8px' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
                   修改后:
                 </div>
@@ -200,7 +199,7 @@ export const PreviewPanel: React.FC = () => {
               </Card>
 
               {result.matches.length > 0 && (
-                <Card style={{ padding: '12px' }}>
+                <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10" style={{ padding: '12px' }}>
                   <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
                     匹配规则:
                   </div>
@@ -213,7 +212,7 @@ export const PreviewPanel: React.FC = () => {
               )}
 
               {result.matches.length === 0 && (
-                <Card style={{ padding: '12px' }}>
+                <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10" style={{ padding: '12px' }}>
                   <div style={{ color: 'var(--heroui-colors-text-secondary)', fontSize: '12px' }}>
                     无规则匹配
                   </div>

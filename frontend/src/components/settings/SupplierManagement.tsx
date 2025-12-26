@@ -201,7 +201,7 @@ export const SupplierManagement: React.FC = () => {
 
   return (
     <>
-      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+      <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 shadow-sm">
         <CardBody className="space-y-6 p-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -246,8 +246,8 @@ export const SupplierManagement: React.FC = () => {
                         key={supplier.id}
                         className={`border-l-4 transition-all hover:shadow-md ${
                           supplier.enabled
-                            ? 'border-l-success bg-white dark:bg-gray-800 border-y border-r border-gray-100 dark:border-gray-700'
-                            : 'border-l-default bg-gray-50 dark:bg-gray-900/50 border-y border-r border-gray-200 dark:border-gray-700 opacity-80 hover:opacity-100'
+                            ? 'border-l-success border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10'
+                            : 'border-l-default border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 opacity-80 hover:opacity-100'
                         }`}
                         shadow="none"
                       >

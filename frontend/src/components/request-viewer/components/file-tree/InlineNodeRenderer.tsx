@@ -92,13 +92,13 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullS
       </div>
     ),
     thead: ({ children, ...props }: any) => (
-      <thead className="bg-gray-100 dark:bg-gray-800" {...props}>{children}</thead>
+      <thead className="bg-blue-50/50 dark:bg-blue-900/20" {...props}>{children}</thead>
     ),
     tbody: ({ children, ...props }: any) => (
       <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>{children}</tbody>
     ),
     tr: ({ children, ...props }: any) => (
-      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800" {...props}>{children}</tr>
+      <tr className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10" {...props}>{children}</tr>
     ),
     strong: ({ children, ...props }: any) => (
       <strong className="font-bold text-gray-900 dark:text-gray-100" {...props}>{children}</strong>
@@ -107,7 +107,7 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullS
 
   return (
     <div className={containerClass}>
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 prose dark:prose-invert max-w-none">
+      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4 prose dark:prose-invert max-w-none">
         {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
@@ -142,7 +142,7 @@ const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="flex-1 w-full min-h-0 p-4 font-mono text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="flex-1 w-full min-h-0 p-4 font-mono text-sm bg-blue-50/30 dark:bg-blue-900/10 text-gray-900 dark:text-gray-100 border border-blue-200/50 dark:border-blue-800/30 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         spellCheck={false}
       />
     </div>
@@ -160,7 +160,7 @@ const NumericArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScr
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4">
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           数值数组 ({values.length} 个元素)
         </p>
@@ -210,7 +210,7 @@ const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string; isFullScree
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-x-auto">
+      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4 overflow-x-auto">
         <pre className="text-xs text-gray-900 dark:text-gray-100 font-mono whitespace-pre">
           {formattedJson}
         </pre>
@@ -239,7 +239,7 @@ const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScre
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-x-auto">
+      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4 overflow-x-auto">
         <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">
           {childCount} 个元素
         </div>
@@ -267,7 +267,7 @@ const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string; isFull
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4">
         <div className="flex items-baseline gap-4">
           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{node.label}:</span>
           <span className="font-mono text-sm text-gray-900 dark:text-gray-100">

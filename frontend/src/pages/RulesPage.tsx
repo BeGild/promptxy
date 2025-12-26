@@ -131,7 +131,7 @@ export const RulesPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>

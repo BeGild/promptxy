@@ -97,10 +97,10 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
       {/* 元数据栏 */}
       {metadata && (
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        <div className="px-4 py-3 border-b border-blue-200/50 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-900/20">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             {metadata.model && (
               <div className="flex items-center gap-1">
@@ -156,7 +156,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
       )}
 
       {/* 视图模式切换 */}
-      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-blue-200/50 dark:border-blue-800/30 flex items-center gap-2">
         {[
           { mode: RenderMode.SUMMARY, label: '结构概览' },
           { mode: RenderMode.FULL, label: '内容详情' },
@@ -168,7 +168,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
               viewMode === mode
                 ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                : 'bg-blue-50/50 dark:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:bg-blue-100/50 dark:hover:bg-blue-900/30'
             }`}
             disabled={mode === RenderMode.DIFF && !originalRequest}
           >

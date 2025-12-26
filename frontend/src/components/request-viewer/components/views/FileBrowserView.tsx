@@ -127,7 +127,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
         id="tree"
         minSize="15%"
         maxSize="50%"
-        className={isFullScreen ? 'bg-gray-50 dark:bg-gray-800' : ''}
+        className={isFullScreen ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}
       >
         <FileTree
           rootNode={viewTree}
@@ -151,7 +151,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
       >
         <div className="h-full flex flex-col">
           {/* 头部：面包屑 + 预览切换 + 全屏按钮 */}
-          <div className={`flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
+          <div className={`flex items-center justify-between border-b border-blue-200/50 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-900/20 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
             <div className="flex-1 overflow-hidden">
               <PathBreadcrumb path={selectedNode.path} />
             </div>
@@ -229,11 +229,11 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   );
 
   return isFullScreen ? (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-800">
       {content}
     </div>
   ) : (
-    <div className="h-full min-h-0 bg-white dark:bg-gray-900">
+    <div className="h-full min-h-0 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
       {content}
     </div>
   );

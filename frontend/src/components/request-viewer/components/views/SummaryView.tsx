@@ -60,7 +60,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({ viewTree, groups }) => {
           >
             {/* 分组头部 */}
             <div
-              className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center justify-between px-4 py-3 bg-blue-50/50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors"
               onClick={() => toggleGroup(group.id)}
             >
               <div className="flex items-center gap-2">
@@ -77,14 +77,14 @@ const SummaryView: React.FC<SummaryViewProps> = ({ viewTree, groups }) => {
 
             {/* 分组描述 */}
             {group.description && isExpanded && (
-              <div className="px-4 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <div className="px-4 py-2 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 border-b border-blue-200/50 dark:border-blue-800/30">
                 <p className="text-xs text-gray-600 dark:text-gray-400">{group.description}</p>
               </div>
             )}
 
             {/* 分组内容 */}
             {isExpanded && (
-              <div className="p-4 bg-white dark:bg-gray-900 space-y-3">
+              <div className="p-4 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 space-y-3">
                 {groupNodes.map(node => (
                   <div key={node.id}>
                     <div className="flex items-start gap-2 mb-1">

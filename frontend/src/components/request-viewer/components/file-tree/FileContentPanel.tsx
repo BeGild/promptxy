@@ -24,7 +24,7 @@ const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(({
   return (
     <div className="h-full flex flex-col">
       {/* 内容区域 */}
-      <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-white dark:bg-gray-900">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
         {isFullScreen ? (
           <div className="h-full">
             <InlineNodeRenderer node={selectedNode} title={selectedNode.label} isMarkdownPreview={isMarkdownPreview} isFullScreen={true} />

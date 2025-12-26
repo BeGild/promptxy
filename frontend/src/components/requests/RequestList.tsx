@@ -293,9 +293,9 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	        aria-label="请求历史表"
 	        onRowAction={handleRowClick}
 	        classNames={{
-	          wrapper: 'shadow-md rounded-xl border border-gray-200 dark:border-gray-700',
-	          th: 'bg-gray-50 dark:bg-gray-800 text-sm font-semibold',
-	          tr: 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
+	          wrapper: 'shadow-md rounded-xl border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10',
+	          th: 'bg-blue-50/50 dark:bg-blue-900/20 text-sm font-semibold',
+	          tr: 'hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors',
 	        }}
 	      >
 		        <TableHeader>

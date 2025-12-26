@@ -252,9 +252,9 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg">
+    <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 rounded-lg">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-blue-200/50 dark:border-blue-800/30">
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
@@ -280,7 +280,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
             <button
               onClick={prevDiff}
               disabled={currentDiffIndex === 0}
-              className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm bg-blue-50/50 dark:bg-blue-900/20 rounded hover:bg-blue-100/50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ↑ 上一个
             </button>
@@ -290,7 +290,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
             <button
               onClick={nextDiff}
               disabled={currentDiffIndex >= diffNodes.length - 1}
-              className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm bg-blue-50/50 dark:bg-blue-900/20 rounded hover:bg-blue-100/50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               下一个 ↓
             </button>
