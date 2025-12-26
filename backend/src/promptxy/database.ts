@@ -85,7 +85,8 @@ export async function initializeDatabase(): Promise<Database> {
     INSERT OR IGNORE INTO settings (key, value) VALUES
       ('max_history', '1000'),
       ('auto_cleanup', 'true'),
-      ('cleanup_interval_hours', '1');
+      ('cleanup_interval_hours', '1'),
+      ('filtered_paths', '[]');
   `);
 
   // 数据库迁移：为已有数据库添加 response_body 列
@@ -433,6 +434,46 @@ export async function getAllSettings(): Promise<Record<string, string>> {
 export async function updateSetting(key: string, value: string): Promise<void> {
   const db = getDatabase();
   await db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
+}
+
+/**
+ * 获取过滤路径列表
+ * 返回需要被过滤掉的路径数组（不记录到数据库）
+ */
+export async function getFilteredPaths(): Promise<string[]> {
+  const db = getDatabase();
+  const result = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, ['filtered_paths']);
+  if (!result?.value) {
+    return [];
+  }
+  try {
+    const paths = JSON.parse(result.value);
+    return Array.isArray(paths) ? paths : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 检查路径是否应该被过滤（不记录）
+ * 支持精确匹配和前缀匹配
+ */
+export function shouldFilterPath(path: string, filteredPaths: string[]): boolean {
+  for (const filteredPath of filteredPaths) {
+    // 精确匹配
+    if (path === filteredPath) {
+      return true;
+    }
+    // 前缀匹配（如果过滤路径以 / 结尾，则表示前缀匹配）
+    if (filteredPath.endsWith('/') && path.startsWith(filteredPath)) {
+      return true;
+    }
+    // 前缀匹配（路径以过滤路径 + / 开头）
+    if (path.startsWith(filteredPath + '/')) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

@@ -20,7 +20,7 @@ import {
   Supplier,
   PathMapping,
 } from './types.js';
-import { insertRequestRecord } from './database.js';
+import { insertRequestRecord, getFilteredPaths, shouldFilterPath } from './database.js';
 import { broadcastRequest } from './api-server.js';
 
 type RouteInfo = {
@@ -300,7 +300,22 @@ export function createGateway(config: PromptxyConfig): http.Server {
       const savedJsonBody = jsonBody;
 
       // 监听响应流结束，保存包含响应体的记录
-      upstreamStream.on('end', () => {
+      upstreamStream.on('end', async () => {
+        // 检查路径是否需要过滤
+        const filteredPaths = await getFilteredPaths();
+        if (shouldFilterPath(savedPath, filteredPaths)) {
+          // 跳过记录，但仍然广播事件
+          broadcastRequest({
+            id: savedRequestId,
+            timestamp: Date.now(),
+            client: matchedRoute.client,
+            path: upstreamPath,
+            method: method,
+            matchedRules: matches.map(m => m.ruleId),
+          });
+          return;
+        }
+
         const responseBodyBuffer = Buffer.concat(responseBodyChunks);
         let responseBodyStr: string | undefined;
 
@@ -367,30 +382,34 @@ export function createGateway(config: PromptxyConfig): http.Server {
         const duration = Date.now() - startTime;
         requestId = requestId ?? generateRequestId();
 
-        const record: RequestRecord = {
-          id: requestId,
-          timestamp: Date.now(),
-          client: route.client,
-          path: upstreamPath,
-          method: method,
-          originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
-          modifiedBody: jsonBody
-            ? JSON.stringify(jsonBody)
-            : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
-          matchedRules: JSON.stringify(matches),
-          responseStatus: undefined,
-          durationMs: duration,
-          responseHeaders: undefined,
-          error: error,
-        };
+        // 检查路径是否需要过滤
+        const filteredPaths = await getFilteredPaths();
+        if (!shouldFilterPath(upstreamPath, filteredPaths)) {
+          const record: RequestRecord = {
+            id: requestId,
+            timestamp: Date.now(),
+            client: route.client,
+            path: upstreamPath,
+            method: method,
+            originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+            modifiedBody: jsonBody
+              ? JSON.stringify(jsonBody)
+              : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+            matchedRules: JSON.stringify(matches),
+            responseStatus: undefined,
+            durationMs: duration,
+            responseHeaders: undefined,
+            error: error,
+          };
 
-        insertRequestRecord(record).catch(err => {
-          logger.debug(`[promptxy] Failed to save error request record: ${err?.message}`);
-        });
+          insertRequestRecord(record).catch(err => {
+            logger.debug(`[promptxy] Failed to save error request record: ${err?.message}`);
+          });
+        }
 
         const sseData: SSERequestEvent = {
           id: requestId,
-          timestamp: record.timestamp,
+          timestamp: Date.now(),
           client: route.client,
           path: upstreamPath,
           method: method,

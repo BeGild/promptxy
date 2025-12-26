@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, Button, Input, Badge, Spinner, Divider } from '@heroui/react';
+import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip } from '@heroui/react';
 import {
   useConfig,
   useExportConfig,
@@ -22,6 +22,8 @@ export const SettingsPanel: React.FC = () => {
   const cleanupMutation = useCleanupRequests();
 
   const [keepCount, setKeepCount] = useState('100');
+  const [filteredPaths, setFilteredPaths] = useState<string[]>([]);
+  const [newPath, setNewPath] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(true);
 
   // 初始化：从后端读取设置
@@ -31,6 +33,15 @@ export const SettingsPanel: React.FC = () => {
         const result = await fetchSettings();
         if (result.success && result.settings.max_history) {
           setKeepCount(result.settings.max_history);
+        }
+        // 加载过滤路径
+        if (result.success && result.settings.filtered_paths) {
+          try {
+            const paths = JSON.parse(result.settings.filtered_paths);
+            setFilteredPaths(Array.isArray(paths) ? paths : []);
+          } catch {
+            setFilteredPaths([]);
+          }
         }
       } catch {
         // 忽略错误，使用默认值
@@ -83,6 +94,49 @@ export const SettingsPanel: React.FC = () => {
   // 处理输入框失去焦点时保存设置
   const handleKeepCountBlur = () => {
     handleSaveSettings();
+  };
+
+  // 添加过滤路径
+  const handleAddFilteredPath = async () => {
+    const trimmedPath = newPath.trim();
+    if (!trimmedPath) return;
+
+    // 确保路径以 / 开头
+    const normalizedPath = trimmedPath.startsWith('/') ? trimmedPath : `/${trimmedPath}`;
+
+    // 检查是否已存在
+    if (filteredPaths.includes(normalizedPath)) {
+      alert('该路径已存在');
+      return;
+    }
+
+    const updatedPaths = [...filteredPaths, normalizedPath];
+    setFilteredPaths(updatedPaths);
+    setNewPath('');
+
+    // 保存到后端
+    try {
+      await updateSettings({ filtered_paths: JSON.stringify(updatedPaths) });
+    } catch (error: any) {
+      alert(`保存失败: ${error?.message}`);
+      // 回滚
+      setFilteredPaths(filteredPaths);
+    }
+  };
+
+  // 删除过滤路径
+  const handleRemoveFilteredPath = async (pathToRemove: string) => {
+    const updatedPaths = filteredPaths.filter(p => p !== pathToRemove);
+    setFilteredPaths(updatedPaths);
+
+    // 保存到后端
+    try {
+      await updateSettings({ filtered_paths: JSON.stringify(updatedPaths) });
+    } catch (error: any) {
+      alert(`保存失败: ${error?.message}`);
+      // 回滚
+      setFilteredPaths(filteredPaths);
+    }
   };
 
   const isLoading = configLoading || statsLoading || settingsLoading;
@@ -227,6 +281,74 @@ export const SettingsPanel: React.FC = () => {
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
                 ⏰ 自动清理: 每小时清理一次，保留最近 {keepCount} 条（可在上方修改）
+              </div>
+            </CardBody>
+          </Card>
+
+          <Divider />
+
+          {/* 路径过滤 */}
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardBody className="space-y-3">
+              <h4 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                🔍 路径过滤
+              </h4>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    label="添加过滤路径"
+                    placeholder="例如: /api/ping 或 /health/"
+                    value={newPath}
+                    onChange={e => setNewPath(e.target.value)}
+                    onKeyPress={e => {
+                      if (e.key === 'Enter') {
+                        handleAddFilteredPath();
+                      }
+                    }}
+                    radius="lg"
+                    classNames={{
+                      inputWrapper:
+                        'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                    }}
+                    description="支持精确匹配（如 /api/ping）和前缀匹配（如 /health/）"
+                  />
+                  <Button
+                    color="warning"
+                    variant="flat"
+                    onPress={handleAddFilteredPath}
+                    radius="lg"
+                    className="shadow-md hover:shadow-lg transition-shadow self-end"
+                    isDisabled={!newPath.trim()}
+                  >
+                    添加
+                  </Button>
+                </div>
+
+                {filteredPaths.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">已过滤的路径:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {filteredPaths.map(path => (
+                        <Chip
+                          key={path}
+                          color="warning"
+                          variant="flat"
+                          onClose={() => handleRemoveFilteredPath(path)}
+                          classNames={{
+                            base: 'shadow-sm',
+                            content: 'font-mono text-sm',
+                          }}
+                        >
+                          {path}
+                        </Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
+                  💡 匹配的路径将不会记录到请求历史中，常用于过滤健康检查等高频请求。
+                </div>
               </div>
             </CardBody>
           </Card>
