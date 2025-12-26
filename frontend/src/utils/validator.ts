@@ -1,4 +1,5 @@
 import { PromptxyRule, PromptxyOp } from '@/types';
+import { generateUUID } from './formatter';
 
 interface RuleValidationResult {
   valid: boolean;
@@ -14,8 +15,11 @@ export function validateRule(rule: PromptxyRule): RuleValidationResult {
   const warnings: string[] = [];
 
   // 基本字段验证
-  if (!rule.id || typeof rule.id !== 'string') {
-    errors.push('规则ID是必需的');
+  if (!rule.uuid || typeof rule.uuid !== 'string') {
+    errors.push('规则UUID是必需的');
+  }
+  if (!rule.name || typeof rule.name !== 'string') {
+    errors.push('规则名称是必需的');
   }
 
   if (!rule.when) {
@@ -138,7 +142,7 @@ export function checkRuleConflicts(rules: PromptxyRule[], newRule: PromptxyRule)
   const conflicts: string[] = [];
 
   for (const rule of rules) {
-    if (rule.id === newRule.id) continue; // 跳过自身
+    if (rule.uuid === newRule.uuid) continue; // 跳过自身
 
     // 检查条件是否完全相同
     const sameConditions =
@@ -149,7 +153,7 @@ export function checkRuleConflicts(rules: PromptxyRule[], newRule: PromptxyRule)
       rule.when.modelRegex === newRule.when.modelRegex;
 
     if (sameConditions) {
-      conflicts.push(`与规则 ${rule.id} 的条件相同`);
+      conflicts.push(`与规则 ${rule.name} 的条件相同`);
     }
   }
 
@@ -161,7 +165,8 @@ export function checkRuleConflicts(rules: PromptxyRule[], newRule: PromptxyRule)
  */
 export function createDefaultRule(): PromptxyRule {
   return {
-    id: `rule-${Date.now()}`,
+    uuid: `rule-${generateUUID()}`,
+    name: `rule-${Date.now()}`,
     description: '',
     when: {
       client: 'claude',

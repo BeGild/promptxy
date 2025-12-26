@@ -309,7 +309,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
             id: savedRequestId,
             timestamp: Date.now(),
             client: matchedRoute.client,
-            path: upstreamPath,
+            path: upstreamPath || savedPath,
             method: method,
             matchedRules: matches.map(m => m.ruleId),
           });

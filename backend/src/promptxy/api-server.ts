@@ -200,41 +200,36 @@ function handleGetConfig(
 /**
  * 验证规则格式
  */
-function validateRules(rules: PromptxyRule[]): RuleValidationResult {
+function validateRule(rule: PromptxyRule): RuleValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!Array.isArray(rules)) {
-    return { valid: false, errors: ['Rules must be an array'], warnings: [] };
+  if (!rule.uuid || typeof rule.uuid !== 'string') {
+    errors.push(`Rule missing or invalid uuid`);
   }
 
-  for (const rule of rules) {
-    if (!rule.id || typeof rule.id !== 'string') {
-      errors.push(`Rule missing or invalid id`);
-      continue;
-    }
+  if (!rule.name || typeof rule.name !== 'string') {
+    errors.push(`Rule missing or invalid name`);
+  }
 
-    if (!rule.when || typeof rule.when !== 'object') {
-      errors.push(`Rule ${rule.id}: missing 'when' object`);
-      continue;
-    }
-
+  if (!rule.when || typeof rule.when !== 'object') {
+    errors.push(`Rule ${rule.name}: missing 'when' object`);
+  } else {
     if (!rule.when.client || typeof rule.when.client !== 'string') {
-      errors.push(`Rule ${rule.id}: invalid client`);
+      errors.push(`Rule ${rule.name}: invalid client`);
     }
 
     if (!rule.when.field || typeof rule.when.field !== 'string') {
-      errors.push(`Rule ${rule.id}: invalid field`);
+      errors.push(`Rule ${rule.name}: invalid field`);
     }
+  }
 
-    if (!Array.isArray(rule.ops) || rule.ops.length === 0) {
-      errors.push(`Rule ${rule.id}: ops must be non-empty array`);
-      continue;
-    }
-
+  if (!Array.isArray(rule.ops) || rule.ops.length === 0) {
+    errors.push(`Rule ${rule.name}: ops must be non-empty array`);
+  } else {
     for (const op of rule.ops) {
       if (!op || typeof op !== 'object' || typeof (op as any).type !== 'string') {
-        errors.push(`Rule ${rule.id}: invalid op`);
+        errors.push(`Rule ${rule.name}: invalid op`);
         continue;
       }
 
@@ -245,16 +240,40 @@ function validateRules(rules: PromptxyRule[]): RuleValidationResult {
           try {
             new RegExp((op as any).regex, (op as any).flags);
           } catch (e: any) {
-            errors.push(`Rule ${rule.id}: invalid regex - ${e.message}`);
+            errors.push(`Rule ${rule.name}: invalid regex - ${e.message}`);
           }
         }
       }
     }
+  }
 
-    // 警告：没有启用状态的规则
-    if (rule.enabled === undefined) {
-      warnings.push(`Rule ${rule.id}: missing 'enabled' property, defaulting to true`);
-    }
+  // 警告：没有启用状态的规则
+  if (rule.enabled === undefined) {
+    warnings.push(`Rule ${rule.name}: missing 'enabled' property, defaulting to true`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * 验证规则格式
+ */
+function validateRules(rules: PromptxyRule[]): RuleValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!Array.isArray(rules)) {
+    return { valid: false, errors: ['Rules must be an array'], warnings: [] };
+  }
+
+  for (const rule of rules) {
+    const result = validateRule(rule);
+    errors.push(...result.errors);
+    warnings.push(...result.warnings);
   }
 
   return {
@@ -734,18 +753,6 @@ async function saveCurrentRules(rules: PromptxyRule[]): Promise<void> {
 }
 
 /**
- * 验证单个规则
- */
-function validateRule(rule: any): { valid: boolean; errors?: string[]; warnings?: string[] } {
-  const result = validateRules([rule]);
-  return {
-    valid: result.valid,
-    errors: result.errors,
-    warnings: result.warnings,
-  };
-}
-
-/**
  * 处理创建单个规则
  */
 async function handleCreateRule(
@@ -801,8 +808,8 @@ async function handleUpdateRule(
       return;
     }
 
-    // 查找并更新
-    const index = currentRules.findIndex(r => r.id === ruleId);
+    // 查找并更新（使用 uuid）
+    const index = currentRules.findIndex(r => r.uuid === ruleId);
     if (index === -1) {
       sendJson(res, 404, { error: 'Rule not found' });
       return;
@@ -833,8 +840,8 @@ async function handleDeleteRule(
   try {
     const ruleId = url.pathname.split('/').pop();
 
-    // 查找并删除
-    const index = currentRules.findIndex(r => r.id === ruleId);
+    // 查找并删除（使用 uuid）
+    const index = currentRules.findIndex(r => r.uuid === ruleId);
     if (index === -1) {
       sendJson(res, 404, { error: 'Rule not found' });
       return;

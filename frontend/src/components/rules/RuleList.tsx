@@ -9,6 +9,7 @@ interface RuleListProps {
   rules: PromptxyRule[];
   isLoading: boolean;
   onEdit: (ruleId: string) => void;
+  onCopy: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onToggle: (rule: PromptxyRule) => void;
   onNewRule: () => void;
@@ -24,6 +25,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
   rules,
   isLoading,
   onEdit,
+  onCopy,
   onDelete,
   onToggle,
   onNewRule,
@@ -38,7 +40,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
   const filteredRules = useMemo(() => {
     return rules.filter(rule => {
       const matchSearch =
-        rule.id.toLowerCase().includes(search.toLowerCase()) ||
+        rule.name.toLowerCase().includes(search.toLowerCase()) ||
         (rule.description || '').toLowerCase().includes(search.toLowerCase());
       const matchClient = filterClient === 'all' || rule.when.client === filterClient;
       return matchSearch && matchClient;
@@ -102,6 +104,13 @@ const RuleListComponent: React.FC<RuleListProps> = ({
     [onToggle],
   );
 
+  const handleCopy = useCallback(
+    (ruleId: string) => {
+      onCopy(ruleId);
+    },
+    [onCopy],
+  );
+
   // 如果启用虚拟滚动，使用虚拟滚动组件
   if (enableVirtualScroll) {
     return (
@@ -109,6 +118,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
         rules={rules}
         isLoading={isLoading}
         onEdit={onEdit}
+        onCopy={onCopy}
         onDelete={onDelete}
         onToggle={onToggle}
         onNewRule={onNewRule}
@@ -140,7 +150,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
       {/* 搜索和过滤工具栏 */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
-          placeholder="🔍 搜索规则ID或描述..."
+          placeholder="🔍 搜索规则名称或描述..."
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
           className="flex-1"
@@ -194,9 +204,10 @@ const RuleListComponent: React.FC<RuleListProps> = ({
       <div className="space-y-3">
         {paginatedRules.map(rule => (
           <RuleCard
-            key={rule.id}
+            key={rule.uuid}
             rule={rule}
             onEdit={handleEdit}
+            onCopy={handleCopy}
             onDelete={handleDelete}
             onToggle={handleToggle}
           />

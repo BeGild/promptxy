@@ -24,13 +24,13 @@ function matchesRule(rule: PromptxyRule, ctx: PromptxyRequestContext): boolean {
   }
 
   if (rule.when.pathRegex) {
-    const re = compileRegex(rule.when.pathRegex, undefined, `rule(${rule.id}).when.pathRegex`);
+    const re = compileRegex(rule.when.pathRegex, undefined, `rule(${rule.name}).when.pathRegex`);
     if (!re.test(ctx.path)) return false;
   }
 
   if (rule.when.modelRegex) {
     if (!ctx.model) return false;
-    const re = compileRegex(rule.when.modelRegex, undefined, `rule(${rule.id}).when.modelRegex`);
+    const re = compileRegex(rule.when.modelRegex, undefined, `rule(${rule.name}).when.modelRegex`);
     if (!re.test(ctx.model)) return false;
   }
 
@@ -55,63 +55,63 @@ export function applyPromptRules(
       switch (op.type) {
         case 'set': {
           text = op.text;
-          matches.push({ ruleId: rule.id, opType: op.type });
+          matches.push({ ruleId: rule.uuid, opType: op.type });
           break;
         }
         case 'append': {
           text = text + op.text;
-          matches.push({ ruleId: rule.id, opType: op.type });
+          matches.push({ ruleId: rule.uuid, opType: op.type });
           break;
         }
         case 'prepend': {
           text = op.text + text;
-          matches.push({ ruleId: rule.id, opType: op.type });
+          matches.push({ ruleId: rule.uuid, opType: op.type });
           break;
         }
         case 'replace': {
           if (op.match !== undefined) {
             if (op.match === '') {
-              throw new Error(`rule(${rule.id}).op(replace): match must not be empty`);
+              throw new Error(`rule(${rule.name}).op(replace): match must not be empty`);
             }
             text = text.split(op.match).join(op.replacement);
-            matches.push({ ruleId: rule.id, opType: op.type });
+            matches.push({ ruleId: rule.uuid, opType: op.type });
             break;
           }
           if (op.regex !== undefined) {
-            const re = compileRegex(op.regex, op.flags, `rule(${rule.id}).op(replace).regex`);
+            const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(replace).regex`);
             text = text.replace(re, op.replacement);
-            matches.push({ ruleId: rule.id, opType: op.type });
+            matches.push({ ruleId: rule.uuid, opType: op.type });
             break;
           }
-          throw new Error(`rule(${rule.id}).op(replace): must provide match or regex`);
+          throw new Error(`rule(${rule.name}).op(replace): must provide match or regex`);
         }
         case 'delete': {
           if (op.match !== undefined) {
             if (op.match === '') {
-              throw new Error(`rule(${rule.id}).op(delete): match must not be empty`);
+              throw new Error(`rule(${rule.name}).op(delete): match must not be empty`);
             }
             text = text.split(op.match).join('');
-            matches.push({ ruleId: rule.id, opType: op.type });
+            matches.push({ ruleId: rule.uuid, opType: op.type });
             break;
           }
           if (op.regex !== undefined) {
-            const re = compileRegex(op.regex, op.flags, `rule(${rule.id}).op(delete).regex`);
+            const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(delete).regex`);
             text = text.replace(re, '');
-            matches.push({ ruleId: rule.id, opType: op.type });
+            matches.push({ ruleId: rule.uuid, opType: op.type });
             break;
           }
-          throw new Error(`rule(${rule.id}).op(delete): must provide match or regex`);
+          throw new Error(`rule(${rule.name}).op(delete): must provide match or regex`);
         }
         case 'insert_before': {
-          const re = compileRegex(op.regex, op.flags, `rule(${rule.id}).op(insert_before).regex`);
+          const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(insert_before).regex`);
           text = text.replace(re, match => `${op.text}${match}`);
-          matches.push({ ruleId: rule.id, opType: op.type });
+          matches.push({ ruleId: rule.uuid, opType: op.type });
           break;
         }
         case 'insert_after': {
-          const re = compileRegex(op.regex, op.flags, `rule(${rule.id}).op(insert_after).regex`);
+          const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(insert_after).regex`);
           text = text.replace(re, match => `${match}${op.text}`);
-          matches.push({ ruleId: rule.id, opType: op.type });
+          matches.push({ ruleId: rule.uuid, opType: op.type });
           break;
         }
         default: {

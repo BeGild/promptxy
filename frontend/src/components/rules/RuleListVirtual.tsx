@@ -17,6 +17,7 @@ interface RuleListVirtualProps {
   rules: PromptxyRule[];
   isLoading: boolean;
   onEdit: (ruleId: string) => void;
+  onCopy: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onToggle: (rule: PromptxyRule) => void;
   onNewRule: () => void;
@@ -26,6 +27,7 @@ interface RuleListVirtualProps {
 interface RuleRowCustomProps {
   rules: PromptxyRule[];
   onEdit: (ruleId: string) => void;
+  onCopy: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onToggle: (rule: PromptxyRule) => void;
   isScrolling: boolean;
@@ -40,11 +42,12 @@ const VirtualRuleRow = (props: {
   style: CSSProperties;
   rules: PromptxyRule[];
   onEdit: (ruleId: string) => void;
+  onCopy: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onToggle: (rule: PromptxyRule) => void;
   isScrolling?: boolean;
 }): React.ReactElement => {
-  const { index, style, rules, onEdit, onDelete, onToggle, isScrolling } = props;
+  const { index, style, rules, onEdit, onCopy, onDelete, onToggle, isScrolling } = props;
   const rule = rules[index];
 
   if (!rule) {
@@ -62,7 +65,7 @@ const VirtualRuleRow = (props: {
 
   return (
     <div style={style} className="px-2 py-1">
-      <RuleCard rule={rule} onEdit={onEdit} onDelete={onDelete} onToggle={onToggle} />
+      <RuleCard rule={rule} onEdit={onEdit} onCopy={onCopy} onDelete={onDelete} onToggle={onToggle} />
     </div>
   );
 };
@@ -75,6 +78,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
   rules,
   isLoading,
   onEdit,
+  onCopy,
   onDelete,
   onToggle,
   onNewRule,
@@ -89,7 +93,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
   const filteredRules = useMemo(() => {
     return rules.filter(rule => {
       const matchSearch =
-        rule.id.toLowerCase().includes(search.toLowerCase()) ||
+        rule.name.toLowerCase().includes(search.toLowerCase()) ||
         (rule.description || '').toLowerCase().includes(search.toLowerCase());
       const matchClient = filterClient === 'all' || rule.when.client === filterClient;
       return matchSearch && matchClient;
@@ -165,7 +169,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
       {/* 搜索和过滤工具栏 */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
-          placeholder="🔍 搜索规则ID或描述..."
+          placeholder="🔍 搜索规则名称或描述..."
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
           className="flex-1"
@@ -263,7 +267,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
         style: CSSProperties;
       } & RuleRowCustomProps,
     ): ReactElement => {
-      const { index, style, rules, onEdit, onDelete, onToggle, isScrolling, ariaAttributes } =
+      const { index, style, rules, onEdit, onCopy, onDelete, onToggle, isScrolling, ariaAttributes } =
         props;
       return (
         <VirtualRuleRow
@@ -272,6 +276,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
           style={style}
           rules={rules}
           onEdit={onEdit}
+          onCopy={onCopy}
           onDelete={onDelete}
           onToggle={onToggle}
           isScrolling={isScrolling}
@@ -304,6 +309,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
               {
                 rules: filteredRules,
                 onEdit,
+                onCopy,
                 onDelete,
                 onToggle,
                 isScrolling: isScrolling || false,

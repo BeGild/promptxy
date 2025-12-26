@@ -110,10 +110,6 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
     }
   };
 
-  const generateNewId = () => {
-    setFormData(prev => ({ ...prev, id: `rule-${generateUUID()}` }));
-  };
-
   return (
     <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
       {/* 验证错误显示 */}
@@ -153,27 +149,30 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
               必填
             </Chip>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
               <Input
-                label="规则ID"
-                placeholder="rule-xxx"
-                value={formData.id}
-                onChange={e => updateField('id', e.target.value)}
+                label="规则名称"
+                placeholder="输入规则名称..."
+                value={formData.name}
+                onChange={e => updateField('name', e.target.value)}
                 isRequired
                 radius="lg"
+                description="给规则取一个容易识别的名称"
               />
             </div>
             <div>
-              <Button
-                size="sm"
-                variant="flat"
-                onPress={generateNewId}
-                className="w-full mt-6"
-                color="primary"
-              >
-                生成UUID
-              </Button>
+              <Input
+                label="UUID"
+                value={formData.uuid}
+                isDisabled
+                radius="lg"
+                description="唯一标识符，自动生成"
+                classNames={{
+                  input: "text-gray-400 dark:text-gray-600 text-xs font-mono",
+                  description: "text-xs"
+                }}
+              />
             </div>
           </div>
           <Textarea

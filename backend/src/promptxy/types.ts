@@ -53,6 +53,19 @@ export type PromptxyRuleWhen = {
 };
 
 export type PromptxyRule = {
+  uuid: string;           // 规则唯一标识符（自动生成，不可修改）
+  name: string;           // 规则名称（可编辑）
+  description?: string;
+  when: PromptxyRuleWhen;
+  ops: PromptxyOp[];
+  stop?: boolean;
+  enabled?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+};
+
+// 旧格式规则类型（用于兼容性检查）
+export type LegacyPromptxyRule = {
   id: string;
   description?: string;
   when: PromptxyRuleWhen;

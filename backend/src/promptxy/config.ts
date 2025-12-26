@@ -1,7 +1,8 @@
 import { access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { PromptxyConfig, PromptxyRule, Supplier, PathMapping } from './types.js';
+import { PromptxyConfig, PromptxyRule, Supplier, PathMapping, LegacyPromptxyRule } from './types.js';
+import { randomUUID } from 'node:crypto';
 
 type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
@@ -257,24 +258,27 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     if (!rule || typeof rule !== 'object') {
       throw new Error(`rule must be an object`);
     }
-    if (!rule.id || typeof rule.id !== 'string') {
-      throw new Error(`rule.id must be a string`);
+    if (!rule.uuid || typeof rule.uuid !== 'string') {
+      throw new Error(`rule.uuid must be a string`);
+    }
+    if (!rule.name || typeof rule.name !== 'string') {
+      throw new Error(`rule.name must be a string`);
     }
     if (!rule.when || typeof rule.when !== 'object') {
-      throw new Error(`rule.when must be an object (rule: ${rule.id})`);
+      throw new Error(`rule.when must be an object (rule: ${rule.name})`);
     }
     if (!rule.when.client || typeof rule.when.client !== 'string') {
-      throw new Error(`rule.when.client must be a string (rule: ${rule.id})`);
+      throw new Error(`rule.when.client must be a string (rule: ${rule.name})`);
     }
     if (!rule.when.field || typeof rule.when.field !== 'string') {
-      throw new Error(`rule.when.field must be a string (rule: ${rule.id})`);
+      throw new Error(`rule.when.field must be a string (rule: ${rule.name})`);
     }
     if (!Array.isArray(rule.ops) || rule.ops.length === 0) {
-      throw new Error(`rule.ops must be a non-empty array (rule: ${rule.id})`);
+      throw new Error(`rule.ops must be a non-empty array (rule: ${rule.name})`);
     }
     for (const op of rule.ops) {
       if (!op || typeof op !== 'object' || typeof (op as any).type !== 'string') {
-        throw new Error(`rule.ops entries must be objects with type (rule: ${rule.id})`);
+        throw new Error(`rule.ops entries must be objects with type (rule: ${rule.name})`);
       }
     }
   }
@@ -381,11 +385,57 @@ export async function loadConfig(): Promise<PromptxyConfig> {
   if (configPath) {
     const parsed = (await readJsonFile(configPath)) as PartialConfig;
     config = mergeConfig(DEFAULT_CONFIG, parsed);
+
+    // 检测并迁移旧格式的规则
+    const migratedRules = migrateRules(config.rules);
+    const needsMigration = migratedRules !== config.rules;
+
+    if (needsMigration) {
+      config = { ...config, rules: migratedRules };
+      // 自动保存迁移后的配置
+      await saveConfig(config);
+      console.log('[Config] 规则数据已自动迁移到新格式 (uuid + name)');
+    }
   }
 
   config = applyEnvOverrides(config);
 
   return assertConfig(config);
+}
+
+/**
+ * 检测并迁移旧格式的规则数据
+ * 如果规则使用旧格式（id 字段），则自动转换为新格式（uuid + name）
+ */
+function migrateRules(rules: PromptxyRule[]): PromptxyRule[] {
+  if (!rules || rules.length === 0) {
+    return rules;
+  }
+
+  let hasMigration = false;
+  const migratedRules: PromptxyRule[] = [];
+
+  for (const rule of rules) {
+    // 检查是否为新格式（有 uuid 和 name）
+    if ('uuid' in rule && 'name' in rule) {
+      migratedRules.push(rule);
+    } else {
+      // 旧格式，需要迁移
+      const legacyRule = rule as unknown as LegacyPromptxyRule;
+      const { id, ...restOfRule } = legacyRule;
+      const migratedRule: PromptxyRule = {
+        ...restOfRule,
+        uuid: `rule-${randomUUID()}`,
+        name: id,
+      };
+      migratedRules.push(migratedRule);
+      hasMigration = true;
+    }
+  }
+
+  // 如果有迁移，还需要更新 assertConfig 中的验证逻辑
+  // 但由于我们在返回前已经将数据转换为新格式，所以验证逻辑应该可以正常工作
+  return hasMigration ? migratedRules : rules;
 }
 
 export async function saveConfig(config: PromptxyConfig): Promise<void> {

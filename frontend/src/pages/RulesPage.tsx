@@ -13,7 +13,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { RuleList, RuleEditor } from '@/components/rules';
 import { useRules, useSaveRules, useDeleteRule } from '@/hooks';
 import { PromptxyRule } from '@/types';
-import { validateRule } from '@/utils';
+import { validateRule, createDefaultRule } from '@/utils';
+import { generateUUID } from '@/utils/formatter';
 
 export const RulesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -26,31 +27,43 @@ export const RulesPage: React.FC = () => {
 
   // 处理新建规则
   const handleNewRule = () => {
-    const newRule: PromptxyRule = {
-      id: `rule-${Date.now()}`,
-      description: '',
-      when: { client: 'claude', field: 'system' },
-      ops: [{ type: 'append', text: '\n\n' }],
-      enabled: true,
-    };
+    const newRule = createDefaultRule();
     setEditingRule(newRule);
     onOpen();
   };
 
   // 处理编辑规则
-  const handleEdit = (ruleId: string) => {
-    const rule = rules.find(r => r.id === ruleId);
+  const handleEdit = (ruleUuid: string) => {
+    const rule = rules.find(r => r.uuid === ruleUuid);
     if (rule) {
       setEditingRule({ ...rule });
       onOpen();
     }
   };
 
+  // 处理复制规则
+  const handleCopy = (ruleUuid: string) => {
+    const rule = rules.find(r => r.uuid === ruleUuid);
+    if (rule) {
+      const timestamp = Date.now();
+      const copiedRule: PromptxyRule = {
+        ...rule,
+        uuid: `rule-${generateUUID()}`,
+        name: `${rule.name}_${timestamp}`,
+        createdAt: undefined,
+        updatedAt: undefined,
+      };
+      setEditingRule(copiedRule);
+      onOpen();
+    }
+  };
+
   // 处理删除规则
-  const handleDelete = async (ruleId: string) => {
-    if (confirm(`确定要删除规则 ${ruleId} 吗？`)) {
+  const handleDelete = async (ruleUuid: string) => {
+    const rule = rules.find(r => r.uuid === ruleUuid);
+    if (confirm(`确定要删除规则 ${rule?.name} 吗？`)) {
       try {
-        await deleteRuleMutation.mutateAsync(ruleId);
+        await deleteRuleMutation.mutateAsync(ruleUuid);
         refetch();
       } catch (error: any) {
         alert(`删除失败: ${error?.message}`);
@@ -64,19 +77,19 @@ export const RulesPage: React.FC = () => {
     const newEnabled = !rule.enabled;
     queryClient.setQueryData(['rules'], (oldRules: PromptxyRule[] | undefined) => {
       if (!oldRules) return [];
-      return oldRules.map(r => (r.id === rule.id ? { ...r, enabled: newEnabled } : r));
+      return oldRules.map(r => (r.uuid === rule.uuid ? { ...r, enabled: newEnabled } : r));
     });
 
     // 然后调用 API
     const updatedRule = { ...rule, enabled: newEnabled };
-    const updatedRules = rules.map(r => (r.id === rule.id ? updatedRule : r));
+    const updatedRules = rules.map(r => (r.uuid === rule.uuid ? updatedRule : r));
     try {
       await saveRulesMutation.mutateAsync(updatedRules);
     } catch (error: any) {
       // 如果失败，回滚状态
       queryClient.setQueryData(['rules'], (oldRules: PromptxyRule[] | undefined) => {
         if (!oldRules) return [];
-        return oldRules.map(r => (r.id === rule.id ? { ...r, enabled: rule.enabled } : r));
+        return oldRules.map(r => (r.uuid === rule.uuid ? { ...r, enabled: rule.enabled } : r));
       });
       alert(`更新失败: ${error?.message}`);
     }
@@ -90,13 +103,13 @@ export const RulesPage: React.FC = () => {
       return;
     }
 
-    // 检查是否已存在
-    const existingIndex = rules.findIndex(r => r.id === rule.id);
+    // 检查是否已存在（通过 uuid 判断）
+    const existingIndex = rules.findIndex(r => r.uuid === rule.uuid);
     let updatedRules: PromptxyRule[];
 
     if (existingIndex >= 0) {
       // 更新现有规则
-      updatedRules = rules.map(r => (r.id === rule.id ? rule : r));
+      updatedRules = rules.map(r => (r.uuid === rule.uuid ? rule : r));
     } else {
       // 添加新规则
       updatedRules = [...rules, rule];
@@ -169,6 +182,7 @@ export const RulesPage: React.FC = () => {
         rules={rules}
         isLoading={isLoading}
         onEdit={handleEdit}
+        onCopy={handleCopy}
         onDelete={handleDelete}
         onToggle={handleToggle}
         onNewRule={handleNewRule}

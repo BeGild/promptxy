@@ -29,7 +29,7 @@ export async function createRule(rule: PromptxyRule): Promise<RuleOperationRespo
  * 更新规则 - 增量API
  */
 export async function updateRule(rule: PromptxyRule): Promise<RuleOperationResponse> {
-  const response = await apiClient.put(`/_promptxy/rules/${rule.id}`, { rule });
+  const response = await apiClient.put(`/_promptxy/rules/${rule.uuid}`, { rule });
   return response.data;
 }
 

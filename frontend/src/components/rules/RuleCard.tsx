@@ -5,6 +5,7 @@ import { PromptxyRule } from '@/types';
 interface RuleCardProps {
   rule: PromptxyRule;
   onEdit: (ruleId: string) => void;
+  onCopy: (ruleId: string) => void;
   onDelete: (ruleId: string) => void;
   onToggle: (rule: PromptxyRule) => void;
 }
@@ -14,17 +15,21 @@ interface RuleCardProps {
  * 使用 React.memo 避免不必要的重新渲染
  * 使用自定义比较函数进行深度比较
  */
-const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, onToggle }) => {
+const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onCopy, onDelete, onToggle }) => {
   const enabled = rule.enabled !== false;
 
   // 使用 useCallback 优化事件处理函数，避免每次渲染都创建新函数
   const handleEdit = useCallback(() => {
-    onEdit(rule.id);
-  }, [onEdit, rule.id]);
+    onEdit(rule.uuid);
+  }, [onEdit, rule.uuid]);
+
+  const handleCopy = useCallback(() => {
+    onCopy(rule.uuid);
+  }, [onCopy, rule.uuid]);
 
   const handleDelete = useCallback(() => {
-    onDelete(rule.id);
-  }, [onDelete, rule.id]);
+    onDelete(rule.uuid);
+  }, [onDelete, rule.uuid]);
 
   const handleToggle = useCallback(() => {
     onToggle(rule);
@@ -48,7 +53,7 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, on
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
-                {rule.id}
+                {rule.name}
               </h4>
               <Chip
                 color={enabled ? 'success' : 'default'}
@@ -58,6 +63,9 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, on
               >
                 {enabled ? '已启用' : '已禁用'}
               </Chip>
+            </div>
+            <div className="text-xs text-gray-400 dark:text-gray-600 font-mono mt-0.5">
+              {rule.uuid}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -117,6 +125,14 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onDelete, on
 
         {/* 操作按钮 */}
         <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <Button
+            size="sm"
+            variant="light"
+            onPress={handleCopy}
+            className="text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+          >
+            复制
+          </Button>
           <Button
             size="sm"
             variant="light"

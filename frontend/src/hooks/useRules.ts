@@ -222,7 +222,7 @@ export function useRule(ruleId: string | null) {
 
   // 使用 useMemo 优化单个规则查找
   const rule = useMemo(() => {
-    return rules.find(r => r.id === ruleId) || null;
+    return rules.find(r => r.uuid === ruleId) || null;
   }, [rules, ruleId]);
 
   return useMemo(

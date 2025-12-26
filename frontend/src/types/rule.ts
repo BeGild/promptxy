@@ -38,7 +38,8 @@ export type PromptxyRuleWhen = {
 };
 
 export type PromptxyRule = {
-  id: string;
+  uuid: string;           // 规则唯一标识符（自动生成，不可修改）
+  name: string;           // 规则名称（可编辑）
   description?: string;
   when: PromptxyRuleWhen;
   ops: PromptxyOp[];
