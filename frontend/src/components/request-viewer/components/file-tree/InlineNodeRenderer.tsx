@@ -107,7 +107,7 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullS
 
   return (
     <div className={containerClass}>
-      <div className="prose dark:prose-invert max-w-none">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 prose dark:prose-invert max-w-none">
         {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
@@ -160,11 +160,11 @@ const NumericArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScr
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           数值数组 ({values.length} 个元素)
         </p>
-        <code className="font-mono text-sm break-all text-gray-700 dark:text-gray-300">
+        <code className="font-mono text-sm break-all text-gray-900 dark:text-gray-100">
           [{values.join(', ')}]
         </code>
       </div>
@@ -210,8 +210,8 @@ const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string; isFullScree
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
-        <pre className="text-xs text-gray-100 font-mono whitespace-pre">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-x-auto">
+        <pre className="text-xs text-gray-900 dark:text-gray-100 font-mono whitespace-pre">
           {formattedJson}
         </pre>
       </div>
@@ -239,11 +239,11 @@ const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScre
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
-        <div className="text-xs text-gray-400 mb-2 font-mono">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-x-auto">
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">
           {childCount} 个元素
         </div>
-        <pre className="text-xs text-gray-100 font-mono whitespace-pre">
+        <pre className="text-xs text-gray-900 dark:text-gray-100 font-mono whitespace-pre">
           {formattedJson}
         </pre>
       </div>
@@ -267,9 +267,9 @@ const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string; isFull
   return (
     <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <div className="flex items-baseline gap-4">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{node.label}:</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{node.label}:</span>
           <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
             {formatValue(node.value)}
           </span>
