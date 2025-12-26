@@ -5,6 +5,7 @@ import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize from 'rehype-sanitize';
+import { rehypeXmlHighlight } from '@/utils/rehype-xml-highlight';
 import type { ViewNode } from '../../types';
 import { NodeType, DiffStatus } from '../../types';
 import { isNumericArray } from '../../utils/arrayHelper';
@@ -47,6 +48,15 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ 
       <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3" {...props}>{children}</p>
     ),
     code: ({ inline, className, children, ...props }: any) => {
+      // XML 标签高亮
+      if (className?.includes('xml-tag-highlight')) {
+        return (
+          <code className="px-0.5 py-0 text-emerald-600 dark:text-emerald-400 font-mono text-xs" {...props}>
+            {children}
+          </code>
+        );
+      }
+      // 内联代码
       if (inline) {
         return (
           <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400 rounded text-xs font-mono" {...props}>
@@ -96,7 +106,8 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ 
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeSanitize, rehypeHighlight, rehypeKatex]}
+        rehypePlugins={[rehypeXmlHighlight, rehypeHighlight, rehypeKatex]}
+        skipHtml={false}
         components={components}
       >
         {markdownContent}
