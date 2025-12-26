@@ -72,7 +72,16 @@ export interface FieldConfig {
   /** 自定义渲染器 */
   customRenderer?: React.ComponentType<{ node: ViewNode }>;
   /** 额外元数据 */
-  metadata?: Record<string, any>;
+  metadata?: {
+    /** 静态标签（固定文本） */
+    label?: string;
+    /** 动态标签生成器（根据节点值动态生成） */
+    labelGenerator?: (value: any, path: string) => string;
+    /** 图标 */
+    icon?: string;
+    /** 其他元数据 */
+    [key: string]: any;
+  };
 }
 
 /**

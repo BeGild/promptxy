@@ -82,13 +82,109 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
       metadata: { label: 'Tools', icon: '🔧' },
     });
 
+    // ===== 数组元素标签优化配置 =====
+    // 注意：树路径以 "root" 开头，所以配置需要包含 root 前缀
+
+    // 1. Tools 数组元素 - 使用 name 属性
+    this.fieldConfigs.set('root.tools.*', {
+      path: 'root.tools.*',
+      metadata: {
+        labelGenerator: (value: any, path: string) => {
+          if (value?.name && typeof value.name === 'string' && value.name.trim()) {
+            return value.name.trim();
+          }
+          return path.split('.').pop() ?? path;
+        },
+      },
+    });
+
+    // 2. Messages 数组元素 - 使用 role 属性
+    this.fieldConfigs.set('root.messages.*', {
+      path: 'root.messages.*',
+      metadata: {
+        labelGenerator: (value: any, path: string) => {
+          if (value?.role && typeof value.role === 'string' && value.role.trim()) {
+            return value.role.trim();
+          }
+          return path.split('.').pop() ?? path;
+        },
+      },
+    });
+
+    // 3. Messages.Content 数组元素 - 使用 type 属性
+    this.fieldConfigs.set('root.messages.*.content.*', {
+      path: 'root.messages.*.content.*',
+      metadata: {
+        labelGenerator: (value: any, path: string) => {
+          if (value?.type && typeof value.type === 'string' && value.type.trim()) {
+            return value.type.trim();
+          }
+          return path.split('.').pop() ?? path;
+        },
+      },
+    });
+
+    // 4. System 数组元素 - 使用 type 属性
+    this.fieldConfigs.set('root.system.*', {
+      path: 'root.system.*',
+      metadata: {
+        labelGenerator: (value: any, path: string) => {
+          if (value?.type && typeof value.type === 'string' && value.type.trim()) {
+            return value.type.trim();
+          }
+          return path.split('.').pop() ?? path;
+        },
+      },
+    });
+
     // Tool input_schema 配置
-    this.fieldConfigs.set('tools.*.input_schema', {
-      path: 'tools.*.input_schema',
+    this.fieldConfigs.set('root.tools.*.input_schema', {
+      path: 'root.tools.*.input_schema',
       type: NodeType.JSON,
       collapsible: true,
       defaultCollapsed: true,
       metadata: { label: 'Input Schema' },
+    });
+
+    // 同样需要更新其他顶层配置
+    this.fieldConfigs.set('root.system', {
+      path: 'root.system',
+      type: NodeType.ARRAY,
+      collapsible: true,
+      defaultCollapsed: false,
+      metadata: { label: 'System Prompt', icon: '📝' },
+    });
+
+    this.fieldConfigs.set('root.system.*.text', {
+      path: 'root.system.*.text',
+      type: NodeType.MARKDOWN,
+      collapsible: true,
+      defaultCollapsed: false,
+      metadata: { label: 'System Prompt 片段' },
+    });
+
+    this.fieldConfigs.set('root.messages', {
+      path: 'root.messages',
+      type: NodeType.ARRAY,
+      collapsible: true,
+      defaultCollapsed: false,
+      metadata: { label: 'Messages', icon: '💬' },
+    });
+
+    this.fieldConfigs.set('root.messages.*.content.*.text', {
+      path: 'root.messages.*.content.*.text',
+      type: NodeType.STRING_LONG,
+      collapsible: true,
+      defaultCollapsed: true,
+      metadata: { label: '消息文本' },
+    });
+
+    this.fieldConfigs.set('root.tools', {
+      path: 'root.tools',
+      type: NodeType.ARRAY,
+      collapsible: true,
+      defaultCollapsed: true,
+      metadata: { label: 'Tools', icon: '🔧' },
     });
   }
 

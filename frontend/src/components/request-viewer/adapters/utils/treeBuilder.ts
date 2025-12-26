@@ -34,13 +34,38 @@ export function buildTreeFromPath(
 
   const nodeType = inferNodeType(obj, currentPath, fieldConfigs);
   const diffStatus = calculateDiffStatus(obj, original, currentPath);
-  const fieldConfig = fieldConfigs.get(currentPath);
+
+  // 获取字段配置（支持通配符匹配）
+  const fieldConfig = getFieldConfigWithWildcard(currentPath, fieldConfigs);
   const summary = generateSummary(obj, nodeType);
+
+  // 生成标签
+  const generateLabel = (value: any, path: string): string => {
+    // 优先使用 labelGenerator 动态生成
+    if (fieldConfig?.metadata?.labelGenerator) {
+      try {
+        const generatedLabel = fieldConfig.metadata.labelGenerator(value, path);
+        if (generatedLabel) {
+          return generatedLabel;
+        }
+      } catch (error) {
+        console.warn(`[treeBuilder] labelGenerator 执行失败 (${path}):`, error);
+      }
+    }
+
+    // 其次使用静态标签
+    if (fieldConfig?.metadata?.label) {
+      return fieldConfig.metadata.label;
+    }
+
+    // 最后降级到路径最后一部分或完整路径
+    return path.split('.').pop() ?? path;
+  };
 
   const node: ViewNode = {
     id: currentPath,
     type: fieldConfig?.type ?? nodeType,
-    label: fieldConfig?.metadata?.label ?? currentPath.split('.').pop() ?? currentPath,
+    label: generateLabel(obj, currentPath),
     path: currentPath,
     value: obj,
     diffStatus,
@@ -244,4 +269,48 @@ export function generateSummary(value: any, type: NodeType): string {
   }
 
   return String(value);
+}
+
+/**
+ * 获取字段配置（支持通配符匹配）
+ * @param path 当前节点路径
+ * @param fieldConfigs 字段配置映射
+ * @returns 字段配置或 undefined
+ */
+function getFieldConfigWithWildcard(
+  path: string,
+  fieldConfigs: Map<string, FieldConfig>
+): FieldConfig | undefined {
+  // 精确匹配
+  if (fieldConfigs.has(path)) {
+    return fieldConfigs.get(path);
+  }
+
+  // 通配符匹配（如 "tools.*", "messages.*"）
+  for (const [key, config] of fieldConfigs.entries()) {
+    if (matchesWildcard(key, path)) {
+      return config;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * 通配符匹配
+ * @param pattern 配置模式（如 "tools.*"）
+ * @param path 实际路径（如 "tools.0"）
+ * @returns 是否匹配
+ */
+function matchesWildcard(pattern: string, path: string): boolean {
+  const patternParts = pattern.split('.');
+  const pathParts = path.split('.');
+
+  if (patternParts.length !== pathParts.length) {
+    return false;
+  }
+
+  return patternParts.every((part, index) => {
+    return part === '*' || part === pathParts[index];
+  });
 }
