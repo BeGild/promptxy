@@ -11,7 +11,13 @@ import { Input, Chip, Button, Spinner, Pagination, Badge, Select, SelectItem } f
 import { List, ListImperativeAPI } from 'react-window';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
-import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from '@/utils';
+import {
+  formatTimeWithMs,
+  formatBytes,
+  formatDuration,
+  getStatusColor,
+  formatClient,
+} from '@/utils';
 import { PathAutocomplete } from './PathAutocomplete';
 
 interface RequestListVirtualProps {
@@ -25,6 +31,9 @@ interface RequestListVirtualProps {
   onRowClick: (id: string) => void;
   onRefresh: () => void;
   onDelete: (id: string) => void;
+  selectedId?: string | null;
+  viewedIds?: Set<string>;
+  onViewedToggle?: (id: string) => void;
 }
 
 // Custom props for the row component
@@ -33,6 +42,9 @@ interface RowCustomProps {
   onRowClick: (id: string) => void;
   onDelete: (id: string) => void;
   isScrolling: boolean;
+  selectedId?: string | null;
+  viewedIds?: Set<string>;
+  onViewedToggle?: (id: string) => void;
 }
 
 /**
@@ -45,6 +57,9 @@ interface VirtualRowProps {
   onRowClick: (id: string) => void;
   onDelete: (id: string) => void;
   isScrolling?: boolean;
+  selectedId?: string | null;
+  viewedIds?: Set<string>;
+  onViewedToggle?: (id: string) => void;
 }
 
 const VirtualRow: React.FC<VirtualRowProps> = ({
@@ -54,17 +69,23 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
   onRowClick,
   onDelete,
   isScrolling,
+  selectedId = null,
+  viewedIds = new Set(),
+  onViewedToggle,
 }) => {
   const item = requests[index];
 
   if (!item) return null;
+
+  const isSelected = selectedId === item.id;
+  const isViewed = viewedIds.has(item.id);
 
   // 在快速滚动时，可以显示简化的占位符以提升性能
   if (isScrolling) {
     return (
       <div style={style} className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-20 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-24 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           <div className="w-16 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         </div>
@@ -75,108 +96,152 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
   return (
     <div
       style={style}
-      className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+      className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer flex items-center gap-3 ${
+        isSelected ? 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30' : ''
+      }`}
       onClick={() => onRowClick(item.id)}
     >
-      <div className="flex items-center gap-3">
-        {/* 时间 */}
-        <div className="w-24 text-xs text-gray-600 dark:text-gray-400">
-          {formatRelativeTime(item.timestamp)}
-        </div>
-
-        {/* 客户端 */}
-        <div className="w-16">
-          <Badge color="primary" variant="flat" size="sm" className="font-medium text-xs">
-            {formatClient(item.client)}
-          </Badge>
-        </div>
-
-        {/* 路径 */}
-        <div className="flex-1 min-w-0">
-          <span className="font-mono text-xs text-gray-600 dark:text-gray-400 truncate block">
-            {item.path}
-          </span>
-        </div>
-
-        {/* 方法 */}
-        <div className="w-16">
-          <Chip size="sm" color="default" variant="flat" className="uppercase text-xs">
-            {item.method}
-          </Chip>
-        </div>
-
-        {/* 匹配规则 */}
-        <div className="w-24">
-          {item.matchedRules && item.matchedRules.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {item.matchedRules.slice(0, 2).map((ruleId: string) => (
-                <Chip
-                  key={ruleId}
-                  size="sm"
-                  color="success"
-                  variant="flat"
-                  className="text-[10px] font-mono"
-                >
-                  {ruleId}
-                </Chip>
-              ))}
-              {item.matchedRules.length > 2 && (
-                <Chip size="sm" color="default" variant="flat" className="text-[10px]">
-                  +{item.matchedRules.length - 2}
-                </Chip>
-              )}
-            </div>
-          ) : (
-            <span className="text-gray-400 text-xs">-</span>
-          )}
-        </div>
-
-        {/* 状态 */}
-        <div className="w-16">
-          <Chip
-            size="sm"
-            color={getStatusColor(item.responseStatus)}
-            variant="flat"
-            className="font-medium text-xs"
+      {/* 复选框 */}
+      <div className="w-12">
+        {onViewedToggle && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onViewedToggle(item.id);
+            }}
+            aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
+            className="w-8 h-8 inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors"
           >
-            {item.responseStatus || 'N/A'}
-          </Chip>
-        </div>
+            <span
+              className={[
+                'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+                isViewed
+                  ? 'bg-purple-600 border-purple-600 dark:bg-purple-400 dark:border-purple-400'
+                  : 'bg-transparent border-gray-300 dark:border-gray-600',
+              ].join(' ')}
+            />
+          </button>
+        )}
+      </div>
 
-        {/* 耗时 */}
-        <div className="w-16 text-xs text-gray-600 dark:text-gray-400 text-center">
-          {item.durationMs ? formatDuration(item.durationMs) : '-'}
-        </div>
+      {/* 紫色指示条 */}
+      {(isSelected || isViewed) && (
+        <div className="w-1 h-full bg-purple-500 rounded-r flex-shrink-0" />
+      )}
 
-        {/* 操作 */}
-        <div className="w-20">
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="light"
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={(e: any) => {
-                e.stopPropagation();
-                onRowClick(item.id);
-              }}
-              className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-xs px-2 h-7"
-            >
-              查看
-            </Button>
-            <Button
-              size="sm"
-              color="danger"
-              variant="light"
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={(e: any) => {
-                e.stopPropagation();
-                onDelete(item.id);
-              }}
-              className="hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 h-7"
-            >
-              删除
-            </Button>
+      {/* 时间 */}
+      <div className="w-24 text-xs font-mono text-gray-700 dark:text-gray-300">
+        {formatTimeWithMs(item.timestamp)}
+      </div>
+
+      {/* 客户端 */}
+      <div className="w-16">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+          {formatClient(item.client)}
+        </span>
+      </div>
+
+      {/* 路径 */}
+      <div className="flex-1 min-w-0">
+        <span className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate block">
+          {item.path}
+        </span>
+      </div>
+
+      {/* 匹配规则 */}
+      <div className="w-24">
+        {item.matchedRules && item.matchedRules.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {item.matchedRules.slice(0, 2).map((ruleId: string) => (
+              <Chip
+                key={ruleId}
+                size="sm"
+                color="success"
+                variant="flat"
+                className="text-[10px] font-mono"
+              >
+                {ruleId}
+              </Chip>
+            ))}
+            {item.matchedRules.length > 2 && (
+              <Chip size="sm" color="default" variant="flat" className="text-[10px]">
+                +{item.matchedRules.length - 2}
+              </Chip>
+            )}
           </div>
+        ) : (
+          <span className="text-gray-400 text-xs">-</span>
+        )}
+      </div>
+
+      {/* 状态 */}
+      <div className="w-16">
+        <Chip
+          size="sm"
+          color={getStatusColor(item.responseStatus)}
+          variant="flat"
+          className="font-medium text-xs"
+        >
+          {item.responseStatus || 'N/A'}
+        </Chip>
+      </div>
+
+      {/* 大小 */}
+      <div className="w-24 text-xs text-gray-700 dark:text-gray-300">
+        {item.requestSize || item.responseSize ? (
+          <span>
+            {item.requestSize && (
+              <span className="text-blue-600 dark:text-blue-400">
+                ↑{formatBytes(item.requestSize)}
+              </span>
+            )}
+            {item.requestSize && item.responseSize && ' '}
+            {item.responseSize && (
+              <span className="text-green-600 dark:text-green-400">
+                ↓{formatBytes(item.responseSize)}
+              </span>
+            )}
+          </span>
+        ) : (
+          '-'
+        )}
+      </div>
+
+      {/* 耗时 */}
+      <div className="w-16 text-xs text-gray-700 dark:text-gray-300 text-center">
+        {item.durationMs ? formatDuration(item.durationMs) : '-'}
+      </div>
+
+      {/* 操作 */}
+      <div className="w-auto">
+        <div className="flex gap-1 items-center">
+          <Button
+            size="sm"
+            variant="light"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onPress={(e: any) => {
+              e.stopPropagation();
+              onRowClick(item.id);
+            }}
+            className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-xs px-2 h-7"
+          >
+            查看
+          </Button>
+          <Button
+            size="sm"
+            color="danger"
+            variant="light"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onPress={(e: any) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            className="hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 h-7"
+          >
+            删除
+          </Button>
         </div>
       </div>
     </div>
@@ -198,6 +263,9 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
   onRowClick,
   onRefresh,
   onDelete,
+  selectedId = null,
+  viewedIds = new Set(),
+  onViewedToggle,
 }) => {
   // 搜索状态
   const [localSearch, setLocalSearch] = useState(filters.search || '');
@@ -413,14 +481,15 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     const tableHeader = (
       <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
         <div className="flex items-center gap-3">
+          <div className="w-12">已查看</div>
           <div className="w-24">时间</div>
           <div className="w-16">客户端</div>
           <div className="flex-1">路径</div>
-          <div className="w-16">方法</div>
           <div className="w-24">匹配规则</div>
           <div className="w-16">状态</div>
+          <div className="w-24">大小</div>
           <div className="w-16 text-center">耗时</div>
-          <div className="w-20">操作</div>
+          <div className="w-auto">操作</div>
         </div>
       </div>
     );
@@ -433,7 +502,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         style: CSSProperties;
       } & RowCustomProps,
     ): ReactElement => {
-      const { index, style, requests, onRowClick, onDelete, isScrolling } = props;
+      const { index, style, requests, onRowClick, onDelete, isScrolling, selectedId, viewedIds, onViewedToggle } = props;
       return (
         <VirtualRow
           index={index}
@@ -442,6 +511,9 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           onRowClick={onRowClick}
           onDelete={onDelete}
           isScrolling={isScrolling}
+          selectedId={selectedId}
+          viewedIds={viewedIds}
+          onViewedToggle={onViewedToggle}
         />
       );
     };
@@ -463,6 +535,9 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
                 onRowClick,
                 onDelete,
                 isScrolling: isScrolling || false,
+                selectedId,
+                viewedIds,
+                onViewedToggle,
               } as RowCustomProps
             }
             style={{ height: containerHeight, width: containerWidth }}

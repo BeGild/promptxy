@@ -1,14 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDisclosure, Card, CardBody, Chip } from '@heroui/react';
 import { RequestList, RequestDetail } from '@/components/requests';
 import { Modal } from '@/components/common';
 import { useRequests, useRequestDetail, useDeleteRequest } from '@/hooks';
 import { RequestFilters } from '@/types';
 
+const VIEWED_STORAGE_KEY = 'promptxy_viewed_requests';
+
+function readViewedIdsArray(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
+    const parsed = stored ? JSON.parse(stored) : [];
+    if (!Array.isArray(parsed)) return [];
+    const unique = new Set<string>();
+    for (const v of parsed) {
+      if (typeof v === 'string' && v) unique.add(v);
+    }
+    return [...unique];
+  } catch {
+    return [];
+  }
+}
+
 export const RequestsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<RequestFilters>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // 已查看：React state 为唯一真相，localStorage 仅做持久化镜像
+  const [viewedIdsArray, setViewedIdsArray] = useState<string[]>(() => readViewedIdsArray());
+  const viewedIds = useMemo(() => new Set(viewedIdsArray), [viewedIdsArray]);
 
   const { data, isLoading, refetch } = useRequests(filters, page);
   const { request, isLoading: detailLoading } = useRequestDetail(selectedId);
@@ -16,20 +38,34 @@ export const RequestsPage: React.FC = () => {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const handleRowClick = (id: string) => {
-    setSelectedId(id);
-    onOpen();
-  };
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEWED_STORAGE_KEY, JSON.stringify(viewedIdsArray));
+    } catch {
+      // 忽略存储错误
+    }
+  }, [viewedIdsArray]);
 
-  const handleClose = () => {
+  const handleRowClick = useCallback((id: string) => {
+    setSelectedId(id);
+    setViewedIdsArray(prev => (prev.includes(id) ? prev : [...prev, id]));
+    onOpen();
+  }, [onOpen]);
+
+  const handleClose = useCallback(() => {
     onClose();
-    setSelectedId(null);
-  };
+    // 不清除 selectedId，保持选中状态
+  }, [onClose]);
+
+  const handleViewedToggle = useCallback((id: string) => {
+    setViewedIdsArray(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (confirm(`确定要删除请求 ${id} 吗？`)) {
       try {
         await deleteMutation.mutateAsync(id);
+        setViewedIdsArray(prev => prev.filter(x => x !== id));
         refetch();
       } catch (error: any) {
         alert(`删除失败: ${error?.message}`);
@@ -104,6 +140,9 @@ export const RequestsPage: React.FC = () => {
         onRowClick={handleRowClick}
         onRefresh={handleRefresh}
         onDelete={handleDelete}
+        selectedId={selectedId}
+        viewedIds={viewedIds}
+        onViewedToggle={handleViewedToggle}
       />
 
       {/* 请求详情模态框 */}
