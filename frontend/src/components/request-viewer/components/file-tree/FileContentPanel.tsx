@@ -26,14 +26,12 @@ const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(({
       {/* 内容区域 */}
       <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-white dark:bg-gray-900">
         {isFullScreen ? (
-          <div className="p-6 h-full">
-            <div className="h-full max-w-5xl mx-auto">
-              <InlineNodeRenderer node={selectedNode} title={selectedNode.label} isMarkdownPreview={isMarkdownPreview} />
-            </div>
+          <div className="h-full">
+            <InlineNodeRenderer node={selectedNode} title={selectedNode.label} isMarkdownPreview={isMarkdownPreview} isFullScreen={true} />
           </div>
         ) : (
           <div className="h-full">
-            <InlineNodeRenderer node={selectedNode} isMarkdownPreview={isMarkdownPreview} />
+            <InlineNodeRenderer node={selectedNode} isMarkdownPreview={isMarkdownPreview} isFullScreen={false} />
           </div>
         )}
       </div>

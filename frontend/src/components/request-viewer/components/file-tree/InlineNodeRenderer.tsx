@@ -21,14 +21,18 @@ interface InlineNodeRendererProps {
   title?: string;
   /** 是否显示 Markdown 预览（默认 false 显示纯文本） */
   isMarkdownPreview?: boolean;
+  /** 是否全屏模式 */
+  isFullScreen?: boolean;
 }
 
 /**
  * 内联 Markdown 渲染器
  * 去掉外层容器和工具栏，用于内容面板
  */
-const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({ node, title, isFullScreen }) => {
   const markdownContent = String(node.value);
+  // 全屏时固定左右边距，非全屏时较小边距
+  const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
   // 自定义渲染组件
   const components = useMemo(() => ({
@@ -102,16 +106,18 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ 
   }), []);
 
   return (
-    <div className="prose dark:prose-invert max-w-none">
-      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeXmlHighlight, rehypeHighlight, rehypeKatex]}
-        skipHtml={false}
-        components={components}
-      >
-        {markdownContent}
-      </ReactMarkdown>
+    <div className={containerClass}>
+      <div className="prose dark:prose-invert max-w-none">
+        {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeXmlHighlight, rehypeHighlight, rehypeKatex]}
+          skipHtml={false}
+          components={components}
+        >
+          {markdownContent}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 };
@@ -120,8 +126,10 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ 
  * 纯文本渲染器
  * 显示为可编辑的文本框，无需存储
  */
-const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({ node, title, isFullScreen }) => {
   const [content, setContent] = useState(String(node.value));
+  // 全屏时固定左右边距，非全屏时较小边距
+  const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
   // 当节点变化时更新内容
   useEffect(() => {
@@ -129,7 +137,7 @@ const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node,
   }, [node.value]);
 
   return (
-    <div className="px-4 py-2 h-full flex flex-col">
+    <div className={`${containerClass} h-full flex flex-col`}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
       <textarea
         value={content}
@@ -145,11 +153,12 @@ const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node,
  * 数值数组渲染器
  * 显示为逗号分隔的值
  */
-const NumericArrayRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+const NumericArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({ node, title, isFullScreen }) => {
   const values = node.value as number[];
+  const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
   return (
-    <div className="p-4">
+    <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -187,7 +196,7 @@ const formatDisplayValue = (val: any): string => {
  * 对象渲染器（内联模式）
  * 显示 JSON 格式的结构
  */
-const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({ node, title, isFullScreen }) => {
   // 显示格式化的 JSON raw 数据
   const formattedJson = React.useMemo(() => {
     try {
@@ -196,9 +205,10 @@ const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node
       return '// 无法格式化此对象';
     }
   }, [node.value]);
+  const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
   return (
-    <div className="p-4">
+    <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
       <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
         <pre className="text-xs text-gray-100 font-mono whitespace-pre">
@@ -213,7 +223,7 @@ const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node
  * 普通数组渲染器（内联模式）
  * 显示格式化的 JSON raw 数据
  */
-const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({ node, title, isFullScreen }) => {
   // 显示格式化的 JSON raw 数据
   const formattedJson = React.useMemo(() => {
     try {
@@ -224,9 +234,10 @@ const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ nod
   }, [node.value]);
 
   const childCount = node.children?.length ?? 0;
+  const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
   return (
-    <div className="p-4">
+    <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
       <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
         <div className="text-xs text-gray-400 mb-2 font-mono">
@@ -243,7 +254,7 @@ const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ nod
 /**
  * 简单值渲染器
  */
-const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({ node, title, isFullScreen }) => {
   const formatValue = (val: any): string => {
     if (val === null) return 'null';
     if (val === undefined) return 'undefined';
@@ -251,9 +262,10 @@ const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string }> = ({
     if (typeof val === 'string') return val;
     return String(val);
   };
+  const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
   return (
-    <div className="p-4">
+    <div className={containerClass}>
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
         <div className="flex items-baseline gap-4">
@@ -275,31 +287,32 @@ const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string }> = ({
 const InlineNodeRendererInternal: React.FC<InlineNodeRendererProps> = ({
   node,
   title,
-  isMarkdownPreview = false
+  isMarkdownPreview = false,
+  isFullScreen = false
 }) => {
   // 数值数组特殊处理
   if (node.type === NodeType.ARRAY && Array.isArray(node.value) && isNumericArray(node.value)) {
-    return <NumericArrayRenderer node={node} title={title} />;
+    return <NumericArrayRenderer node={node} title={title} isFullScreen={isFullScreen} />;
   }
 
   // MARKDOWN 和 STRING_LONG 根据 isMarkdownPreview 切换渲染方式
   if (node.type === NodeType.MARKDOWN || node.type === NodeType.STRING_LONG) {
     return isMarkdownPreview
-      ? <InlineMarkdownRenderer node={node} title={title} />
-      : <PlainTextRenderer node={node} title={title} />;
+      ? <InlineMarkdownRenderer node={node} title={title} isFullScreen={isFullScreen} />
+      : <PlainTextRenderer node={node} title={title} isFullScreen={isFullScreen} />;
   }
 
   // 根据节点类型选择渲染器
   switch (node.type) {
     case NodeType.JSON:
-      return <InlineJsonRenderer node={node} title={title} />;
+      return <InlineJsonRenderer node={node} title={title} isFullScreen={isFullScreen} />;
 
     case NodeType.ARRAY:
-      return <InlineArrayRenderer node={node} title={title} />;
+      return <InlineArrayRenderer node={node} title={title} isFullScreen={isFullScreen} />;
 
     case NodeType.PRIMITIVE:
     default:
-      return <InlinePrimitiveRenderer node={node} title={title} />;
+      return <InlinePrimitiveRenderer node={node} title={title} isFullScreen={isFullScreen} />;
   }
 };
 
