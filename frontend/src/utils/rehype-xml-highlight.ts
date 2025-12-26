@@ -2,15 +2,24 @@ import { visit } from 'unist-util-visit';
 import type { Plugin } from 'unified';
 import type { Root, Element, Text } from 'hast';
 
+interface TagMatch {
+  type: 'open' | 'close' | 'selfclose';
+  tagName: string;
+  fullMatch: string;
+  start: number;
+  end: number;
+}
+
 /**
  * rehype-xml-highlight
  *
  * 将 XML/HTML 标签转换为带颜色高亮的文本
- * 防止标签被解析为实际的 HTML 元素
+ * 只高亮标签本身，不处理标签内容
+ * 只处理闭合的标签对
  */
 export const rehypeXmlHighlight: Plugin<[], Root> = () => {
   return (tree) => {
-    // 直接访问所有文本节点，避免嵌套 visit 导致的无限循环
+    // 直接访问所有文本节点
     visit(tree, 'text', (textNode: Text, index, parent) => {
       if (!parent || index === undefined) return;
       // 跳过已经是 code 元素子节点的文本（已处理的）
@@ -24,67 +33,125 @@ export const rehypeXmlHighlight: Plugin<[], Root> = () => {
       const value = textNode.value;
       if (!value) return;
 
-      // 匹配 XML/HTML 标签的正则表达式
-      const tagRegex = /(<\/?[\w-]+(?:\s+[\w-]+(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*\/?>)/g;
-
-      // 如果没有标签，直接返回
-      if (!tagRegex.test(value)) return;
-
-      // 重置正则的 lastIndex
-      tagRegex.lastIndex = 0;
-
-      // 分割文本，将标签和普通文本分开
-      const parts: Array<{ type: 'text' | 'tag'; value: string }> = [];
-      let lastIndex = 0;
+      // 匹配所有 XML/HTML 标签
+      const tagRegex = /<\/?([\w-]+)(?:\s+[\w-]+(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*\/?>/g;
+      const matches: TagMatch[] = [];
       let match;
 
+      // 收集所有标签
       while ((match = tagRegex.exec(value)) !== null) {
+        const fullMatch = match[0];
+        const isClosing = fullMatch.startsWith('</');
+        const isSelfClosing = fullMatch.endsWith('/>');
+        const tagName = match[1];
+
+        matches.push({
+          type: isClosing ? 'close' : isSelfClosing ? 'selfclose' : 'open',
+          tagName,
+          fullMatch,
+          start: match.index,
+          end: tagRegex.lastIndex,
+        });
+      }
+
+      if (matches.length === 0) return;
+
+      // 使用栈匹配闭合的标签对
+      const stack: Array<{ match: TagMatch; index: number }> = [];
+      const pairs: Array<{ open: TagMatch; close?: TagMatch; startIndex: number; endIndex: number }> = [];
+
+      for (let i = 0; i < matches.length; i++) {
+        const m = matches[i];
+
+        if (m.type === 'open') {
+          stack.push({ match: m, index: i });
+        } else if (m.type === 'close') {
+          // 查找匹配的开放标签
+          for (let j = stack.length - 1; j >= 0; j--) {
+            if (stack[j].match.tagName === m.tagName) {
+              const openMatch = stack.splice(j, 1)[0];
+              pairs.push({
+                open: openMatch.match,
+                close: m,
+                startIndex: openMatch.index,
+                endIndex: m.end,
+              });
+              break;
+            }
+          }
+        } else if (m.type === 'selfclose') {
+          // 自闭合标签单独处理
+          pairs.push({
+            open: m,
+            startIndex: m.start,
+            endIndex: m.end,
+          });
+        }
+      }
+
+      if (pairs.length === 0) return;
+
+      // 构建新的子节点数组
+      const newChildren: Array<Text | Element> = [];
+      let lastIndex = 0;
+
+      // 处理每个标签对
+      for (const pair of pairs) {
         // 添加标签前的普通文本
-        if (match.index > lastIndex) {
-          parts.push({
+        if (pair.startIndex > lastIndex) {
+          newChildren.push({
             type: 'text',
-            value: value.slice(lastIndex, match.index),
+            value: value.slice(lastIndex, pair.startIndex),
           });
         }
 
-        // 添加标签
-        parts.push({
-          type: 'tag',
-          value: match[1],
+        // 添加开始标签（高亮）
+        newChildren.push({
+          type: 'element',
+          tagName: 'code',
+          properties: {
+            className: ['xml-tag-highlight'],
+          },
+          children: [{ type: 'text', value: pair.open.fullMatch }],
         });
 
-        lastIndex = tagRegex.lastIndex;
-      }
+        // 添加标签内容（普通文本）
+        const contentStart = pair.open.end;
+        const contentEnd = pair.close ? pair.close.start : pair.open.end;
+        if (contentEnd > contentStart) {
+          newChildren.push({
+            type: 'text',
+            value: value.slice(contentStart, contentEnd),
+          });
+        }
 
-      // 添加剩余的普通文本
-      if (lastIndex < value.length) {
-        parts.push({
-          type: 'text',
-          value: value.slice(lastIndex),
-        });
-      }
-
-      // 如果没有找到任何标签或只有标签，保持原样
-      if (parts.length <= 1) {
-        return;
-      }
-
-      // 替换当前节点为新的节点数组
-      const newChildren: Array<Text | Element> = parts.map((part) => {
-        if (part.type === 'text') {
-          return { type: 'text', value: part.value };
-        } else {
-          // 将标签包装在 code 元素中，应用绿色高亮
-          return {
+        // 如果有结束标签，添加它（高亮）
+        if (pair.close) {
+          newChildren.push({
             type: 'element',
             tagName: 'code',
             properties: {
               className: ['xml-tag-highlight'],
             },
-            children: [{ type: 'text', value: part.value }],
-          };
+            children: [{ type: 'text', value: pair.close.fullMatch }],
+          });
         }
-      });
+
+        lastIndex = pair.close ? pair.close.end : pair.open.end;
+      }
+
+      // 添加剩余的普通文本
+      if (lastIndex < value.length) {
+        newChildren.push({
+          type: 'text',
+          value: value.slice(lastIndex),
+        });
+      }
+
+      // 如果没有变化，保持原样
+      if (newChildren.length <= 1) {
+        return;
+      }
 
       // 用新节点替换原来的文本节点
       const parentChildren = parent.children as Array<Text | Element>;
