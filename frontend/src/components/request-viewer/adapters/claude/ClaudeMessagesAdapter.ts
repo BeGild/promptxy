@@ -92,7 +92,7 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
           const index = parts.pop() ?? '?';
           let label = index;
           if (value?.name && typeof value.name === 'string' && value.name.trim()) {
-            label = `${index}[${value.name.trim()}]`;
+            label = `${index} [${value.name.trim()}]`;
           }
           return label;
         },
@@ -108,7 +108,7 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
           const index = parts.pop() ?? '?';
           let label = index;
           if (value?.role && typeof value.role === 'string' && value.role.trim()) {
-            label = `${index}[${value.role.trim()}]`;
+            label = `${index} [${value.role.trim()}]`;
           }
           return label;
         },
@@ -124,7 +124,7 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
           const index = parts.pop() ?? '?';
           let label = index;
           if (value?.type && typeof value.type === 'string' && value.type.trim()) {
-            label = `${index}[${value.type.trim()}]`;
+            label = `${index} [${value.type.trim()}]`;
           }
           return label;
         },
@@ -140,7 +140,7 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
           const index = parts.pop() ?? '?';
           let label = index;
           if (value?.type && typeof value.type === 'string' && value.type.trim()) {
-            label = `${index}[${value.type.trim()}]`;
+            label = `${index} [${value.type.trim()}]`;
           }
           return label;
         },

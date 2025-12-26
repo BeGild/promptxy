@@ -33,6 +33,15 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({ node }) => {
     if (val === undefined) return 'undefined';
     if (typeof val === 'boolean') return val ? 'true' : 'false';
     if (typeof val === 'string') return `"${val}"`;
+    if (typeof val === 'number') return String(val);
+    // 对象和数组类型：格式化为 JSON 字符串（紧凑格式用于内联显示）
+    if (typeof val === 'object') {
+      try {
+        return JSON.stringify(val);
+      } catch {
+        return '[Invalid Object]';
+      }
+    }
     return String(val);
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { Maximize2, Minimize2, Copy, Check } from 'lucide-react';
 import {
   Panel,
   Group,
@@ -11,6 +11,7 @@ import { NodeType } from '../../types';
 import FileTree from '../file-tree/FileTree';
 import FileContentPanel from '../file-tree/FileContentPanel';
 import PathBreadcrumb from '../file-tree/PathBreadcrumb';
+import { getNodeCopyContent, copyToClipboard } from '../../utils/clipboard';
 
 interface FileBrowserViewProps {
   /** 视图树根节点 */
@@ -30,6 +31,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   const [selectedNode, setSelectedNode] = useState<ViewNode>(viewTree);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isMarkdownPreview, setIsMarkdownPreview] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // 自定义 storage：让 useDefaultLayout 仍然写入我们既有的 localStorage key（不引入新的前缀 key）
   const panelLayoutStorage = useMemo(() => {
@@ -87,6 +89,18 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   const handleToggleFullScreen = useCallback(() => {
     setIsFullScreen(prev => !prev);
   }, []);
+
+  /**
+   * 处理复制
+   */
+  const handleCopy = useCallback(async () => {
+    const content = getNodeCopyContent(selectedNode);
+    const success = await copyToClipboard(content);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [selectedNode]);
 
   // 处理 ESC 键退出全屏
   useEffect(() => {
@@ -167,6 +181,24 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
                   </button>
                 </div>
               )}
+              {/* 复制按钮 */}
+              <button
+                onClick={handleCopy}
+                className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-1.5"
+                title={copied ? '已复制' : '复制'}
+              >
+                {copied ? (
+                  <>
+                    <Check size={14} />
+                    <span className="text-xs">已复制</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} />
+                    <span className="text-xs">复制</span>
+                  </>
+                )}
+              </button>
               <button
                 onClick={handleToggleFullScreen}
                 className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-2"

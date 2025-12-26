@@ -164,35 +164,46 @@ const NumericArrayRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ no
 };
 
 /**
+ * 格式化值为可读字符串
+ */
+const formatDisplayValue = (val: any): string => {
+  if (val === null) return 'null';
+  if (val === undefined) return 'undefined';
+  if (typeof val === 'boolean') return val ? 'true' : 'false';
+  if (typeof val === 'string') return `"${val}"`;
+  if (typeof val === 'number') return String(val);
+  // 对象和数组类型：格式化为 JSON 字符串
+  if (typeof val === 'object') {
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return '[Invalid Object]';
+    }
+  }
+  return String(val);
+};
+
+/**
  * 对象渲染器（内联模式）
  * 显示 JSON 格式的结构
  */
 const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
-  // 简化显示：只显示类型和子项数量
-  const childCount = node.children?.length ?? 0;
+  // 显示格式化的 JSON raw 数据
+  const formattedJson = React.useMemo(() => {
+    try {
+      return JSON.stringify(node.value, null, 2);
+    } catch {
+      return '// 无法格式化此对象';
+    }
+  }, [node.value]);
 
   return (
     <div className="p-4">
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
-          <span className="font-semibold">{node.label}</span>
-          <span className="text-gray-500 dark:text-gray-400"> ({childCount} 项)</span>
-        </p>
-        {childCount > 0 && (
-          <div className="mt-2 space-y-1">
-            {node.children?.slice(0, 10).map(child => (
-              <div key={child.id} className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                • {child.label}: {typeof child.value === 'string' ? `"${child.value}"` : String(child.value ?? 'null')}
-              </div>
-            ))}
-            {childCount > 10 && (
-              <p className="text-xs text-gray-500 dark:text-gray-500 italic">
-                ... 还有 {childCount - 10} 项
-              </p>
-            )}
-          </div>
-        )}
+      <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
+        <pre className="text-xs text-gray-100 font-mono whitespace-pre">
+          {formattedJson}
+        </pre>
       </div>
     </div>
   );
@@ -200,27 +211,30 @@ const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node
 
 /**
  * 普通数组渲染器（内联模式）
+ * 显示格式化的 JSON raw 数据
  */
 const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string }> = ({ node, title }) => {
+  // 显示格式化的 JSON raw 数据
+  const formattedJson = React.useMemo(() => {
+    try {
+      return JSON.stringify(node.value, null, 2);
+    } catch {
+      return '// 无法格式化此数组';
+    }
+  }, [node.value]);
+
   const childCount = node.children?.length ?? 0;
 
   return (
     <div className="p-4">
       {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
-          <span className="font-semibold">{node.label}</span>
-          <span className="text-gray-500 dark:text-gray-400"> ({childCount} 个元素)</span>
-        </p>
-        {childCount > 0 && childCount <= 20 && (
-          <div className="mt-2 space-y-1">
-            {node.children?.map((child, index) => (
-              <div key={child.id} className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                [{index}]: {typeof child.value === 'string' ? `"${child.value}"` : String(child.value ?? 'null')}
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
+        <div className="text-xs text-gray-400 mb-2 font-mono">
+          {childCount} 个元素
+        </div>
+        <pre className="text-xs text-gray-100 font-mono whitespace-pre">
+          {formattedJson}
+        </pre>
       </div>
     </div>
   );
