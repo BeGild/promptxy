@@ -42,6 +42,7 @@
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
     "remark-stringify": "^11.0.0",
+    "sonner": "^2.0.7",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
     "zustand": "^4.5.5"

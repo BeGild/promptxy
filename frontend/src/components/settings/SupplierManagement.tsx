@@ -16,6 +16,8 @@ import {
   Select,
   SelectItem,
 } from '@heroui/react';
+import { Network, Plus, Edit2, Trash2, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   useSuppliers,
   useCreateSupplier,
@@ -101,17 +103,17 @@ export const SupplierManagement: React.FC = () => {
   // 创建供应商
   const handleCreateSupplier = async () => {
     if (!newSupplier.name || !newSupplier.baseUrl || !newSupplier.localPrefix) {
-      alert('请填写所有必填字段');
+      toast.error('请填写所有必填字段');
       return;
     }
 
     if (!isValidUrl(newSupplier.baseUrl)) {
-      alert('API 地址格式无效，请使用 http:// 或 https:// 开头的地址');
+      toast.error('API 地址格式无效，请使用 http:// 或 https:// 开头的地址');
       return;
     }
 
     if (!newSupplier.localPrefix.startsWith('/')) {
-      alert('本地路径前缀必须以 / 开头');
+      toast.error('本地路径前缀必须以 / 开头');
       return;
     }
 
@@ -120,9 +122,9 @@ export const SupplierManagement: React.FC = () => {
         supplier: newSupplier,
       });
       handleCloseAddModal();
-      alert('供应商已创建！');
+      toast.success('供应商已创建！');
     } catch (error: any) {
-      alert(`创建失败: ${error?.message || '未知错误'}`);
+      toast.error(`创建失败: ${error?.message || '未知错误'}`);
     }
   };
 
@@ -143,12 +145,12 @@ export const SupplierManagement: React.FC = () => {
     if (!editingSupplier) return;
 
     if (!isValidUrl(editingSupplier.baseUrl)) {
-      alert('API 地址格式无效');
+      toast.error('API 地址格式无效');
       return;
     }
 
     if (!editingSupplier.localPrefix.startsWith('/')) {
-      alert('本地路径前缀必须以 / 开头');
+      toast.error('本地路径前缀必须以 / 开头');
       return;
     }
 
@@ -158,22 +160,22 @@ export const SupplierManagement: React.FC = () => {
         request: { supplier: editingSupplier },
       });
       handleCloseEditModal();
-      alert('供应商已更新！');
+      toast.success('供应商已更新！');
     } catch (error: any) {
-      alert(`更新失败: ${error?.message || '未知错误'}`);
+      toast.error(`更新失败: ${error?.message || '未知错误'}`);
     }
   };
 
   // 删除供应商
   const handleDeleteSupplier = async (supplier: Supplier) => {
-    if (confirm(`确定要删除供应商 "${supplier.name}" 吗？`)) {
-      try {
-        await deleteMutation.mutateAsync(supplier.id);
-        alert('供应商已删除！');
-      } catch (error: any) {
-        alert(`删除失败: ${error?.message || '未知错误'}`);
+    toast.promise(
+      deleteMutation.mutateAsync(supplier.id),
+      {
+        loading: '正在删除供应商...',
+        success: '供应商已删除！',
+        error: (err) => `删除失败: ${err?.message || '未知错误'}`,
       }
-    }
+    );
   };
 
   // 切换供应商状态
@@ -183,8 +185,9 @@ export const SupplierManagement: React.FC = () => {
         supplierId: supplier.id,
         request: { enabled: !supplier.enabled },
       });
+      // toast.success(`已${!supplier.enabled ? '启用' : '禁用'}供应商`);
     } catch (error: any) {
-      alert(`切换失败: ${error?.message || '未知错误'}`);
+      toast.error(`切换失败: ${error?.message || '未知错误'}`);
     }
   };
 
@@ -198,107 +201,140 @@ export const SupplierManagement: React.FC = () => {
 
   return (
     <>
-      <Card className="border border-gray-200 dark:border-gray-700">
-        <CardBody className="space-y-4">
+      <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+        <CardBody className="space-y-6 p-6">
           <div className="flex justify-between items-center">
-            <h4 className="text-lg font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-              供应商管理
-            </h4>
+            <div className="flex items-center gap-2">
+              <Network size={24} className="text-green-600 dark:text-green-400" />
+              <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                供应商管理
+              </h4>
+            </div>
             <Button
               color="primary"
               variant="flat"
               onPress={handleOpenAddModal}
               radius="lg"
-              className="shadow-md hover:shadow-lg transition-shadow"
+              className="shadow-sm"
+              startContent={<Plus size={18} />}
             >
-              + 添加供应商
+              添加供应商
             </Button>
           </div>
 
           {groupedSuppliers.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              暂无供应商配置，请点击上方按钮添加。
+            <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+              <Network size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="text-gray-500 font-medium">暂无供应商配置</p>
+              <p className="text-sm text-gray-400 mt-1">点击上方按钮添加新的供应商</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-6">
               {groupedSuppliers.map(group => (
-                <div key={group.prefix} className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span>{group.color}</span>
-                    <span className="font-mono font-bold">{group.prefix}</span>
-                    <span>({group.suppliers.length} 个供应商)</span>
+                <div key={group.prefix} className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm px-1">
+                    <span className="text-lg">{group.color}</span>
+                    <span className="font-mono font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                      {group.prefix}
+                    </span>
+                    <span className="text-gray-500">({group.suppliers.length} 个供应商)</span>
                   </div>
-                  {group.suppliers.map(supplier => (
-                    <Card
-                      key={supplier.id}
-                      className={`border-l-4 ${
-                        supplier.enabled
-                          ? 'border-l-success bg-white dark:bg-gray-800'
-                          : 'border-l-default bg-gray-50 dark:bg-gray-900/50'
-                      }`}
-                    >
-                      <CardBody className="p-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{supplier.name}</span>
-                              <Badge
-                                color={supplier.enabled ? 'success' : 'default'}
-                                variant="flat"
-                                size="sm"
-                              >
-                                {supplier.enabled ? '已启用' : '已禁用'}
-                              </Badge>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {group.suppliers.map(supplier => (
+                      <Card
+                        key={supplier.id}
+                        className={`border-l-4 transition-all hover:shadow-md ${
+                          supplier.enabled
+                            ? 'border-l-success bg-white dark:bg-gray-800 border-y border-r border-gray-100 dark:border-gray-700'
+                            : 'border-l-default bg-gray-50 dark:bg-gray-900/50 border-y border-r border-gray-200 dark:border-gray-700 opacity-80 hover:opacity-100'
+                        }`}
+                        shadow="none"
+                      >
+                        <CardBody className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900 dark:text-gray-100">{supplier.name}</span>
+                                {supplier.enabled && (
+                                  <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs space-y-1">
+                                <div className="flex items-center gap-1.5 text-gray-500">
+                                  <span className="font-mono bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                                    {supplier.localPrefix}
+                                  </span>
+                                  <span className="text-gray-300">→</span>
+                                  <span className="truncate max-w-[180px] text-gray-600 dark:text-gray-400" title={supplier.baseUrl}>
+                                    {supplier.baseUrl}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400 font-mono">
-                              {group.color} {supplier.localPrefix} → {supplier.baseUrl}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-end mb-1">
+                                <Switch
+                                  size="sm"
+                                  isSelected={supplier.enabled}
+                                  onValueChange={() => handleToggleSupplier(supplier)}
+                                  isDisabled={toggleMutation.isPending}
+                                  classNames={{
+                                    wrapper: "group-data-[selected=true]:bg-green-500",
+                                  }}
+                                />
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  isIconOnly
+                                  size="sm"
+                                  variant="light"
+                                  onPress={() => handleOpenEditModal(supplier)}
+                                  isDisabled={updateMutation.isPending}
+                                  className="text-gray-500 hover:text-blue-600"
+                                >
+                                  <Edit2 size={16} />
+                                </Button>
+                                <Button
+                                  isIconOnly
+                                  size="sm"
+                                  color="danger"
+                                  variant="light"
+                                  onPress={() => handleDeleteSupplier(supplier)}
+                                  isDisabled={deleteMutation.isPending}
+                                  className="text-gray-400 hover:text-red-500"
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              size="sm"
-                              isSelected={supplier.enabled}
-                              onValueChange={() => handleToggleSupplier(supplier)}
-                              isDisabled={toggleMutation.isPending}
-                            />
-                            <Button
-                              size="sm"
-                              color="default"
-                              variant="light"
-                              onPress={() => handleOpenEditModal(supplier)}
-                              isDisabled={updateMutation.isPending}
-                            >
-                              编辑
-                            </Button>
-                            <Button
-                              size="sm"
-                              color="danger"
-                              variant="light"
-                              onPress={() => handleDeleteSupplier(supplier)}
-                              isDisabled={deleteMutation.isPending}
-                            >
-                              删除
-                            </Button>
-                          </div>
-                        </div>
-                      </CardBody>
-                    </Card>
-                  ))}
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
-            💡 提示：相同颜色的供应商共享相同的本地路径前缀，只有一个可以启用。
+          <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start gap-2">
+            <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
+            <span>相同颜色的供应商共享相同的本地路径前缀，同一组内同时只能启用一个供应商。</span>
           </div>
         </CardBody>
       </Card>
 
       {/* 新增供应商模态框 */}
-      <Modal isOpen={isAddModalOpen} onClose={handleCloseAddModal} size="2xl">
+      <Modal isOpen={isAddModalOpen} onClose={handleCloseAddModal} size="2xl" backdrop="blur">
         <ModalContent>
-          <ModalHeader>添加供应商</ModalHeader>
+          <ModalHeader className="flex flex-col gap-1">
+            <span className="text-xl font-bold">添加供应商</span>
+            <span className="text-sm font-normal text-gray-500">配置新的上游 LLM 服务提供商</span>
+          </ModalHeader>
           <ModalBody className="space-y-4">
             <Input
               label="名称"
@@ -307,53 +343,54 @@ export const SupplierManagement: React.FC = () => {
               onChange={e => setNewSupplier({ ...newSupplier, name: e.target.value })}
               isRequired
               radius="lg"
+              variant="bordered"
+              labelPlacement="outside"
             />
 
             <div className="space-y-2">
               <label className="text-sm font-medium">本地路径前缀</label>
-              <Select
-                placeholder="选择常用前缀或自定义"
-                selectedKeys={[selectedPrefixOption]}
-                onSelectionChange={keys => {
-                  const key = Array.from(keys)[0] as string;
-                  if (key !== 'custom') {
-                    handleSelectPrefix(key);
-                  } else {
-                    setSelectedPrefixOption('custom');
-                  }
-                }}
-                radius="lg"
-                classNames={{
-                  trigger: 'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-                }}
-              >
-                <>
-                  {COMMON_PREFIX_OPTIONS.map(option => (
-                    <SelectItem key={option.prefix} textValue={option.label}>
-                      <div className="flex items-center gap-2">
-                        <span>{option.color}</span>
-                        <span>{option.label}</span>
-                        <span className="text-xs text-gray-500">({option.description})</span>
-                      </div>
+              <div className="flex gap-2">
+                <Select
+                  placeholder="选择常用前缀"
+                  selectedKeys={[selectedPrefixOption]}
+                  onSelectionChange={keys => {
+                    const key = Array.from(keys)[0] as string;
+                    if (key !== 'custom') {
+                      handleSelectPrefix(key);
+                    } else {
+                      setSelectedPrefixOption('custom');
+                    }
+                  }}
+                  radius="lg"
+                  variant="bordered"
+                  className="w-1/3"
+                >
+                  <>
+                    {COMMON_PREFIX_OPTIONS.map(option => (
+                      <SelectItem key={option.prefix} textValue={option.label}>
+                        <div className="flex items-center gap-2">
+                          <span>{option.color}</span>
+                          <span>{option.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    <SelectItem key="custom" textValue="自定义">
+                      🆕 自定义...
                     </SelectItem>
-                  ))}
-                  <SelectItem key="custom" textValue="自定义">
-                    🆕 自定义...
-                  </SelectItem>
-                </>
-              </Select>
+                  </>
+                </Select>
 
-              <Input
-                placeholder="/custom"
-                value={newSupplier.localPrefix}
-                onChange={e => setNewSupplier({ ...newSupplier, localPrefix: e.target.value })}
-                isRequired
-                radius="lg"
-                startContent={<span className="text-gray-400">{selectedPrefixOption !== 'custom' ? getPrefixColor(newSupplier.localPrefix) : '🔹'}</span>}
-                classNames={{
-                  inputWrapper: 'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-                }}
-              />
+                <Input
+                  placeholder="/custom"
+                  value={newSupplier.localPrefix}
+                  onChange={e => setNewSupplier({ ...newSupplier, localPrefix: e.target.value })}
+                  isRequired
+                  radius="lg"
+                  variant="bordered"
+                  className="flex-1"
+                  startContent={<span className="text-gray-400">{selectedPrefixOption !== 'custom' ? getPrefixColor(newSupplier.localPrefix) : '🔹'}</span>}
+                />
+              </div>
             </div>
 
             <Input
@@ -363,18 +400,18 @@ export const SupplierManagement: React.FC = () => {
               onChange={e => setNewSupplier({ ...newSupplier, baseUrl: e.target.value })}
               isRequired
               radius="lg"
-              classNames={{
-                inputWrapper: 'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-              }}
+              variant="bordered"
+              labelPlacement="outside"
+              description="目标 API 服务的根地址"
             />
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <Switch
                 isSelected={newSupplier.enabled}
                 onValueChange={enabled => setNewSupplier({ ...newSupplier, enabled })}
                 size="sm"
               >
-                <span className="text-sm">启用此供应商</span>
+                <span className="text-sm font-medium">立即启用此供应商</span>
               </Switch>
             </div>
           </ModalBody>
@@ -386,15 +423,16 @@ export const SupplierManagement: React.FC = () => {
               color="primary"
               onPress={handleCreateSupplier}
               isLoading={createMutation.isPending}
+              className="shadow-md"
             >
-              {createMutation.isPending ? '创建中...' : '创建'}
+              {createMutation.isPending ? '创建中...' : '创建供应商'}
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* 编辑供应商模态框 */}
-      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} size="2xl">
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} size="2xl" backdrop="blur">
         <ModalContent>
           <ModalHeader>编辑供应商</ModalHeader>
           <ModalBody className="space-y-4">
@@ -409,6 +447,8 @@ export const SupplierManagement: React.FC = () => {
                   }
                   isRequired
                   radius="lg"
+                  variant="bordered"
+                  labelPlacement="outside"
                 />
 
                 <Input
@@ -420,10 +460,9 @@ export const SupplierManagement: React.FC = () => {
                   }
                   isRequired
                   radius="lg"
+                  variant="bordered"
+                  labelPlacement="outside"
                   startContent={<span className="text-gray-400">{getPrefixColor(editingSupplier.localPrefix)}</span>}
-                  classNames={{
-                    inputWrapper: 'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-                  }}
                 />
 
                 <Input
@@ -435,12 +474,11 @@ export const SupplierManagement: React.FC = () => {
                   }
                   isRequired
                   radius="lg"
-                  classNames={{
-                    inputWrapper: 'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-                  }}
+                  variant="bordered"
+                  labelPlacement="outside"
                 />
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <Switch
                     isSelected={editingSupplier.enabled}
                     onValueChange={enabled =>
@@ -448,7 +486,7 @@ export const SupplierManagement: React.FC = () => {
                     }
                     size="sm"
                   >
-                    <span className="text-sm">启用此供应商</span>
+                    <span className="text-sm font-medium">启用此供应商</span>
                   </Switch>
                 </div>
               </>
@@ -462,8 +500,9 @@ export const SupplierManagement: React.FC = () => {
               color="primary"
               onPress={handleUpdateSupplier}
               isLoading={updateMutation.isPending}
+              className="shadow-md"
             >
-              {updateMutation.isPending ? '更新中...' : '更新'}
+              {updateMutation.isPending ? '更新中...' : '保存更改'}
             </Button>
           </ModalFooter>
         </ModalContent>

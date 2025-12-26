@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip } from '@heroui/react';
+import { BarChart3, Database, Settings, Download, Upload, Trash2, Filter, Plus, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   useConfig,
   useExportConfig,
@@ -142,91 +144,96 @@ export const SettingsPanel: React.FC = () => {
   const isLoading = configLoading || statsLoading || settingsLoading;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
           <Spinner color="primary">加载配置中...</Spinner>
         </div>
       ) : (
-        <>
-          {/* 统计信息 */}
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardBody className="space-y-3">
-              <h4 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                📊 统计信息
-              </h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">总请求数:</span>
-                  <Badge color="primary" variant="flat" size="sm" className="font-bold">
-                    {stats?.total || 0}
-                  </Badge>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 统计信息 - 占据全宽或 2/3 */}
+          <Card className="lg:col-span-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="text-blue-600 dark:text-blue-400" size={24} />
+                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  统计信息
+                </h4>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
+                  <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">总请求数</div>
+                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total || 0}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">今日请求:</span>
-                  <Badge color="success" variant="flat" size="sm" className="font-bold">
-                    {stats?.recent || 0}
-                  </Badge>
+                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50">
+                  <div className="text-sm text-green-600 dark:text-green-400 mb-1">今日请求</div>
+                  <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.recent || 0}</div>
                 </div>
-                <div className="col-span-2">
-                  <span className="text-gray-500">按客户端:</span>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50">
+                  <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">数据库大小</div>
+                  <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                    {stats?.database?.size ? formatBytes(stats.database.size) : '0 B'}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50">
+                  <div className="text-sm text-purple-600 dark:text-purple-400 mb-1">记录数</div>
+                  <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                    {stats?.database?.recordCount || 0}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div>
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">按客户端分布</span>
+                  <div className="flex flex-wrap gap-2">
                     {stats?.byClient &&
                       Object.entries(stats.byClient).map(([client, count]) => (
-                        <Badge
+                        <Chip
                           key={client}
                           color="secondary"
                           variant="flat"
-                          size="sm"
+                          size="md"
                           className="font-medium"
                         >
                           {formatClient(client)}: {count}
-                        </Badge>
+                        </Chip>
                       ))}
                   </div>
                 </div>
-                <div className="col-span-2">
-                  <span className="text-gray-500">数据库路径:</span>
-                  <div className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all mt-1 bg-gray-50 dark:bg-gray-900/30 p-2 rounded">
+                <div>
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">数据库路径</span>
+                  <div className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                    <Database size={14} className="shrink-0" />
                     {stats?.database?.path}
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">数据库大小:</span>
-                  <Badge color="warning" variant="flat" size="sm" className="font-bold">
-                    {stats?.database?.size ? formatBytes(stats.database.size) : '0 B'}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">记录数:</span>
-                  <Badge color="default" variant="flat" size="sm" className="font-bold">
-                    {stats?.database?.recordCount || 0}
-                  </Badge>
                 </div>
               </div>
             </CardBody>
           </Card>
 
-          <Divider />
-
-          {/* 供应商管理 */}
-          <SupplierManagement />
-
-          <Divider />
+          {/* 供应商管理 - 占据全宽 */}
+          <div className="lg:col-span-3">
+            <SupplierManagement />
+          </div>
 
           {/* 配置管理 */}
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardBody className="space-y-3">
-              <h4 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                ⚙️ 配置管理
-              </h4>
-              <div className="flex flex-wrap gap-2">
+          <Card className="lg:col-span-1 border border-gray-200 dark:border-gray-700 shadow-sm h-full">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center gap-2">
+                <Settings size={24} className="text-purple-600 dark:text-purple-400" />
+                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  配置管理
+                </h4>
+              </div>
+              <div className="flex flex-col gap-3">
                 <Button
                   color="primary"
                   variant="flat"
                   onPress={handleExport}
                   radius="lg"
-                  className="shadow-md hover:shadow-lg transition-shadow"
+                  className="w-full justify-start"
+                  startContent={<Download size={18} />}
                 >
                   {exportMutation.isPending ? '导出中...' : '导出配置'}
                 </Button>
@@ -235,98 +242,135 @@ export const SettingsPanel: React.FC = () => {
                   variant="flat"
                   onPress={handleImport}
                   radius="lg"
-                  className="shadow-md hover:shadow-lg transition-shadow"
+                  className="w-full justify-start"
+                  startContent={<Upload size={18} />}
                 >
                   {importMutation.isPending ? '导入中...' : '导入配置'}
                 </Button>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
-                💡 导出包含所有规则配置，导入会覆盖当前规则。
+              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg leading-relaxed">
+                导出包含所有规则配置，导入会覆盖当前规则。请谨慎操作。
               </div>
             </CardBody>
           </Card>
 
-          <Divider />
-
           {/* 数据清理 */}
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardBody className="space-y-3">
-              <h4 className="text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-                🗑️ 数据清理
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="md:col-span-2">
-                  <Input
-                    label="保留最近条数"
-                    placeholder="100"
-                    value={keepCount}
-                    onChange={e => setKeepCount(e.target.value)}
-                    onBlur={handleKeepCountBlur}
-                    radius="lg"
-                    classNames={{
-                      inputWrapper:
-                        'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-                    }}
-                  />
-                </div>
+          <Card className="lg:col-span-1 border border-gray-200 dark:border-gray-700 shadow-sm h-full">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center gap-2">
+                <Trash2 size={24} className="text-red-600 dark:text-red-400" />
+                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  数据清理
+                </h4>
+              </div>
+              <div className="space-y-4">
+                <Input
+                  label="保留最近条数"
+                  placeholder="100"
+                  value={keepCount}
+                  onChange={e => setKeepCount(e.target.value)}
+                  onBlur={handleKeepCountBlur}
+                  radius="lg"
+                  labelPlacement="outside"
+                  classNames={{
+                    inputWrapper:
+                      'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                  }}
+                />
                 <Button
                   color="danger"
                   variant="flat"
                   onPress={handleCleanup}
                   radius="lg"
-                  className="shadow-md hover:shadow-lg transition-shadow"
+                  className="w-full"
+                  startContent={<Trash2 size={18} />}
                 >
-                  {cleanupMutation.isPending ? '清理中...' : '清理'}
+                  {cleanupMutation.isPending ? '清理中...' : '清理旧数据'}
                 </Button>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
-                ⏰ 自动清理: 每小时清理一次，保留最近 {keepCount} 条（可在上方修改）
+              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg leading-relaxed">
+                自动清理: 每小时清理一次，保留最近 {keepCount} 条记录。
               </div>
             </CardBody>
           </Card>
 
-          <Divider />
-
-          {/* 路径过滤 */}
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardBody className="space-y-3">
-              <h4 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
-                🔍 路径过滤
-              </h4>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    label="添加过滤路径"
-                    placeholder="例如: /api/ping 或 /health/"
-                    value={newPath}
-                    onChange={e => setNewPath(e.target.value)}
-                    onKeyPress={e => {
-                      if (e.key === 'Enter') {
-                        handleAddFilteredPath();
-                      }
-                    }}
-                    radius="lg"
-                    classNames={{
-                      inputWrapper:
-                        'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-                    }}
-                    description="支持精确匹配（如 /api/ping）和前缀匹配（如 /health/）"
-                  />
-                  <Button
-                    color="warning"
-                    variant="flat"
-                    onPress={handleAddFilteredPath}
-                    radius="lg"
-                    className="shadow-md hover:shadow-lg transition-shadow self-end"
-                    isDisabled={!newPath.trim()}
-                  >
-                    添加
-                  </Button>
+          {/* 关于 */}
+          <Card className="lg:col-span-1 border border-gray-200 dark:border-gray-700 shadow-sm h-full">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center gap-2">
+                <Info size={24} className="text-gray-600 dark:text-gray-400" />
+                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  关于系统
+                </h4>
+              </div>
+              <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">版本</span>
+                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-xs">v2.0</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Gateway 端口</span>
+                  <span className="font-mono bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded text-xs">7070</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">API 端口</span>
+                  <span className="font-mono bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded text-xs">7071</span>
+                </div>
+                <Divider className="my-2" />
+                <p className="text-xs leading-relaxed opacity-80">
+                  PromptXY 是一个强大的本地 HTTP 代理规则管理器，用于捕获、监控和修改 LLM 请求。
+                </p>
+              </div>
+            </CardBody>
+          </Card>
 
-                {filteredPaths.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">已过滤的路径:</div>
+          {/* 路径过滤 - 占据全宽 */}
+          <Card className="lg:col-span-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center gap-2">
+                <Filter size={24} className="text-amber-600 dark:text-amber-400" />
+                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  路径过滤
+                </h4>
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="flex-1 w-full">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="例如: /api/ping 或 /health/"
+                      value={newPath}
+                      onChange={e => setNewPath(e.target.value)}
+                      onKeyPress={e => {
+                        if (e.key === 'Enter') {
+                          handleAddFilteredPath();
+                        }
+                      }}
+                      radius="lg"
+                      classNames={{
+                        inputWrapper:
+                          'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      color="warning"
+                      variant="flat"
+                      onPress={handleAddFilteredPath}
+                      radius="lg"
+                      className="shadow-sm"
+                      isDisabled={!newPath.trim()}
+                      startContent={<Plus size={18} />}
+                    >
+                      添加
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 ml-1">
+                    支持精确匹配（如 /api/ping）和前缀匹配（如 /health/）。匹配的路径将不会记录到历史。
+                  </p>
+                </div>
+                
+                <div className="flex-1 w-full bg-gray-50 dark:bg-gray-900/30 rounded-xl p-4 min-h-[100px]">
+                  {filteredPaths.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {filteredPaths.map(path => (
                         <Chip
@@ -335,7 +379,7 @@ export const SettingsPanel: React.FC = () => {
                           variant="flat"
                           onClose={() => handleRemoveFilteredPath(path)}
                           classNames={{
-                            base: 'shadow-sm',
+                            base: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
                             content: 'font-mono text-sm',
                           }}
                         >
@@ -343,47 +387,16 @@ export const SettingsPanel: React.FC = () => {
                         </Chip>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
-                  💡 匹配的路径将不会记录到请求历史中，常用于过滤健康检查等高频请求。
+                  ) : (
+                    <div className="text-sm text-gray-400 italic text-center py-2">
+                      暂无过滤路径
+                    </div>
+                  )}
                 </div>
               </div>
             </CardBody>
           </Card>
-
-          <Divider />
-
-          {/* 关于 */}
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardBody className="space-y-2">
-              <h4 className="text-lg font-bold bg-gradient-to-r from-gray-600 to-gray-800 dark:from-gray-400 dark:to-gray-200 bg-clip-text text-transparent">
-                ℹ️ 关于
-              </h4>
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900 dark:text-gray-100">PromptXY v2.0</span>
-                  <span>- 本地HTTP代理规则管理器</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">功能:</span>
-                  <span>规则管理、请求捕获、实时监控、差异对比</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">端口:</span>
-                  <Badge color="primary" variant="flat" size="sm">
-                    Gateway(7070)
-                  </Badge>
-                  <span>|</span>
-                  <Badge color="primary" variant="flat" size="sm">
-                    API(7071)
-                  </Badge>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </>
+        </div>
       )}
     </div>
   );

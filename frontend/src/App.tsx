@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { HeroUIProvider } from '@heroui/react';
+import { Toaster } from 'sonner';
 import { Header } from '@/components/layout';
 import { RulesPage } from '@/pages/RulesPage';
 import { RequestsPage } from '@/pages/RequestsPage';
@@ -11,6 +12,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 function AppContent() {
   const activeTab = useUIStore(state => state.activeTab);
+  const theme = useUIStore(state => state.theme);
   const checkConnection = useAppStore(state => state.checkConnection);
   const apiConnected = useAppStore(state => state.apiConnected);
 
@@ -25,6 +27,21 @@ function AppContent() {
       });
     }
   }, [checkConnection, initialCheckDone]);
+
+  // 主题应用逻辑
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.add(theme);
+    }
+  }, [theme]);
 
   // 渲染对应页面
   const renderPage = () => {
@@ -43,9 +60,9 @@ function AppContent() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <Header sseConnected={sseConnected} apiConnected={apiConnected} />
-      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
+      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
         {/* 页面级错误边界 - 捕获页面渲染错误 */}
         <ErrorBoundary
           onError={(error, errorInfo) => {
@@ -55,6 +72,7 @@ function AppContent() {
           {renderPage()}
         </ErrorBoundary>
       </div>
+      <Toaster position="bottom-right" richColors closeButton theme={theme === 'system' ? undefined : theme} />
     </div>
   );
 }

@@ -14,21 +14,21 @@ interface TagMatch {
  * rehype-xml-highlight
  *
  * 将 XML/HTML 标签转换为带颜色高亮的文本
- * 只高亮标签本身，不处理标签内容
- * 只处理闭合的标签对
+ * 只高亮标签本身（`<tag ...>` / `</tag>` / `<tag .../>`），不处理标签内容
+ *
+ * 高亮规则：
+ * - 仅高亮“可闭合成对”的 open/close 标签
+ * - 显式自闭合（以 `/>` 结尾）的标签永远高亮
+ * - 未闭合的标签、以及 void 标签写法（如 `<br>` / `<img>` 不带 `/>`）原样保留但不高亮
  */
 export const rehypeXmlHighlight: Plugin<[], Root> = () => {
-  return (tree) => {
+  return tree => {
     // 直接访问所有文本节点
     visit(tree, 'text', (textNode: Text, index, parent) => {
       if (!parent || index === undefined) return;
       // 跳过已经是 code 元素子节点的文本（已处理的）
-      if (
-        parent.type === 'element' &&
-        (parent.tagName === 'code' || parent.tagName === 'pre')
-      ) {
+      if (parent.type === 'element' && (parent.tagName === 'code' || parent.tagName === 'pre'))
         return;
-      }
 
       const value = textNode.value;
       if (!value) return;
@@ -56,104 +56,64 @@ export const rehypeXmlHighlight: Plugin<[], Root> = () => {
 
       if (matches.length === 0) return;
 
-      // 使用栈匹配闭合的标签对
-      const stack: Array<{ match: TagMatch; index: number }> = [];
-      const pairs: Array<{ open: TagMatch; close?: TagMatch; startIndex: number; endIndex: number }> = [];
+      // 使用栈匹配可闭合的 open/close 标签；仅对“配对成功”的标签做高亮
+      const shouldHighlight: boolean[] = new Array(matches.length).fill(false);
+      const openStack: Array<{ tagName: string; matchIndex: number }> = [];
 
       for (let i = 0; i < matches.length; i++) {
         const m = matches[i];
 
+        if (m.type === 'selfclose') {
+          shouldHighlight[i] = true;
+          continue;
+        }
+
         if (m.type === 'open') {
-          stack.push({ match: m, index: i });
-        } else if (m.type === 'close') {
-          // 查找匹配的开放标签
-          for (let j = stack.length - 1; j >= 0; j--) {
-            if (stack[j].match.tagName === m.tagName) {
-              const openMatch = stack.splice(j, 1)[0];
-              pairs.push({
-                open: openMatch.match,
-                close: m,
-                startIndex: openMatch.index,
-                endIndex: m.end,
-              });
-              break;
-            }
+          openStack.push({ tagName: m.tagName, matchIndex: i });
+          continue;
+        }
+
+        if (m.type === 'close') {
+          for (let j = openStack.length - 1; j >= 0; j--) {
+            if (openStack[j].tagName !== m.tagName) continue;
+            const open = openStack.splice(j, 1)[0];
+            shouldHighlight[open.matchIndex] = true;
+            shouldHighlight[i] = true;
+            break;
           }
-        } else if (m.type === 'selfclose') {
-          // 自闭合标签单独处理
-          pairs.push({
-            open: m,
-            startIndex: m.start,
-            endIndex: m.end,
-          });
         }
       }
 
-      if (pairs.length === 0) return;
+      if (!shouldHighlight.some(Boolean)) return;
 
-      // 构建新的子节点数组
+      // 仅在“需要高亮的标签”处拆分，避免无谓地产生大量节点
+      const highlightMatches: TagMatch[] = [];
+      for (let i = 0; i < matches.length; i++) {
+        if (shouldHighlight[i]) highlightMatches.push(matches[i]);
+      }
+
       const newChildren: Array<Text | Element> = [];
       let lastIndex = 0;
 
-      // 处理每个标签对
-      for (const pair of pairs) {
-        // 添加标签前的普通文本
-        if (pair.startIndex > lastIndex) {
-          newChildren.push({
-            type: 'text',
-            value: value.slice(lastIndex, pair.startIndex),
-          });
+      for (const m of highlightMatches) {
+        if (m.start > lastIndex) {
+          newChildren.push({ type: 'text', value: value.slice(lastIndex, m.start) });
         }
 
-        // 添加开始标签（高亮）
         newChildren.push({
           type: 'element',
           tagName: 'code',
-          properties: {
-            className: ['xml-tag-highlight'],
-          },
-          children: [{ type: 'text', value: pair.open.fullMatch }],
+          properties: { className: ['xml-tag-highlight'] },
+          children: [{ type: 'text', value: m.fullMatch }],
         });
 
-        // 添加标签内容（普通文本）
-        const contentStart = pair.open.end;
-        const contentEnd = pair.close ? pair.close.start : pair.open.end;
-        if (contentEnd > contentStart) {
-          newChildren.push({
-            type: 'text',
-            value: value.slice(contentStart, contentEnd),
-          });
-        }
-
-        // 如果有结束标签，添加它（高亮）
-        if (pair.close) {
-          newChildren.push({
-            type: 'element',
-            tagName: 'code',
-            properties: {
-              className: ['xml-tag-highlight'],
-            },
-            children: [{ type: 'text', value: pair.close.fullMatch }],
-          });
-        }
-
-        lastIndex = pair.close ? pair.close.end : pair.open.end;
+        lastIndex = m.end;
       }
 
-      // 添加剩余的普通文本
       if (lastIndex < value.length) {
-        newChildren.push({
-          type: 'text',
-          value: value.slice(lastIndex),
-        });
+        newChildren.push({ type: 'text', value: value.slice(lastIndex) });
       }
 
-      // 如果没有变化，保持原样
-      if (newChildren.length <= 1) {
-        return;
-      }
-
-      // 用新节点替换原来的文本节点
       const parentChildren = parent.children as Array<Text | Element>;
       parentChildren.splice(index, 1, ...newChildren);
     });

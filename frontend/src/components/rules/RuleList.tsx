@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Input, Button, Spinner, Pagination, Chip, Select, SelectItem } from '@heroui/react';
+import { Input, Button, Pagination, Chip, Select, SelectItem } from '@heroui/react';
+import { Search, Filter, Plus, X } from 'lucide-react';
 import { RuleCard } from './RuleCard';
 import { EmptyState } from '@/components/common';
 import { PromptxyRule } from '@/types';
@@ -128,8 +129,13 @@ const RuleListComponent: React.FC<RuleListProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Spinner color="primary">加载规则中...</Spinner>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div
+            key={i}
+            className="h-48 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse border border-gray-200 dark:border-gray-700"
+          />
+        ))}
       </div>
     );
   }
@@ -146,18 +152,19 @@ const RuleListComponent: React.FC<RuleListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* 搜索和过滤工具栏 */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <Input
-          placeholder="🔍 搜索规则名称或描述..."
+          placeholder="搜索规则名称或描述..."
           value={search}
           onChange={e => handleSearchChange(e.target.value)}
           className="flex-1"
           radius="lg"
+          startContent={<Search size={18} className="text-gray-400" />}
           classNames={{
             inputWrapper:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors',
           }}
         />
 
@@ -166,9 +173,10 @@ const RuleListComponent: React.FC<RuleListProps> = ({
           onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
+          startContent={<Filter size={18} className="text-gray-400" />}
           classNames={{
             trigger:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -180,28 +188,35 @@ const RuleListComponent: React.FC<RuleListProps> = ({
         <Button
           color="primary"
           onPress={onNewRule}
-          className="shadow-md hover:shadow-lg transition-shadow"
+          className="shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
           radius="lg"
+          startContent={<Plus size={20} />}
         >
-          + 新建规则
+          新建规则
         </Button>
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-gray-500 px-1">
         <span>搜索结果:</span>
-        <Chip color="primary" variant="flat" size="sm">
+        <Chip color="primary" variant="flat" size="sm" className="h-5 text-xs">
           {filteredRules.length} 条
         </Chip>
         {search && (
-          <Button size="sm" variant="light" onPress={handleClearSearch} className="h-6 px-2">
+          <Button
+            size="sm"
+            variant="light"
+            onPress={handleClearSearch}
+            className="h-6 px-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+            startContent={<X size={14} />}
+          >
             清除搜索
           </Button>
         )}
       </div>
 
-      {/* 规则卡片列表 */}
-      <div className="space-y-3">
+      {/* 规则卡片列表 - 响应式 Grid 布局 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
         {paginatedRules.map(rule => (
           <RuleCard
             key={rule.uuid}
@@ -216,17 +231,17 @@ const RuleListComponent: React.FC<RuleListProps> = ({
 
       {/* 分页 */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center mt-8">
           <Pagination
             total={totalPages}
             page={page}
             onChange={handlePageChange}
             color="primary"
-            showShadow={true}
+            showShadow
             classNames={{
-              wrapper: 'gap-1',
-              item: 'min-w-9 h-9',
-              cursor: 'shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold',
+              wrapper: 'gap-2',
+              item: 'w-9 h-9 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700',
+              cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
             }}
           />
         </div>

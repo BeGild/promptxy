@@ -19,6 +19,7 @@ export default defineConfig({
     hookTimeout: 10000,
     teardownTimeout: 10000,
     // 并行测试限制
+    minWorkers: 1,
     maxWorkers: 4,
   },
   resolve: {

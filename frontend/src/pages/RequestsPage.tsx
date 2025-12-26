@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDisclosure, Card, CardBody, Chip } from '@heroui/react';
+import { toast } from 'sonner';
 import { RequestList, RequestDetail } from '@/components/requests';
 import { Modal } from '@/components/common';
 import { useRequests, useRequestDetail, useDeleteRequest } from '@/hooks';
@@ -62,23 +63,25 @@ export const RequestsPage: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm(`确定要删除请求 ${id} 吗？`)) {
-      try {
-        await deleteMutation.mutateAsync(id);
+    // 使用 toast.promise 处理异步操作
+    toast.promise(deleteMutation.mutateAsync(id), {
+      loading: '正在删除请求...',
+      success: () => {
         setViewedIdsArray(prev => prev.filter(x => x !== id));
         refetch();
-      } catch (error: any) {
-        alert(`删除失败: ${error?.message}`);
-      }
-    }
+        return `请求 ${id} 已删除`;
+      },
+      error: (err: any) => `删除失败: ${err?.message}`,
+    });
   };
 
   const handleRefresh = () => {
     refetch();
+    toast.success('已刷新请求列表');
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>

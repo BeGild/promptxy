@@ -15,6 +15,7 @@ import {
   Select,
   SelectItem,
 } from '@heroui/react';
+import { Filter, RefreshCw, X, Eye, Trash2 } from 'lucide-react';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
 import {
@@ -200,8 +201,20 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 
   if (isLoading && requests.length === 0) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Spinner color="primary">加载请求中...</Spinner>
+      <div className="space-y-4">
+        <div className="flex gap-4">
+          <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+          <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+          <div className="h-10 w-24 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div
+              key={i}
+              className="h-16 w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -233,9 +246,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
           onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
+          startContent={<Filter size={18} className="text-gray-400" />}
           classNames={{
             trigger:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -247,21 +261,28 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         <Button
           color="primary"
           onPress={handleRefresh}
-          className="shadow-md hover:shadow-lg transition-shadow"
+          className="shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
           radius="lg"
+          startContent={<RefreshCw size={18} />}
         >
           刷新
         </Button>
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-gray-500 px-1">
         <span>显示结果:</span>
-        <Chip color="secondary" variant="flat" size="sm">
+        <Chip color="secondary" variant="flat" size="sm" className="h-5 text-xs">
           {statsDisplay.showing} / {statsDisplay.total} 条
         </Chip>
         {localSearch && (
-          <Button size="sm" variant="light" onPress={clearSearch} className="h-6 px-2">
+          <Button
+            size="sm"
+            variant="light"
+            onPress={clearSearch}
+            className="h-6 px-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+            startContent={<X size={14} />}
+          >
             清除搜索
           </Button>
         )}
@@ -418,23 +439,25 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                   {item.durationMs ? formatDuration(item.durationMs) : '-'}
                 </TableCell>
 	                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
-	                  <div className="flex gap-1">
+	                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 	                    <Button
 	                      size="sm"
 	                      variant="light"
 	                      onPress={() => handleRowClick(item.id)}
 	                      className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          isIconOnly
 	                    >
-	                      查看
+	                      <Eye size={18} />
 	                    </Button>
 	                    <Button
 	                      size="sm"
 	                      color="danger"
 	                      variant="light"
                       onPress={() => handleDelete(item.id)}
-                      className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      isIconOnly
                     >
-                      删除
+                      <Trash2 size={18} />
                     </Button>
                   </div>
                 </TableCell>
@@ -452,11 +475,11 @@ const RequestListComponent: React.FC<RequestListProps> = ({
             page={page}
             onChange={onPageChange}
             color="primary"
-            showShadow={true}
+            showShadow
             classNames={{
-              wrapper: 'gap-1',
-              item: 'min-w-9 h-9',
-              cursor: 'shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold',
+              wrapper: 'gap-2',
+              item: 'w-9 h-9 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700',
+              cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
             }}
           />
         </div>

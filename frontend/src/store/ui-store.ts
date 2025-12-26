@@ -16,6 +16,7 @@ interface UIState {
   // UI 状态
   sidebarCollapsed: boolean;
   activeTab: 'rules' | 'requests' | 'preview' | 'settings';
+  theme: 'light' | 'dark' | 'system';
 
   // 操作
   openRuleEditor: (ruleId?: string | null) => void;
@@ -27,6 +28,7 @@ interface UIState {
   openSettings: () => void;
   closeSettings: () => void;
   setActiveTab: (tab: 'rules' | 'requests' | 'preview' | 'settings') => void;
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
   toggleSidebar: () => void;
   reset: () => void;
 }
@@ -40,6 +42,7 @@ const initialState = {
   selectedRequestId: null,
   sidebarCollapsed: true,
   activeTab: 'rules' as const,
+  theme: 'system' as const,
 };
 
 /**
@@ -85,6 +88,7 @@ export const useUIStore = create<UIState>()(
 
         return {
           ...initialState,
+          theme: 'system', // 默认跟随系统
 
           openRuleEditor: (ruleId?: string | null) =>
             dedupedSet({
@@ -117,6 +121,8 @@ export const useUIStore = create<UIState>()(
           closeSettings: () => dedupedSet({ isSettingsOpen: false }),
 
           setActiveTab: tab => dedupedSet({ activeTab: tab }),
+          
+          setTheme: (theme) => dedupedSet({ theme }),
 
           toggleSidebar: () =>
             dedupedSet((state: UIState) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -128,6 +134,7 @@ export const useUIStore = create<UIState>()(
         name: 'promptxy-ui-state',
         partialize: state => ({
           activeTab: state.activeTab,
+          theme: state.theme,
         }),
       },
     ),
@@ -181,13 +188,15 @@ export const useSelectedSelector = () => {
 export const useUIStateSelector = () => {
   const sidebarCollapsed = useUIStore(state => state.sidebarCollapsed);
   const activeTab = useUIStore(state => state.activeTab);
+  const theme = useUIStore(state => state.theme);
 
   return useMemo(
     () => ({
       sidebarCollapsed,
       activeTab,
+      theme,
     }),
-    [sidebarCollapsed, activeTab],
+    [sidebarCollapsed, activeTab, theme],
   );
 };
 
