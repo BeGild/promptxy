@@ -161,6 +161,8 @@ async function handleGetRequest(
       method: record.method,
       originalBody: JSON.parse(record.originalBody),
       modifiedBody: JSON.parse(record.modifiedBody),
+      requestSize: record.requestSize,
+      responseSize: record.responseSize,
       matchedRules: JSON.parse(record.matchedRules),
       responseStatus: record.responseStatus,
       durationMs: record.durationMs,

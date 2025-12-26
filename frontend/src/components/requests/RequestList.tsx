@@ -17,7 +17,13 @@ import {
 } from '@heroui/react';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
-import { formatRelativeTime, formatDuration, getStatusColor, formatClient } from '@/utils';
+import {
+  formatTimeWithMs,
+  formatBytes,
+  formatDuration,
+  getStatusColor,
+  formatClient,
+} from '@/utils';
 import { RequestListVirtual } from './RequestListVirtual';
 import { PathAutocomplete } from './PathAutocomplete';
 
@@ -33,6 +39,9 @@ interface RequestListProps {
   onRefresh: () => void;
   onDelete: (id: string) => void;
   enableVirtualScroll?: boolean;
+  selectedId?: string | null;
+  viewedIds?: Set<string>;
+  onViewedToggle?: (id: string) => void;
 }
 
 /**
@@ -52,7 +61,12 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   onRefresh,
   onDelete,
   enableVirtualScroll = false,
+  selectedId = null,
+  viewedIds = new Set(),
+  onViewedToggle,
 }) => {
+  const suppressNextRowActionRef = useRef(false);
+
   // 使用 useMemo 优化分页计算
   const totalPages = useMemo(() => {
     return Math.ceil(total / 50);
@@ -124,6 +138,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   // 优化的行点击处理
   const handleRowClick = useCallback(
     (key: React.Key) => {
+      if (suppressNextRowActionRef.current) {
+        suppressNextRowActionRef.current = false;
+        return;
+      }
       onRowClick(key as string);
     },
     [onRowClick],
@@ -150,6 +168,15 @@ const RequestListComponent: React.FC<RequestListProps> = ({
     };
   }, [requests.length, total]);
 
+  type RequestTableItem = RequestListItem & { _isViewed: boolean };
+  const tableItems = useMemo<RequestTableItem[]>(() => {
+    if (enableVirtualScroll) return [];
+    return requests.map((request) => ({
+      ...request,
+      _isViewed: viewedIds.has(request.id),
+    }));
+  }, [enableVirtualScroll, requests, viewedIds]);
+
   // 如果启用虚拟滚动，使用虚拟滚动组件
   if (enableVirtualScroll) {
     return (
@@ -164,6 +191,9 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         onRowClick={onRowClick}
         onRefresh={onRefresh}
         onDelete={onDelete}
+        selectedId={selectedId}
+        viewedIds={viewedIds}
+        onViewedToggle={onViewedToggle}
       />
     );
   }
@@ -237,110 +267,180 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         )}
       </div>
 
-      {/* 请求表格 */}
-      <Table
-        aria-label="请求历史表"
-        selectionMode="single"
-        onRowAction={handleRowClick}
-        classNames={{
-          wrapper: 'shadow-md rounded-xl border border-gray-200 dark:border-gray-700',
-          th: 'bg-gray-50 dark:bg-gray-800 text-sm font-semibold',
-          tr: 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
-        }}
-      >
-        <TableHeader>
-          <TableColumn>时间</TableColumn>
-          <TableColumn>客户端</TableColumn>
-          <TableColumn>路径</TableColumn>
-          <TableColumn>方法</TableColumn>
-          <TableColumn>匹配规则</TableColumn>
-          <TableColumn>状态</TableColumn>
-          <TableColumn>耗时</TableColumn>
-          <TableColumn>操作</TableColumn>
-        </TableHeader>
-        <TableBody
-          items={requests}
-          isLoading={isLoading}
-          emptyContent={<div className="py-12 text-center text-gray-500">暂无数据</div>}
-        >
-          {item => (
-            <TableRow key={item.id} className="cursor-pointer">
-              <TableCell className="text-sm">{formatRelativeTime(item.timestamp)}</TableCell>
-              <TableCell>
-                <Badge color="primary" variant="flat" size="sm" className="font-medium">
-                  {formatClient(item.client)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <span className="font-mono text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px] block">
-                  {item.path}
-                </span>
-              </TableCell>
-              <TableCell>
-                <Chip size="sm" color="default" variant="flat" className="uppercase text-xs">
-                  {item.method}
-                </Chip>
-              </TableCell>
-              <TableCell>
-                {item.matchedRules && item.matchedRules.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {item.matchedRules.slice(0, 3).map(ruleId => (
-                      <Chip
-                        key={ruleId}
-                        size="sm"
-                        color="success"
-                        variant="flat"
-                        className="text-xs font-mono"
-                      >
-                        {ruleId}
-                      </Chip>
-                    ))}
-                    {item.matchedRules.length > 3 && (
-                      <Chip size="sm" color="default" variant="flat" className="text-xs">
-                        +{item.matchedRules.length - 3}
-                      </Chip>
-                    )}
+	      {/* 请求表格 */}
+	      <Table
+	        aria-label="请求历史表"
+	        onRowAction={handleRowClick}
+	        classNames={{
+	          wrapper: 'shadow-md rounded-xl border border-gray-200 dark:border-gray-700',
+	          th: 'bg-gray-50 dark:bg-gray-800 text-sm font-semibold',
+	          tr: 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
+	        }}
+	      >
+		        <TableHeader>
+		          <TableColumn className="w-12">已查看</TableColumn>
+		          <TableColumn className="w-1" aria-label="指示条">
+		            {' '}
+		          </TableColumn>
+		          <TableColumn>时间</TableColumn>
+		          <TableColumn>客户端</TableColumn>
+		          <TableColumn>路径</TableColumn>
+		          <TableColumn>匹配规则</TableColumn>
+	          <TableColumn>状态</TableColumn>
+	          <TableColumn>大小</TableColumn>
+	          <TableColumn>耗时</TableColumn>
+	          <TableColumn>操作</TableColumn>
+	        </TableHeader>
+	        <TableBody
+	          items={tableItems}
+	          isLoading={isLoading}
+	          emptyContent={<div className="py-12 text-center text-gray-500">暂无数据</div>}
+	        >
+	          {item => {
+	            const isSelected = selectedId === item.id;
+	            const isViewed = item._isViewed;
+
+	            return (
+	              <TableRow key={item.id}>
+	                {/* 已查看指示器 - 仅视觉显示 */}
+	                <TableCell className={`w-12 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+	                  {onViewedToggle ? (
+	                    <button
+	                      type="button"
+	                      aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
+	                      onPointerDown={() => {
+	                        suppressNextRowActionRef.current = true;
+	                      }}
+	                      onClick={(e) => {
+	                        e.preventDefault();
+	                        e.stopPropagation();
+	                        onViewedToggle(item.id);
+	                      }}
+	                      className="w-8 h-8 inline-flex items-center justify-center select-none rounded hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors"
+	                    >
+	                      <span
+	                        className={[
+	                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+	                          isViewed
+	                            ? 'bg-purple-600 border-purple-600 dark:bg-purple-400 dark:border-purple-400'
+	                            : 'bg-transparent border-gray-300 dark:border-gray-600',
+	                        ].join(' ')}
+	                      />
+	                    </button>
+	                  ) : (
+	                    <div className="w-8 h-8 inline-flex items-center justify-center select-none">
+	                      <span
+	                        className={[
+	                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+	                          isViewed
+	                            ? 'bg-purple-600 border-purple-600 dark:bg-purple-400 dark:border-purple-400'
+	                            : 'bg-transparent border-gray-300 dark:border-gray-600',
+	                        ].join(' ')}
+	                      />
+	                    </div>
+	                  )}
+	                </TableCell>
+
+                {/* 紫色指示条 */}
+                <TableCell className={`w-1 p-0 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                  {(isSelected || isViewed) && (
+                    <div className="h-full w-1 bg-purple-500 rounded-r" />
+                  )}
+                </TableCell>
+
+                <TableCell className={`text-sm font-mono text-xs text-gray-700 dark:text-gray-300 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                  {formatTimeWithMs(item.timestamp)}
+                </TableCell>
+                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {formatClient(item.client)}
+                  </span>
+                </TableCell>
+                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                  <span className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate max-w-[200px] block">
+                    {item.path}
+                  </span>
+                </TableCell>
+                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                  {item.matchedRules && item.matchedRules.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {item.matchedRules.slice(0, 3).map(ruleId => (
+                        <Chip
+                          key={ruleId}
+                          size="sm"
+                          color="success"
+                          variant="flat"
+                          className="text-xs font-mono"
+                        >
+                          {ruleId}
+                        </Chip>
+                      ))}
+                      {item.matchedRules.length > 3 && (
+                        <Chip size="sm" color="default" variant="flat" className="text-xs">
+                          +{item.matchedRules.length - 3}
+                        </Chip>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                  <Chip
+                    size="sm"
+                    color={getStatusColor(item.responseStatus)}
+                    variant="flat"
+                    className="font-medium"
+                  >
+                    {item.responseStatus || 'N/A'}
+                  </Chip>
+                </TableCell>
+                <TableCell className={`text-sm text-gray-700 dark:text-gray-300 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                  {item.requestSize || item.responseSize ? (
+                    <span className="text-xs">
+                      {item.requestSize && (
+                        <span className="text-blue-600 dark:text-blue-400">
+                          ↑{formatBytes(item.requestSize)}
+                        </span>
+                      )}
+                      {item.requestSize && item.responseSize && ' '}
+                      {item.responseSize && (
+                        <span className="text-green-600 dark:text-green-400">
+                          ↓{formatBytes(item.responseSize)}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
+                <TableCell className={`text-sm text-gray-700 dark:text-gray-300 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                  {item.durationMs ? formatDuration(item.durationMs) : '-'}
+                </TableCell>
+	                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+	                  <div className="flex gap-1">
+	                    <Button
+	                      size="sm"
+	                      variant="light"
+	                      onPress={() => handleRowClick(item.id)}
+	                      className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+	                    >
+	                      查看
+	                    </Button>
+	                    <Button
+	                      size="sm"
+	                      color="danger"
+	                      variant="light"
+                      onPress={() => handleDelete(item.id)}
+                      className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      删除
+                    </Button>
                   </div>
-                ) : (
-                  <span className="text-gray-400 text-sm">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <Chip
-                  size="sm"
-                  color={getStatusColor(item.responseStatus)}
-                  variant="flat"
-                  className="font-medium"
-                >
-                  {item.responseStatus || 'N/A'}
-                </Chip>
-              </TableCell>
-              <TableCell className="text-sm">
-                {item.durationMs ? formatDuration(item.durationMs) : '-'}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="light"
-                    onPress={() => handleRowClick(item.id)}
-                    className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  >
-                    查看
-                  </Button>
-                  <Button
-                    size="sm"
-                    color="danger"
-                    variant="light"
-                    onPress={() => handleDelete(item.id)}
-                    className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    删除
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
+                </TableCell>
+              </TableRow>
+            );
+          }}
         </TableBody>
       </Table>
 

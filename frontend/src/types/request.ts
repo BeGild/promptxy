@@ -10,6 +10,8 @@ export interface RequestRecord {
   method: string;
   originalBody: any;
   modifiedBody: any;
+  requestSize?: number;
+  responseSize?: number;
   matchedRules: Array<{ ruleId: string; opType: string }>;
   responseStatus?: number;
   durationMs?: number;
@@ -25,6 +27,8 @@ export interface RequestListItem {
   path: string;
   method: string;
   matchedRules: string[];
+  requestSize?: number;
+  responseSize?: number;
   responseStatus?: number;
   durationMs?: number;
   error?: string;

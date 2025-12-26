@@ -58,6 +58,10 @@ export async function initializeDatabase(): Promise<Database> {
       original_body TEXT NOT NULL,
       modified_body TEXT NOT NULL,
 
+      -- 请求/响应大小（字节）
+      request_size INTEGER,
+      response_size INTEGER,
+
       -- 匹配规则（JSON数组字符串）
       matched_rules TEXT NOT NULL,
 
@@ -89,16 +93,29 @@ export async function initializeDatabase(): Promise<Database> {
       ('filtered_paths', '[]');
   `);
 
-  // 数据库迁移：为已有数据库添加 response_body 列
+  // 数据库迁移：为已有数据库添加新列
   try {
     // 检查列是否存在
     const tableInfo = await dbInstance.all(
       `PRAGMA table_info(requests)`
     );
-    const hasResponseBody = tableInfo.some((col: any) => col.name === 'response_body');
 
+    // 迁移 response_body 列
+    const hasResponseBody = tableInfo.some((col: any) => col.name === 'response_body');
     if (!hasResponseBody) {
       await dbInstance.exec(`ALTER TABLE requests ADD COLUMN response_body TEXT`);
+    }
+
+    // 迁移 request_size 列
+    const hasRequestSize = tableInfo.some((col: any) => col.name === 'request_size');
+    if (!hasRequestSize) {
+      await dbInstance.exec(`ALTER TABLE requests ADD COLUMN request_size INTEGER`);
+    }
+
+    // 迁移 response_size 列
+    const hasResponseSize = tableInfo.some((col: any) => col.name === 'response_size');
+    if (!hasResponseSize) {
+      await dbInstance.exec(`ALTER TABLE requests ADD COLUMN response_size INTEGER`);
     }
   } catch {
     // 忽略迁移错误，可能是新数据库
@@ -126,9 +143,9 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
   await db.run(
     `INSERT INTO requests (
       id, timestamp, client, path, method,
-      original_body, modified_body, matched_rules,
+      original_body, modified_body, request_size, response_size, matched_rules,
       response_status, duration_ms, response_headers, response_body, error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.id,
       record.timestamp,
@@ -137,6 +154,8 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
       record.method,
       record.originalBody,
       record.modifiedBody,
+      record.requestSize ?? null,
+      record.responseSize ?? null,
       record.matchedRules,
       record.responseStatus ?? null,
       record.durationMs ?? null,
@@ -233,7 +252,7 @@ export async function getRequestList(options: {
     `
      SELECT
        id, timestamp, client, path, method,
-       matched_rules, response_status, duration_ms, error
+       request_size, response_size, matched_rules, response_status, duration_ms, error
      FROM requests
      WHERE (? IS NULL OR client = ?)
        AND (? IS NULL OR timestamp >= ?)
@@ -261,6 +280,8 @@ export async function getRequestList(options: {
     client: row.client,
     path: row.path,
     method: row.method,
+    requestSize: row.request_size ?? undefined,
+    responseSize: row.response_size ?? undefined,
     matchedRules: row.matched_rules ? JSON.parse(row.matched_rules).map((m: any) => m.ruleId) : [],
     responseStatus: row.response_status ?? undefined,
     durationMs: row.duration_ms ?? undefined,
@@ -295,6 +316,8 @@ export async function getRequestDetail(id: string): Promise<RequestRecord | null
     method: row.method,
     originalBody: row.original_body,
     modifiedBody: row.modified_body,
+    requestSize: row.request_size ?? undefined,
+    responseSize: row.response_size ?? undefined,
     matchedRules: row.matched_rules,
     responseStatus: row.response_status ?? undefined,
     durationMs: row.duration_ms ?? undefined,

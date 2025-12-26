@@ -137,6 +137,10 @@ export interface RequestRecord {
   originalBody: string;
   modifiedBody: string;
 
+  // 请求/响应大小（字节）
+  requestSize?: number;
+  responseSize?: number;
+
   // 匹配规则
   matchedRules: string; // JSON 数组字符串
 
@@ -157,6 +161,8 @@ export interface RequestRecordResponse {
   method: string;
   originalBody: any;
   modifiedBody: any;
+  requestSize?: number;
+  responseSize?: number;
   matchedRules: Array<{ ruleId: string; opType: PromptxyOpType }>;
   responseStatus?: number;
   durationMs?: number;
@@ -177,6 +183,8 @@ export interface RequestListResponse {
     path: string;
     method: string;
     matchedRules: string[];
+    requestSize?: number;
+    responseSize?: number;
     responseStatus?: number;
     durationMs?: number;
     error?: string;

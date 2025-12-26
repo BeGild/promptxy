@@ -346,6 +346,8 @@ export function createGateway(config: PromptxyConfig): http.Server {
           modifiedBody: savedJsonBody
             ? JSON.stringify(savedJsonBody)
             : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+          requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
+          responseSize: responseBodyBuffer.length,
           matchedRules: JSON.stringify(matches),
           responseStatus: responseStatus,
           durationMs: duration,
@@ -395,6 +397,7 @@ export function createGateway(config: PromptxyConfig): http.Server {
             modifiedBody: jsonBody
               ? JSON.stringify(jsonBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+            requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
             matchedRules: JSON.stringify(matches),
             responseStatus: undefined,
             durationMs: duration,
