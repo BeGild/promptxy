@@ -55,6 +55,12 @@
     --color-accent: #ce9178;
     --color-accent-light: #fff5eb;
 
+    /* 渐变强调色 */
+    --color-accent-purple: #a855f7;
+    --color-accent-purple-light: #f3e8ff;
+    --color-accent-pink: #ec4899;
+    --color-accent-pink-light: #fce7f3;
+
     /* ==================== 边框色 ==================== */
     --color-border-default: #e0e0e0;
     --color-border-subtle: #f0f0f0;

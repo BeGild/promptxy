@@ -68,7 +68,7 @@ export const PreviewPanel: React.FC = () => {
     <div className="flex gap-md flex-wrap">
       {/* 输入区域 */}
       <div className="flex-1 min-w-[300px]">
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-md h-full">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-md h-full">
           <h4 className="mb-3">测试输入</h4>
 
           <div className="flex flex-col gap-sm">
@@ -150,7 +150,7 @@ export const PreviewPanel: React.FC = () => {
 
       {/* 输出区域 */}
       <div className="flex-1 min-w-[300px]">
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-md h-full">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-md h-full">
           <h4 className="mb-3">预览结果</h4>
 
           {previewMutation.isPending && (
@@ -161,7 +161,7 @@ export const PreviewPanel: React.FC = () => {
 
           {previewMutation.isError && (
             <Card
-              className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-sm"
+              className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm"
             >
               <div className="text-error">{previewMutation.error?.message || '预览失败'}</div>
             </Card>
@@ -169,7 +169,7 @@ export const PreviewPanel: React.FC = () => {
 
           {result && (
             <>
-              <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-sm mb-2">
+              <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm mb-2">
                 <div className="font-semibold text-sm mb-1">
                   原始文本:
                 </div>
@@ -182,7 +182,7 @@ export const PreviewPanel: React.FC = () => {
                 </div>
               </Card>
 
-              <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-sm mb-2">
+              <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm mb-2">
                 <div className="font-semibold text-sm mb-1">
                   修改后:
                 </div>
@@ -196,7 +196,7 @@ export const PreviewPanel: React.FC = () => {
               </Card>
 
               {result.matches.length > 0 && (
-                <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-sm">
+                <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm">
                   <div className="font-semibold text-sm mb-1">
                     匹配规则:
                   </div>
@@ -209,7 +209,7 @@ export const PreviewPanel: React.FC = () => {
               )}
 
               {result.matches.length === 0 && (
-                <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 p-sm">
+                <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm">
                   <div className="text-secondary text-xs">
                     无规则匹配
                   </div>

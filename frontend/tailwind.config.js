@@ -37,6 +37,11 @@ export default {
           primary: 'var(--color-brand-primary)',
           secondary: 'var(--color-brand-secondary)',
         },
+        /* 强调色 */
+        accent: {
+          purple: 'var(--color-accent-purple)',
+          pink: 'var(--color-accent-pink)',
+        },
         /* 状态色 */
         success: 'var(--color-status-success)',
         warning: 'var(--color-status-warning)',
@@ -118,44 +123,44 @@ export default {
       themes: {
         light: {
           colors: {
-            background: '#ffffff',
-            foreground: '#1a1a1a',
+            background: 'var(--color-bg-primary)',
+            foreground: 'var(--color-text-primary)',
             primary: {
-              DEFAULT: '#007acc',
-              foreground: '#ffffff',
+              DEFAULT: 'var(--color-brand-primary)',
+              foreground: 'var(--color-brand-primary-on-primary)',
             },
             success: {
-              DEFAULT: '#4ec9b0',
+              DEFAULT: 'var(--color-status-success)',
               foreground: '#ffffff',
             },
             warning: {
-              DEFAULT: '#ce9178',
+              DEFAULT: 'var(--color-status-warning)',
               foreground: '#ffffff',
             },
             danger: {
-              DEFAULT: '#f48771',
+              DEFAULT: 'var(--color-status-error)',
               foreground: '#ffffff',
             },
           },
         },
         dark: {
           colors: {
-            background: '#1e1e1e',
-            foreground: '#cccccc',
+            background: 'var(--color-bg-primary)',
+            foreground: 'var(--color-text-primary)',
             primary: {
-              DEFAULT: '#007acc',
-              foreground: '#ffffff',
+              DEFAULT: 'var(--color-brand-primary)',
+              foreground: 'var(--color-brand-primary-on-primary)',
             },
             success: {
-              DEFAULT: '#4ec9b0',
+              DEFAULT: 'var(--color-status-success)',
               foreground: '#ffffff',
             },
             warning: {
-              DEFAULT: '#ce9178',
+              DEFAULT: 'var(--color-status-warning)',
               foreground: '#ffffff',
             },
             danger: {
-              DEFAULT: '#f48771',
+              DEFAULT: 'var(--color-status-error)',
               foreground: '#ffffff',
             },
           },

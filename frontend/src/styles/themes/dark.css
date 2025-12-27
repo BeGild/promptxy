@@ -35,6 +35,12 @@
     --color-border-subtle: #2d2d30;
     --color-border-strong: #5a5a5a;
 
+    /* ==================== 强调色（深色调整） ==================== */
+    --color-accent-purple: #c084fc;
+    --color-accent-purple-light: #581c87;
+    --color-accent-pink: #f472b6;
+    --color-accent-pink-light: #831843;
+
     /* ==================== 阴影（深色调整） ==================== */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);

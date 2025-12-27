@@ -2,7 +2,8 @@
  * 样式系统入口文件
  *
  * 导入所有样式模块
- * 使用顺序: Tokens → Themes → Utilities → Tailwind → Globals
+ * 使用顺序: Tokens → Themes → Utilities → Globals → Tailwind
+ * 注意: @import 必须在所有其他语句之前
  */
 
 /* Design Tokens */
@@ -16,10 +17,10 @@
 @import './utilities/layout.css';
 @import './utilities/components.css';
 
-/* Tailwind CSS */
+/* Global Styles (向后兼容) - 必须在 @tailwind 之前 */
+@import './globals.css';
+
+/* Tailwind CSS - 必须在最后 */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Global Styles (向后兼容) */
-@import './globals.css';

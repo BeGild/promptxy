@@ -53,7 +53,7 @@ export const Modal: React.FC<ModalProps> = ({
       scrollBehavior="outside"
       classNames={{
         base: 'border border-brand-primary/30 dark:border-brand-primary/20',
-        backdrop: 'bg-black/50',
+        backdrop: 'bg-overlay',
         header: 'bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 border-b border-brand-primary/30 dark:border-brand-primary/20',
         body: 'bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5',
       }}

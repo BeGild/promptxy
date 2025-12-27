@@ -75,16 +75,16 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
   return (
     <Navbar
       isBordered
-      className="h-14 bg-white/70 dark:bg-black/70 backdrop-blur-md"
+      className="h-14 bg-bg-primary/70 backdrop-blur-md"
       maxWidth="full"
       style={{ paddingLeft: 'var(--spacing-md)', paddingRight: 'var(--spacing-md)' }}
     >
       {/* 左侧：Logo 和名称 */}
       <NavbarBrand className="gap-3">
-        <div className="p-1.5 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-lg shadow-lg shadow-blue-500/20">
+        <div className="p-1.5 bg-gradient-to-tr from-brand-primary to-accent-purple rounded-lg shadow-lg shadow-brand-primary/20">
           <LogoIcon size={20} className="text-white" />
         </div>
-        <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400">
+        <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-text-primary to-text-secondary dark:from-text-primary dark:to-text-tertiary">
           PromptXY
         </span>
       </NavbarBrand>
@@ -108,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
               delay={0}
               closeDelay={0}
               classNames={{
-                content: 'bg-white dark:bg-secondary shadow-xl border border-default',
+                content: 'bg-elevated dark:bg-elevated shadow-xl border border-default',
               }}
             >
               <Button
