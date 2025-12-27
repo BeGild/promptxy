@@ -7,12 +7,13 @@
  * 3. 语义化工具类（如 .card, .btn）
  *
  * ❌ FORBIDDEN:
- * - style={{ color: '#007acc' }}
- * - className="text-gray-600"
+ * - 硬编码颜色值（如 #007acc, #ff0000）
+ * - 硬编码尺寸值（如 16px, 8px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
  *
  * ✅ REQUIRED:
- * - className="text-secondary"
- * - className="bg-elevated"
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
 /**

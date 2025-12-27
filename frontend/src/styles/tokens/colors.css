@@ -73,5 +73,25 @@
     --color-icon-subtle: #999999;
     --color-icon-primary: #007acc;
     --color-icon-inverse: #ffffff;
+
+    /* ==================== 透明度变体 ==================== */
+    /* 状态色透明度 - 用于背景、阴影等 */
+    --color-status-success-alpha: rgba(78, 201, 176, 0.1);
+    --color-status-success-alpha-strong: rgba(78, 201, 176, 0.6);
+    --color-status-error-alpha: rgba(244, 135, 113, 0.1);
+    --color-status-warning-alpha: rgba(206, 145, 120, 0.1);
+    --color-status-info-alpha: rgba(86, 156, 214, 0.1);
+
+    /* 品牌色透明度 */
+    --color-brand-primary-alpha: rgba(0, 122, 204, 0.1);
+    --color-brand-primary-alpha-weak: rgba(0, 122, 204, 0.05);
+    --color-brand-primary-alpha-medium: rgba(0, 122, 204, 0.3);
+    --color-brand-primary-alpha-strong: rgba(0, 122, 204, 0.6);
+    --color-brand-primary-alpha-full: rgba(0, 122, 204, 1);
+
+    /* 黑白透明度 */
+    --color-white-alpha: rgba(255, 255, 255, 0.5);
+    --color-black-alpha: rgba(0, 0, 0, 0.05);
+    --color-black-alpha-strong: rgba(0, 0, 0, 0.9);
   }
 }

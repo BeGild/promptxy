@@ -7,12 +7,13 @@
  * 3. 语义化工具类（如 .card, .btn）
  *
  * ❌ FORBIDDEN:
- * - className="border-blue-200/50 dark:border-blue-800/30"
- * - className="from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10"
+ * - 硬编码颜色值（如 #007acc, #ff0000）
+ * - 硬编码尺寸值（如 16px, 8px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
  *
  * ✅ REQUIRED:
- * - className="border-brand-primary/30 dark:border-brand-primary/20"
- * - className="from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5"
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
 import React, { ReactNode } from 'react';

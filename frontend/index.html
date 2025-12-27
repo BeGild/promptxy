@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PromptXY v2.0 - Web UI</title>
+
+    <!-- 防止主题闪烁：在 CSS 加载前预先应用主题 -->
+    <script>
+      (function() {
+        try {
+          const stored = localStorage.getItem('promptxy-ui-state');
+          const theme = stored ? JSON.parse(stored).theme : 'system';
+
+          if (theme === 'system') {
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.classList.toggle('dark', systemDark);
+          } else {
+            document.documentElement.classList.toggle('dark', theme === 'dark');
+          }
+        } catch (e) {
+          console.warn('Failed to apply theme before load:', e);
+        }
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

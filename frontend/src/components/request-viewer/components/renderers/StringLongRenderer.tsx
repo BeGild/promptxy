@@ -7,12 +7,13 @@
  * 3. 语义化工具类（如 .card, .btn）
  *
  * ❌ FORBIDDEN:
- * - className="text-gray-500"
- * - className="from-gray-600 to-gray-800 dark:from-gray-400"
+ * - 硬编码颜色值（如 #007acc, #ff0000）
+ * - 硬编码尺寸值（如 16px, 8px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
  *
  * ✅ REQUIRED:
- * - className="text-secondary"
- * - className="from-primary to-secondary dark:from-primary"
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
 import React, { useState, useCallback } from 'react';

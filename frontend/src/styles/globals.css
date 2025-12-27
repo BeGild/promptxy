@@ -73,17 +73,17 @@
 
   /* 差异高亮 */
   .diff-added {
-    background-color: rgba(78, 201, 176, 0.1);
+    background-color: var(--color-status-success-alpha);
     color: var(--color-status-success);
   }
 
   .diff-removed {
-    background-color: rgba(244, 135, 113, 0.1);
+    background-color: var(--color-status-error-alpha);
     color: var(--color-status-error);
   }
 
   .diff-modified {
-    background-color: rgba(206, 145, 120, 0.1);
+    background-color: var(--color-status-warning-alpha);
     color: var(--color-status-warning);
   }
 
@@ -170,10 +170,10 @@
   @keyframes glow {
     0%,
     100% {
-      box-shadow: 0 0 5px rgba(0, 122, 204, 0.3);
+      box-shadow: 0 0 5px var(--color-brand-primary-alpha-medium);
     }
     50% {
-      box-shadow: 0 0 20px rgba(0, 122, 204, 0.6);
+      box-shadow: 0 0 20px var(--color-brand-primary-alpha-strong);
     }
   }
 
@@ -185,10 +185,10 @@
   @keyframes borderPulse {
     0%,
     100% {
-      border-color: rgba(0, 122, 204, 0.3);
+      border-color: var(--color-brand-primary-alpha-medium);
     }
     50% {
-      border-color: rgba(0, 122, 204, 1);
+      border-color: var(--color-brand-primary-alpha-full);
     }
   }
 
@@ -228,7 +228,7 @@
   }
 
   .table-row-hover:hover {
-    background-color: rgba(0, 122, 204, 0.05);
+    background-color: var(--color-brand-primary-alpha-weak);
   }
 
   /* 按钮点击波纹效果 */
@@ -255,7 +255,7 @@
     left: 50%;
     width: 5px;
     height: 5px;
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--color-white-alpha);
     opacity: 0;
     border-radius: 100%;
     transform: scale(1, 1) translate(-50%);
@@ -287,7 +287,7 @@
 
   .status-connected {
     background: var(--color-status-success);
-    box-shadow: 0 0 8px rgba(78, 201, 176, 0.6);
+    box-shadow: 0 0 8px var(--color-status-success-alpha-strong);
     animation: statusPulse 2s ease-in-out infinite;
   }
 
@@ -333,7 +333,7 @@
     left: 50%;
     transform: translateX(-50%) translateY(-8px);
     padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.9);
+    background: var(--color-black-alpha-strong);
     color: white;
     border-radius: 6px;
     font-size: 12px;

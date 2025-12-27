@@ -115,6 +115,10 @@ export default {
         normal: '200ms',
         slow: '300ms',
       },
+      transitionTimingFunction: {
+        smooth: 'var(--ease-smooth)',
+        bounce: 'var(--ease-bounce)',
+      },
     },
   },
   darkMode: 'class',

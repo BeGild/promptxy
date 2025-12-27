@@ -7,14 +7,13 @@
  * 3. 语义化工具类（如 .card, .btn）
  *
  * ❌ FORBIDDEN:
- * - className="text-gray-900 dark:text-gray-100"
- * - className="bg-gray-100 dark:bg-gray-800"
- * - className="bg-blue-50/30 dark:bg-blue-900/10"
+ * - 硬编码颜色值（如 #007acc, #ff0000）
+ * - 硬编码尺寸值（如 16px, 8px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
  *
  * ✅ REQUIRED:
- * - className="text-primary dark:text-primary"
- * - className="bg-canvas dark:bg-secondary"
- * - className="bg-brand-primary/10 dark:bg-brand-primary/20"
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
 import React, { useMemo, useState, useEffect } from 'react';

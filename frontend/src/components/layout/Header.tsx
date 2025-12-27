@@ -7,12 +7,13 @@
  * 3. 语义化工具类（如 .card, .btn）
  *
  * ❌ FORBIDDEN:
- * - style={{ paddingLeft: '16px' }}
- * - className="text-gray-500"
+ * - 硬编码颜色值（如 #007acc, #ff0000）
+ * - 硬编码尺寸值（如 16px, 8px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
  *
  * ✅ REQUIRED:
- * - style={{ paddingLeft: 'var(--spacing-md)' }}
- * - className="text-secondary"
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
 import React from 'react';
@@ -75,9 +76,8 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
   return (
     <Navbar
       isBordered
-      className="h-14 bg-bg-primary/70 backdrop-blur-md"
+      className="h-14 px-md bg-bg-primary/70 backdrop-blur-md"
       maxWidth="full"
-      style={{ paddingLeft: 'var(--spacing-md)', paddingRight: 'var(--spacing-md)' }}
     >
       {/* 左侧：Logo 和名称 */}
       <NavbarBrand className="gap-3">

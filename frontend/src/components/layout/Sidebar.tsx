@@ -7,12 +7,13 @@
  * 3. 语义化工具类（如 .card, .btn）
  *
  * ❌ FORBIDDEN:
- * - style={{ width: '44px' }}
- * - style={{ gap: '10px' }}
+ * - 硬编码颜色值（如 #007acc, #ff0000）
+ * - 硬编码尺寸值（如 16px, 8px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
  *
  * ✅ REQUIRED:
- * - style={{ width: 'var(--size-sidebar)' }}
- * - className="gap-md"
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
 import React from 'react';
@@ -31,29 +32,9 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: 'var(--spacing-3xl)', // 48px (接近原来的 44px)
-        height: '100%',
-        flexShrink: 0,
-        background: 'var(--color-bg-primary)',
-        borderRight: '1px solid var(--color-border-default)',
-      }}
-    >
+    <div className="relative w-3xl h-full flex-shrink-0 bg-bg-primary border-r border-border-default">
       {/* 垂直居中的菜单容器 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--spacing-sm)', // 8px
-          alignItems: 'center',
-        }}
-      >
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-sm items-center">
         {menuItems.map(item => (
           <Tooltip
             key={item.key}
@@ -74,10 +55,7 @@ export const Sidebar: React.FC = () => {
               color={activeTab === item.key ? 'primary' : 'default'}
               onPress={() => setActiveTab(item.key as any)}
               size="sm"
-              style={{
-                transition: 'transform var(--transition-normal) var(--ease-smooth)',
-              }}
-              className="hover:scale-120"
+              className="transition-transform duration-normal ease-smooth hover:scale-120"
             >
               <span className="text-md">{item.icon}</span>
             </Button>
