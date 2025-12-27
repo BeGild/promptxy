@@ -151,7 +151,7 @@ export const RulesPage: React.FC = () => {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/10 border-none">
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
           <CardBody className="p-4">
             <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">已启用</div>
             <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
@@ -159,7 +159,7 @@ export const RulesPage: React.FC = () => {
             </div>
           </CardBody>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/10 border-none">
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
           <CardBody className="p-4">
             <div className="text-sm text-purple-700 dark:text-purple-300 font-medium">已禁用</div>
             <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
@@ -167,7 +167,7 @@ export const RulesPage: React.FC = () => {
             </div>
           </CardBody>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/10 border-none">
+        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
           <CardBody className="p-4">
             <div className="text-sm text-green-700 dark:text-green-300 font-medium">总规则数</div>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
