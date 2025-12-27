@@ -173,44 +173,44 @@ export default {
       themes: {
         light: {
           colors: {
-            background: 'var(--color-bg-primary)',
-            foreground: 'var(--color-text-primary)',
+            background: '#ffffff',
+            foreground: '#1a1a1a',
             primary: {
-              DEFAULT: 'var(--color-brand-primary)',
-              foreground: 'var(--color-brand-primary-on-primary)',
+              DEFAULT: '#007acc',
+              foreground: '#ffffff',
             },
             success: {
-              DEFAULT: 'var(--color-status-success)',
+              DEFAULT: '#4ec9b0',
               foreground: '#ffffff',
             },
             warning: {
-              DEFAULT: 'var(--color-status-warning)',
+              DEFAULT: '#ce9178',
               foreground: '#ffffff',
             },
             danger: {
-              DEFAULT: 'var(--color-status-error)',
+              DEFAULT: '#f48771',
               foreground: '#ffffff',
             },
           },
         },
         dark: {
           colors: {
-            background: 'var(--color-bg-primary)',
-            foreground: 'var(--color-text-primary)',
+            background: '#1a1a1a',
+            foreground: '#ffffff',
             primary: {
-              DEFAULT: 'var(--color-brand-primary)',
-              foreground: 'var(--color-brand-primary-on-primary)',
+              DEFAULT: '#007acc',
+              foreground: '#ffffff',
             },
             success: {
-              DEFAULT: 'var(--color-status-success)',
+              DEFAULT: '#4ec9b0',
               foreground: '#ffffff',
             },
             warning: {
-              DEFAULT: 'var(--color-status-warning)',
+              DEFAULT: '#ce9178',
               foreground: '#ffffff',
             },
             danger: {
-              DEFAULT: 'var(--color-status-error)',
+              DEFAULT: '#f48771',
               foreground: '#ffffff',
             },
           },
