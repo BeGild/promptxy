@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="bg-gray-100 dark:bg-gray-800"
+ * - className="text-gray-500"
+ *
+ * ✅ REQUIRED:
+ * - className="bg-canvas dark:bg-secondary"
+ * - className="text-secondary"
+ */
+
 import React, {
   useState,
   useMemo,
@@ -58,7 +75,7 @@ const VirtualRuleRow = (props: {
   if (isScrolling) {
     return (
       <div style={style} className="px-2 py-1">
-        <div className="h-full bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+        <div className="h-full bg-canvas dark:bg-secondary rounded-lg animate-pulse" />
       </div>
     );
   }
@@ -176,7 +193,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
           radius="lg"
           classNames={{
             inputWrapper:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+              'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
         />
 
@@ -187,7 +204,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
           radius="lg"
           classNames={{
             trigger:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+              'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -207,7 +224,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-secondary">
         <span>搜索结果:</span>
         <Chip color="primary" variant="flat" size="sm">
           {filteredRules.length} 条
@@ -217,7 +234,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
             清除搜索
           </Button>
         )}
-        {isScrolling && <span className="text-xs text-gray-400 ml-auto">滚动中...</span>}
+        {isScrolling && <span className="text-xs text-tertiary ml-auto">滚动中...</span>}
       </div>
     </>
   );
@@ -245,7 +262,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
 
     if (filteredRules.length === 0) {
       return (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-secondary">
           <p>没有找到匹配的规则</p>
           <Button size="sm" variant="light" onPress={handleClearSearch} className="mt-2">
             清除搜索
@@ -285,7 +302,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
     };
 
     return (
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-md bg-white dark:bg-gray-900">
+      <div className="border border-subtle rounded-xl overflow-hidden shadow-md bg-elevated">
         <div style={{ height: containerHeight }}>
           <List
             listRef={listRef}

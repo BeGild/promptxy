@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-green-700 dark:text-green-300"
+ * - className="bg-gray-100 dark:bg-gray-800"
+ *
+ * ✅ REQUIRED:
+ * - className="text-status-success"
+ * - className="bg-canvas dark:bg-secondary"
+ */
+
 import React, { useState, useEffect } from 'react';
 import type { ViewNode } from '../../types';
 import { DiffStatus, NodeType } from '../../types';
@@ -103,13 +120,13 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
   const renderDiffIndicator = (status: DiffStatus) => {
     switch (status) {
       case DiffStatus.ADDED:
-        return <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded">🟢 新增</span>;
+        return <span className="px-2 py-1 bg-status-success/10 dark:bg-status-success/20 text-status-success dark:text-status-success/80 text-xs rounded">🟢 新增</span>;
       case DiffStatus.REMOVED:
-        return <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs rounded">🔴 删除</span>;
+        return <span className="px-2 py-1 bg-status-error/10 dark:bg-status-error/20 text-status-error dark:text-status-error/80 text-xs rounded">🔴 删除</span>;
       case DiffStatus.MODIFIED:
-        return <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded">🟡 修改</span>;
+        return <span className="px-2 py-1 bg-status-warning/10 dark:bg-status-warning/20 text-status-warning dark:text-status-warning/80 text-xs rounded">🟡 修改</span>;
       default:
-        return <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded">🟢 无变化</span>;
+        return <span className="px-2 py-1 bg-canvas dark:bg-secondary text-tertiary text-xs rounded">🟢 无变化</span>;
     }
   };
 
@@ -120,7 +137,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
     return (
       <div className="space-y-1">
         {/* 差异统计 */}
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        <div className="text-xs text-secondary mb-2">
           段落级对比: {changedCount}/{paragraphs.length} 个段落有变化
           (原文 {totalOriginal} 段 → 修改后 {totalModified} 段)
         </div>
@@ -128,11 +145,11 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
         {/* 段落列表 */}
         {paragraphs.map((para) => {
           const colorClass = {
-            same: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30',
-            added: 'border-green-500 bg-green-50 dark:bg-green-900/20',
-            removed: 'border-red-500 bg-red-50 dark:bg-red-900/20',
-            modified: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20',
-            moved: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20',
+            same: 'border-subtle bg-canvas dark:bg-secondary/30',
+            added: 'border-status-success bg-status-success/10 dark:bg-status-success/20',
+            removed: 'border-status-error bg-status-error/10 dark:bg-status-error/20',
+            modified: 'border-status-warning bg-status-warning/10 dark:bg-status-warning/20',
+            moved: 'border-brand-primary bg-brand-primary/10 dark:bg-brand-primary/20',
           }[para.type];
 
           const label = {
@@ -150,16 +167,16 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
           return (
             <div key={para.id} className={`border-l-2 ${colorClass} pl-3 py-2 rounded`}>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                <span className="text-xs font-medium text-secondary">
                   {label}
                 </span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="text-xs text-tertiary">
                   段落 {para.index + 1}
                   {para.originalIndex !== undefined && ` (原: ${para.originalIndex + 1})`}
                 </span>
               </div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <code className="bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded block overflow-x-auto">
+              <div className="text-sm text-primary">
+                <code className="bg-canvas dark:bg-secondary px-2 py-1 rounded block overflow-x-auto">
                   {para.content}
                 </code>
               </div>
@@ -181,9 +198,9 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
       // 显示折叠的无变化指示器
       return (
         <div key={modifiedNode.id} className="py-1" style={{ marginLeft: `${depth * 16}px` }}>
-          <div className="flex justify-between items-center text-xs text-gray-400 dark:text-gray-600 py-1 px-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+          <div className="flex justify-between items-center text-xs text-tertiary py-1 px-2 bg-canvas dark:bg-secondary/50 rounded">
             <span>🟢 未变化 (已折叠)</span>
-            <span className="text-gray-400">{modifiedNode.label}</span>
+            <span className="text-tertiary">{modifiedNode.label}</span>
           </div>
         </div>
       );
@@ -196,9 +213,9 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
       <div key={modifiedNode.id} className="py-1">
         <div className="grid grid-cols-2 gap-4" style={marginStyle}>
           {/* 原始值 */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded p-2">
+          <div className="border border-subtle rounded p-2">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-primary">
                 {modifiedNode.label}
               </span>
               {renderDiffIndicator(originalNode ? DiffStatus.SAME : DiffStatus.REMOVED)}
@@ -206,24 +223,24 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
             {originalNode ? (
               <PrimitiveRenderer node={originalNode} />
             ) : (
-              <span className="text-xs text-gray-400 italic">无</span>
+              <span className="text-xs text-tertiary italic">无</span>
             )}
           </div>
 
           {/* 修改后的值 */}
           <div className={`border rounded p-2 ${
-            modifiedNode.diffStatus === DiffStatus.ADDED ? 'border-green-500 bg-green-50 dark:bg-green-900/20' :
-            modifiedNode.diffStatus === DiffStatus.REMOVED ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
-            modifiedNode.diffStatus === DiffStatus.MODIFIED ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
-            'border-gray-200 dark:border-gray-700'
+            modifiedNode.diffStatus === DiffStatus.ADDED ? 'border-status-success bg-status-success/10 dark:bg-status-success/20' :
+            modifiedNode.diffStatus === DiffStatus.REMOVED ? 'border-status-error bg-status-error/10 dark:bg-status-error/20' :
+            modifiedNode.diffStatus === DiffStatus.MODIFIED ? 'border-status-warning bg-status-warning/10 dark:bg-status-warning/20' :
+            'border-subtle'
           }`}>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-primary">
                 {modifiedNode.label}
               </span>
               {renderDiffIndicator(modifiedNode.diffStatus)}
               {hasMarkdownDiff && (
-                <span className="text-xs text-blue-600 dark:text-blue-400">
+                <span className="text-xs text-brand-primary">
                   段落级对比
                 </span>
               )}
@@ -252,11 +269,11 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 rounded-lg">
+    <div className="bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 rounded-lg">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-blue-200/50 dark:border-blue-800/30">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-brand-primary/30 dark:border-brand-primary/20">
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 text-sm text-primary">
             <input
               type="checkbox"
               checked={showChangesOnly}
@@ -265,11 +282,11 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
             />
             仅显示变化
           </label>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-secondary">
             {diffNodes.length} 个变化
           </span>
           {markdownDiffs.size > 0 && (
-            <span className="text-xs text-blue-600 dark:text-blue-400">
+            <span className="text-xs text-brand-primary">
               {markdownDiffs.size} 个 Markdown 段落级对比
             </span>
           )}
@@ -280,17 +297,17 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
             <button
               onClick={prevDiff}
               disabled={currentDiffIndex === 0}
-              className="px-3 py-1 text-sm bg-blue-50/50 dark:bg-blue-900/20 rounded hover:bg-blue-100/50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm bg-brand-primary/10 dark:bg-brand-primary/20 rounded hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ↑ 上一个
             </button>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-secondary">
               {currentDiffIndex + 1} / {diffNodes.length}
             </span>
             <button
               onClick={nextDiff}
               disabled={currentDiffIndex >= diffNodes.length - 1}
-              className="px-3 py-1 text-sm bg-blue-50/50 dark:bg-blue-900/20 rounded hover:bg-blue-100/50 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm bg-brand-primary/10 dark:bg-brand-primary/20 rounded hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               下一个 ↓
             </button>

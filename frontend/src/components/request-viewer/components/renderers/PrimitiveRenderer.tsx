@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
+ * - className="text-gray-700 dark:text-gray-300"
+ *
+ * ✅ REQUIRED:
+ * - className="text-status-success dark:text-status-success/80 bg-status-success/10 dark:bg-status-success/20"
+ * - className="text-secondary"
+ */
+
 import React from 'react';
 import type { ViewNode } from '../../types';
 import { DiffStatus } from '../../types';
@@ -17,13 +34,13 @@ const PrimitiveRenderer: React.FC<PrimitiveRendererProps> = ({ node }) => {
   const getDiffColor = () => {
     switch (diffStatus) {
       case DiffStatus.ADDED:
-        return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
+        return 'text-status-success dark:text-status-success/80 bg-status-success/10 dark:bg-status-success/20';
       case DiffStatus.REMOVED:
-        return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
+        return 'text-status-error dark:text-status-error/80 bg-status-error/10 dark:bg-status-error/20';
       case DiffStatus.MODIFIED:
-        return 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20';
+        return 'text-status-warning dark:text-status-warning/80 bg-status-warning/10 dark:bg-status-warning/20';
       default:
-        return 'text-gray-700 dark:text-gray-300';
+        return 'text-secondary';
     }
   };
 

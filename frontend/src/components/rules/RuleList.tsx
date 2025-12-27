@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-400"
+ * - className="bg-white dark:bg-gray-800"
+ *
+ * ✅ REQUIRED:
+ * - className="text-tertiary"
+ * - className="bg-elevated dark:bg-elevated"
+ */
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { Input, Button, Pagination, Chip, Select, SelectItem } from '@heroui/react';
 import { Search, Filter, Plus, X } from 'lucide-react';
@@ -133,7 +150,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
         {[1, 2, 3, 4, 5, 6].map(i => (
           <div
             key={i}
-            className="h-48 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse border border-gray-200 dark:border-gray-700"
+            className="h-48 rounded-xl bg-canvas dark:bg-secondary animate-pulse border border-subtle"
           />
         ))}
       </div>
@@ -161,10 +178,10 @@ const RuleListComponent: React.FC<RuleListProps> = ({
           onChange={e => handleSearchChange(e.target.value)}
           className="flex-1"
           radius="lg"
-          startContent={<Search size={18} className="text-gray-400" />}
+          startContent={<Search size={18} className="text-tertiary" />}
           classNames={{
             inputWrapper:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors',
+              'shadow-sm bg-elevated dark:bg-elevated border border-subtle hover:border-border-default transition-colors',
           }}
         />
 
@@ -173,10 +190,10 @@ const RuleListComponent: React.FC<RuleListProps> = ({
           onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
-          startContent={<Filter size={18} className="text-gray-400" />}
+          startContent={<Filter size={18} className="text-tertiary" />}
           classNames={{
             trigger:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors',
+              'shadow-sm bg-elevated dark:bg-elevated border border-subtle hover:border-border-default transition-colors',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -197,7 +214,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 px-1">
+      <div className="flex items-center gap-2 text-sm text-secondary px-1">
         <span>搜索结果:</span>
         <Chip color="primary" variant="flat" size="sm" className="h-5 text-xs">
           {filteredRules.length} 条
@@ -207,7 +224,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
             size="sm"
             variant="light"
             onPress={handleClearSearch}
-            className="h-6 px-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+            className="h-6 px-2 text-secondary hover:text-primary dark:hover:text-primary"
             startContent={<X size={14} />}
           >
             清除搜索
@@ -240,7 +257,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
             showShadow
             classNames={{
               wrapper: 'gap-2',
-              item: 'w-9 h-9 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700',
+              item: 'w-9 h-9 rounded-lg bg-elevated shadow-sm border border-subtle',
               cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
             }}
           />

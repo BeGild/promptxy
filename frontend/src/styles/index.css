@@ -1,0 +1,25 @@
+/**
+ * 样式系统入口文件
+ *
+ * 导入所有样式模块
+ * 使用顺序: Tokens → Themes → Utilities → Tailwind → Globals
+ */
+
+/* Design Tokens */
+@import './tokens/index.css';
+
+/* Themes */
+@import './themes/light.css';
+@import './themes/dark.css';
+
+/* Utilities */
+@import './utilities/layout.css';
+@import './utilities/components.css';
+
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Styles (向后兼容) */
+@import './globals.css';

@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="bg-white dark:bg-gray-800"
+ * - className="border-gray-200 dark:border-gray-700"
+ *
+ * ✅ REQUIRED:
+ * - className="bg-elevated dark:bg-elevated"
+ * - className="border-subtle"
+ */
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Autocomplete, AutocompleteItem, Spinner } from '@heroui/react';
 import { getPaths } from '@/api/requests';
@@ -70,7 +87,7 @@ export const PathAutocomplete: React.FC<PathAutocompleteProps> = ({
       items={filteredPaths}
       inputProps={{
         classNames: {
-          inputWrapper: 'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+          inputWrapper: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
         },
       }}
       classNames={{

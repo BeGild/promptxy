@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import TestHeroUI from './TestHeroUI';
-import './styles/globals.css';
+import './styles/index.css';
 import { ErrorBoundary, CustomErrorUI } from '@/components/common/ErrorBoundary';
 
 // 创建 QueryClient 实例

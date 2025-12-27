@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - style={{ color: '#007acc' }}
+ * - style={{ stopColor: '#007AFF' }}
+ *
+ * ✅ REQUIRED:
+ * - className="text-brand"
+ * - style={{ stopColor: 'var(--color-brand-primary)' }}
+ */
+
 import React from 'react';
 
 interface LogoIconProps {
@@ -18,8 +35,8 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' })
       {/* 定义渐变 */}
       <defs>
         <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#007AFF', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#0055D4', stopOpacity: 1 }} />
+          <stop offset="0%" style={{ stopColor: 'var(--color-brand-primary)', stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: 'var(--color-brand-primary-hover)', stopOpacity: 1 }} />
         </linearGradient>
       </defs>
 

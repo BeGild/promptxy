@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-blue-700 dark:text-blue-300"
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ *
+ * ✅ REQUIRED:
+ * - className="text-brand-primary"
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ */
+
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import {
   Table,
@@ -203,15 +220,15 @@ const RequestListComponent: React.FC<RequestListProps> = ({
     return (
       <div className="space-y-4">
         <div className="flex gap-4">
-          <div className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
-          <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
-          <div className="h-10 w-24 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+          <div className="h-10 w-full bg-secondary dark:bg-secondary rounded-lg animate-pulse" />
+          <div className="h-10 w-48 bg-secondary dark:bg-secondary rounded-lg animate-pulse" />
+          <div className="h-10 w-24 bg-secondary dark:bg-secondary rounded-lg animate-pulse" />
         </div>
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
-              className="h-16 w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse"
+              className="h-16 w-full bg-secondary dark:bg-secondary rounded-xl animate-pulse"
             />
           ))}
         </div>
@@ -246,10 +263,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
           onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
-          startContent={<Filter size={18} className="text-gray-400" />}
+          startContent={<Filter size={18} className="text-tertiary" />}
           classNames={{
             trigger:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors',
+              'shadow-sm bg-elevated dark:bg-elevated border border-subtle hover:border-subtle dark:hover:border-subtle transition-colors',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -270,7 +287,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 px-1">
+      <div className="flex items-center gap-2 text-sm text-tertiary px-1">
         <span>显示结果:</span>
         <Chip color="secondary" variant="flat" size="sm" className="h-5 text-xs">
           {statsDisplay.showing} / {statsDisplay.total} 条
@@ -280,7 +297,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
             size="sm"
             variant="light"
             onPress={clearSearch}
-            className="h-6 px-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+            className="h-6 px-2 text-tertiary hover:text-primary dark:hover:text-primary"
             startContent={<X size={14} />}
           >
             清除搜索
@@ -293,9 +310,9 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	        aria-label="请求历史表"
 	        onRowAction={handleRowClick}
 	        classNames={{
-	          wrapper: 'shadow-md rounded-xl border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10',
-	          th: 'bg-blue-50/50 dark:bg-blue-900/20 text-sm font-semibold',
-	          tr: 'hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors',
+	          wrapper: 'shadow-md rounded-xl border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10',
+	          th: 'bg-brand-primary/10 dark:bg-brand-primary/20 text-sm font-semibold',
+	          tr: 'hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 transition-colors',
 	        }}
 	      >
 		        <TableHeader>
@@ -315,7 +332,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	        <TableBody
 	          items={tableItems}
 	          isLoading={isLoading}
-	          emptyContent={<div className="py-12 text-center text-gray-500">暂无数据</div>}
+	          emptyContent={<div className="py-12 text-center text-tertiary">暂无数据</div>}
 	        >
 	          {item => {
 	            const isSelected = selectedId === item.id;
@@ -324,7 +341,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	            return (
 	              <TableRow key={item.id}>
 	                {/* 已查看指示器 - 仅视觉显示 */}
-	                <TableCell className={`w-12 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+	                <TableCell className={`w-12 ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
 	                  {onViewedToggle ? (
 	                    <button
 	                      type="button"
@@ -337,14 +354,14 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	                        e.stopPropagation();
 	                        onViewedToggle(item.id);
 	                      }}
-	                      className="w-8 h-8 inline-flex items-center justify-center select-none rounded hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors"
+	                      className="w-8 h-8 inline-flex items-center justify-center select-none rounded hover:bg-secondary dark:hover:bg-secondary transition-colors"
 	                    >
 	                      <span
 	                        className={[
 	                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
 	                          isViewed
-	                            ? 'bg-purple-600 border-purple-600 dark:bg-purple-400 dark:border-purple-400'
-	                            : 'bg-transparent border-gray-300 dark:border-gray-600',
+	                            ? 'bg-accent-purple border-accent-purple dark:bg-accent-purple dark:border-accent-purple'
+	                            : 'bg-transparent border-subtle dark:border-subtle',
 	                        ].join(' ')}
 	                      />
 	                    </button>
@@ -354,8 +371,8 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	                        className={[
 	                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
 	                          isViewed
-	                            ? 'bg-purple-600 border-purple-600 dark:bg-purple-400 dark:border-purple-400'
-	                            : 'bg-transparent border-gray-300 dark:border-gray-600',
+	                            ? 'bg-accent-purple border-accent-purple dark:bg-accent-purple dark:border-accent-purple'
+	                            : 'bg-transparent border-subtle dark:border-subtle',
 	                        ].join(' ')}
 	                      />
 	                    </div>
@@ -363,26 +380,26 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	                </TableCell>
 
                 {/* 紫色指示条 */}
-                <TableCell className={`w-1 p-0 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                <TableCell className={`w-1 p-0 ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
                   {(isSelected || isViewed) && (
-                    <div className="h-full w-1 bg-purple-500 rounded-r" />
+                    <div className="h-full w-1 bg-accent-purple rounded-r" />
                   )}
                 </TableCell>
 
-                <TableCell className={`text-sm font-mono text-xs text-gray-700 dark:text-gray-300 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                <TableCell className={`text-sm font-mono text-xs text-primary dark:text-primary ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
                   {formatTimeWithMs(item.timestamp)}
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
+                  <span className="text-sm font-medium text-primary dark:text-primary">
                     {formatClient(item.client)}
                   </span>
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
-                  <span className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate max-w-[200px] block">
+                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
+                  <span className="font-mono text-xs text-primary dark:text-primary truncate max-w-[200px] block">
                     {item.path}
                   </span>
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
                   {item.matchedRules && item.matchedRules.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {item.matchedRules.slice(0, 3).map(ruleId => (
@@ -403,10 +420,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                       )}
                     </div>
                   ) : (
-                    <span className="text-gray-400 text-sm">-</span>
+                    <span className="text-tertiary text-sm">-</span>
                   )}
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
                   <Chip
                     size="sm"
                     color={getStatusColor(item.responseStatus)}
@@ -416,17 +433,17 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     {item.responseStatus || 'N/A'}
                   </Chip>
                 </TableCell>
-                <TableCell className={`text-sm text-gray-700 dark:text-gray-300 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                <TableCell className={`text-sm text-primary dark:text-primary ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
                   {item.requestSize || item.responseSize ? (
                     <span className="text-xs">
                       {item.requestSize && (
-                        <span className="text-blue-600 dark:text-blue-400">
+                        <span className="text-brand-primary dark:text-brand-primary">
                           ↑{formatBytes(item.requestSize)}
                         </span>
                       )}
                       {item.requestSize && item.responseSize && ' '}
                       {item.responseSize && (
-                        <span className="text-green-600 dark:text-green-400">
+                        <span className="text-status-success dark:text-status-success">
                           ↓{formatBytes(item.responseSize)}
                         </span>
                       )}
@@ -435,16 +452,16 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     '-'
                   )}
                 </TableCell>
-                <TableCell className={`text-sm text-gray-700 dark:text-gray-300 ${isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}>
+                <TableCell className={`text-sm text-primary dark:text-primary ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
                   {item.durationMs ? formatDuration(item.durationMs) : '-'}
                 </TableCell>
-	                <TableCell className={isSelected ? 'bg-purple-50 dark:bg-purple-900/20' : ''}>
+	                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
 	                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 	                    <Button
 	                      size="sm"
 	                      variant="light"
 	                      onPress={() => handleRowClick(item.id)}
-	                      className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+	                      className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/10"
                           isIconOnly
 	                    >
 	                      <Eye size={18} />
@@ -454,7 +471,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	                      color="danger"
 	                      variant="light"
                       onPress={() => handleDelete(item.id)}
-                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="text-status-error hover:bg-status-error/10 dark:hover:bg-status-error/10"
                       isIconOnly
                     >
                       <Trash2 size={18} />
@@ -478,7 +495,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
             showShadow
             classNames={{
               wrapper: 'gap-2',
-              item: 'w-9 h-9 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700',
+              item: 'w-9 h-9 rounded-lg bg-elevated dark:bg-elevated shadow-sm border border-subtle',
               cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
             }}
           />

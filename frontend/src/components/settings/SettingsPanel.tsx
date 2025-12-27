@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ * - className="text-gray-900 dark:text-gray-100"
+ *
+ * ✅ REQUIRED:
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ * - className="text-primary dark:text-primary"
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip } from '@heroui/react';
 import { BarChart3, Database, Settings, Download, Upload, Trash2, Filter, Plus, Info } from 'lucide-react';
@@ -152,32 +169,32 @@ export const SettingsPanel: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 统计信息 - 占据全宽或 2/3 */}
-          <Card className="lg:col-span-3 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+          <Card className="lg:col-span-3 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
-                <BarChart3 className="text-blue-600 dark:text-blue-400" size={24} />
-                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <BarChart3 className="text-brand-primary" size={24} />
+                <h4 className="text-lg font-bold text-primary">
                   统计信息
                 </h4>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
-                  <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">总请求数</div>
-                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats?.total || 0}</div>
+                <div className="p-4 rounded-xl bg-brand-primary/10 dark:bg-brand-primary/20 border border-brand-primary/30 dark:border-brand-primary/20">
+                  <div className="text-sm text-brand-primary dark:text-brand-primary/80 mb-1">总请求数</div>
+                  <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">{stats?.total || 0}</div>
                 </div>
-                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50">
-                  <div className="text-sm text-green-600 dark:text-green-400 mb-1">今日请求</div>
-                  <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats?.recent || 0}</div>
+                <div className="p-4 rounded-xl bg-status-success/10 dark:bg-status-success/20 border border-status-success/30 dark:border-status-success/20">
+                  <div className="text-sm text-status-success dark:text-status-success/80 mb-1">今日请求</div>
+                  <div className="text-2xl font-bold text-status-success dark:text-status-success/90">{stats?.recent || 0}</div>
                 </div>
-                <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50">
-                  <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">数据库大小</div>
-                  <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                <div className="p-4 rounded-xl bg-accent-orange/10 dark:bg-accent-orange/20 border border-accent-orange/30 dark:border-accent-orange/20">
+                  <div className="text-sm text-accent-orange dark:text-accent-orange/80 mb-1">数据库大小</div>
+                  <div className="text-2xl font-bold text-accent-orange dark:text-accent-orange/90">
                     {stats?.database?.size ? formatBytes(stats.database.size) : '0 B'}
                   </div>
                 </div>
-                <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50">
-                  <div className="text-sm text-purple-600 dark:text-purple-400 mb-1">记录数</div>
-                  <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                <div className="p-4 rounded-xl bg-accent-purple/10 dark:bg-accent-purple/20 border border-accent-purple/30 dark:border-accent-purple/20">
+                  <div className="text-sm text-accent-purple dark:text-accent-purple/80 mb-1">记录数</div>
+                  <div className="text-2xl font-bold text-accent-purple dark:text-accent-purple/90">
                     {stats?.database?.recordCount || 0}
                   </div>
                 </div>
@@ -185,7 +202,7 @@ export const SettingsPanel: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">按客户端分布</span>
+                  <span className="text-sm font-medium text-secondary mb-2 block">按客户端分布</span>
                   <div className="flex flex-wrap gap-2">
                     {stats?.byClient &&
                       Object.entries(stats.byClient).map(([client, count]) => (
@@ -202,8 +219,8 @@ export const SettingsPanel: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">数据库路径</span>
-                  <div className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all bg-gray-100 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                  <span className="text-sm font-medium text-secondary mb-2 block">数据库路径</span>
+                  <div className="font-mono text-xs text-secondary break-all bg-canvas dark:bg-secondary p-3 rounded-lg border border-subtle flex items-center gap-2">
                     <Database size={14} className="shrink-0" />
                     {stats?.database?.path}
                   </div>
@@ -218,11 +235,11 @@ export const SettingsPanel: React.FC = () => {
           </div>
 
           {/* 配置管理 */}
-          <Card className="lg:col-span-1 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 h-full">
+          <Card className="lg:col-span-1 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 h-full">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
-                <Settings size={24} className="text-purple-600 dark:text-purple-400" />
-                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <Settings size={24} className="text-accent-purple" />
+                <h4 className="text-lg font-bold text-primary">
                   配置管理
                 </h4>
               </div>
@@ -248,18 +265,18 @@ export const SettingsPanel: React.FC = () => {
                   {importMutation.isPending ? '导入中...' : '导入配置'}
                 </Button>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg leading-relaxed">
+              <div className="text-xs text-secondary bg-canvas dark:bg-secondary/50 p-3 rounded-lg leading-relaxed">
                 导出包含所有规则配置，导入会覆盖当前规则。请谨慎操作。
               </div>
             </CardBody>
           </Card>
 
           {/* 数据清理 */}
-          <Card className="lg:col-span-1 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 h-full">
+          <Card className="lg:col-span-1 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 h-full">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
-                <Trash2 size={24} className="text-red-600 dark:text-red-400" />
-                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <Trash2 size={24} className="text-status-error" />
+                <h4 className="text-lg font-bold text-primary">
                   数据清理
                 </h4>
               </div>
@@ -274,7 +291,7 @@ export const SettingsPanel: React.FC = () => {
                   labelPlacement="outside"
                   classNames={{
                     inputWrapper:
-                      'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                      'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
                   }}
                 />
                 <Button
@@ -288,33 +305,33 @@ export const SettingsPanel: React.FC = () => {
                   {cleanupMutation.isPending ? '清理中...' : '清理旧数据'}
                 </Button>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg leading-relaxed">
+              <div className="text-xs text-secondary bg-canvas dark:bg-secondary/50 p-3 rounded-lg leading-relaxed">
                 自动清理: 每小时清理一次，保留最近 {keepCount} 条记录。
               </div>
             </CardBody>
           </Card>
 
           {/* 关于 */}
-          <Card className="lg:col-span-1 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 h-full">
+          <Card className="lg:col-span-1 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 h-full">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
-                <Info size={24} className="text-gray-600 dark:text-gray-400" />
-                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <Info size={24} className="text-secondary" />
+                <h4 className="text-lg font-bold text-primary">
                   关于系统
                 </h4>
               </div>
-              <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+              <div className="space-y-3 text-sm text-secondary">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">版本</span>
-                  <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-xs">v2.0</span>
+                  <span className="font-mono bg-canvas dark:bg-secondary px-2 py-0.5 rounded text-xs">v2.0</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Gateway 端口</span>
-                  <span className="font-mono bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded text-xs">7070</span>
+                  <span className="font-mono bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary px-2 py-0.5 rounded text-xs">7070</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-medium">API 端口</span>
-                  <span className="font-mono bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded text-xs">7071</span>
+                  <span className="font-mono bg-accent-purple/10 dark:bg-accent-purple/20 text-accent-purple px-2 py-0.5 rounded text-xs">7071</span>
                 </div>
                 <Divider className="my-2" />
                 <p className="text-xs leading-relaxed opacity-80">
@@ -325,11 +342,11 @@ export const SettingsPanel: React.FC = () => {
           </Card>
 
           {/* 路径过滤 - 占据全宽 */}
-          <Card className="lg:col-span-3 border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+          <Card className="lg:col-span-3 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
             <CardBody className="space-y-4 p-6">
               <div className="flex items-center gap-2">
-                <Filter size={24} className="text-amber-600 dark:text-amber-400" />
-                <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <Filter size={24} className="text-accent-orange" />
+                <h4 className="text-lg font-bold text-primary">
                   路径过滤
                 </h4>
               </div>
@@ -348,7 +365,7 @@ export const SettingsPanel: React.FC = () => {
                       radius="lg"
                       classNames={{
                         inputWrapper:
-                          'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+                          'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
                       }}
                       className="flex-1"
                     />
@@ -364,12 +381,12 @@ export const SettingsPanel: React.FC = () => {
                       添加
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 ml-1">
+                  <p className="text-xs text-secondary mt-2 ml-1">
                     支持精确匹配（如 /api/ping）和前缀匹配（如 /health/）。匹配的路径将不会记录到历史。
                   </p>
                 </div>
                 
-                <div className="flex-1 w-full bg-gray-50 dark:bg-gray-900/30 rounded-xl p-4 min-h-[100px]">
+                <div className="flex-1 w-full bg-canvas dark:bg-secondary/30 rounded-xl p-4 min-h-[100px]">
                   {filteredPaths.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {filteredPaths.map(path => (
@@ -388,7 +405,7 @@ export const SettingsPanel: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-400 italic text-center py-2">
+                    <div className="text-sm text-tertiary italic text-center py-2">
                       暂无过滤路径
                     </div>
                   )}

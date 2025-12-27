@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="border-gray-100 dark:border-gray-800"
+ * - className="text-gray-700 dark:text-gray-300"
+ *
+ * ✅ REQUIRED:
+ * - className="border-subtle"
+ * - className="text-primary dark:text-primary"
+ */
+
 import React, {
   useMemo,
   useCallback,
@@ -83,11 +100,11 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
   // 在快速滚动时，可以显示简化的占位符以提升性能
   if (isScrolling) {
     return (
-      <div style={style} className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+      <div style={style} className="px-4 py-3 border-b border-subtle">
         <div className="flex items-center gap-3">
-          <div className="w-24 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="w-16 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-24 h-4 bg-subtle rounded animate-pulse" />
+          <div className="w-16 h-4 bg-subtle rounded animate-pulse" />
+          <div className="flex-1 h-4 bg-subtle rounded animate-pulse" />
         </div>
       </div>
     );
@@ -96,8 +113,8 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
   return (
     <div
       style={style}
-      className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer flex items-center gap-3 ${
-        isSelected ? 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30' : ''
+      className={`px-4 py-3 border-b border-subtle hover:bg-canvas dark:hover:bg-secondary/50 transition-colors cursor-pointer flex items-center gap-3 ${
+        isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/20 hover:bg-accent-purple/20 dark:hover:bg-accent-purple/30' : ''
       }`}
       onClick={() => onRowClick(item.id)}
     >
@@ -112,14 +129,14 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
               onViewedToggle(item.id);
             }}
             aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
-            className="w-8 h-8 inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors"
+            className="w-8 h-8 inline-flex items-center justify-center rounded hover:bg-canvas dark:hover:bg-secondary/60 transition-colors"
           >
             <span
               className={[
                 'w-3.5 h-3.5 rounded-full border-2 transition-colors',
                 isViewed
-                  ? 'bg-purple-600 border-purple-600 dark:bg-purple-400 dark:border-purple-400'
-                  : 'bg-transparent border-gray-300 dark:border-gray-600',
+                  ? 'bg-accent-purple border-accent-purple dark:bg-accent-purple/80 dark:border-accent-purple/80'
+                  : 'bg-transparent border-subtle',
               ].join(' ')}
             />
           </button>
@@ -128,24 +145,24 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
 
       {/* 紫色指示条 */}
       {(isSelected || isViewed) && (
-        <div className="w-1 h-full bg-purple-500 rounded-r flex-shrink-0" />
+        <div className="w-1 h-full bg-accent-purple rounded-r flex-shrink-0" />
       )}
 
       {/* 时间 */}
-      <div className="w-24 text-xs font-mono text-gray-700 dark:text-gray-300">
+      <div className="w-24 text-xs font-mono text-primary">
         {formatTimeWithMs(item.timestamp)}
       </div>
 
       {/* 客户端 */}
       <div className="w-16">
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-xs font-medium text-primary">
           {formatClient(item.client)}
         </span>
       </div>
 
       {/* 路径 */}
       <div className="flex-1 min-w-0">
-        <span className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate block">
+        <span className="font-mono text-xs text-primary truncate block">
           {item.path}
         </span>
       </div>
@@ -172,7 +189,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             )}
           </div>
         ) : (
-          <span className="text-gray-400 text-xs">-</span>
+          <span className="text-tertiary text-xs">-</span>
         )}
       </div>
 
@@ -189,17 +206,17 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       </div>
 
       {/* 大小 */}
-      <div className="w-24 text-xs text-gray-700 dark:text-gray-300">
+      <div className="w-24 text-xs text-primary">
         {item.requestSize || item.responseSize ? (
           <span>
             {item.requestSize && (
-              <span className="text-blue-600 dark:text-blue-400">
+              <span className="text-brand-primary">
                 ↑{formatBytes(item.requestSize)}
               </span>
             )}
             {item.requestSize && item.responseSize && ' '}
             {item.responseSize && (
-              <span className="text-green-600 dark:text-green-400">
+              <span className="text-status-success">
                 ↓{formatBytes(item.responseSize)}
               </span>
             )}
@@ -210,7 +227,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       </div>
 
       {/* 耗时 */}
-      <div className="w-16 text-xs text-gray-700 dark:text-gray-300 text-center">
+      <div className="w-16 text-xs text-primary text-center">
         {item.durationMs ? formatDuration(item.durationMs) : '-'}
       </div>
 
@@ -225,7 +242,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
               e.stopPropagation();
               onRowClick(item.id);
             }}
-            className="text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-xs px-2 h-7"
+            className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 text-xs px-2 h-7"
           >
             查看
           </Button>
@@ -238,7 +255,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
               e.stopPropagation();
               onDelete(item.id);
             }}
-            className="hover:bg-red-50 dark:hover:bg-red-900/20 text-xs px-2 h-7"
+            className="hover:bg-status-error/10 dark:hover:bg-status-error/20 text-xs px-2 h-7"
           >
             删除
           </Button>
@@ -421,7 +438,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           radius="lg"
           classNames={{
             trigger:
-              'shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
+              'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -441,7 +458,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-secondary">
         <span>显示结果:</span>
         <Chip color="secondary" variant="flat" size="sm">
           {statsDisplay.showing} / {statsDisplay.total} 条
@@ -451,7 +468,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
             清除搜索
           </Button>
         )}
-        {isScrolling && <span className="text-xs text-gray-400 ml-auto">滚动中...</span>}
+        {isScrolling && <span className="text-xs text-tertiary ml-auto">滚动中...</span>}
       </div>
     </>
   );
@@ -479,7 +496,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
 
     // 表头（固定显示）
     const tableHeader = (
-      <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+      <div className="bg-canvas dark:bg-secondary border-b border-subtle px-4 py-2 text-xs font-semibold text-secondary">
         <div className="flex items-center gap-3">
           <div className="w-12">已查看</div>
           <div className="w-24">时间</div>
@@ -519,7 +536,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     };
 
     return (
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-md">
+      <div className="border border-subtle rounded-xl overflow-hidden shadow-md">
         {tableHeader}
         <div style={{ height: containerHeight }}>
           <List
@@ -562,7 +579,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           classNames={{
             wrapper: 'gap-1',
             item: 'min-w-9 h-9',
-            cursor: 'shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold',
+            cursor: 'shadow-lg bg-gradient-to-r from-accent-purple to-accent-pink text-white font-bold',
           }}
         />
       </div>

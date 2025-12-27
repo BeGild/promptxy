@@ -1,3 +1,18 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="bg-gray-50 dark:bg-gray-950"
+ *
+ * ✅ REQUIRED:
+ * - className="bg-canvas dark:bg-secondary"
+ */
+
 import React, { useEffect, useState } from 'react';
 import { HeroUIProvider } from '@heroui/react';
 import { Toaster } from 'sonner';
@@ -60,9 +75,9 @@ function AppContent() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+    <div className="flex flex-col h-screen overflow-hidden bg-canvas dark:bg-secondary transition-colors duration-300">
       <Header sseConnected={sseConnected} apiConnected={apiConnected} />
-      <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+      <div className="flex-1 overflow-auto bg-canvas dark:bg-secondary transition-colors duration-300">
         {/* 页面级错误边界 - 捕获页面渲染错误 */}
         <ErrorBoundary
           onError={(error, errorInfo) => {

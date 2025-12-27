@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-blue-700 dark:text-blue-300"
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ *
+ * ✅ REQUIRED:
+ * - className="text-brand-primary"
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ */
+
 import React, { useState } from 'react';
 import {
   useDisclosure,
@@ -135,10 +152,10 @@ export const RulesPage: React.FC = () => {
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent-purple bg-clip-text text-transparent">
             规则管理
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-secondary mt-1">
             创建和管理请求修改规则，支持复杂的匹配和替换逻辑
           </p>
         </div>
@@ -151,26 +168,26 @@ export const RulesPage: React.FC = () => {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">已启用</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">已启用</div>
+            <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
               {rules.filter(r => r.enabled !== false).length}
             </div>
           </CardBody>
         </Card>
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-purple-700 dark:text-purple-300 font-medium">已禁用</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+            <div className="text-sm text-accent-purple dark:text-accent-purple/80 font-medium">已禁用</div>
+            <div className="text-2xl font-bold text-accent-purple dark:text-accent-purple/90">
               {rules.filter(r => r.enabled === false).length}
             </div>
           </CardBody>
         </Card>
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-green-700 dark:text-green-300 font-medium">总规则数</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">总规则数</div>
+            <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
               {rules.length}
             </div>
           </CardBody>

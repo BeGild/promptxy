@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-500 dark:text-gray-400"
+ * - className="bg-blue-50/50 dark:bg-blue-900/20"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="bg-brand-primary/10 dark:bg-brand-primary/20"
+ */
+
 import React, { useState, useMemo, useEffect } from 'react';
 import type { RequestMetadata, ViewNode, ViewGroup, RequestAdapter } from '../types';
 import { RenderMode } from '../types';
@@ -90,51 +107,51 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
 
   if (!adapter || !viewTree) {
     return (
-      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+      <div className="p-4 text-center text-secondary">
         正在加载请求详情...
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+    <div className="h-full flex flex-col bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
       {/* 元数据栏 */}
       {metadata && (
-        <div className="px-4 py-3 border-b border-blue-200/50 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-900/20">
+        <div className="px-4 py-3 border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             {metadata.model && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400">Model:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{metadata.model}</span>
+                <span className="text-secondary">Model:</span>
+                <span className="font-medium text-primary">{metadata.model}</span>
               </div>
             )}
             {metadata.messageCount !== undefined && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400">Messages:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{metadata.messageCount}</span>
+                <span className="text-secondary">Messages:</span>
+                <span className="font-medium text-primary">{metadata.messageCount}</span>
               </div>
             )}
             {metadata.systemPromptLength !== undefined && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400">System:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-secondary">System:</span>
+                <span className="font-medium text-primary">
                   {(metadata.systemPromptLength / 1000).toFixed(1)}k 字符
                 </span>
               </div>
             )}
             {metadata.toolCount !== undefined && metadata.toolCount > 0 && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400">Tools:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">{metadata.toolCount}</span>
+                <span className="text-secondary">Tools:</span>
+                <span className="font-medium text-primary">{metadata.toolCount}</span>
               </div>
             )}
             {metadata.responseStatus && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                <span className="text-secondary">Status:</span>
                 <span className={`font-medium ${
                   metadata.responseStatus >= 200 && metadata.responseStatus < 300
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? 'text-status-success'
+                    : 'text-status-error'
                 }`}>
                   {metadata.responseStatus}
                 </span>
@@ -142,13 +159,13 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             )}
             {metadata.responseDuration && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400">耗时:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-secondary">耗时:</span>
+                <span className="font-medium text-primary">
                   {(metadata.responseDuration / 1000).toFixed(2)}s
                 </span>
               </div>
             )}
-            <div className="ml-auto text-xs text-gray-400 dark:text-gray-500">
+            <div className="ml-auto text-xs text-tertiary">
               {adapter.name} v{adapter.version}
             </div>
           </div>
@@ -156,7 +173,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
       )}
 
       {/* 视图模式切换 */}
-      <div className="px-4 py-2 border-b border-blue-200/50 dark:border-blue-800/30 flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-brand-primary/30 dark:border-brand-primary/20 flex items-center gap-2">
         {[
           { mode: RenderMode.SUMMARY, label: '结构概览' },
           { mode: RenderMode.FULL, label: '内容详情' },
@@ -167,8 +184,8 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             onClick={() => setViewMode(mode)}
             className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
               viewMode === mode
-                ? 'bg-blue-500 text-white'
-                : 'bg-blue-50/50 dark:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:bg-blue-100/50 dark:hover:bg-blue-900/30'
+                ? 'bg-brand-primary text-white'
+                : 'bg-brand-primary/10 dark:bg-brand-primary/20 text-primary hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30'
             }`}
             disabled={mode === RenderMode.DIFF && !originalRequest}
           >
@@ -192,7 +209,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             {originalTree ? (
               <DiffView originalTree={originalTree} modifiedTree={viewTree} />
             ) : (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+              <div className="text-center text-secondary py-8">
                 无原始请求，无法显示差异对比
               </div>
             )}

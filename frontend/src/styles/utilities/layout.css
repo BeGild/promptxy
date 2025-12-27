@@ -1,0 +1,50 @@
+/**
+ * 布局工具类
+ *
+ * 常用布局模式的可复用类
+ */
+
+@layer components {
+  /* ==================== Flex 布局 ==================== */
+  .flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .flex-start {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .flex-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .flex-col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .flex-col-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ==================== Grid 布局 ==================== */
+  .grid-center {
+    display: grid;
+    place-items: center;
+  }
+}

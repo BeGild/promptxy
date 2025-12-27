@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="bg-blue-50/30 dark:bg-blue-900/20"
+ * - className="text-gray-600 dark:text-gray-400"
+ *
+ * ✅ REQUIRED:
+ * - className="bg-brand-primary/10 dark:bg-brand-primary/20"
+ * - className="text-secondary"
+ */
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Maximize2, Minimize2, Copy, Check } from 'lucide-react';
 import {
@@ -127,7 +144,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
         id="tree"
         minSize="15%"
         maxSize="50%"
-        className={isFullScreen ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}
+        className={isFullScreen ? 'bg-brand-primary/10 dark:bg-brand-primary/20' : ''}
       >
         <FileTree
           rootNode={viewTree}
@@ -139,9 +156,9 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
 
       {/* 分割条 */}
       <Separator
-        className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+        className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary"
       >
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-gray-200 dark:bg-gray-700 group-data-[separator=hover]:bg-blue-500 group-data-[separator=active]:bg-blue-600 transition-colors" />
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-subtle group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
       </Separator>
 
       {/* 右侧：内容面板 */}
@@ -151,7 +168,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
       >
         <div className="h-full flex flex-col">
           {/* 头部：面包屑 + 预览切换 + 全屏按钮 */}
-          <div className={`flex items-center justify-between border-b border-blue-200/50 dark:border-blue-800/30 bg-blue-50/50 dark:bg-blue-900/20 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
+          <div className={`flex items-center justify-between border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
             <div className="flex-1 overflow-hidden">
               <PathBreadcrumb path={selectedNode.path} />
             </div>
@@ -163,8 +180,8 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
                     onClick={() => setIsMarkdownPreview(false)}
                     className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                       !isMarkdownPreview
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'bg-brand-primary text-white'
+                        : 'text-secondary hover:bg-canvas dark:hover:bg-secondary'
                     }`}
                   >
                     纯文本
@@ -173,8 +190,8 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
                     onClick={() => setIsMarkdownPreview(true)}
                     className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                       isMarkdownPreview
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'bg-brand-primary text-white'
+                        : 'text-secondary hover:bg-canvas dark:hover:bg-secondary'
                     }`}
                   >
                     预览
@@ -184,7 +201,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
               {/* 复制按钮 */}
               <button
                 onClick={handleCopy}
-                className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-1.5"
+                className="flex-shrink-0 p-1.5 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-1.5"
                 title={copied ? '已复制' : '复制'}
               >
                 {copied ? (
@@ -201,7 +218,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
               </button>
               <button
                 onClick={handleToggleFullScreen}
-                className="flex-shrink-0 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex items-center gap-2"
+                className="flex-shrink-0 p-1.5 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-2"
                 title={isFullScreen ? '退出全屏 (ESC)' : '全屏'}
               >
                 {isFullScreen ? (
@@ -229,11 +246,11 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   );
 
   return isFullScreen ? (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-800">
+    <div className="fixed inset-0 z-50 bg-elevated">
       {content}
     </div>
   ) : (
-    <div className="h-full min-h-0 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+    <div className="h-full min-h-0 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
       {content}
     </div>
   );

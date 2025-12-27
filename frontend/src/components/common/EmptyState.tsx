@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - style={{ color: '#007acc' }}
+ * - className="text-gray-600"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="bg-elevated"
+ */
+
 import React from 'react';
 import { Button, Card, CardBody } from '@heroui/react';
 
@@ -17,12 +34,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
 }) => {
   return (
-    <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
-      <CardBody className="p-8 text-center space-y-4">
+    <Card className="border-2 border-dashed border-gray-300 dark:border-gray-700 bg-secondary dark:bg-elevated">
+      <CardBody className="p-xl text-center space-y-4">
         <div className="text-6xl">{icon}</div>
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">{description}</p>
+          <h3 className="text-xl font-bold text-primary dark:text-primary">{title}</h3>
+          <p className="text-sm text-secondary max-w-md mx-auto">{description}</p>
         </div>
         {actionText && onAction && (
           <Button

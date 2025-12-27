@@ -1,4 +1,21 @@
 /**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - style={{ color: '#007acc' }}
+ * - className="text-gray-600"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="bg-elevated"
+ */
+
+/**
  * ErrorBoundary - React 错误边界组件
  * 捕获子组件树中的 JavaScript 错误并显示友好的错误 UI
  *
@@ -36,30 +53,30 @@ const DefaultErrorUI: React.FC<{
   onReset: () => void;
 }> = ({ error, errorInfo, onReset }) => {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950 p-4">
-      <Card className="max-w-2xl w-full border-2 border-danger-500 bg-white dark:bg-gray-900">
-        <CardBody className="p-6 space-y-4">
+    <div className="flex items-center justify-center min-h-screen bg-secondary dark:bg-primary p-md">
+      <Card className="max-w-2xl w-full border-2 border-error bg-elevated">
+        <CardBody className="p-md space-y-4">
           {/* 标题区域 */}
           <div className="text-center space-y-2">
             <div className="text-6xl">⚠️</div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">出现了意外错误</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h2 className="text-2xl font-bold text-primary">出现了意外错误</h2>
+            <p className="text-sm text-secondary">
               应用程序遇到了问题，我们的工程师正在努力修复
             </p>
           </div>
 
           {/* 错误详情（仅开发环境） */}
           {isDevelopment && error && (
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 space-y-3 text-xs font-mono overflow-auto max-h-64">
+            <div className="bg-canvas dark:bg-secondary rounded-lg p-md space-y-3 text-xs font-mono overflow-auto max-h-64">
               <div className="space-y-1">
-                <div className="font-bold text-danger-600">错误信息:</div>
-                <div className="text-gray-800 dark:text-gray-200">{error.message}</div>
+                <div className="font-bold text-error">错误信息:</div>
+                <div className="text-primary">{error.message}</div>
               </div>
 
               {error.stack && (
                 <div className="space-y-1">
-                  <div className="font-bold text-warning-600">堆栈跟踪:</div>
-                  <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  <div className="font-bold text-warning">堆栈跟踪:</div>
+                  <div className="text-secondary whitespace-pre-wrap">
                     {error.stack}
                   </div>
                 </div>
@@ -67,8 +84,8 @@ const DefaultErrorUI: React.FC<{
 
               {errorInfo?.componentStack && (
                 <div className="space-y-1">
-                  <div className="font-bold text-primary-600">组件堆栈:</div>
-                  <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  <div className="font-bold text-brand-primary">组件堆栈:</div>
+                  <div className="text-secondary whitespace-pre-wrap">
                     {errorInfo.componentStack}
                   </div>
                 </div>
@@ -78,13 +95,13 @@ const DefaultErrorUI: React.FC<{
 
           {/* 生产环境友好提示 */}
           {!isDevelopment && (
-            <div className="bg-warning-100 dark:bg-warning-900/20 rounded-lg p-3 text-sm text-warning-800 dark:text-warning-200">
+            <div className="bg-warning-100 dark:bg-warning-900/20 rounded-lg p-sm text-sm text-warning-800 dark:text-warning-200">
               <p>💡 提示：如果这个问题持续出现，请尝试刷新页面或联系技术支持。</p>
             </div>
           )}
 
           {/* 操作按钮 */}
-          <div className="flex gap-3 justify-center pt-2">
+          <div className="flex gap-md justify-center pt-sm">
             <Button
               color="primary"
               onPress={onReset}
@@ -107,7 +124,7 @@ const DefaultErrorUI: React.FC<{
 
           {/* 开发环境额外信息 */}
           {isDevelopment && (
-            <div className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-xs text-center text-muted pt-sm border-t border-default">
               开发模式：错误详情已显示上方
             </div>
           )}
@@ -261,23 +278,23 @@ export const CustomErrorUI: React.FC<{
   showDetails = isDevelopment,
 }) => {
   return (
-    <div className="flex items-center justify-center min-h-full p-4">
-      <Card className="max-w-lg w-full border-2 border-danger-500 bg-white dark:bg-gray-900">
-        <CardBody className="p-6 space-y-4">
+    <div className="flex items-center justify-center min-h-full p-md">
+      <Card className="max-w-lg w-full border-2 border-error bg-elevated">
+        <CardBody className="p-md space-y-4">
           <div className="text-center space-y-2">
             <div className="text-5xl">{icon}</div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+            <h3 className="text-xl font-bold text-primary">{title}</h3>
+            <p className="text-sm text-secondary">{description}</p>
           </div>
 
           {showDetails && error && (
-            <div className="bg-gray-100 dark:bg-gray-800 rounded p-3 text-xs font-mono overflow-auto max-h-40">
+            <div className="bg-canvas dark:bg-secondary rounded p-sm text-xs font-mono overflow-auto max-h-40">
               <div className="font-bold mb-1">错误详情:</div>
-              <div className="text-gray-700 dark:text-gray-300">{error.message}</div>
+              <div className="text-secondary">{error.message}</div>
               {error.stack && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-gray-500">堆栈信息</summary>
-                  <pre className="mt-1 whitespace-pre-wrap text-gray-600 dark:text-gray-400">
+                <details className="mt-sm">
+                  <summary className="cursor-pointer text-muted">堆栈信息</summary>
+                  <pre className="mt-1 whitespace-pre-wrap text-tertiary">
                     {error.stack}
                   </pre>
                 </details>
@@ -286,7 +303,7 @@ export const CustomErrorUI: React.FC<{
           )}
 
           {onAction && (
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-sm">
               <Button color="danger" onPress={onAction} variant="flat" radius="lg" size="md">
                 {actionText}
               </Button>

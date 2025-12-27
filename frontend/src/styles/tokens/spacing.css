@@ -1,0 +1,18 @@
+/**
+ * 间距变量系统
+ *
+ * 基于 4px 网格的间距系统
+ * 格式: --spacing-{size}
+ */
+
+@layer base {
+  :root {
+    --spacing-xs: 4px;   /* 0.25rem */
+    --spacing-sm: 8px;   /* 0.5rem */
+    --spacing-md: 16px;  /* 1rem */
+    --spacing-lg: 24px;  /* 1.5rem */
+    --spacing-xl: 32px;  /* 2rem */
+    --spacing-2xl: 48px; /* 3rem */
+    --spacing-3xl: 64px; /* 4rem */
+  }
+}

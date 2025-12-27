@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-500"
+ * - className="from-gray-600 to-gray-800 dark:from-gray-400"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="from-primary to-secondary dark:from-primary"
+ */
+
 import React, { useState, useCallback, useEffect } from 'react';
 import type { ViewNode } from '../../types';
 import { DiffStatus } from '../../types';
@@ -56,7 +73,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
       case DiffStatus.MODIFIED:
         return 'border-yellow-500';
       default:
-        return 'border-gray-200 dark:border-gray-700';
+        return 'border-subtle';
     }
   };
 
@@ -73,14 +90,14 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
     <div className={`border-l-2 ${getDiffClass()} ml-2`}>
       {/* 头部 */}
       <div
-        className="flex items-center gap-2 py-1 px-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer select-none"
+        className="flex items-center gap-2 py-1 px-2 hover:bg-secondary rounded cursor-pointer select-none"
         onClick={toggleExpanded}
       >
-        <span className="text-gray-400">
+        <span className="text-tertiary">
           {hasChildren ? (isExpanded ? '▼' : '▶') : '•'}
         </span>
         <span className="font-semibold text-sm">{label}:</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-xs text-tertiary">
           [{childCount} 项]
         </span>
       </div>
@@ -92,7 +109,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
             {visibleChildren.map(child => (
               <div key={child.id} className="my-1">
                 <div className="flex items-start gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                  <span className="text-sm text-tertiary font-mono">
                     [{child.label}]:
                   </span>
                   <div className="flex-1">
@@ -110,7 +127,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
                 e.stopPropagation();
                 setShowAll(true);
               }}
-              className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              className="mt-2 text-xs text-brand-primary hover:underline"
             >
               显示剩余 {childCount - DEFAULT_VISIBLE} 项...
             </button>
@@ -122,7 +139,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
                 e.stopPropagation();
                 setShowAll(false);
               }}
-              className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              className="mt-2 text-xs text-brand-primary hover:underline"
             >
               收起
             </button>

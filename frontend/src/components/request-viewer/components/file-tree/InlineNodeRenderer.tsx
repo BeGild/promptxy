@@ -1,3 +1,22 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-900 dark:text-gray-100"
+ * - className="bg-gray-100 dark:bg-gray-800"
+ * - className="bg-blue-50/30 dark:bg-blue-900/10"
+ *
+ * ✅ REQUIRED:
+ * - className="text-primary dark:text-primary"
+ * - className="bg-canvas dark:bg-secondary"
+ * - className="bg-brand-primary/10 dark:bg-brand-primary/20"
+ */
+
 import React, { useMemo, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -37,25 +56,25 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullS
   // 自定义渲染组件
   const components = useMemo(() => ({
     h1: ({ children, ...props }: any) => (
-      <h1 className="text-2xl font-bold mt-6 mb-4 text-gray-900 dark:text-gray-100" {...props}>{children}</h1>
+      <h1 className="text-2xl font-bold mt-6 mb-4 text-primary" {...props}>{children}</h1>
     ),
     h2: ({ children, ...props }: any) => (
-      <h2 className="text-xl font-bold mt-5 mb-3 text-gray-900 dark:text-gray-100" {...props}>{children}</h2>
+      <h2 className="text-xl font-bold mt-5 mb-3 text-primary" {...props}>{children}</h2>
     ),
     h3: ({ children, ...props }: any) => (
-      <h3 className="text-lg font-bold mt-4 mb-2 text-gray-900 dark:text-gray-100" {...props}>{children}</h3>
+      <h3 className="text-lg font-bold mt-4 mb-2 text-primary" {...props}>{children}</h3>
     ),
     h4: ({ children, ...props }: any) => (
-      <h4 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props}>{children}</h4>
+      <h4 className="text-base font-bold mt-3 mb-2 text-primary" {...props}>{children}</h4>
     ),
     p: ({ children, ...props }: any) => (
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3" {...props}>{children}</p>
+      <p className="text-sm text-secondary leading-relaxed mb-3" {...props}>{children}</p>
     ),
     code: ({ inline, className, children, ...props }: any) => {
       // XML 标签高亮
       if (className?.includes('xml-tag-highlight')) {
         return (
-          <code className="px-0.5 py-0 text-emerald-600 dark:text-emerald-400 font-mono text-xs" {...props}>
+          <code className="px-0.5 py-0 text-accent-purple dark:text-accent-purple/80 font-mono text-xs" {...props}>
             {children}
           </code>
         );
@@ -63,7 +82,7 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullS
       // 内联代码
       if (inline) {
         return (
-          <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400 rounded text-xs font-mono" {...props}>
+          <code className="px-1 py-0.5 bg-canvas dark:bg-secondary text-status-error dark:text-status-error/80 rounded text-xs font-mono" {...props}>
             {children}
           </code>
         );
@@ -71,44 +90,44 @@ const InlineMarkdownRenderer: React.FC<{ node: ViewNode; title?: string; isFullS
       return <code className={className} {...props}>{children}</code>;
     },
     pre: ({ children, ...props }: any) => (
-      <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4 text-xs font-mono" {...props}>
+      <pre className="bg-secondary dark:bg-secondary/90 text-primary p-4 rounded-lg overflow-x-auto mb-4 text-xs font-mono" {...props}>
         {children}
       </pre>
     ),
     ul: ({ children, ...props }: any) => (
-      <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 mb-3 space-y-1" {...props}>{children}</ul>
+      <ul className="list-disc list-inside text-sm text-secondary mb-3 space-y-1" {...props}>{children}</ul>
     ),
     ol: ({ children, ...props }: any) => (
-      <ol className="list-decimal list-inside text-sm text-gray-700 dark:text-gray-300 mb-3 space-y-1" {...props}>{children}</ol>
+      <ol className="list-decimal list-inside text-sm text-secondary mb-3 space-y-1" {...props}>{children}</ol>
     ),
     blockquote: ({ children, ...props }: any) => (
-      <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-3" {...props}>
+      <blockquote className="border-l-4 border-subtle pl-4 italic text-tertiary my-3" {...props}>
         {children}
       </blockquote>
     ),
     table: ({ children, ...props }: any) => (
       <div className="overflow-x-auto mb-4">
-        <table className="min-w-full border border-gray-200 dark:border-gray-700" {...props}>{children}</table>
+        <table className="min-w-full border border-subtle" {...props}>{children}</table>
       </div>
     ),
     thead: ({ children, ...props }: any) => (
-      <thead className="bg-blue-50/50 dark:bg-blue-900/20" {...props}>{children}</thead>
+      <thead className="bg-brand-primary/10 dark:bg-brand-primary/20" {...props}>{children}</thead>
     ),
     tbody: ({ children, ...props }: any) => (
-      <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>{children}</tbody>
+      <tbody className="divide-y divide-subtle" {...props}>{children}</tbody>
     ),
     tr: ({ children, ...props }: any) => (
-      <tr className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10" {...props}>{children}</tr>
+      <tr className="hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10" {...props}>{children}</tr>
     ),
     strong: ({ children, ...props }: any) => (
-      <strong className="font-bold text-gray-900 dark:text-gray-100" {...props}>{children}</strong>
+      <strong className="font-bold text-primary" {...props}>{children}</strong>
     ),
   }), []);
 
   return (
     <div className={containerClass}>
-      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4 prose dark:prose-invert max-w-none">
-        {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
+      <div className="bg-brand-primary/10 dark:bg-brand-primary/20 border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg p-4 prose dark:prose-invert max-w-none">
+        {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
           rehypePlugins={[rehypeXmlHighlight, rehypeHighlight, rehypeKatex]}
@@ -138,11 +157,11 @@ const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen
 
   return (
     <div className={`${containerClass} h-full flex flex-col`}>
-      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
+      {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="flex-1 w-full min-h-0 p-4 font-mono text-sm bg-blue-50/30 dark:bg-blue-900/10 text-gray-900 dark:text-gray-100 border border-blue-200/50 dark:border-blue-800/30 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="flex-1 w-full min-h-0 p-4 font-mono text-sm bg-brand-primary/10 dark:bg-brand-primary/20 text-primary border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
         spellCheck={false}
       />
     </div>
@@ -159,12 +178,12 @@ const NumericArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScr
 
   return (
     <div className={containerClass}>
-      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+      {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
+      <div className="bg-brand-primary/10 dark:bg-brand-primary/20 border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg p-4">
+        <p className="text-xs text-tertiary mb-2">
           数值数组 ({values.length} 个元素)
         </p>
-        <code className="font-mono text-sm break-all text-gray-900 dark:text-gray-100">
+        <code className="font-mono text-sm break-all text-primary">
           [{values.join(', ')}]
         </code>
       </div>
@@ -209,9 +228,9 @@ const InlineJsonRenderer: React.FC<{ node: ViewNode; title?: string; isFullScree
 
   return (
     <div className={containerClass}>
-      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4 overflow-x-auto">
-        <pre className="text-xs text-gray-900 dark:text-gray-100 font-mono whitespace-pre">
+      {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
+      <div className="bg-brand-primary/10 dark:bg-brand-primary/20 border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg p-4 overflow-x-auto">
+        <pre className="text-xs text-primary font-mono whitespace-pre">
           {formattedJson}
         </pre>
       </div>
@@ -238,12 +257,12 @@ const InlineArrayRenderer: React.FC<{ node: ViewNode; title?: string; isFullScre
 
   return (
     <div className={containerClass}>
-      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4 overflow-x-auto">
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">
+      {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
+      <div className="bg-brand-primary/10 dark:bg-brand-primary/20 border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg p-4 overflow-x-auto">
+        <div className="text-xs text-tertiary mb-2 font-mono">
           {childCount} 个元素
         </div>
-        <pre className="text-xs text-gray-900 dark:text-gray-100 font-mono whitespace-pre">
+        <pre className="text-xs text-primary font-mono whitespace-pre">
           {formattedJson}
         </pre>
       </div>
@@ -266,11 +285,11 @@ const InlinePrimitiveRenderer: React.FC<{ node: ViewNode; title?: string; isFull
 
   return (
     <div className={containerClass}>
-      {title && <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>}
-      <div className="bg-blue-50/30 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-lg p-4">
+      {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
+      <div className="bg-brand-primary/10 dark:bg-brand-primary/20 border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg p-4">
         <div className="flex items-baseline gap-4">
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{node.label}:</span>
-          <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
+          <span className="text-sm font-semibold text-primary">{node.label}:</span>
+          <span className="font-mono text-sm text-primary">
             {formatValue(node.value)}
           </span>
         </div>

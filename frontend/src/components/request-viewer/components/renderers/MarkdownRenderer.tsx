@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-500"
+ * - className="from-gray-600 to-gray-800 dark:from-gray-400"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="from-primary to-secondary dark:from-primary"
+ */
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -101,31 +118,31 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
     // 标题
     h1: ({ children, ...props }: any) => {
       const index = headings.findIndex(h => h.text === String(children));
-      return <h1 id={`heading-${index}`} className="text-2xl font-bold mt-6 mb-4 text-gray-900 dark:text-gray-100" {...props}>{children}</h1>;
+      return <h1 id={`heading-${index}`} className="text-2xl font-bold mt-6 mb-4 text-primary dark:text-primary" {...props}>{children}</h1>;
     },
     h2: ({ children, ...props }: any) => {
       const index = headings.findIndex(h => h.text === String(children));
-      return <h2 id={`heading-${index}`} className="text-xl font-bold mt-5 mb-3 text-gray-900 dark:text-gray-100" {...props}>{children}</h2>;
+      return <h2 id={`heading-${index}`} className="text-xl font-bold mt-5 mb-3 text-primary dark:text-primary" {...props}>{children}</h2>;
     },
     h3: ({ children, ...props }: any) => {
       const index = headings.findIndex(h => h.text === String(children));
-      return <h3 id={`heading-${index}`} className="text-lg font-bold mt-4 mb-2 text-gray-900 dark:text-gray-100" {...props}>{children}</h3>;
+      return <h3 id={`heading-${index}`} className="text-lg font-bold mt-4 mb-2 text-primary dark:text-primary" {...props}>{children}</h3>;
     },
     h4: ({ children, ...props }: any) => {
       const index = headings.findIndex(h => h.text === String(children));
-      return <h4 id={`heading-${index}`} className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props}>{children}</h4>;
+      return <h4 id={`heading-${index}`} className="text-base font-bold mt-3 mb-2 text-primary dark:text-primary" {...props}>{children}</h4>;
     },
     h5: ({ children, ...props }: any) => {
       const index = headings.findIndex(h => h.text === String(children));
-      return <h5 id={`heading-${index}`} className="text-sm font-bold mt-2 mb-1 text-gray-900 dark:text-gray-100" {...props}>{children}</h5>;
+      return <h5 id={`heading-${index}`} className="text-sm font-bold mt-2 mb-1 text-primary dark:text-primary" {...props}>{children}</h5>;
     },
     h6: ({ children, ...props }: any) => {
       const index = headings.findIndex(h => h.text === String(children));
-      return <h6 id={`heading-${index}`} className="text-xs font-bold mt-2 mb-1 text-gray-700 dark:text-gray-300" {...props}>{children}</h6>;
+      return <h6 id={`heading-${index}`} className="text-xs font-bold mt-2 mb-1 text-secondary dark:text-secondary" {...props}>{children}</h6>;
     },
     // 段落
     p: ({ children, ...props }: any) => (
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3" {...props}>{children}</p>
+      <p className="text-sm text-secondary leading-relaxed mb-3" {...props}>{children}</p>
     ),
     // 代码块
     code: ({ inline, className, children, ...props }: any) => {
@@ -140,7 +157,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
       // 内联代码
       if (inline) {
         return (
-          <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-red-600 dark:text-red-400 rounded text-xs font-mono" {...props}>
+          <code className="px-1 py-0.5 bg-secondary text-red-600 dark:text-red-400 rounded text-xs font-mono" {...props}>
             {children}
           </code>
         );
@@ -153,57 +170,57 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
       );
     },
     pre: ({ children, ...props }: any) => (
-      <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4 text-xs font-mono" {...props}>
+      <pre className="bg-canvas text-primary p-4 rounded-lg overflow-x-auto mb-4 text-xs font-mono" {...props}>
         {children}
       </pre>
     ),
     // 列表
     ul: ({ children, ...props }: any) => (
-      <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 mb-3 space-y-1" {...props}>{children}</ul>
+      <ul className="list-disc list-inside text-sm text-secondary mb-3 space-y-1" {...props}>{children}</ul>
     ),
     ol: ({ children, ...props }: any) => (
-      <ol className="list-decimal list-inside text-sm text-gray-700 dark:text-gray-300 mb-3 space-y-1" {...props}>{children}</ol>
+      <ol className="list-decimal list-inside text-sm text-secondary mb-3 space-y-1" {...props}>{children}</ol>
     ),
     li: ({ children, ...props }: any) => (
       <li className="ml-4" {...props}>{children}</li>
     ),
     // 引用
     blockquote: ({ children, ...props }: any) => (
-      <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-3" {...props}>
+      <blockquote className="border-l-4 border-subtle pl-4 italic text-tertiary my-3" {...props}>
         {children}
       </blockquote>
     ),
     // 表格
     table: ({ children, ...props }: any) => (
       <div className="overflow-x-auto mb-4">
-        <table className="min-w-full border border-gray-200 dark:border-gray-700" {...props}>{children}</table>
+        <table className="min-w-full border border-subtle" {...props}>{children}</table>
       </div>
     ),
     thead: ({ children, ...props }: any) => (
-      <thead className="bg-gray-100 dark:bg-gray-800" {...props}>{children}</thead>
+      <thead className="bg-secondary" {...props}>{children}</thead>
     ),
     tbody: ({ children, ...props }: any) => (
-      <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>{children}</tbody>
+      <tbody className="divide-y divide-subtle" {...props}>{children}</tbody>
     ),
     tr: ({ children, ...props }: any) => (
-      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800" {...props}>{children}</tr>
+      <tr className="hover:bg-secondary" {...props}>{children}</tr>
     ),
     th: ({ children, ...props }: any) => (
-      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase" {...props}>{children}</th>
+      <th className="px-4 py-2 text-left text-xs font-semibold text-secondary uppercase" {...props}>{children}</th>
     ),
     td: ({ children, ...props }: any) => (
-      <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300" {...props}>{children}</td>
+      <td className="px-4 py-2 text-sm text-secondary" {...props}>{children}</td>
     ),
     // 水平线
     hr: (props: any) => (
-      <hr className="my-4 border-gray-300 dark:border-gray-700" {...props} />
+      <hr className="my-4 border-subtle" {...props} />
     ),
     // 强调
     strong: ({ children, ...props }: any) => (
-      <strong className="font-bold text-gray-900 dark:text-gray-100" {...props}>{children}</strong>
+      <strong className="font-bold text-primary" {...props}>{children}</strong>
     ),
     em: ({ children, ...props }: any) => (
-      <em className="italic text-gray-700 dark:text-gray-300" {...props}>{children}</em>
+      <em className="italic text-secondary" {...props}>{children}</em>
     ),
   }), [headings]);
 
@@ -211,11 +228,11 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
   const getDiffClass = () => {
     switch (diffStatus) {
       case DiffStatus.ADDED:
-        return 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20';
+        return 'border-l-4 border-green-500 bg-status-success/10';
       case DiffStatus.REMOVED:
-        return 'border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20';
+        return 'border-l-4 border-red-500 bg-status-error/10';
       case DiffStatus.MODIFIED:
-        return 'border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20';
+        return 'border-l-4 border-yellow-500 bg-status-warning/10';
       default:
         return 'border-l-4 border-transparent';
     }
@@ -236,28 +253,28 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
     <>
       <div className={`rounded ${getDiffClass()}`}>
         {/* 头部：显示摘要和操作按钮 */}
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-t">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between px-3 py-2 bg-secondary rounded-t">
+          <span className="text-xs text-tertiary">
             Markdown ({markdownContent.length} 字符)
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleCopy(false)}
-              className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="复制纯文本"
             >
               {copied ? '✓ 已复制' : '📋 复制文本'}
             </button>
             <button
               onClick={() => handleCopy(true)}
-              className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="复制 Markdown 源码"
             >
               📄 复制 MD
             </button>
             <button
               onClick={() => setIsFullScreen(true)}
-              className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="全屏阅读"
             >
               ↗ 全屏
@@ -265,7 +282,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
             {node.collapsible && (
               <button
                 onClick={toggleExpanded}
-                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               >
                 {isExpanded ? '▼ 折叠' : '▶ 展开'}
               </button>
@@ -283,23 +300,23 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
 
       {/* 全屏阅读模式 */}
       {isFullScreen && (
-        <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col">
+        <div className="fixed inset-0 z-50 bg-elevated flex flex-col">
           {/* 全屏头部 */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-subtle">
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{node.label}</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{node.path}</p>
+              <h2 className="text-lg font-bold text-primary">{node.label}</h2>
+              <p className="text-xs text-tertiary">{node.path}</p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => handleCopy(false)}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="text-sm text-tertiary hover:text-primary px-3 py-1.5 rounded hover:bg-secondary transition-colors"
               >
                 {copied ? '✓ 已复制' : '📋 复制'}
               </button>
               <button
                 onClick={() => setIsFullScreen(false)}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="text-sm text-tertiary hover:text-primary px-3 py-1.5 rounded hover:bg-secondary transition-colors"
               >
                 × 退出全屏
               </button>
@@ -317,9 +334,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
 
             {/* 目录 */}
             {headings.length > 0 && (
-              <div className="w-64 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-y-auto">
+              <div className="w-64 border-l border-subtle bg-secondary overflow-y-auto">
                 <div className="p-4">
-                  <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">目录</h3>
+                  <h3 className="text-sm font-bold text-secondary mb-3">目录</h3>
                   <nav className="space-y-2">
                     {headings.map((heading, index) => (
                       <button
@@ -327,8 +344,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
                         onClick={() => scrollToHeading(heading.id)}
                         className={`block text-left text-xs w-full px-2 py-1 rounded transition-colors ${
                           activeHeading === heading.id
-                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ? 'bg-brand-primary/10 text-brand-primary font-semibold'
+                            : 'text-tertiary hover:bg-secondary'
                         }`}
                         style={{ paddingLeft: `${(heading.level - 1) * 0.5 + 0.5}rem` }}
                       >

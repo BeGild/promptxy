@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - style={{ width: '44px' }}
+ * - style={{ gap: '10px' }}
+ *
+ * ✅ REQUIRED:
+ * - style={{ width: 'var(--size-sidebar)' }}
+ * - className="gap-md"
+ */
+
 import React from 'react';
 import { Button, Tooltip } from '@heroui/react';
 import { useUIStore } from '@/store';
@@ -17,11 +34,11 @@ export const Sidebar: React.FC = () => {
     <div
       style={{
         position: 'relative',
-        width: '44px',
+        width: 'var(--spacing-3xl)', // 48px (接近原来的 44px)
         height: '100%',
         flexShrink: 0,
-        background: 'var(--heroui-colors-background)',
-        borderRight: '1px solid var(--heroui-colors-border)',
+        background: 'var(--color-bg-primary)',
+        borderRight: '1px solid var(--color-border-default)',
       }}
     >
       {/* 垂直居中的菜单容器 */}
@@ -33,7 +50,7 @@ export const Sidebar: React.FC = () => {
           transform: 'translate(-50%, -50%)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: 'var(--spacing-sm)', // 8px
           alignItems: 'center',
         }}
       >
@@ -58,11 +75,11 @@ export const Sidebar: React.FC = () => {
               onPress={() => setActiveTab(item.key as any)}
               size="sm"
               style={{
-                transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                transition: 'transform var(--transition-normal) var(--ease-smooth)',
               }}
               className="hover:scale-120"
             >
-              <span style={{ fontSize: '16px' }}>{item.icon}</span>
+              <span className="text-md">{item.icon}</span>
             </Button>
           </Tooltip>
         ))}

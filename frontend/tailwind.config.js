@@ -12,41 +12,151 @@ export default {
     './node_modules/@heroui/**/node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        /* 背景色 */
+        bg: {
+          primary: 'var(--color-bg-primary)',
+          secondary: 'var(--color-bg-secondary)',
+          elevated: 'var(--color-bg-elevated)',
+          canvas: 'var(--color-bg-canvas)',
+          overlay: 'var(--color-bg-overlay)',
+          backdrop: 'var(--color-bg-backdrop)',
+        },
+        /* 文本色 */
+        text: {
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          tertiary: 'var(--color-text-tertiary)',
+          muted: 'var(--color-text-muted)',
+          disabled: 'var(--color-text-disabled)',
+          inverse: 'var(--color-text-inverse)',
+        },
+        /* 品牌色 */
+        brand: {
+          primary: 'var(--color-brand-primary)',
+          secondary: 'var(--color-brand-secondary)',
+        },
+        /* 状态色 */
+        success: 'var(--color-status-success)',
+        warning: 'var(--color-status-warning)',
+        error: 'var(--color-status-error)',
+        info: 'var(--color-status-info)',
+        /* 边框色 */
+        border: {
+          default: 'var(--color-border-default)',
+          subtle: 'var(--color-border-subtle)',
+          strong: 'var(--color-border-strong)',
+          focused: 'var(--color-border-focused)',
+          error: 'var(--color-border-error)',
+        },
+      },
+      spacing: {
+        xs: 'var(--spacing-xs)',
+        sm: 'var(--spacing-sm)',
+        md: 'var(--spacing-md)',
+        lg: 'var(--spacing-lg)',
+        xl: 'var(--spacing-xl)',
+        '2xl': 'var(--spacing-2xl)',
+        '3xl': 'var(--spacing-3xl)',
+      },
+      fontSize: {
+        xs: 'var(--font-size-xs)',
+        sm: 'var(--font-size-sm)',
+        md: 'var(--font-size-md)',
+        lg: 'var(--font-size-lg)',
+        xl: 'var(--font-size-xl)',
+        '2xl': 'var(--font-size-2xl)',
+        '3xl': 'var(--font-size-3xl)',
+        '4xl': 'var(--font-size-4xl)',
+      },
+      fontWeight: {
+        normal: 'var(--font-weight-normal)',
+        medium: 'var(--font-weight-medium)',
+        semibold: 'var(--font-weight-semibold)',
+        bold: 'var(--font-weight-bold)',
+      },
+      lineHeight: {
+        tight: 'var(--line-height-tight)',
+        normal: 'var(--line-height-normal)',
+        relaxed: 'var(--line-height-relaxed)',
+      },
+      fontFamily: {
+        sans: 'var(--font-family-base)',
+        mono: 'var(--font-family-mono)',
+      },
+      borderRadius: {
+        xs: 'var(--radius-xs)',
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+        full: 'var(--radius-full)',
+      },
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        '2xl': 'var(--shadow-2xl)',
+        dropdown: 'var(--shadow-dropdown)',
+        modal: 'var(--shadow-modal)',
+        tooltip: 'var(--shadow-tooltip)',
+      },
+      transitionDuration: {
+        fast: '150ms',
+        normal: '200ms',
+        slow: '300ms',
+      },
+    },
   },
   darkMode: 'class',
   plugins: [
     heroui({
       themes: {
+        light: {
+          colors: {
+            background: '#ffffff',
+            foreground: '#1a1a1a',
+            primary: {
+              DEFAULT: '#007acc',
+              foreground: '#ffffff',
+            },
+            success: {
+              DEFAULT: '#4ec9b0',
+              foreground: '#ffffff',
+            },
+            warning: {
+              DEFAULT: '#ce9178',
+              foreground: '#ffffff',
+            },
+            danger: {
+              DEFAULT: '#f48771',
+              foreground: '#ffffff',
+            },
+          },
+        },
         dark: {
           colors: {
             background: '#1e1e1e',
-            foreground: '#e0e0e0',
+            foreground: '#cccccc',
             primary: {
-              50: '#e6f3ff',
-              100: '#cce6ff',
-              200: '#99ccff',
-              300: '#66b3ff',
-              400: '#3399ff',
-              500: '#007acc',
-              600: '#0066b3',
-              700: '#005599',
-              800: '#004477',
-              900: '#003355',
               DEFAULT: '#007acc',
+              foreground: '#ffffff',
             },
             success: {
-              50: '#e6fff9',
-              100: '#ccfff2',
-              200: '#99ffe6',
-              300: '#66ffd9',
-              400: '#33ffcc',
-              500: '#4ec9b0',
-              600: '#3eb39c',
-              700: '#2e8d7a',
-              800: '#1e6758',
-              900: '#0e4136',
               DEFAULT: '#4ec9b0',
+              foreground: '#ffffff',
+            },
+            warning: {
+              DEFAULT: '#ce9178',
+              foreground: '#ffffff',
+            },
+            danger: {
+              DEFAULT: '#f48771',
+              foreground: '#ffffff',
             },
           },
         },

@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-blue-700 dark:text-blue-300"
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ *
+ * ✅ REQUIRED:
+ * - className="text-brand-primary"
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ */
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardBody, CardHeader, Button } from '@heroui/react';
 import { Copy } from 'lucide-react';
@@ -67,7 +84,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-tertiary">
           {isNoChanges
             ? viewMode === 'side-by-side'
               ? '原始请求（无改写）'
@@ -100,8 +117,8 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
 
       {viewMode === 'side-by-side' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+          <Card className="border border-subtle">
+            <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
                 <b className="text-sm">原始请求</b>
                 <Button
@@ -116,18 +133,18 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
               </div>
             </CardHeader>
             <CardBody className="p-0">
-              <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50">
+              <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas">
                 {(isNoChanges ? originalLines : left).map((line, i) => (
                   <div
                     key={i}
                     className={`whitespace-pre-wrap ${
                       isNoChanges
-                        ? 'text-gray-700 dark:text-gray-300'
+                        ? 'text-primary dark:text-primary'
                         : line.startsWith('-')
-                          ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10'
+                          ? 'text-status-error dark:text-status-error bg-status-error/10 dark:bg-status-error/10'
                           : line.startsWith('~')
-                            ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
-                            : 'text-gray-700 dark:text-gray-300'
+                            ? 'text-status-warning dark:text-status-warning bg-status-warning/10 dark:bg-status-warning/10'
+                            : 'text-primary dark:text-primary'
                     }`}
                   >
                     {line}
@@ -136,8 +153,8 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
               </div>
             </CardBody>
           </Card>
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+          <Card className="border border-subtle">
+            <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
                 <b className="text-sm">修改后请求</b>
                 <Button
@@ -152,18 +169,18 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
               </div>
             </CardHeader>
             <CardBody className="p-0">
-              <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50">
+              <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas">
                 {(isNoChanges ? originalLines : right).map((line, i) => (
                   <div
                     key={i}
                     className={`whitespace-pre-wrap ${
                       isNoChanges
-                        ? 'text-gray-700 dark:text-gray-300'
+                        ? 'text-primary dark:text-primary'
                         : line.startsWith('+')
-                          ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/10'
+                          ? 'text-status-success dark:text-status-success bg-status-success/10 dark:bg-status-success/10'
                           : line.startsWith('~')
-                            ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
-                            : 'text-gray-700 dark:text-gray-300'
+                            ? 'text-status-warning dark:text-status-warning bg-status-warning/10 dark:bg-status-warning/10'
+                            : 'text-primary dark:text-primary'
                     }`}
                   >
                     {line}
@@ -175,8 +192,8 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+          <Card className="border border-subtle">
+            <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
                 <b className="text-sm">原始</b>
                 <Button
@@ -191,13 +208,13 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
               </div>
             </CardHeader>
             <CardBody className="p-0">
-              <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50 text-gray-700 dark:text-gray-300">
+              <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas text-primary dark:text-primary">
                 {originalStr}
               </pre>
             </CardBody>
           </Card>
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2">
+          <Card className="border border-subtle">
+            <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
                 <b className="text-sm">{isNoChanges ? '原始请求' : '修改后'}</b>
                 <Button
@@ -212,7 +229,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
               </div>
             </CardHeader>
             <CardBody className="p-0">
-              <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-white dark:bg-gray-900/50 text-gray-700 dark:text-gray-300">
+              <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas text-primary dark:text-primary">
                 {isNoChanges ? originalStr : modifiedStr}
               </pre>
             </CardBody>

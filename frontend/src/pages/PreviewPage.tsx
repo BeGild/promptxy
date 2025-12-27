@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-500"
+ * - className="from-green-600 to-blue-600"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="from-status-success to-brand-primary"
+ */
+
 import React from 'react';
 import { PreviewPanel } from '@/components/preview';
 
@@ -7,10 +24,10 @@ export const PreviewPage: React.FC = () => {
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-status-success to-brand-primary bg-clip-text text-transparent">
             实时预览
           </h1>
-          <p className="text-sm text-gray-500 mt-1">测试规则效果，实时查看请求修改结果</p>
+          <p className="text-sm text-secondary mt-1">测试规则效果，实时查看请求修改结果</p>
         </div>
       </div>
 

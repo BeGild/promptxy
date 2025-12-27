@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-600 dark:text-gray-400"
+ * - className="hover:text-gray-900 dark:hover:text-gray-200"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="hover:text-primary dark:hover:text-primary"
+ */
+
 import React, { useMemo, useCallback } from 'react';
 
 interface PathBreadcrumbProps {
@@ -23,15 +40,15 @@ const PathBreadcrumb: React.FC<PathBreadcrumbProps> = React.memo(({ path, onSegm
   }, [onSegmentClick]);
 
   return (
-    <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 overflow-x-auto">
+    <div className="flex items-center gap-1 text-sm text-secondary overflow-x-auto">
       {segments.map((segment, index) => (
         <React.Fragment key={index}>
           {index > 0 && (
-            <span className="flex-shrink-0 text-gray-400 dark:text-gray-600">/</span>
+            <span className="flex-shrink-0 text-tertiary">/</span>
           )}
           <button
             onClick={() => handleClick(segment, index)}
-            className="flex-shrink-0 hover:text-gray-900 dark:hover:text-gray-200 hover:underline transition-colors truncate max-w-[150px]"
+            className="flex-shrink-0 hover:text-primary dark:hover:text-primary hover:underline transition-colors truncate max-w-[150px]"
             title={segment}
           >
             {segment}

@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-400 dark:text-gray-600"
+ * - className="bg-gray-50 dark:bg-gray-900/30"
+ *
+ * ✅ REQUIRED:
+ * - className="text-tertiary"
+ * - className="bg-canvas dark:bg-secondary/30"
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Input,
@@ -114,11 +131,11 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
     <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
       {/* 验证错误显示 */}
       {!validation.valid && (
-        <Card className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <Card className="bg-status-error/10 dark:bg-status-error/20 border border-status-error/30 dark:border-status-error/20">
           <CardBody className="p-3">
-            <div className="font-bold text-red-700 dark:text-red-400 mb-1">验证错误:</div>
+            <div className="font-bold text-status-error mb-1">验证错误:</div>
             {validation.errors.map((err, i) => (
-              <div key={i} className="text-sm text-red-600 dark:text-red-300">
+              <div key={i} className="text-sm text-status-error">
                 • {err}
               </div>
             ))}
@@ -128,11 +145,11 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
 
       {/* 警告显示 */}
       {validation.warnings.length > 0 && (
-        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+        <Card className="bg-status-warning/10 dark:bg-status-warning/20 border border-status-warning/30 dark:border-status-warning/20">
           <CardBody className="p-3">
-            <div className="font-bold text-yellow-700 dark:text-yellow-400 mb-1">警告:</div>
+            <div className="font-bold text-status-warning mb-1">警告:</div>
             {validation.warnings.map((warn, i) => (
-              <div key={i} className="text-sm text-yellow-600 dark:text-yellow-300">
+              <div key={i} className="text-sm text-status-warning">
                 • {warn}
               </div>
             ))}
@@ -141,7 +158,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
       )}
 
       {/* 基本信息 */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="border border-subtle">
         <CardBody className="space-y-3">
           <div className="flex items-center gap-2">
             <h4 className="text-lg font-bold">基本信息</h4>
@@ -169,7 +186,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                 radius="lg"
                 description="唯一标识符，自动生成"
                 classNames={{
-                  input: "text-gray-400 dark:text-gray-600 text-xs font-mono",
+                  input: "text-tertiary text-xs font-mono",
                   description: "text-xs"
                 }}
               />
@@ -189,7 +206,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
       <Divider />
 
       {/* 匹配条件 */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="border border-subtle">
         <CardBody className="space-y-3">
           <h4 className="text-lg font-bold">匹配条件 (When)</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -245,7 +262,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
       <Divider />
 
       {/* 操作序列 */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="border border-subtle">
         <CardBody className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-lg font-bold">操作序列 (Ops)</h4>
@@ -253,13 +270,13 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
               {formData.ops.length} 个操作
             </Chip>
           </div>
-          <div className="text-sm text-gray-500">按顺序执行操作，支持拖拽调整顺序（暂未实现）</div>
+          <div className="text-sm text-secondary">按顺序执行操作，支持拖拽调整顺序（暂未实现）</div>
 
           <div className="space-y-3">
             {formData.ops.map((op, index) => (
               <Card
                 key={index}
-                className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700"
+                className="bg-canvas dark:bg-secondary/30 border border-subtle"
               >
                 <CardBody className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -276,7 +293,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                       color="danger"
                       variant="light"
                       onPress={() => removeOp(index)}
-                      className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="hover:bg-status-error/10 dark:hover:bg-status-error/20"
                     >
                       删除
                     </Button>
@@ -425,7 +442,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
       <Divider />
 
       {/* 高级选项 */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="border border-subtle">
         <CardBody className="space-y-3">
           <h4 className="text-lg font-bold">高级选项</h4>
           <div className="flex flex-col gap-2">

@@ -1,0 +1,46 @@
+/**
+ * 深色主题变量
+ *
+ * 定义深色模式下的颜色值
+ * 当 .dark 类存在于 documentElement 时生效
+ */
+
+@layer base {
+  .dark {
+    /* ==================== 背景色（深色） ==================== */
+    --color-bg-primary: #1e1e1e;
+    --color-bg-secondary: #252526;
+    --color-bg-elevated: #2d2d30;
+    --color-bg-canvas: #1a1a1a;
+    --color-bg-overlay: rgba(0, 0, 0, 0.7);
+    --color-bg-backdrop: rgba(30, 30, 30, 0.8);
+
+    /* ==================== 文本色（深色） ==================== */
+    --color-text-primary: #cccccc;
+    --color-text-secondary: #858585;
+    --color-text-tertiary: #6a6a6a;
+    --color-text-muted: #4a4a4a;
+    --color-text-disabled: #3a3a3a;
+    --color-text-inverse: #1a1a1a;
+
+    /* ==================== 品牌色（深色调整） ==================== */
+    --color-brand-primary: #007acc;
+    --color-brand-primary-hover: #3399ff;
+    --color-brand-primary-active: #66b3ff;
+    --color-brand-primary-light: #004477;
+    --color-brand-primary-on-primary: #ffffff;
+
+    /* ==================== 边框色（深色） ==================== */
+    --color-border-default: #3e3e42;
+    --color-border-subtle: #2d2d30;
+    --color-border-strong: #5a5a5a;
+
+    /* ==================== 阴影（深色调整） ==================== */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+    --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.7);
+  }
+}

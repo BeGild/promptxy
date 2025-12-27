@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-700 dark:text-gray-300"
+ * - className="bg-gray-100 dark:bg-gray-800"
+ *
+ * ✅ REQUIRED:
+ * - className="text-primary dark:text-primary"
+ * - className="bg-canvas dark:bg-secondary"
+ */
+
 import React, { memo } from 'react';
 import { ChevronRight, ChevronDown, File, FileText, Code, Hash, List, Folder, FolderOpen } from 'lucide-react';
 import type { ViewNode } from '../../types';
@@ -138,9 +155,9 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(({
       <div
         className={`
           flex items-center gap-1 py-1 px-2 rounded cursor-pointer select-none
-          hover:bg-gray-100 dark:hover:bg-gray-800
+          hover:bg-canvas dark:hover:bg-secondary
           transition-colors duration-150
-          ${isSelected ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}
+          ${isSelected ? 'bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary dark:text-brand-primary/80' : 'text-primary'}
         `}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={handleClick}
@@ -149,7 +166,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(({
       >
         {/* 展开/折叠指示器 */}
         {folder ? (
-          <span className="flex-shrink-0 text-gray-400">
+          <span className="flex-shrink-0 text-tertiary">
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
         ) : (
@@ -157,7 +174,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(({
         )}
 
         {/* 节点图标 */}
-        <IconComponent size={14} className="flex-shrink-0 text-gray-500 dark:text-gray-400" />
+        <IconComponent size={14} className="flex-shrink-0 text-secondary" />
 
         {/* 节点标签 */}
         <span className="text-sm truncate flex-1">

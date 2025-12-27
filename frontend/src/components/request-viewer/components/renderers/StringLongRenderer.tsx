@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-gray-500"
+ * - className="from-gray-600 to-gray-800 dark:from-gray-400"
+ *
+ * ✅ REQUIRED:
+ * - className="text-secondary"
+ * - className="from-primary to-secondary dark:from-primary"
+ */
+
 import React, { useState, useCallback } from 'react';
 import type { ViewNode } from '../../types';
 import { DiffStatus } from '../../types';
@@ -33,11 +50,11 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
   const getDiffClass = () => {
     switch (diffStatus) {
       case DiffStatus.ADDED:
-        return 'border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20';
+        return 'border-l-4 border-green-500 bg-status-success/10';
       case DiffStatus.REMOVED:
-        return 'border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20';
+        return 'border-l-4 border-red-500 bg-status-error/10';
       case DiffStatus.MODIFIED:
-        return 'border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20';
+        return 'border-l-4 border-yellow-500 bg-status-warning/10';
       default:
         return 'border-l-4 border-transparent';
     }
@@ -50,14 +67,14 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
     <div className={`rounded ${getDiffClass()}`}>
       {/* 头部：显示摘要和操作按钮 */}
       {(isLong || node.collapsible) && (
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-t">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between px-3 py-2 bg-secondary rounded-t">
+          <span className="text-xs text-tertiary">
             {displayValue.length} 字符
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="复制内容"
             >
               {copied ? '✓ 已复制' : '📋 复制'}
@@ -65,7 +82,7 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
             {node.collapsible && (
               <button
                 onClick={toggleExpanded}
-                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               >
                 {isExpanded ? '▼ 折叠' : '▶ 展开'}
               </button>
@@ -80,14 +97,14 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
           !isLong && !node.collapsible ? 'mt-0' : ''
         }`}
       >
-        <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">
+        <pre className="text-sm text-secondary whitespace-pre-wrap break-words font-mono">
           {displayValue}
         </pre>
       </div>
 
       {/* 折叠时显示预览 */}
       {!isExpanded && isLong && (
-        <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 italic">
+        <div className="px-3 py-2 text-sm text-tertiary italic">
           {displayValue.slice(0, 100)}...
         </div>
       )}

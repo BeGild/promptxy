@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - style={{ color: '#007acc' }}
+ * - style={{ gap: '8px' }}
+ *
+ * ✅ REQUIRED:
+ * - className="flex-center gap-sm"
+ * - style={{ gap: 'var(--spacing-sm)' }}
+ */
+
 import React from 'react';
 import { Chip } from '@heroui/react';
 
@@ -25,15 +42,15 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   const status = getStatus();
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ fontSize: '14px' }}>{status.dot}</span>
+    <div className="flex items-center gap-sm">
+      <span className="text-sm">{status.dot}</span>
       {showText && (
         <Chip color={status.color} size="sm" variant="flat">
           {status.label}
         </Chip>
       )}
       {error && showText && (
-        <span style={{ fontSize: '12px', color: 'var(--heroui-colors-danger)' }}>{error}</span>
+        <span className="text-xs text-error">{error}</span>
       )}
     </div>
   );

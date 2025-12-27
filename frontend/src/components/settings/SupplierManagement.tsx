@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ * - className="text-gray-900 dark:text-gray-100"
+ *
+ * ✅ REQUIRED:
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ * - className="text-primary dark:text-primary"
+ */
+
 import React, { useState } from 'react';
 import {
   Card,
@@ -201,12 +218,12 @@ export const SupplierManagement: React.FC = () => {
 
   return (
     <>
-      <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 shadow-sm">
+      <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 shadow-sm">
         <CardBody className="space-y-6 p-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Network size={24} className="text-green-600 dark:text-green-400" />
-              <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <Network size={24} className="text-status-success" />
+              <h4 className="text-lg font-bold text-primary">
                 供应商管理
               </h4>
             </div>
@@ -223,10 +240,10 @@ export const SupplierManagement: React.FC = () => {
           </div>
 
           {groupedSuppliers.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-              <Network size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500 font-medium">暂无供应商配置</p>
-              <p className="text-sm text-gray-400 mt-1">点击上方按钮添加新的供应商</p>
+            <div className="text-center py-12 bg-canvas dark:bg-secondary/30 rounded-xl border border-dashed border-subtle">
+              <Network size={48} className="mx-auto text-tertiary mb-3" />
+              <p className="text-secondary font-medium">暂无供应商配置</p>
+              <p className="text-sm text-tertiary mt-1">点击上方按钮添加新的供应商</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -234,10 +251,10 @@ export const SupplierManagement: React.FC = () => {
                 <div key={group.prefix} className="space-y-3">
                   <div className="flex items-center gap-2 text-sm px-1">
                     <span className="text-lg">{group.color}</span>
-                    <span className="font-mono font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                    <span className="font-mono font-bold text-primary bg-canvas dark:bg-secondary px-2 py-0.5 rounded">
                       {group.prefix}
                     </span>
-                    <span className="text-gray-500">({group.suppliers.length} 个供应商)</span>
+                    <span className="text-secondary">({group.suppliers.length} 个供应商)</span>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -246,8 +263,8 @@ export const SupplierManagement: React.FC = () => {
                         key={supplier.id}
                         className={`border-l-4 transition-all hover:shadow-md ${
                           supplier.enabled
-                            ? 'border-l-success border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10'
-                            : 'border-l-default border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 opacity-80 hover:opacity-100'
+                            ? 'border-l-success border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5'
+                            : 'border-l-default border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 opacity-80 hover:opacity-100'
                         }`}
                         shadow="none"
                       >
@@ -255,21 +272,21 @@ export const SupplierManagement: React.FC = () => {
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-gray-900 dark:text-gray-100">{supplier.name}</span>
+                                <span className="font-bold text-primary">{supplier.name}</span>
                                 {supplier.enabled && (
                                   <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-success opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-status-success"></span>
                                   </span>
                                 )}
                               </div>
                               <div className="text-xs space-y-1">
-                                <div className="flex items-center gap-1.5 text-gray-500">
-                                  <span className="font-mono bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                                <div className="flex items-center gap-1.5 text-secondary">
+                                  <span className="font-mono bg-canvas dark:bg-secondary/50 px-1.5 py-0.5 rounded text-primary">
                                     {supplier.localPrefix}
                                   </span>
-                                  <span className="text-gray-300">→</span>
-                                  <span className="truncate max-w-[180px] text-gray-600 dark:text-gray-400" title={supplier.baseUrl}>
+                                  <span className="text-tertiary">→</span>
+                                  <span className="truncate max-w-[180px] text-secondary" title={supplier.baseUrl}>
                                     {supplier.baseUrl}
                                   </span>
                                 </div>
@@ -294,7 +311,7 @@ export const SupplierManagement: React.FC = () => {
                                   variant="light"
                                   onPress={() => handleOpenEditModal(supplier)}
                                   isDisabled={updateMutation.isPending}
-                                  className="text-gray-500 hover:text-blue-600"
+                                  className="text-secondary hover:text-brand-primary"
                                 >
                                   <Edit2 size={16} />
                                 </Button>
@@ -305,7 +322,7 @@ export const SupplierManagement: React.FC = () => {
                                   variant="light"
                                   onPress={() => handleDeleteSupplier(supplier)}
                                   isDisabled={deleteMutation.isPending}
-                                  className="text-gray-400 hover:text-red-500"
+                                  className="text-tertiary hover:text-status-error"
                                 >
                                   <Trash2 size={16} />
                                 </Button>
@@ -321,8 +338,8 @@ export const SupplierManagement: React.FC = () => {
             </div>
           )}
 
-          <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start gap-2">
-            <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
+          <div className="text-xs text-secondary bg-brand-primary/10 dark:bg-brand-primary/20 p-3 rounded-lg flex items-start gap-2">
+            <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
             <span>相同颜色的供应商共享相同的本地路径前缀，同一组内同时只能启用一个供应商。</span>
           </div>
         </CardBody>
@@ -333,7 +350,7 @@ export const SupplierManagement: React.FC = () => {
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
             <span className="text-xl font-bold">添加供应商</span>
-            <span className="text-sm font-normal text-gray-500">配置新的上游 LLM 服务提供商</span>
+            <span className="text-sm font-normal text-secondary">配置新的上游 LLM 服务提供商</span>
           </ModalHeader>
           <ModalBody className="space-y-4">
             <Input
@@ -388,7 +405,7 @@ export const SupplierManagement: React.FC = () => {
                   radius="lg"
                   variant="bordered"
                   className="flex-1"
-                  startContent={<span className="text-gray-400">{selectedPrefixOption !== 'custom' ? getPrefixColor(newSupplier.localPrefix) : '🔹'}</span>}
+                  startContent={<span className="text-tertiary">{selectedPrefixOption !== 'custom' ? getPrefixColor(newSupplier.localPrefix) : '🔹'}</span>}
                 />
               </div>
             </div>
@@ -405,7 +422,7 @@ export const SupplierManagement: React.FC = () => {
               description="目标 API 服务的根地址"
             />
 
-            <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-canvas dark:bg-secondary rounded-lg">
               <Switch
                 isSelected={newSupplier.enabled}
                 onValueChange={enabled => setNewSupplier({ ...newSupplier, enabled })}
@@ -462,7 +479,7 @@ export const SupplierManagement: React.FC = () => {
                   radius="lg"
                   variant="bordered"
                   labelPlacement="outside"
-                  startContent={<span className="text-gray-400">{getPrefixColor(editingSupplier.localPrefix)}</span>}
+                  startContent={<span className="text-tertiary">{getPrefixColor(editingSupplier.localPrefix)}</span>}
                 />
 
                 <Input
@@ -478,7 +495,7 @@ export const SupplierManagement: React.FC = () => {
                   labelPlacement="outside"
                 />
 
-                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-2 p-3 bg-canvas dark:bg-secondary rounded-lg">
                   <Switch
                     isSelected={editingSupplier.enabled}
                     onValueChange={enabled =>

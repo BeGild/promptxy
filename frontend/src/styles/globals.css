@@ -1,25 +1,12 @@
-/* TailwindCSS 入口：生成 base/components/utilities */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/**
+ * 全局样式
+ *
+ * 此文件包含全局基础样式、动画和工具类
+ * Tailwind 和 Design Tokens 由 index.css 导入
+ */
 
 @layer base {
   /* 全局基础样式 */
-  :root {
-    /* 颜色系统 - 深色主题 */
-    --bg-main: #1e1e1e;
-    --bg-panel: #252526;
-    --bg-card: #2d2d30;
-    --border-color: #3e3e42;
-    --text-primary: #cccccc;
-    --text-secondary: #858585;
-    --primary: #007acc;
-    --success: #4ec9b0;
-    --warning: #ce9178;
-    --error: #f48771;
-    --info: #569cd6;
-  }
-
   * {
     margin: 0;
     padding: 0;
@@ -27,15 +14,9 @@
   }
 
   body {
-    font-family:
-      'Inter',
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      'Roboto',
-      sans-serif;
-    background-color: var(--bg-main);
-    color: var(--text-primary);
+    font-family: var(--font-family-base);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
     overflow: hidden;
   }
 
@@ -46,34 +27,36 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--bg-panel);
+    background: var(--color-bg-secondary);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #424242;
-    border-radius: 4px;
+    background: var(--color-border-strong);
+    border-radius: var(--radius-sm);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #4e4e4e;
+    background: var(--color-text-tertiary);
   }
 
   /* 代码字体 */
   code,
   pre,
   .monospace {
-    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-family: var(--font-family-mono);
   }
 }
 
 @layer components {
   /* HeroUI 主题覆盖 */
   .heroui-provider {
-    background-color: var(--bg-main) !important;
+    background-color: var(--color-bg-primary) !important;
   }
 }
 
 @layer utilities {
+  /* ==================== 动画类 ==================== */
+
   /* 加载动画 */
   .loading-spinner {
     animation: spin 1s linear infinite;
@@ -91,25 +74,25 @@
   /* 差异高亮 */
   .diff-added {
     background-color: rgba(78, 201, 176, 0.1);
-    color: var(--success);
+    color: var(--color-status-success);
   }
 
   .diff-removed {
     background-color: rgba(244, 135, 113, 0.1);
-    color: var(--error);
+    color: var(--color-status-error);
   }
 
   .diff-modified {
     background-color: rgba(206, 145, 120, 0.1);
-    color: var(--warning);
+    color: var(--color-status-warning);
   }
 
   /* 状态指示器脉冲动画 */
   .status-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: statusPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  @keyframes pulse {
+  @keyframes statusPulse {
     0%,
     100% {
       opacity: 1;
@@ -118,8 +101,6 @@
       opacity: 0.5;
     }
   }
-
-  /* 现代化动画效果 */
 
   /* 淡入动画 */
   @keyframes fadeIn {
@@ -215,18 +196,6 @@
     animation: borderPulse 2s ease-in-out infinite;
   }
 
-  /* 悬停提升效果 */
-  .hover-lift {
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  }
-
   /* 渐变文字动画 */
   @keyframes gradientShift {
     0% {
@@ -248,15 +217,9 @@
 
   /* 玻璃拟态效果 */
   .glass {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-bg-backdrop);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  /* 暗色模式下的玻璃拟态 */
-  .dark .glass {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-border-subtle);
   }
 
   /* 表格行悬停动画 */
@@ -310,7 +273,7 @@
 
   .card-hover:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-lg);
   }
 
   /* 状态指示器 - 连接状态 */
@@ -323,18 +286,18 @@
   }
 
   .status-connected {
-    background: #4ec9b0;
+    background: var(--color-status-success);
     box-shadow: 0 0 8px rgba(78, 201, 176, 0.6);
-    animation: pulse 2s ease-in-out infinite;
+    animation: statusPulse 2s ease-in-out infinite;
   }
 
   .status-disconnected {
-    background: #f48771;
+    background: var(--color-status-error);
   }
 
   .status-connecting {
-    background: #ce9178;
-    animation: pulse 1.5s ease-in-out infinite;
+    background: var(--color-status-warning);
+    animation: statusPulse 1.5s ease-in-out infinite;
   }
 
   /* 骨架屏动画 */
@@ -348,7 +311,7 @@
   }
 
   .skeleton {
-    background: linear-gradient(90deg, #2d2d30 25%, #3a3a3d 50%, #2d2d30 75%);
+    background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-border-subtle) 50%, var(--color-bg-secondary) 75%);
     background-size: 1000px 100%;
     animation: shimmer 2s infinite linear;
   }

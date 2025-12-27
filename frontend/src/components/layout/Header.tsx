@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - style={{ paddingLeft: '16px' }}
+ * - className="text-gray-500"
+ *
+ * ✅ REQUIRED:
+ * - style={{ paddingLeft: 'var(--spacing-md)' }}
+ * - className="text-secondary"
+ */
+
 import React from 'react';
 import {
   Navbar,
@@ -60,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
       isBordered
       className="h-14 bg-white/70 dark:bg-black/70 backdrop-blur-md"
       maxWidth="full"
-      style={{ paddingLeft: '16px', paddingRight: '16px' }}
+      style={{ paddingLeft: 'var(--spacing-md)', paddingRight: 'var(--spacing-md)' }}
     >
       {/* 左侧：Logo 和名称 */}
       <NavbarBrand className="gap-3">
@@ -83,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
               content={
                 <div className="px-1 py-0.5">
                   <div className="font-semibold text-sm">{item.label}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{item.desc}</div>
+                  <div className="text-xs text-secondary">{item.desc}</div>
                 </div>
               }
               placement="bottom"
@@ -91,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
               delay={0}
               closeDelay={0}
               classNames={{
-                content: 'bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700',
+                content: 'bg-white dark:bg-secondary shadow-xl border border-default',
               }}
             >
               <Button
@@ -102,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
                 className={`transition-all duration-300 ${
                   isActive
                     ? 'bg-primary/10 text-primary dark:text-primary-400'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    : 'text-secondary hover:text-primary dark:hover:text-inverse hover:bg-canvas dark:hover:bg-secondary'
                 }`}
               >
                 <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
@@ -114,13 +131,13 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
 
       {/* 右侧：状态指示器和主题切换 */}
       <NavbarContent justify="end" className="gap-4">
-        <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 rounded-full border border-gray-100 dark:border-gray-700/50">
+        <div className="flex items-center gap-sm px-3 py-1.5 bg-canvas dark:bg-secondary/50 rounded-full border border-subtle">
           <StatusIndicator
             connected={apiConnected}
             error={!apiConnected ? 'API未连接' : null}
             showText={false}
           />
-          <div className="w-px h-3 bg-gray-200 dark:bg-gray-700" />
+          <div className="w-px h-3 bg-border-default" />
           <StatusIndicator
             connected={sseConnected}
             error={!sseConnected ? 'SSE未连接' : null}
@@ -133,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
             <Button
               isIconOnly
               variant="light"
-              className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="text-secondary hover:text-primary dark:text-secondary dark:hover:text-inverse"
             >
               {getThemeIcon()}
             </Button>

@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ * - className="from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10"
+ *
+ * ✅ REQUIRED:
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ * - className="from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5"
+ */
+
 import React, { ReactNode } from 'react';
 import {
   Modal as HeroModal,
@@ -35,17 +52,13 @@ export const Modal: React.FC<ModalProps> = ({
       placement="center"
       scrollBehavior="outside"
       classNames={{
-        base: 'border border-blue-200/50 dark:border-blue-800/30',
+        base: 'border border-brand-primary/30 dark:border-brand-primary/20',
         backdrop: 'bg-black/50',
-        header: 'bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 border-b border-blue-200/50 dark:border-blue-800/30',
-        body: 'bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10',
+        header: 'bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 border-b border-brand-primary/30 dark:border-brand-primary/20',
+        body: 'bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5',
       }}
     >
-      <ModalContent
-        classNames={{
-          base: 'border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10',
-        }}
-      >
+      <ModalContent>
         {() => (
           <>
             <ModalHeader>{title}</ModalHeader>

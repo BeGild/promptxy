@@ -1,3 +1,20 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - className="text-blue-700 dark:text-blue-300"
+ * - className="border-blue-200/50 dark:border-blue-800/30"
+ *
+ * ✅ REQUIRED:
+ * - className="text-brand-primary"
+ * - className="border-brand-primary/30 dark:border-brand-primary/20"
+ */
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDisclosure, Card, CardBody, Chip } from '@heroui/react';
 import { toast } from 'sonner';
@@ -85,10 +102,10 @@ export const RequestsPage: React.FC = () => {
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-accent-purple to-accent-pink bg-clip-text text-transparent">
             请求监控
           </h1>
-          <p className="text-sm text-gray-500 mt-1">实时查看经过代理的请求历史和修改详情</p>
+          <p className="text-sm text-secondary mt-1">实时查看经过代理的请求历史和修改详情</p>
         </div>
         <div className="flex gap-2">
           <Chip color="secondary" variant="flat" size="sm">
@@ -99,32 +116,32 @@ export const RequestsPage: React.FC = () => {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">总请求</div>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">总请求</div>
+            <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
               {data?.total || 0}
             </div>
           </CardBody>
         </Card>
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-green-700 dark:text-green-300 font-medium">当前页</div>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">当前页</div>
+            <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
               {data?.items?.length || 0}
             </div>
           </CardBody>
         </Card>
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-purple-700 dark:text-purple-300 font-medium">当前页码</div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">{page}</div>
+            <div className="text-sm text-accent-purple dark:text-accent-purple/80 font-medium">当前页码</div>
+            <div className="text-2xl font-bold text-accent-purple dark:text-accent-purple/90">{page}</div>
           </CardBody>
         </Card>
-        <Card className="border border-blue-200/50 dark:border-blue-800/30 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-4">
-            <div className="text-sm text-orange-700 dark:text-orange-300 font-medium">总页数</div>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+            <div className="text-sm text-accent-orange dark:text-accent-orange/80 font-medium">总页数</div>
+            <div className="text-2xl font-bold text-accent-orange dark:text-accent-orange/90">
               {Math.ceil((data?.total || 0) / 50)}
             </div>
           </CardBody>
