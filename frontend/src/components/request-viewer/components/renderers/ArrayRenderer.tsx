@@ -106,9 +106,9 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
       {/* 子节点列表 */}
       {hasChildren && isExpanded && (
         <div className="ml-4">
-          <div className="space-y-1">
+          <div className="space-y-xs">
             {visibleChildren.map(child => (
-              <div key={child.id} className="my-1">
+              <div key={child.id} className="my-my1">
                 <div className="flex items-start gap-2">
                   <span className="text-sm text-tertiary font-mono">
                     [{child.label}]:

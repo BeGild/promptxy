@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
       maxWidth="full"
     >
       {/* 左侧：Logo 和名称 */}
-      <NavbarBrand className="gap-3">
+      <NavbarBrand className="gap-xmd">
         <div className="p-1.5 bg-gradient-to-tr from-brand-primary to-accent-purple rounded-lg shadow-lg shadow-brand-primary/20">
           <LogoIcon size={20} className="text-white" />
         </div>
@@ -90,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
       </NavbarBrand>
 
       {/* 中间：Dock 导航图标 */}
-      <NavbarContent justify="center" className="gap-2">
+      <NavbarContent justify="center" className="gap-sm">
         {menuItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.key;
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
       </NavbarContent>
 
       {/* 右侧：状态指示器和主题切换 */}
-      <NavbarContent justify="end" className="gap-4">
+      <NavbarContent justify="end" className="gap-md">
         <div className="flex items-center gap-sm px-3 py-1.5 bg-canvas dark:bg-secondary/50 rounded-full border border-subtle">
           <StatusIndicator
             connected={apiConnected}

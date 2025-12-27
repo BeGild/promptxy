@@ -95,7 +95,7 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
       {/* 内容 */}
       <div
         className={`p-3 overflow-auto ${isExpanded ? '' : 'hidden'} ${
-          !isLong && !node.collapsible ? 'mt-0' : ''
+          !isLong && !node.collapsible ? 'mt-mt0' : ''
         }`}
       >
         <pre className="text-sm text-secondary whitespace-pre-wrap break-words font-mono">

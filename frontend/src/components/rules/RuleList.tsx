@@ -257,7 +257,7 @@ const RuleListComponent: React.FC<RuleListProps> = ({
             color="primary"
             showShadow
             classNames={{
-              wrapper: 'gap-2',
+              wrapper: 'gap-sm',
               item: 'w-9 h-9 rounded-lg bg-elevated shadow-sm border border-subtle',
               cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
             }}

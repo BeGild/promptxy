@@ -169,7 +169,7 @@ export const RulesPage: React.FC = () => {
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-4">
+          <CardBody className="p-p4">
             <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">已启用</div>
             <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
               {rules.filter(r => r.enabled !== false).length}
@@ -177,7 +177,7 @@ export const RulesPage: React.FC = () => {
           </CardBody>
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-4">
+          <CardBody className="p-p4">
             <div className="text-sm text-accent-purple dark:text-accent-purple/80 font-medium">已禁用</div>
             <div className="text-2xl font-bold text-accent-purple dark:text-accent-purple/90">
               {rules.filter(r => r.enabled === false).length}
@@ -185,7 +185,7 @@ export const RulesPage: React.FC = () => {
           </CardBody>
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-4">
+          <CardBody className="p-p4">
             <div className="text-sm text-status-success dark:text-status-success/80 font-medium">总规则数</div>
             <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
               {rules.length}

@@ -69,7 +69,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
     <div className="max-h-[70vh] overflow-y-auto space-y-4 p-2">
       {/* 基本信息 */}
       <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
-        <CardBody className="space-y-3">
+        <CardBody className="space-y-xmd">
           <h4 className="text-lg font-bold">基本信息</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
       {/* 匹配规则 */}
       {request.matchedRules && request.matchedRules.length > 0 && (
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
-          <CardBody className="space-y-3">
+          <CardBody className="space-y-xmd">
             <h4 className="text-lg font-bold">匹配规则</h4>
             <div className="flex flex-wrap gap-2">
               {request.matchedRules.map((match, i) => (
@@ -148,7 +148,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
       <Divider />
 
       {/* 请求详情 - 使用新的 RequestDetailPanel */}
-      <div className="space-y-2">
+      <div className="space-y-sm">
         <h4 className="text-lg font-bold">请求详情</h4>
         <div className="border border-subtle rounded-lg overflow-hidden h-[50vh]">
           <RequestDetailPanel
@@ -163,7 +163,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
       {/* 错误信息 */}
       {request.error && (
         <Card className="border border-status-error/30 dark:border-status-error/20 bg-gradient-to-br from-elevated to-status-error/5 dark:from-elevated dark:to-status-error/10">
-          <CardBody className="space-y-2">
+          <CardBody className="space-y-sm">
             <div className="font-bold text-status-error dark:text-status-error">错误信息</div>
             <div className="font-mono text-xs text-status-error dark:text-status-error bg-canvas/50 dark:bg-canvas/20 p-2 rounded">
               {request.error}
@@ -189,7 +189,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
               </Button>
             </div>
           </CardHeader>
-          <CardBody className="space-y-2">
+          <CardBody className="space-y-sm">
             <pre className="font-mono text-xs bg-secondary dark:bg-secondary p-3 rounded-lg overflow-x-auto">
               {JSON.stringify(request.responseHeaders, null, 2)}
             </pre>
@@ -219,7 +219,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
               </Button>
             </div>
           </CardHeader>
-          <CardBody className="space-y-2">
+          <CardBody className="space-y-sm">
             <pre className="font-mono text-xs bg-secondary dark:bg-secondary p-3 rounded-lg overflow-x-auto max-h-[300px] overflow-y-auto">
               {typeof request.responseBody === 'string'
                 ? request.responseBody

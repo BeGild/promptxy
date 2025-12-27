@@ -66,7 +66,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({ viewTree, groups }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-md">
       {groups.map(group => {
         const groupNodes = getGroupNodes(group);
         const isExpanded = expandedGroups.has(group.id);

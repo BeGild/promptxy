@@ -219,13 +219,13 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 
   if (isLoading && requests.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-md">
         <div className="flex gap-4">
           <div className="h-10 w-full bg-secondary dark:bg-secondary rounded-lg animate-pulse" />
           <div className="h-10 w-48 bg-secondary dark:bg-secondary rounded-lg animate-pulse" />
           <div className="h-10 w-24 bg-secondary dark:bg-secondary rounded-lg animate-pulse" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-sm">
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
@@ -249,7 +249,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-md">
       {/* 工具栏 */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
         <PathAutocomplete
@@ -317,8 +317,8 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	        }}
 	      >
 		        <TableHeader>
-		          <TableColumn className="w-12">已查看</TableColumn>
-		          <TableColumn className="w-1" aria-label="指示条">
+		          <TableColumn className="w-w12">已查看</TableColumn>
+		          <TableColumn className="w-w1" aria-label="指示条">
 		            {' '}
 		          </TableColumn>
 		          <TableColumn>时间</TableColumn>
@@ -495,7 +495,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
             color="primary"
             showShadow
             classNames={{
-              wrapper: 'gap-2',
+              wrapper: 'gap-sm',
               item: 'w-9 h-9 rounded-lg bg-elevated dark:bg-elevated shadow-sm border border-subtle',
               cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
             }}

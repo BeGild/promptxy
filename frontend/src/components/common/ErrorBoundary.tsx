@@ -69,13 +69,13 @@ const DefaultErrorUI: React.FC<{
           {/* 错误详情（仅开发环境） */}
           {isDevelopment && error && (
             <div className="bg-canvas dark:bg-secondary rounded-lg p-md space-y-3 text-xs font-mono overflow-auto max-h-64">
-              <div className="space-y-1">
+              <div className="space-y-xs">
                 <div className="font-bold text-error">错误信息:</div>
                 <div className="text-primary">{error.message}</div>
               </div>
 
               {error.stack && (
-                <div className="space-y-1">
+                <div className="space-y-xs">
                   <div className="font-bold text-warning">堆栈跟踪:</div>
                   <div className="text-secondary whitespace-pre-wrap">
                     {error.stack}
@@ -84,7 +84,7 @@ const DefaultErrorUI: React.FC<{
               )}
 
               {errorInfo?.componentStack && (
-                <div className="space-y-1">
+                <div className="space-y-xs">
                   <div className="font-bold text-brand-primary">组件堆栈:</div>
                   <div className="text-secondary whitespace-pre-wrap">
                     {errorInfo.componentStack}

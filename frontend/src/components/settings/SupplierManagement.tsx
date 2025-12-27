@@ -249,7 +249,7 @@ export const SupplierManagement: React.FC = () => {
           ) : (
             <div className="space-y-6">
               {groupedSuppliers.map(group => (
-                <div key={group.prefix} className="space-y-3">
+                <div key={group.prefix} className="space-y-xmd">
                   <div className="flex items-center gap-2 text-sm px-1">
                     <span className="text-lg">{group.color}</span>
                     <span className="font-mono font-bold text-primary bg-canvas dark:bg-secondary px-2 py-0.5 rounded">
@@ -269,7 +269,7 @@ export const SupplierManagement: React.FC = () => {
                         }`}
                         shadow="none"
                       >
-                        <CardBody className="p-4">
+                        <CardBody className="p-p4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2">
@@ -353,7 +353,7 @@ export const SupplierManagement: React.FC = () => {
             <span className="text-xl font-bold">添加供应商</span>
             <span className="text-sm font-normal text-secondary">配置新的上游 LLM 服务提供商</span>
           </ModalHeader>
-          <ModalBody className="space-y-4">
+          <ModalBody className="space-y-md">
             <Input
               label="名称"
               placeholder="例如：Claude Official"
@@ -365,7 +365,7 @@ export const SupplierManagement: React.FC = () => {
               labelPlacement="outside"
             />
 
-            <div className="space-y-2">
+            <div className="space-y-sm">
               <label className="text-sm font-medium">本地路径前缀</label>
               <div className="flex gap-2">
                 <Select
@@ -453,7 +453,7 @@ export const SupplierManagement: React.FC = () => {
       <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} size="2xl" backdrop="blur">
         <ModalContent>
           <ModalHeader>编辑供应商</ModalHeader>
-          <ModalBody className="space-y-4">
+          <ModalBody className="space-y-md">
             {editingSupplier && (
               <>
                 <Input

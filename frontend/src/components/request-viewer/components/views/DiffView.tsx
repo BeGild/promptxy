@@ -136,7 +136,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
     const { paragraphs, totalOriginal, totalModified, changedCount } = diffResult;
 
     return (
-      <div className="space-y-1">
+      <div className="space-y-xs">
         {/* 差异统计 */}
         <div className="text-xs text-secondary mb-2">
           段落级对比: {changedCount}/{paragraphs.length} 个段落有变化
@@ -198,7 +198,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
     if (showChangesOnly && modifiedNode.diffStatus === DiffStatus.SAME) {
       // 显示折叠的无变化指示器
       return (
-        <div key={modifiedNode.id} className="py-1" style={{ marginLeft: `${depth * 16}px` }}>
+        <div key={modifiedNode.id} className="py-xs" style={{ marginLeft: `${depth * 16}px` }}>
           <div className="flex justify-between items-center text-xs text-tertiary py-1 px-2 bg-canvas dark:bg-secondary/50 rounded">
             <span>🟢 未变化 (已折叠)</span>
             <span className="text-tertiary">{modifiedNode.label}</span>
@@ -211,7 +211,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
     const hasMarkdownDiff = markdownDiffs.has(modifiedNode.id);
 
     return (
-      <div key={modifiedNode.id} className="py-1">
+      <div key={modifiedNode.id} className="py-xs">
         <div className="grid grid-cols-2 gap-4" style={marginStyle}>
           {/* 原始值 */}
           <div className="border border-subtle rounded p-2">
@@ -258,7 +258,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
 
         {/* 子节点 */}
         {modifiedNode.children && modifiedNode.children.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-mt2">
             {modifiedNode.children.map((child) => {
               const originalChild = originalNode?.children?.find(c => c.path === child.path);
               return renderNode(originalChild, child, depth + 1);
@@ -317,7 +317,7 @@ const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
       </div>
 
       {/* 差异内容 */}
-      <div className="p-4">
+      <div className="p-p4">
         {renderNode(undefined, modifiedTree)}
       </div>
     </div>

@@ -265,7 +265,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
       return (
         <div className="text-center py-12 text-secondary">
           <p>没有找到匹配的规则</p>
-          <Button size="sm" variant="light" onPress={handleClearSearch} className="mt-2">
+          <Button size="sm" variant="light" onPress={handleClearSearch} className="mt-mt2">
             清除搜索
           </Button>
         </div>
@@ -341,7 +341,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-md">
       {renderHeader()}
       {renderVirtualList()}
     </div>

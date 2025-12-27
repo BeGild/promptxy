@@ -38,7 +38,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     <Card className="border-2 border-dashed border-subtle dark:border-subtle bg-secondary dark:bg-elevated">
       <CardBody className="p-xl text-center space-y-4">
         <div className="text-6xl">{icon}</div>
-        <div className="space-y-2">
+        <div className="space-y-sm">
           <h3 className="text-xl font-bold text-primary dark:text-primary">{title}</h3>
           <p className="text-sm text-secondary max-w-md mx-auto">{description}</p>
         </div>

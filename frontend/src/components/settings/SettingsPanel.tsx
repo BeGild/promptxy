@@ -281,7 +281,7 @@ export const SettingsPanel: React.FC = () => {
                   数据清理
                 </h4>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-md">
                 <Input
                   label="保留最近条数"
                   placeholder="100"
@@ -334,7 +334,7 @@ export const SettingsPanel: React.FC = () => {
                   <span className="font-medium">API 端口</span>
                   <span className="font-mono bg-accent-purple/10 dark:bg-accent-purple/20 text-accent-purple px-2 py-0.5 rounded text-xs">7071</span>
                 </div>
-                <Divider className="my-2" />
+                <Divider className="my-my2" />
                 <p className="text-xs leading-relaxed opacity-80">
                   PromptXY 是一个强大的本地 HTTP 代理规则管理器，用于捕获、监控和修改 LLM 请求。
                 </p>

@@ -120,7 +120,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       onClick={() => onRowClick(item.id)}
     >
       {/* 复选框 */}
-      <div className="w-12">
+      <div className="w-w12">
         {onViewedToggle && (
           <button
             type="button"
@@ -155,7 +155,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       </div>
 
       {/* 客户端 */}
-      <div className="w-16">
+      <div className="w-w16">
         <span className="text-xs font-medium text-primary">
           {formatClient(item.client)}
         </span>
@@ -169,7 +169,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       </div>
 
       {/* 匹配规则 */}
-      <div className="w-24">
+      <div className="w-w24">
         {item.matchedRules && item.matchedRules.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {item.matchedRules.slice(0, 2).map((ruleId: string) => (
@@ -195,7 +195,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       </div>
 
       {/* 状态 */}
-      <div className="w-16">
+      <div className="w-w16">
         <Chip
           size="sm"
           color={getStatusColor(item.responseStatus)}
@@ -499,13 +499,13 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     const tableHeader = (
       <div className="bg-canvas dark:bg-secondary border-b border-subtle px-4 py-2 text-xs font-semibold text-secondary">
         <div className="flex items-center gap-3">
-          <div className="w-12">已查看</div>
-          <div className="w-24">时间</div>
-          <div className="w-16">客户端</div>
+          <div className="w-w12">已查看</div>
+          <div className="w-w24">时间</div>
+          <div className="w-w16">客户端</div>
           <div className="flex-1">路径</div>
-          <div className="w-24">匹配规则</div>
-          <div className="w-16">状态</div>
-          <div className="w-24">大小</div>
+          <div className="w-w24">匹配规则</div>
+          <div className="w-w16">状态</div>
+          <div className="w-w24">大小</div>
           <div className="w-16 text-center">耗时</div>
           <div className="w-auto">操作</div>
         </div>
@@ -578,7 +578,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           color="primary"
           showShadow={true}
           classNames={{
-            wrapper: 'gap-1',
+            wrapper: 'gap-xs',
             item: 'min-w-9 h-9',
             cursor: 'shadow-lg bg-gradient-to-r from-accent-purple to-accent-pink text-white font-bold',
           }}
@@ -588,7 +588,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-md">
       {renderHeader()}
       {renderVirtualList()}
       {renderPagination()}

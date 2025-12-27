@@ -336,9 +336,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
             {/* 目录 */}
             {headings.length > 0 && (
               <div className="w-64 border-l border-subtle bg-secondary overflow-y-auto">
-                <div className="p-4">
+                <div className="p-p4">
                   <h3 className="text-sm font-bold text-secondary mb-3">目录</h3>
-                  <nav className="space-y-2">
+                  <nav className="space-y-sm">
                     {headings.map((heading, index) => (
                       <button
                         key={index}

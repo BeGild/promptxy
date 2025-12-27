@@ -100,7 +100,7 @@ const JsonRenderer: React.FC<JsonRendererProps> = ({ node }) => {
       {hasChildren && isExpanded && (
         <div className="ml-4">
           {children!.map(child => (
-            <div key={child.id} className="my-1">
+            <div key={child.id} className="my-my1">
               <div className="flex items-start gap-2">
                 <span className="text-sm text-tertiary font-mono">
                   {child.label}:

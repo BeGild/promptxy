@@ -69,7 +69,7 @@ export const PreviewPanel: React.FC = () => {
       {/* 输入区域 */}
       <div className="flex-1 min-w-[300px]">
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-md h-full">
-          <h4 className="mb-3">测试输入</h4>
+          <h4 className="mb-mb3">测试输入</h4>
 
           <div className="flex flex-col gap-sm">
             <div className="flex gap-sm">
@@ -151,7 +151,7 @@ export const PreviewPanel: React.FC = () => {
       {/* 输出区域 */}
       <div className="flex-1 min-w-[300px]">
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-md h-full">
-          <h4 className="mb-3">预览结果</h4>
+          <h4 className="mb-mb3">预览结果</h4>
 
           {previewMutation.isPending && (
             <div className="flex justify-center p-xl">

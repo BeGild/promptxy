@@ -83,7 +83,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
   const isNoChanges = !hasChanges;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-xmd">
       <div className="flex items-center justify-between">
         <span className="text-sm text-tertiary">
           {isNoChanges
@@ -133,7 +133,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                 </Button>
               </div>
             </CardHeader>
-            <CardBody className="p-0">
+            <CardBody className="p-p0">
               <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas">
                 {(isNoChanges ? originalLines : left).map((line, i) => (
                   <div
@@ -169,7 +169,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                 </Button>
               </div>
             </CardHeader>
-            <CardBody className="p-0">
+            <CardBody className="p-p0">
               <div className="font-mono text-xs leading-5 h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas">
                 {(isNoChanges ? originalLines : right).map((line, i) => (
                   <div
@@ -208,7 +208,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                 </Button>
               </div>
             </CardHeader>
-            <CardBody className="p-0">
+            <CardBody className="p-p0">
               <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas text-primary dark:text-primary">
                 {originalStr}
               </pre>
@@ -229,7 +229,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                 </Button>
               </div>
             </CardHeader>
-            <CardBody className="p-0">
+            <CardBody className="p-p0">
               <pre className="font-mono text-xs h-[400px] overflow-auto p-3 bg-canvas dark:bg-canvas text-primary dark:text-primary">
                 {isNoChanges ? originalStr : modifiedStr}
               </pre>
