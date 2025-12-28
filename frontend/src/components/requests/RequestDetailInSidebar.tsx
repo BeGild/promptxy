@@ -1,0 +1,176 @@
+/**
+ * ⚠️ STYLESYSTEM COMPLIANCE ⚠️
+ *
+ * 禁止使用硬编码样式值！所有样式必须使用：
+ * 1. Tailwind 语义类名（如 p-md, bg-elevated, text-primary）
+ * 2. CSS 变量（如 var(--spacing-md), var(--color-bg-primary)）
+ * 3. 语义化工具类（如 .card, .btn）
+ *
+ * ❌ FORBIDDEN:
+ * - 硬编码颜色值（如 #007aff, #f5f5f7）
+ * - 硬编码尺寸值（如 400px, 16px）
+ * - 旧 Tailwind 颜色类（如 gray-*, blue-*, slate-*）
+ *
+ * ✅ REQUIRED:
+ * - 使用语义化变量和类名
+ * - 参考 styles/tokens/colors.css 中的可用变量
+ */
+
+import React from 'react';
+import { Card, CardBody, CardHeader, Chip, Spinner, Divider, Button, Tabs, Tab } from '@heroui/react';
+import { Plus } from 'lucide-react';
+import { RequestRecord } from '@/types';
+import { formatTimeWithMs, formatDuration, getStatusColor, formatClient, formatSize } from '@/utils';
+import { RequestDetailPanel } from '@/components/request-viewer';
+
+interface RequestDetailInSidebarProps {
+  request: RequestRecord | null;
+  isLoading: boolean;
+  onSwitchToRuleMode?: () => void;
+}
+
+export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
+  request,
+  isLoading,
+  onSwitchToRuleMode,
+}) => {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Spinner color="primary" size="sm">加载详情中...</Spinner>
+      </div>
+    );
+  }
+
+  if (!request) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <div className="text-sm font-medium text-secondary">未找到请求详情</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* 基本信息 - 极简单行布局 */}
+      <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
+        <CardBody className="px-3 py-2">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            {/* ID - 完整显示 */}
+            <span className="text-tertiary font-mono text-xs" title={request.id}>
+              {request.id}
+            </span>
+            <span className="text-tertiary">·</span>
+            {/* 时间 */}
+            <span className="text-tertiary whitespace-nowrap">
+              {formatTimeWithMs(request.timestamp)}
+            </span>
+            <span className="text-tertiary">·</span>
+            {/* 客户端 */}
+            <span className="text-secondary font-medium">
+              {formatClient(request.client)}
+            </span>
+            <span className="text-tertiary">·</span>
+            {/* 方法 */}
+            <span className="text-tertiary uppercase font-medium">
+              {request.method}
+            </span>
+            <span className="text-tertiary">·</span>
+            {/* 状态 */}
+            <Chip
+              size="sm"
+              color={getStatusColor(request.responseStatus)}
+              variant="flat"
+              className="h-5 min-h-5 min-w-0"
+              classNames={{
+                base: "min-w-0 inline-flex items-center",
+                content: "px-2 py-0.5 min-w-0 inline-flex"
+              }}
+            >
+              {request.responseStatus || 'N/A'}
+            </Chip>
+            <span className="text-tertiary">·</span>
+            {/* 耗时 */}
+            {request.durationMs && (
+              <>
+                <span className="text-tertiary">
+                  {formatDuration(request.durationMs)}
+                </span>
+                <span className="text-tertiary">·</span>
+              </>
+            )}
+            {/* 请求体大小 */}
+            {request.requestSize && (
+              <>
+                <span className="text-tertiary">
+                  {formatSize(request.requestSize)}
+                </span>
+                <span className="text-tertiary">·</span>
+              </>
+            )}
+            {/* 路径 */}
+            <span className="font-mono text-secondary truncate flex-1 min-w-0">
+              {request.path}
+            </span>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* 匹配规则 - 紧凑单行 */}
+      {request.matchedRules && request.matchedRules.length > 0 && (
+        <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
+          <CardBody className="px-3 py-2">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-tertiary font-medium">匹配:</span>
+              <div className="flex flex-wrap gap-1.5 flex-1">
+                {request.matchedRules.map((match, i) => (
+                  <React.Fragment key={i}>
+                    <span className="text-xs text-secondary font-mono">{match.ruleId}</span>
+                    <Chip
+                      size="sm"
+                      color="warning"
+                      variant="flat"
+                      className="h-5 min-h-5 text-xs uppercase px-2 min-w-0"
+                      classNames={{
+                        base: "min-w-0 inline-flex items-center",
+                        content: "px-2 py-0.5 min-w-0 inline-flex"
+                      }}
+                    >
+                      {match.opType}
+                    </Chip>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* 请求详情 */}
+      <div className="space-y-sm">
+        <h4 className="text-base font-bold">请求详情</h4>
+        <div className="border border-subtle rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 350px)' }}>
+          <RequestDetailPanel
+            request={request.modifiedBody}
+            originalRequest={request.originalBody}
+            responseStatus={request.responseStatus}
+            responseDuration={request.durationMs}
+          />
+        </div>
+      </div>
+
+      {/* 快速创建规则按钮 */}
+      {onSwitchToRuleMode && (
+        <Button
+          color="primary"
+          variant="flat"
+          onPress={onSwitchToRuleMode}
+          className="w-full"
+          startContent={<Plus size={16} />}
+        >
+          快速创建规则
+        </Button>
+      )}
+    </div>
+  );
+};

@@ -16,11 +16,12 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useDisclosure, Card, CardBody, Chip } from '@heroui/react';
+import { Card, CardBody, Chip } from '@heroui/react';
 import { toast } from 'sonner';
-import { RequestList, RequestDetail } from '@/components/requests';
-import { Modal } from '@/components/common';
+import { RequestList, RequestDetailSidebar } from '@/components/requests';
+import { SideDrawer } from '@/components/common';
 import { useRequests, useRequestDetail, useDeleteRequest } from '@/hooks';
+import { useUIStore, useSidebarSelector } from '@/store';
 import { RequestFilters } from '@/types';
 
 const VIEWED_STORAGE_KEY = 'promptxy_viewed_requests';
@@ -54,7 +55,8 @@ export const RequestsPage: React.FC = () => {
   const { request, isLoading: detailLoading } = useRequestDetail(selectedId);
   const deleteMutation = useDeleteRequest();
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  // 侧边栏状态管理
+  const { isRequestSidebarOpen, sidebarWidth, openRequestSidebar, closeRequestSidebar } = useUIStore();
 
   useEffect(() => {
     try {
@@ -68,15 +70,15 @@ export const RequestsPage: React.FC = () => {
     (id: string) => {
       setSelectedId(id);
       setViewedIdsArray(prev => (prev.includes(id) ? prev : [...prev, id]));
-      onOpen();
+      openRequestSidebar(id);
     },
-    [onOpen],
+    [openRequestSidebar],
   );
 
   const handleClose = useCallback(() => {
-    onClose();
+    closeRequestSidebar();
     // 不清除 selectedId，保持选中状态
-  }, [onClose]);
+  }, [closeRequestSidebar]);
 
   const handleViewedToggle = useCallback((id: string) => {
     setViewedIdsArray(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
@@ -101,83 +103,95 @@ export const RequestsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* 顶部标题栏 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent bg-clip-text text-transparent">
-            请求监控
-          </h1>
-          <p className="text-sm text-secondary mt-1">实时查看经过代理的请求历史和修改详情</p>
+    <div className="flex h-[calc(100vh-56px)]">
+      {/* 左侧内容区域 */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        {/* 顶部标题栏 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent bg-clip-text text-transparent">
+              请求监控
+            </h1>
+            <p className="text-sm text-secondary mt-1">实时查看经过代理的请求历史和修改详情</p>
+          </div>
+          <div className="flex gap-2">
+            <Chip color="secondary" variant="flat" size="sm">
+              {data?.total || 0} 条记录
+            </Chip>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Chip color="secondary" variant="flat" size="sm">
-            {data?.total || 0} 条记录
-          </Chip>
+
+        {/* 统计卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+            <CardBody className="p-p4">
+              <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">
+                总请求
+              </div>
+              <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
+                {data?.total || 0}
+              </div>
+            </CardBody>
+          </Card>
+          <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+            <CardBody className="p-p4">
+              <div className="text-sm text-status-success dark:text-status-success/80 font-medium">
+                当前页
+              </div>
+              <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
+                {data?.items?.length || 0}
+              </div>
+            </CardBody>
+          </Card>
+          <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+            <CardBody className="p-p4">
+              <div className="text-sm text-accent dark:text-accent/80 font-medium">当前页码</div>
+              <div className="text-2xl font-bold text-accent dark:text-accent/90">{page}</div>
+            </CardBody>
+          </Card>
+          <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+            <CardBody className="p-p4">
+              <div className="text-sm text-status-warning dark:text-status-warning/80 font-medium">
+                总页数
+              </div>
+              <div className="text-2xl font-bold text-status-warning dark:text-status-warning/90">
+                {Math.ceil((data?.total || 0) / 50)}
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* 请求列表组件 */}
+        <RequestList
+          requests={data?.items || []}
+          filters={filters}
+          onFiltersChange={setFilters}
+          isLoading={isLoading}
+          total={data?.total || 0}
+          page={page}
+          onPageChange={setPage}
+          onRowClick={handleRowClick}
+          onRefresh={handleRefresh}
+          onDelete={handleDelete}
+          selectedId={selectedId}
+          viewedIds={viewedIds}
+          onViewedToggle={handleViewedToggle}
+        />
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-p4">
-            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">
-              总请求
-            </div>
-            <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
-              {data?.total || 0}
-            </div>
-          </CardBody>
-        </Card>
-        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-p4">
-            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">
-              当前页
-            </div>
-            <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
-              {data?.items?.length || 0}
-            </div>
-          </CardBody>
-        </Card>
-        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-p4">
-            <div className="text-sm text-accent dark:text-accent/80 font-medium">当前页码</div>
-            <div className="text-2xl font-bold text-accent dark:text-accent/90">{page}</div>
-          </CardBody>
-        </Card>
-        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-          <CardBody className="p-p4">
-            <div className="text-sm text-status-warning dark:text-status-warning/80 font-medium">
-              总页数
-            </div>
-            <div className="text-2xl font-bold text-status-warning dark:text-status-warning/90">
-              {Math.ceil((data?.total || 0) / 50)}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* 请求列表组件 */}
-      <RequestList
-        requests={data?.items || []}
-        filters={filters}
-        onFiltersChange={setFilters}
-        isLoading={isLoading}
-        total={data?.total || 0}
-        page={page}
-        onPageChange={setPage}
-        onRowClick={handleRowClick}
-        onRefresh={handleRefresh}
-        onDelete={handleDelete}
-        selectedId={selectedId}
-        viewedIds={viewedIds}
-        onViewedToggle={handleViewedToggle}
-      />
-
-      {/* 请求详情模态框 */}
-      <Modal isOpen={isOpen} onClose={handleClose} title="请求详情" size="4xl" backdrop="blur">
-        <RequestDetail request={request || null} isLoading={detailLoading} onClose={handleClose} />
-      </Modal>
+      {/* 侧边栏 */}
+      <SideDrawer
+        isOpen={isRequestSidebarOpen}
+        onClose={handleClose}
+        defaultWidth={sidebarWidth}
+      >
+        <RequestDetailSidebar
+          request={request || null}
+          isLoading={detailLoading}
+        />
+      </SideDrawer>
     </div>
   );
 };

@@ -18,6 +18,11 @@ interface UIState {
   activeTab: 'rules' | 'requests' | 'preview' | 'settings';
   theme: 'light' | 'dark' | 'system';
 
+  // 请求侧边栏状态
+  isRequestSidebarOpen: boolean;
+  sidebarMode: 'detail' | 'response' | 'rule';
+  sidebarWidth: number;  // 记忆用户偏好 (vw)
+
   // 操作
   openRuleEditor: (ruleId?: string | null) => void;
   closeRuleEditor: () => void;
@@ -31,6 +36,12 @@ interface UIState {
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   toggleSidebar: () => void;
   reset: () => void;
+
+  // 侧边栏操作
+  openRequestSidebar: (requestId: string) => void;
+  closeRequestSidebar: () => void;
+  setSidebarMode: (mode: 'detail' | 'response' | 'rule') => void;
+  setSidebarWidth: (width: number) => void;
 }
 
 const initialState = {
@@ -43,6 +54,10 @@ const initialState = {
   sidebarCollapsed: true,
   activeTab: 'rules' as const,
   theme: 'system' as const,
+  // 侧边栏初始状态
+  isRequestSidebarOpen: false,
+  sidebarMode: 'detail' as 'detail' | 'response' | 'rule',
+  sidebarWidth: 40,  // 默认 40vw
 };
 
 /**
@@ -127,6 +142,26 @@ export const useUIStore = create<UIState>()(
           toggleSidebar: () =>
             dedupedSet((state: UIState) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
+          // 侧边栏操作
+          openRequestSidebar: (requestId: string) =>
+            dedupedSet({
+              isRequestSidebarOpen: true,
+              selectedRequestId: requestId,
+              sidebarMode: 'detail',
+            }),
+
+          closeRequestSidebar: () =>
+            dedupedSet({
+              isRequestSidebarOpen: false,
+              // 不清除 selectedRequestId，保持选中状态
+            }),
+
+          setSidebarMode: (mode: 'detail' | 'response' | 'rule') =>
+            dedupedSet({ sidebarMode: mode }),
+
+          setSidebarWidth: (width: number) =>
+            dedupedSet({ sidebarWidth: width }),
+
           reset: () => dedupedSet(initialState),
         };
       },
@@ -197,6 +232,24 @@ export const useUIStateSelector = () => {
       theme,
     }),
     [sidebarCollapsed, activeTab, theme],
+  );
+};
+
+/**
+ * 获取侧边栏状态的 Memoized 选择器
+ */
+export const useSidebarSelector = () => {
+  const isRequestSidebarOpen = useUIStore(state => state.isRequestSidebarOpen);
+  const sidebarMode = useUIStore(state => state.sidebarMode);
+  const sidebarWidth = useUIStore(state => state.sidebarWidth);
+
+  return useMemo(
+    () => ({
+      isRequestSidebarOpen,
+      sidebarMode,
+      sidebarWidth,
+    }),
+    [isRequestSidebarOpen, sidebarMode, sidebarWidth],
   );
 };
 

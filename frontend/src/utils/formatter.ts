@@ -7,16 +7,19 @@
  */
 
 /**
- * 格式化时间为时:分:秒.毫秒格式
- * 示例: 14:30:25.123
+ * 格式化时间为完整日期+时:分:秒.毫秒格式
+ * 示例: 2025-01-15 14:30:25.123
  */
 export function formatTimeWithMs(timestamp: number): string {
   const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
   const ms = String(date.getMilliseconds()).padStart(3, '0');
-  return `${hours}:${minutes}:${seconds}.${ms}`;
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${ms}`;
 }
 export function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
@@ -71,6 +74,11 @@ export function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
+
+/**
+ * 格式化大小（formatBytes 别名）
+ */
+export const formatSize = formatBytes;
 
 /**
  * 格式化 JSON
