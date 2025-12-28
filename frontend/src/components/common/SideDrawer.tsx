@@ -16,7 +16,7 @@
  * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@heroui/react';
 import { X, GripVertical } from 'lucide-react';
 
@@ -24,23 +24,43 @@ interface SideDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  defaultWidth?: number;  // 默认 40vw
-  minWidth?: number;      // 默认 30vw
-  maxWidth?: number;      // 默认 60vw
+  defaultWidth?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  squeezeThreshold?: number;
+  onModeChange?: (mode: 'squeeze' | 'overlay') => void;
+  onWidthChange?: (width: number) => void;
 }
 
 export const SideDrawer: React.FC<SideDrawerProps> = ({
   isOpen,
   onClose,
   children,
-  defaultWidth = 40,
-  minWidth = 30,
-  maxWidth = 60,
+  defaultWidth = 60,
+  minWidth = 40,
+  maxWidth = 90,
+  squeezeThreshold = 60,
+  onModeChange,
+  onWidthChange,
 }) => {
   const [width, setWidth] = useState(defaultWidth);
   const [isResizing, setIsResizing] = useState(false);
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 当前是否为覆盖模式
+  const isOverlay = width > squeezeThreshold;
+
+  // 宽度变化时通知父组件
+  useEffect(() => {
+    onWidthChange?.(width);
+    onModeChange?.(isOverlay ? 'overlay' : 'squeeze');
+  }, [width, isOverlay, onWidthChange, onModeChange]);
+
+  // 打开时重置宽度
+  useEffect(() => {
+    if (isOpen) {
+      setWidth(defaultWidth);
+    }
+  }, [isOpen, defaultWidth]);
 
   // ESC 键关闭
   useEffect(() => {
@@ -61,19 +81,24 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!isResizing || !containerRef.current) return;
+    if (!isResizing) return;
+
+    let rafId: number;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const containerRect = containerRef.current!.getBoundingClientRect();
-      const newWidth = ((containerRect.right - e.clientX) / window.innerWidth) * 100;
-
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        setWidth(newWidth);
-      }
+      rafId = requestAnimationFrame(() => {
+        const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
+        if (newWidth >= minWidth && newWidth <= maxWidth) {
+          setWidth(newWidth);
+        }
+      });
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -82,33 +107,46 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [isResizing, minWidth, maxWidth]);
 
-  return (
-    <div
-      ref={containerRef}
-      className={`
-        flex-shrink-0 border-l border-subtle bg-canvas dark:bg-secondary relative
-        transition-all duration-300 ease-in-out overflow-hidden
-        ${isOpen ? 'opacity-100' : 'w-0 opacity-0'}
-      `}
-      style={isOpen ? { width: `${width}vw` } : {}}
-    >
-      {/* 拖拽手柄 - 调整大小指示器 */}
-      {isResizing && (
-        <div
-          className="fixed inset-y-0 bg-brand-primary/20 dark:bg-brand-primary/30 cursor-col-resize z-50 pointer-events-none"
-          style={{ width: '4px', right: `${100 - width}vw` }}
-        />
-      )}
+  // 计算内容层位置，支持开启动画
+  const overlayLeft = isOpen
+    ? (isOverlay ? `${100 - width}vw` : `calc(100% - ${width}vw)`)
+    : '100%';
 
-      {/* 侧边栏内容 */}
+  // 统一结构，根据模式只改变样式，避免重绘
+  return (
+    <>
+      {/* 外层容器 - 始终占据 flex 空间，支持动画 */}
       <div
-        ref={drawerRef}
-        className="h-full flex flex-col"
+        className="flex-shrink-0 relative transition-all duration-300 ease-out"
+        style={{
+          width: (!isOpen || isOverlay) ? '0px' : `${width}vw`
+        }}
       >
-        {/* 拖拽手柄区域 */}
+        {/* 底层透明层 - 挤压左侧内容 */}
+        <div className="h-full" style={{ width: isOverlay ? '0px' : '100%' }} />
+      </div>
+
+      {/* 上层内容层 - 始终 fixed 定位，避开 Header，支持动画 */}
+      <div
+        className="h-full border-l border-subtle bg-canvas dark:bg-secondary shadow-xl transition-all duration-300 ease-out"
+        style={{
+          position: 'fixed',
+          top: '56px',
+          width: isOpen ? `${width}vw` : '0px',
+          left: overlayLeft,
+          zIndex: (isOpen && isOverlay) ? 50 : 'auto',
+          height: 'calc(100vh - 56px)',
+          opacity: isOpen ? 1 : 0,
+          overflow: isOpen ? 'visible' : 'hidden'
+        }}
+      >
+        {/* 拖拽手柄 */}
         <div
           onMouseDown={handleMouseDown}
           className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-primary/50 dark:hover:bg-brand-primary/60 transition-colors group z-10"
@@ -118,27 +156,28 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
           </div>
         </div>
 
-        {/* 头部操作栏 */}
+        {/* 头部 */}
         <div className="flex items-center justify-between px-md py-sm border-b border-subtle ml-1 flex-shrink-0">
           <div className="text-sm font-medium text-tertiary">详情面板</div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={onClose}
-            className="min-w-6 h-6"
-          >
-            <X size={16} />
-          </Button>
-        </div>
-
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-auto min-h-0">
-          <div className="p-md pl-lg">
-            {children}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-tertiary opacity-60">ESC 关闭</span>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              onPress={onClose}
+              className="min-w-6 h-6"
+            >
+              <X size={16} />
+            </Button>
           </div>
         </div>
+
+        {/* 内容 */}
+        <div className="overflow-auto" style={{ height: 'calc(100% - 49px)' }}>
+          <div className="p-md pl-lg">{children}</div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
