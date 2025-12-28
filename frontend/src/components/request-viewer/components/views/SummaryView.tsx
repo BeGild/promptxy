@@ -72,10 +72,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({ viewTree, groups }) => {
         const isExpanded = expandedGroups.has(group.id);
 
         return (
-          <div
-            key={group.id}
-            className="border border-subtle rounded-lg overflow-hidden"
-          >
+          <div key={group.id} className="border border-subtle rounded-lg overflow-hidden">
             {/* 分组头部 */}
             <div
               className="flex items-center justify-between px-4 py-3 bg-brand-primary/10 dark:bg-brand-primary/20 cursor-pointer hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30 transition-colors"
@@ -84,13 +81,9 @@ const SummaryView: React.FC<SummaryViewProps> = ({ viewTree, groups }) => {
               <div className="flex items-center gap-2">
                 <span className="text-lg">{group.icon}</span>
                 <h3 className="font-semibold text-primary">{group.label}</h3>
-                <span className="text-xs text-secondary">
-                  ({groupNodes.length} 个字段)
-                </span>
+                <span className="text-xs text-secondary">({groupNodes.length} 个字段)</span>
               </div>
-              <span className="text-tertiary">
-                {isExpanded ? '▼' : '▶'}
-              </span>
+              <span className="text-tertiary">{isExpanded ? '▼' : '▶'}</span>
             </div>
 
             {/* 分组描述 */}
@@ -106,9 +99,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({ viewTree, groups }) => {
                 {groupNodes.map(node => (
                   <div key={node.id}>
                     <div className="flex items-start gap-2 mb-1">
-                      <span className="text-sm font-medium text-primary">
-                        {node.label}:
-                      </span>
+                      <span className="text-sm font-medium text-primary">{node.label}:</span>
                     </div>
                     <div className="ml-4">
                       <NodeRenderer node={node} />

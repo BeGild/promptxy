@@ -210,7 +210,7 @@
   }
 
   .gradient-text-animated {
-    background: linear-gradient(90deg, #007acc, #8b5cf6, #ec4899, #007acc);
+    background: linear-gradient(90deg, #d46a1a, #ff9a52, #c45c3e, #d46a1a);
     background-size: 200% 200%;
     animation: gradientShift 3s ease infinite;
   }
@@ -311,7 +311,12 @@
   }
 
   .skeleton {
-    background: linear-gradient(90deg, var(--color-bg-secondary) 25%, var(--color-border-subtle) 50%, var(--color-bg-secondary) 75%);
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-secondary) 25%,
+      var(--color-border-subtle) 50%,
+      var(--color-bg-secondary) 75%
+    );
     background-size: 1000px 100%;
     animation: shimmer 2s infinite linear;
   }

@@ -1,21 +1,23 @@
 /**
  * 节点类型枚举
  */
+import type * as React from 'react';
+
 export enum NodeType {
-  PRIMITIVE = 'primitive',   // 简单值（string, number, boolean, <200字符）
+  PRIMITIVE = 'primitive', // 简单值（string, number, boolean, <200字符）
   STRING_LONG = 'string_long', // 长字符串（>200字符）
-  MARKDOWN = 'markdown',     // Markdown 格式文本
-  JSON = 'json',             // JSON 对象
-  ARRAY = 'array',           // 数组
-  CODE = 'code',             // 代码块
+  MARKDOWN = 'markdown', // Markdown 格式文本
+  JSON = 'json', // JSON 对象
+  ARRAY = 'array', // 数组
+  CODE = 'code', // 代码块
 }
 
 /**
  * 差异状态枚举
  */
 export enum DiffStatus {
-  SAME = 'same',       // 无变化
-  ADDED = 'added',     // 新增
+  SAME = 'same', // 无变化
+  ADDED = 'added', // 新增
   REMOVED = 'removed', // 删除
   MODIFIED = 'modified', // 修改
 }
@@ -25,8 +27,8 @@ export enum DiffStatus {
  */
 export enum RenderMode {
   SUMMARY = 'summary', // 结构概览
-  FULL = 'full',       // 内容详情
-  DIFF = 'diff',       // 差异对比
+  FULL = 'full', // 内容详情
+  DIFF = 'diff', // 差异对比
 }
 
 /**

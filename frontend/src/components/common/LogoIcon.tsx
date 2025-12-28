@@ -36,7 +36,10 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' })
       <defs>
         <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style={{ stopColor: 'var(--color-brand-primary)', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: 'var(--color-brand-primary-hover)', stopOpacity: 1 }} />
+          <stop
+            offset="100%"
+            style={{ stopColor: 'var(--color-brand-primary-hover)', stopOpacity: 1 }}
+          />
         </linearGradient>
       </defs>
 

@@ -24,7 +24,7 @@ export const PreviewPage: React.FC = () => {
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-status-success to-brand-primary bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent bg-clip-text text-transparent">
             实时预览
           </h1>
           <p className="text-sm text-secondary mt-1">测试规则效果，实时查看请求修改结果</p>

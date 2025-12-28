@@ -7,7 +7,7 @@
 
     <!-- 防止主题闪烁：在 CSS 加载前预先应用主题 -->
     <script>
-      (function() {
+      (function () {
         try {
           const stored = localStorage.getItem('promptxy-ui-state');
           const theme = stored ? JSON.parse(stored).theme : 'system';

@@ -17,8 +17,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import type { ViewNode } from '../../types';
-import { DiffStatus } from '../../types';
+import { DiffStatus, type ViewNode } from '../../types';
 import NodeRenderer from './NodeRenderer';
 
 interface ArrayRendererProps {
@@ -36,7 +35,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
 
   // 从 localStorage 读取折叠状态
   useEffect(() => {
-    const stored = localStorage.getItem('request-viewer:collapse-state');
+    const stored = globalThis.localStorage?.getItem('request-viewer:collapse-state');
     if (stored) {
       try {
         const state = JSON.parse(stored);
@@ -55,10 +54,10 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
     setIsExpanded(newState);
 
     try {
-      const stored = localStorage.getItem('request-viewer:collapse-state');
+      const stored = globalThis.localStorage?.getItem('request-viewer:collapse-state');
       const state = stored ? JSON.parse(stored) : {};
       state[id] = newState;
-      localStorage.setItem('request-viewer:collapse-state', JSON.stringify(state));
+      globalThis.localStorage?.setItem('request-viewer:collapse-state', JSON.stringify(state));
     } catch (e) {
       // 忽略存储错误
     }
@@ -68,11 +67,11 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
   const getDiffClass = () => {
     switch (diffStatus) {
       case DiffStatus.ADDED:
-        return 'border-green-500';
+        return 'border-status-success';
       case DiffStatus.REMOVED:
-        return 'border-red-500';
+        return 'border-status-error';
       case DiffStatus.MODIFIED:
-        return 'border-yellow-500';
+        return 'border-status-warning';
       default:
         return 'border-subtle';
     }
@@ -94,13 +93,9 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
         className="flex items-center gap-2 py-1 px-2 hover:bg-secondary rounded cursor-pointer select-none"
         onClick={toggleExpanded}
       >
-        <span className="text-tertiary">
-          {hasChildren ? (isExpanded ? '▼' : '▶') : '•'}
-        </span>
+        <span className="text-tertiary">{hasChildren ? (isExpanded ? '▼' : '▶') : '•'}</span>
         <span className="font-semibold text-sm">{label}:</span>
-        <span className="text-xs text-tertiary">
-          [{childCount} 项]
-        </span>
+        <span className="text-xs text-tertiary">[{childCount} 项]</span>
       </div>
 
       {/* 子节点列表 */}
@@ -110,9 +105,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
             {visibleChildren.map(child => (
               <div key={child.id} className="my-my1">
                 <div className="flex items-start gap-2">
-                  <span className="text-sm text-tertiary font-mono">
-                    [{child.label}]:
-                  </span>
+                  <span className="text-sm text-tertiary font-mono">[{child.label}]:</span>
                   <div className="flex-1">
                     <NodeRenderer node={child} />
                   </div>
@@ -124,7 +117,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
           {/* 显示更多按钮 */}
           {hasMore && !showAll && (
             <button
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 setShowAll(true);
               }}
@@ -136,7 +129,7 @@ const ArrayRenderer: React.FC<ArrayRendererProps> = ({ node }) => {
 
           {showAll && childCount > DEFAULT_VISIBLE && (
             <button
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 setShowAll(false);
               }}

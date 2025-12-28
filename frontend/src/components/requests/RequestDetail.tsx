@@ -182,7 +182,9 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={() => copyToClipboard(JSON.stringify(request.responseHeaders, null, 2), '响应头')}
+                onPress={() =>
+                  copyToClipboard(JSON.stringify(request.responseHeaders, null, 2), '响应头')
+                }
                 className="min-w-6 h-6"
               >
                 <Copy size={14} />
@@ -207,12 +209,14 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
                 isIconOnly
                 size="sm"
                 variant="light"
-                onPress={() => copyToClipboard(
-                  typeof request.responseBody === 'string'
-                    ? request.responseBody
-                    : JSON.stringify(request.responseBody, null, 2),
-                  '响应体'
-                )}
+                onPress={() =>
+                  copyToClipboard(
+                    typeof request.responseBody === 'string'
+                      ? request.responseBody
+                      : JSON.stringify(request.responseBody, null, 2),
+                    '响应体',
+                  )
+                }
                 className="min-w-6 h-6"
               >
                 <Copy size={14} />

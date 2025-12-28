@@ -34,7 +34,13 @@ interface RuleCardProps {
  * 使用 React.memo 避免不必要的重新渲染
  * 使用自定义比较函数进行深度比较
  */
-const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onCopy, onDelete, onToggle }) => {
+const RuleCardComponent: React.FC<RuleCardProps> = ({
+  rule,
+  onEdit,
+  onCopy,
+  onDelete,
+  onToggle,
+}) => {
   const enabled = rule.enabled !== false;
 
   // 使用 useCallback 优化事件处理函数，避免每次渲染都创建新函数
@@ -129,7 +135,7 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onCopy, onDe
           <Chip
             size="sm"
             variant="flat"
-            className="bg-accent-purple/10 dark:bg-accent-purple/20 text-accent-purple dark:text-accent-purple/80 border border-accent-purple/30 dark:border-accent-purple/20"
+            className="bg-accent/10 dark:bg-accent/20 text-accent dark:text-accent/80 border border-accent/30 dark:border-accent/20"
           >
             {rule.when.field}
           </Chip>
@@ -137,7 +143,7 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onCopy, onDe
             <Chip
               size="sm"
               variant="flat"
-              className="bg-accent-orange/10 dark:bg-accent-orange/20 text-accent-orange dark:text-accent-orange/80 border border-accent-orange/30 dark:border-accent-orange/20"
+              className="bg-status-warning/10 dark:bg-status-warning/20 text-status-warning dark:text-status-warning/80 border border-status-warning/30 dark:border-status-warning/20"
             >
               {rule.when.method}
             </Chip>
@@ -159,7 +165,7 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onCopy, onDe
           <div className="space-y-1.5 text-xs font-mono bg-canvas dark:bg-secondary/50 p-2.5 rounded-lg border border-subtle mb-4">
             {rule.when.pathRegex && (
               <div className="flex items-center gap-2 text-secondary truncate">
-                <span className="text-accent-purple font-bold">PATH</span>
+                <span className="text-accent font-bold">PATH</span>
                 <span className="truncate opacity-80">{rule.when.pathRegex}</span>
               </div>
             )}
@@ -180,7 +186,7 @@ const RuleCardComponent: React.FC<RuleCardProps> = ({ rule, onEdit, onCopy, onDe
               size="sm"
               variant="light"
               onPress={handleCopy}
-              className="text-tertiary hover:text-accent-purple hover:bg-accent-purple/10 dark:hover:bg-accent-purple/20"
+              className="text-tertiary hover:text-accent hover:bg-accent/10 dark:hover:bg-accent/20"
             >
               <Copy size={16} />
             </Button>

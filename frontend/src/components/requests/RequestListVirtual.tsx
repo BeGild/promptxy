@@ -115,7 +115,9 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
     <div
       style={style}
       className={`px-4 py-3 border-b border-subtle hover:bg-canvas dark:hover:bg-secondary/50 transition-colors cursor-pointer flex items-center gap-3 ${
-        isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/20 hover:bg-accent-purple/20 dark:hover:bg-accent-purple/30' : ''
+        isSelected
+          ? 'bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 dark:hover:bg-accent/30'
+          : ''
       }`}
       onClick={() => onRowClick(item.id)}
     >
@@ -124,7 +126,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
         {onViewedToggle && (
           <button
             type="button"
-            onClick={(e) => {
+            onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onViewedToggle(item.id);
@@ -136,7 +138,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
               className={[
                 'w-3.5 h-3.5 rounded-full border-2 transition-colors',
                 isViewed
-                  ? 'bg-accent-purple border-accent-purple dark:bg-accent-purple/80 dark:border-accent-purple/80'
+                  ? 'bg-accent border-accent dark:bg-accent/80 dark:border-accent/80'
                   : 'bg-transparent border-subtle',
               ].join(' ')}
             />
@@ -144,28 +146,20 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
         )}
       </div>
 
-      {/* 紫色指示条 */}
-      {(isSelected || isViewed) && (
-        <div className="w-1 h-full bg-accent-purple rounded-r flex-shrink-0" />
-      )}
+      {/* 强调色指示条 */}
+      {(isSelected || isViewed) && <div className="w-1 h-full bg-accent rounded-r flex-shrink-0" />}
 
       {/* 时间 */}
-      <div className="w-24 text-xs font-mono text-primary">
-        {formatTimeWithMs(item.timestamp)}
-      </div>
+      <div className="w-24 text-xs font-mono text-primary">{formatTimeWithMs(item.timestamp)}</div>
 
       {/* 客户端 */}
       <div className="w-w16">
-        <span className="text-xs font-medium text-primary">
-          {formatClient(item.client)}
-        </span>
+        <span className="text-xs font-medium text-primary">{formatClient(item.client)}</span>
       </div>
 
       {/* 路径 */}
       <div className="flex-1 min-w-0">
-        <span className="font-mono text-xs text-primary truncate block">
-          {item.path}
-        </span>
+        <span className="font-mono text-xs text-primary truncate block">{item.path}</span>
       </div>
 
       {/* 匹配规则 */}
@@ -211,15 +205,11 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
         {item.requestSize || item.responseSize ? (
           <span>
             {item.requestSize && (
-              <span className="text-brand-primary">
-                ↑{formatBytes(item.requestSize)}
-              </span>
+              <span className="text-brand-primary">↑{formatBytes(item.requestSize)}</span>
             )}
             {item.requestSize && item.responseSize && ' '}
             {item.responseSize && (
-              <span className="text-status-success">
-                ↓{formatBytes(item.responseSize)}
-              </span>
+              <span className="text-status-success">↓{formatBytes(item.responseSize)}</span>
             )}
           </span>
         ) : (
@@ -438,8 +428,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           className="w-full md:w-48"
           radius="lg"
           classNames={{
-            trigger:
-              'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
+            trigger: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -520,7 +509,17 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         style: CSSProperties;
       } & RowCustomProps,
     ): ReactElement => {
-      const { index, style, requests, onRowClick, onDelete, isScrolling, selectedId, viewedIds, onViewedToggle } = props;
+      const {
+        index,
+        style,
+        requests,
+        onRowClick,
+        onDelete,
+        isScrolling,
+        selectedId,
+        viewedIds,
+        onViewedToggle,
+      } = props;
       return (
         <VirtualRow
           index={index}
@@ -580,7 +579,8 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           classNames={{
             wrapper: 'gap-xs',
             item: 'min-w-9 h-9',
-            cursor: 'shadow-lg bg-gradient-to-r from-accent-purple to-accent-pink text-white font-bold',
+            cursor:
+              'shadow-lg bg-gradient-to-r from-brand-primary to-accent text-primary dark:text-inverse font-bold',
           }}
         />
       </div>

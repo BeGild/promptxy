@@ -140,4 +140,3 @@ describe('rehypeXmlHighlight', () => {
     expect(children[0]).toMatchObject({ type: 'text', value: 'Hello <a>world</a> end' });
   });
 });
-

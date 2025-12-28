@@ -152,7 +152,7 @@ export const RulesPage: React.FC = () => {
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent-purple bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent bg-clip-text text-transparent">
             规则管理
           </h1>
           <p className="text-sm text-secondary mt-1">
@@ -170,7 +170,9 @@ export const RulesPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">已启用</div>
+            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">
+              已启用
+            </div>
             <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
               {rules.filter(r => r.enabled !== false).length}
             </div>
@@ -178,15 +180,17 @@ export const RulesPage: React.FC = () => {
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-accent-purple dark:text-accent-purple/80 font-medium">已禁用</div>
-            <div className="text-2xl font-bold text-accent-purple dark:text-accent-purple/90">
+            <div className="text-sm text-accent dark:text-accent/80 font-medium">已禁用</div>
+            <div className="text-2xl font-bold text-accent dark:text-accent/90">
               {rules.filter(r => r.enabled === false).length}
             </div>
           </CardBody>
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">总规则数</div>
+            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">
+              总规则数
+            </div>
             <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
               {rules.length}
             </div>

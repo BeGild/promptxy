@@ -1,5 +1,4 @@
-import type { ViewNode, FieldConfig, DiffStatus } from '../../types';
-import { NodeType } from '../../types';
+import { NodeType, type ViewNode, type FieldConfig, type DiffStatus } from '../../types';
 
 /**
  * 树构建选项
@@ -21,16 +20,8 @@ export interface TreeBuilderOptions {
  * @param options 构建选项
  * @returns 视图树根节点
  */
-export function buildTreeFromPath(
-  obj: any,
-  options: TreeBuilderOptions = {}
-): ViewNode {
-  const {
-    fieldConfigs = new Map(),
-    original,
-    currentPath = 'root',
-    depth = 0,
-  } = options;
+export function buildTreeFromPath(obj: any, options: TreeBuilderOptions = {}): ViewNode {
+  const { fieldConfigs = new Map(), original, currentPath = 'root', depth = 0 } = options;
 
   const nodeType = inferNodeType(obj, currentPath, fieldConfigs);
   const diffStatus = calculateDiffStatus(obj, original, currentPath);
@@ -87,7 +78,7 @@ export function buildTreeFromPath(
         currentPath: `${currentPath}.${index}`,
         depth: depth + 1,
         original: original?.[index],
-      })
+      }),
     );
   } else if (obj && typeof obj === 'object') {
     node.children = Object.keys(obj).map(key =>
@@ -96,7 +87,7 @@ export function buildTreeFromPath(
         currentPath: `${currentPath}.${key}`,
         depth: depth + 1,
         original: original?.[key],
-      })
+      }),
     );
   }
 
@@ -113,7 +104,7 @@ export function buildTreeFromPath(
 export function inferNodeType(
   value: any,
   path: string,
-  fieldConfigs: Map<string, FieldConfig>
+  fieldConfigs: Map<string, FieldConfig>,
 ): NodeType {
   // 检查是否有显式配置
   const config = fieldConfigs.get(path);
@@ -156,11 +147,7 @@ export function inferNodeType(
  * @param path 路径
  * @returns 差异状态
  */
-export function calculateDiffStatus(
-  current: any,
-  original: any,
-  path: string
-): DiffStatus {
+export function calculateDiffStatus(current: any, original: any, path: string): DiffStatus {
   if (original === undefined) {
     return 'same' as DiffStatus;
   }
@@ -279,7 +266,7 @@ export function generateSummary(value: any, type: NodeType): string {
  */
 function getFieldConfigWithWildcard(
   path: string,
-  fieldConfigs: Map<string, FieldConfig>
+  fieldConfigs: Map<string, FieldConfig>,
 ): FieldConfig | undefined {
   // 精确匹配
   if (fieldConfigs.has(path)) {

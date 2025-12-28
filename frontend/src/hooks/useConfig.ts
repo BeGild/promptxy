@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { exportConfig, importConfig, downloadConfig, uploadConfig, fetchUpstreams, updateUpstreams } from '@/api/config';
+import {
+  exportConfig,
+  importConfig,
+  downloadConfig,
+  uploadConfig,
+  fetchUpstreams,
+  updateUpstreams,
+} from '@/api/config';
 import type { UpstreamsUpdateRequest } from '@/types/api';
 
 /**

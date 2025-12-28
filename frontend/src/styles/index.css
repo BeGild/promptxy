@@ -17,6 +17,9 @@
 @import './utilities/layout.css';
 @import './utilities/components.css';
 
+/* Vendor styles (theme-aware) */
+@import './highlightjs.css';
+
 /* Global Styles (向后兼容) - 必须在 @tailwind 之前 */
 @import './globals.css';
 
@@ -24,3 +27,479 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==================== 语义类名兜底/修正 ==================== */
+/**
+ * 背景：
+ * - 项目历史上大量使用 `text-secondary` / `bg-secondary` / `bg-canvas` 等“语义类名”
+ * - HeroUI 也会注入同名色系（secondary 往往会被配置成品牌/强调色），导致深色模式出现“整体发绿”等问题
+ *
+ * 目标：
+ * - 在不大规模重写 className 的前提下，让这些“语义类名”稳定指向 Design Tokens（var(--color-*)）
+ * - 同时覆盖常见的 `/30` `/50` `/60` `/90` 透明度用法（避免半透明背景仍被 HeroUI secondary 接管）
+ *
+ * 注意：
+ * - 这里刻意不覆盖 `text-primary/bg-primary`：它们在代码中大量用于 HeroUI 的 primary（品牌主色）语义
+ */
+@layer utilities {
+  /* 文本语义色 */
+  .text-secondary {
+    color: var(--color-text-secondary) !important;
+  }
+  .text-tertiary {
+    color: var(--color-text-tertiary) !important;
+  }
+  .text-muted {
+    color: var(--color-text-muted) !important;
+  }
+  .text-disabled {
+    color: var(--color-text-disabled) !important;
+  }
+  .text-inverse {
+    color: var(--color-text-inverse) !important;
+  }
+
+  /* 背景语义色（不带透明度） */
+  .bg-secondary {
+    background-color: var(--color-bg-secondary) !important;
+  }
+  .bg-elevated {
+    background-color: var(--color-bg-elevated) !important;
+  }
+  .bg-canvas {
+    background-color: var(--color-bg-canvas) !important;
+  }
+  .bg-overlay {
+    background-color: var(--color-bg-overlay) !important;
+  }
+
+  /* ==================== accent 兜底（避免 text/bg/border/gradient 缺失导致不可见） ==================== */
+  .text-accent {
+    color: var(--color-accent) !important;
+  }
+  .text-accent\/80 {
+    color: var(--color-accent-alpha-80) !important;
+  }
+  .text-accent\/90 {
+    color: var(--color-accent-alpha-90) !important;
+  }
+
+  .bg-accent {
+    background-color: var(--color-accent) !important;
+  }
+  .bg-accent\/10 {
+    background-color: var(--color-accent-alpha-10) !important;
+  }
+  .bg-accent\/20 {
+    background-color: var(--color-accent-alpha-20) !important;
+  }
+  .bg-accent\/30 {
+    background-color: var(--color-accent-alpha-30) !important;
+  }
+  .bg-accent\/80 {
+    background-color: var(--color-accent-alpha-80) !important;
+  }
+
+  .border-accent {
+    border-color: var(--color-accent) !important;
+  }
+  .border-accent\/20 {
+    border-color: var(--color-accent-alpha-20) !important;
+  }
+  .border-accent\/30 {
+    border-color: var(--color-accent-alpha-30) !important;
+  }
+  .border-accent\/80 {
+    border-color: var(--color-accent-alpha-80) !important;
+  }
+
+  /* 渐变 stop：仅补齐项目中用到的 to-accent */
+  .to-accent {
+    --tw-gradient-to: var(--color-accent) var(--tw-gradient-to-position) !important;
+  }
+
+  /* dark: 变体（避免 dark:text-accent/xx 等失效） */
+  .dark .dark\:text-accent\/80 {
+    color: var(--color-accent-alpha-80) !important;
+  }
+  .dark .dark\:text-accent\/90 {
+    color: var(--color-accent-alpha-90) !important;
+  }
+  .dark .dark\:bg-accent\/10 {
+    background-color: var(--color-accent-alpha-10) !important;
+  }
+  .dark .dark\:bg-accent\/20 {
+    background-color: var(--color-accent-alpha-20) !important;
+  }
+  .dark .dark\:bg-accent\/30 {
+    background-color: var(--color-accent-alpha-30) !important;
+  }
+  .dark .dark\:bg-accent\/80 {
+    background-color: var(--color-accent-alpha-80) !important;
+  }
+  .dark .dark\:border-accent\/20 {
+    border-color: var(--color-accent-alpha-20) !important;
+  }
+  .dark .dark\:border-accent\/30 {
+    border-color: var(--color-accent-alpha-30) !important;
+  }
+  .dark .dark\:border-accent\/80 {
+    border-color: var(--color-accent-alpha-80) !important;
+  }
+  .dark .dark\:to-accent {
+    --tw-gradient-to: var(--color-accent) var(--tw-gradient-to-position) !important;
+  }
+
+  /* ==================== brand-primary 透明度兜底（避免 /10 /20 /30 等失效） ==================== */
+  .text-brand-primary\/80 {
+    color: var(--color-brand-primary-alpha-80) !important;
+  }
+  .text-brand-primary\/90 {
+    color: var(--color-brand-primary-alpha-90) !important;
+  }
+  .bg-brand-primary\/5 {
+    background-color: var(--color-brand-primary-alpha-weak) !important;
+  }
+  .bg-brand-primary\/10 {
+    background-color: var(--color-brand-primary-alpha) !important;
+  }
+  .bg-brand-primary\/20 {
+    background-color: var(--color-brand-primary-alpha-20) !important;
+  }
+  .bg-brand-primary\/30 {
+    background-color: var(--color-brand-primary-alpha-medium) !important;
+  }
+  .bg-brand-primary\/60 {
+    background-color: var(--color-brand-primary-alpha-strong) !important;
+  }
+  .border-brand-primary\/20 {
+    border-color: var(--color-brand-primary-alpha-20) !important;
+  }
+  .border-brand-primary\/30 {
+    border-color: var(--color-brand-primary-alpha-medium) !important;
+  }
+
+  .dark .dark\:text-brand-primary\/80 {
+    color: var(--color-brand-primary-alpha-80) !important;
+  }
+  .dark .dark\:text-brand-primary\/90 {
+    color: var(--color-brand-primary-alpha-90) !important;
+  }
+  .dark .dark\:bg-brand-primary\/5 {
+    background-color: var(--color-brand-primary-alpha-weak) !important;
+  }
+  .dark .dark\:bg-brand-primary\/10 {
+    background-color: var(--color-brand-primary-alpha) !important;
+  }
+  .dark .dark\:bg-brand-primary\/20 {
+    background-color: var(--color-brand-primary-alpha-20) !important;
+  }
+  .dark .dark\:bg-brand-primary\/30 {
+    background-color: var(--color-brand-primary-alpha-medium) !important;
+  }
+  .dark .dark\:hover\:bg-brand-primary\/20:hover {
+    background-color: var(--color-brand-primary-alpha-20) !important;
+  }
+  .dark .dark\:hover\:bg-brand-primary\/30:hover {
+    background-color: var(--color-brand-primary-alpha-medium) !important;
+  }
+  .dark .dark\:border-brand-primary\/20 {
+    border-color: var(--color-brand-primary-alpha-20) !important;
+  }
+  .dark .dark\:border-brand-primary\/30 {
+    border-color: var(--color-brand-primary-alpha-medium) !important;
+  }
+
+  /* ==================== status-* 透明度兜底（避免 /10 /20 /30 等失效） ==================== */
+  .text-status-success {
+    color: var(--color-status-success) !important;
+  }
+  .bg-status-success {
+    background-color: var(--color-status-success) !important;
+  }
+  .border-status-success {
+    border-color: var(--color-status-success) !important;
+  }
+  .text-status-success\/80 {
+    color: var(--color-status-success-alpha-80) !important;
+  }
+  .text-status-success\/90 {
+    color: var(--color-status-success-alpha-90) !important;
+  }
+  .bg-status-success\/10 {
+    background-color: var(--color-status-success-alpha) !important;
+  }
+  .bg-status-success\/20 {
+    background-color: var(--color-status-success-alpha-20) !important;
+  }
+  .bg-status-success\/30 {
+    background-color: var(--color-status-success-alpha-30) !important;
+  }
+  .border-status-success\/20 {
+    border-color: var(--color-status-success-alpha-20) !important;
+  }
+  .border-status-success\/30 {
+    border-color: var(--color-status-success-alpha-30) !important;
+  }
+
+  .text-status-warning {
+    color: var(--color-status-warning) !important;
+  }
+  .bg-status-warning {
+    background-color: var(--color-status-warning) !important;
+  }
+  .border-status-warning {
+    border-color: var(--color-status-warning) !important;
+  }
+  .text-status-warning\/80 {
+    color: var(--color-status-warning-alpha-80) !important;
+  }
+  .text-status-warning\/90 {
+    color: var(--color-status-warning-alpha-90) !important;
+  }
+  .bg-status-warning\/10 {
+    background-color: var(--color-status-warning-alpha) !important;
+  }
+  .bg-status-warning\/20 {
+    background-color: var(--color-status-warning-alpha-20) !important;
+  }
+  .bg-status-warning\/30 {
+    background-color: var(--color-status-warning-alpha-30) !important;
+  }
+  .border-status-warning\/20 {
+    border-color: var(--color-status-warning-alpha-20) !important;
+  }
+  .border-status-warning\/30 {
+    border-color: var(--color-status-warning-alpha-30) !important;
+  }
+
+  .text-status-error {
+    color: var(--color-status-error) !important;
+  }
+  .bg-status-error {
+    background-color: var(--color-status-error) !important;
+  }
+  .border-status-error {
+    border-color: var(--color-status-error) !important;
+  }
+  .text-status-error\/80 {
+    color: var(--color-status-error-alpha-80) !important;
+  }
+  .text-status-error\/90 {
+    color: var(--color-status-error-alpha-90) !important;
+  }
+  .bg-status-error\/10 {
+    background-color: var(--color-status-error-alpha) !important;
+  }
+  .bg-status-error\/20 {
+    background-color: var(--color-status-error-alpha-20) !important;
+  }
+  .bg-status-error\/30 {
+    background-color: var(--color-status-error-alpha-30) !important;
+  }
+  .border-status-error\/20 {
+    border-color: var(--color-status-error-alpha-20) !important;
+  }
+  .border-status-error\/30 {
+    border-color: var(--color-status-error-alpha-30) !important;
+  }
+
+  .text-status-info {
+    color: var(--color-status-info) !important;
+  }
+  .bg-status-info {
+    background-color: var(--color-status-info) !important;
+  }
+  .border-status-info {
+    border-color: var(--color-status-info) !important;
+  }
+  .text-status-info\/80 {
+    color: var(--color-status-info-alpha-80) !important;
+  }
+  .text-status-info\/90 {
+    color: var(--color-status-info-alpha-90) !important;
+  }
+  .bg-status-info\/10 {
+    background-color: var(--color-status-info-alpha) !important;
+  }
+  .bg-status-info\/20 {
+    background-color: var(--color-status-info-alpha-20) !important;
+  }
+  .bg-status-info\/30 {
+    background-color: var(--color-status-info-alpha-30) !important;
+  }
+  .border-status-info\/20 {
+    border-color: var(--color-status-info-alpha-20) !important;
+  }
+  .border-status-info\/30 {
+    border-color: var(--color-status-info-alpha-30) !important;
+  }
+
+  .dark .dark\:text-status-success\/80 {
+    color: var(--color-status-success-alpha-80) !important;
+  }
+  .dark .dark\:text-status-success\/90 {
+    color: var(--color-status-success-alpha-90) !important;
+  }
+  .dark .dark\:bg-status-success\/10 {
+    background-color: var(--color-status-success-alpha) !important;
+  }
+  .dark .dark\:bg-status-success\/20 {
+    background-color: var(--color-status-success-alpha-20) !important;
+  }
+  .dark .dark\:bg-status-success\/30 {
+    background-color: var(--color-status-success-alpha-30) !important;
+  }
+  .dark .dark\:border-status-success\/20 {
+    border-color: var(--color-status-success-alpha-20) !important;
+  }
+  .dark .dark\:border-status-success\/30 {
+    border-color: var(--color-status-success-alpha-30) !important;
+  }
+
+  .dark .dark\:text-status-warning\/80 {
+    color: var(--color-status-warning-alpha-80) !important;
+  }
+  .dark .dark\:text-status-warning\/90 {
+    color: var(--color-status-warning-alpha-90) !important;
+  }
+  .dark .dark\:bg-status-warning\/10 {
+    background-color: var(--color-status-warning-alpha) !important;
+  }
+  .dark .dark\:bg-status-warning\/20 {
+    background-color: var(--color-status-warning-alpha-20) !important;
+  }
+  .dark .dark\:bg-status-warning\/30 {
+    background-color: var(--color-status-warning-alpha-30) !important;
+  }
+  .dark .dark\:border-status-warning\/20 {
+    border-color: var(--color-status-warning-alpha-20) !important;
+  }
+  .dark .dark\:border-status-warning\/30 {
+    border-color: var(--color-status-warning-alpha-30) !important;
+  }
+
+  .dark .dark\:text-status-error\/80 {
+    color: var(--color-status-error-alpha-80) !important;
+  }
+  .dark .dark\:text-status-error\/90 {
+    color: var(--color-status-error-alpha-90) !important;
+  }
+  .dark .dark\:bg-status-error\/10 {
+    background-color: var(--color-status-error-alpha) !important;
+  }
+  .dark .dark\:bg-status-error\/20 {
+    background-color: var(--color-status-error-alpha-20) !important;
+  }
+  .dark .dark\:bg-status-error\/30 {
+    background-color: var(--color-status-error-alpha-30) !important;
+  }
+  .dark .dark\:border-status-error\/20 {
+    border-color: var(--color-status-error-alpha-20) !important;
+  }
+  .dark .dark\:border-status-error\/30 {
+    border-color: var(--color-status-error-alpha-30) !important;
+  }
+
+  .dark .dark\:text-status-info\/80 {
+    color: var(--color-status-info-alpha-80) !important;
+  }
+  .dark .dark\:text-status-info\/90 {
+    color: var(--color-status-info-alpha-90) !important;
+  }
+  .dark .dark\:bg-status-info\/10 {
+    background-color: var(--color-status-info-alpha) !important;
+  }
+  .dark .dark\:bg-status-info\/20 {
+    background-color: var(--color-status-info-alpha-20) !important;
+  }
+  .dark .dark\:bg-status-info\/30 {
+    background-color: var(--color-status-info-alpha-30) !important;
+  }
+  .dark .dark\:border-status-info\/20 {
+    border-color: var(--color-status-info-alpha-20) !important;
+  }
+  .dark .dark\:border-status-info\/30 {
+    border-color: var(--color-status-info-alpha-30) !important;
+  }
+
+  /* 背景语义色（带透明度 - 通过 tokens 中预先计算的 rgba 变量实现） */
+  .bg-secondary\/30 {
+    background-color: var(--color-bg-secondary-alpha-30) !important;
+  }
+  .bg-secondary\/50 {
+    background-color: var(--color-bg-secondary-alpha-50) !important;
+  }
+  .bg-secondary\/60 {
+    background-color: var(--color-bg-secondary-alpha-60) !important;
+  }
+  .bg-secondary\/90 {
+    background-color: var(--color-bg-secondary-alpha-90) !important;
+  }
+
+  .bg-canvas\/20 {
+    background-color: var(--color-bg-canvas-alpha-20) !important;
+  }
+  .bg-canvas\/50 {
+    background-color: var(--color-bg-canvas-alpha-50) !important;
+  }
+
+  /* 深色模式：Tailwind 的 dark: 前缀类需要额外覆盖（选择器为 .dark .dark\\:...） */
+  .dark .dark\:bg-secondary\/30 {
+    background-color: var(--color-bg-secondary-alpha-30) !important;
+  }
+  .dark .dark\:bg-secondary\/50 {
+    background-color: var(--color-bg-secondary-alpha-50) !important;
+  }
+  .dark .dark\:bg-secondary\/60 {
+    background-color: var(--color-bg-secondary-alpha-60) !important;
+  }
+  .dark .dark\:bg-secondary\/90 {
+    background-color: var(--color-bg-secondary-alpha-90) !important;
+  }
+  .dark .dark\:bg-canvas\/20 {
+    background-color: var(--color-bg-canvas-alpha-20) !important;
+  }
+  .dark .dark\:bg-canvas\/50 {
+    background-color: var(--color-bg-canvas-alpha-50) !important;
+  }
+
+  /* 深色模式 hover 变体（如 dark:hover:bg-secondary/50） */
+  .dark .dark\:hover\:bg-secondary\/50:hover {
+    background-color: var(--color-bg-secondary-alpha-50) !important;
+  }
+  .dark .dark\:hover\:bg-secondary\/60:hover {
+    background-color: var(--color-bg-secondary-alpha-60) !important;
+  }
+
+  /* 边框语义色 */
+  .border-subtle {
+    border-color: var(--color-border-subtle) !important;
+  }
+  .border-default {
+    border-color: var(--color-border-default) !important;
+  }
+  .border-strong {
+    border-color: var(--color-border-strong) !important;
+  }
+  .border-error {
+    border-color: var(--color-border-error) !important;
+  }
+  .border-focused {
+    border-color: var(--color-border-focused) !important;
+  }
+
+  /* 边框色的背景兜底（用于左侧强调条等场景） */
+  .bg-border-subtle {
+    background-color: var(--color-border-subtle) !important;
+  }
+  .bg-border-default {
+    background-color: var(--color-border-default) !important;
+  }
+  .bg-border-strong {
+    background-color: var(--color-border-strong) !important;
+  }
+  .bg-border-error {
+    background-color: var(--color-border-error) !important;
+  }
+}

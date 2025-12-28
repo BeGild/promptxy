@@ -37,9 +37,5 @@ export function isNumericArray(arr: any[]): boolean {
  */
 export function isPrimitiveArray(arr: any[]): boolean {
   if (arr.length === 0) return true;
-  return arr.every(item =>
-    item === null ||
-    item === undefined ||
-    typeof item !== 'object'
-  );
+  return arr.every(item => item === null || item === undefined || typeof item !== 'object');
 }

@@ -1,6 +1,5 @@
 import React from 'react';
-import type { ViewNode } from '../../types';
-import { NodeType } from '../../types';
+import { NodeType, type ViewNode } from '../../types';
 import PrimitiveRenderer from './PrimitiveRenderer';
 import StringLongRenderer from './StringLongRenderer';
 import MarkdownRenderer from './MarkdownRenderer';

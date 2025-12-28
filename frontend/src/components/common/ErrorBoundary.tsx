@@ -61,9 +61,7 @@ const DefaultErrorUI: React.FC<{
           <div className="text-center space-y-2">
             <div className="text-6xl">⚠️</div>
             <h2 className="text-2xl font-bold text-primary">出现了意外错误</h2>
-            <p className="text-sm text-secondary">
-              应用程序遇到了问题，我们的工程师正在努力修复
-            </p>
+            <p className="text-sm text-secondary">应用程序遇到了问题，我们的工程师正在努力修复</p>
           </div>
 
           {/* 错误详情（仅开发环境） */}
@@ -77,9 +75,7 @@ const DefaultErrorUI: React.FC<{
               {error.stack && (
                 <div className="space-y-xs">
                   <div className="font-bold text-warning">堆栈跟踪:</div>
-                  <div className="text-secondary whitespace-pre-wrap">
-                    {error.stack}
-                  </div>
+                  <div className="text-secondary whitespace-pre-wrap">{error.stack}</div>
                 </div>
               )}
 
@@ -295,9 +291,7 @@ export const CustomErrorUI: React.FC<{
               {error.stack && (
                 <details className="mt-sm">
                   <summary className="cursor-pointer text-muted">堆栈信息</summary>
-                  <pre className="mt-1 whitespace-pre-wrap text-tertiary">
-                    {error.stack}
-                  </pre>
+                  <pre className="mt-1 whitespace-pre-wrap text-tertiary">{error.stack}</pre>
                 </details>
               )}
             </div>

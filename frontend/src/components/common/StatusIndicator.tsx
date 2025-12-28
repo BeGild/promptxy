@@ -49,9 +49,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
           {status.label}
         </Chip>
       )}
-      {error && showText && (
-        <span className="text-xs text-error">{error}</span>
-      )}
+      {error && showText && <span className="text-xs text-error">{error}</span>}
     </div>
   );
 };

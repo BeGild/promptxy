@@ -1,5 +1,4 @@
-import type { ViewNode } from '../types';
-import { NodeType } from '../types';
+import { NodeType, type ViewNode } from '../types';
 
 /**
  * 获取节点可复制的内容

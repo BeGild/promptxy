@@ -74,14 +74,10 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
   };
 
   return (
-    <Navbar
-      isBordered
-      className="h-14 px-md bg-bg-primary/70 backdrop-blur-md"
-      maxWidth="full"
-    >
+    <Navbar isBordered className="h-14 px-md bg-bg-primary/70 backdrop-blur-md" maxWidth="full">
       {/* 左侧：Logo 和名称 */}
       <NavbarBrand className="gap-xmd">
-        <div className="p-1.5 bg-gradient-to-tr from-brand-primary to-accent-purple rounded-lg shadow-lg shadow-brand-primary/20">
+        <div className="p-1.5 bg-gradient-to-tr from-brand-primary to-accent rounded-lg shadow-lg shadow-brand-primary/20">
           <LogoIcon size={20} className="text-white" />
         </div>
         <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-text-primary to-text-secondary dark:from-text-primary dark:to-text-tertiary">

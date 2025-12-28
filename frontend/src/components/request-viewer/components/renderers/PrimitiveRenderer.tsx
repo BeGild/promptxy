@@ -17,8 +17,7 @@
  */
 
 import React from 'react';
-import type { ViewNode } from '../../types';
-import { DiffStatus } from '../../types';
+import { DiffStatus, type ViewNode } from '../../types';
 
 interface PrimitiveRendererProps {
   node: ViewNode;

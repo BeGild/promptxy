@@ -9,23 +9,67 @@
   :root {
     /* ==================== 背景色（浅色） ==================== */
     --color-bg-primary: #ffffff;
-    --color-bg-secondary: #f5f5f5;
-    --color-bg-elevated: #ffffff;
-    --color-bg-canvas: #fafafa;
+    --color-bg-secondary: #faf8f5;
+    --color-bg-elevated: #fffdfa;
+    --color-bg-canvas: #f5f3f0;
     --color-bg-overlay: rgba(0, 0, 0, 0.5);
-    --color-bg-backdrop: rgba(255, 255, 255, 0.8);
+    --color-bg-backdrop: rgba(255, 253, 250, 0.8);
 
     /* ==================== 文本色（浅色） ==================== */
-    --color-text-primary: #1a1a1a;
-    --color-text-secondary: #666666;
-    --color-text-tertiary: #999999;
-    --color-text-muted: #cccccc;
-    --color-text-disabled: #e0e0e0;
+    --color-text-primary: #1a1612;
+    --color-text-secondary: #6b6560;
+    --color-text-tertiary: #9b9590;
+    --color-text-muted: #c5c1be;
+    --color-text-disabled: #c5c1be;
     --color-text-inverse: #ffffff;
 
     /* ==================== 边框色（浅色） ==================== */
-    --color-border-default: #e0e0e0;
-    --color-border-subtle: #f0f0f0;
-    --color-border-strong: #cccccc;
+    --color-border-default: #e8e4df;
+    --color-border-subtle: #f0ede8;
+    --color-border-strong: #c5c1be;
+
+    /* ==================== HeroUI 主题色覆盖（避免默认蓝/紫） ==================== */
+    /* HeroUI 使用 HSL 三元组变量（通常会被 provider 注入默认蓝/紫），这里显式覆盖为暖炭橙体系 */
+    --heroui-primary: 25.81 78.15% 46.67% !important; /* #D46A1A */
+    --heroui-primary-foreground: 30 18.18% 8.63% !important; /* #1A1612 */
+
+    /* secondary：按最新取向“去绿（仅 success 用绿）”，secondary 设为暖中性灰（避免全局发绿） */
+    --heroui-secondary: 27.27 5.21% 58.63% !important; /* #9B9590 */
+    --heroui-secondary-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-success: 100.41 19.68% 51.18% !important; /* #7A9B6A */
+    --heroui-success-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-warning: 29.69 53.01% 64.12% !important; /* #D4A373 */
+    --heroui-warning-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-danger: 8.48 66.67% 72.94% !important; /* #E8998C */
+    --heroui-danger-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-focus: 25.81 78.15% 46.67% !important; /* 对齐主色，避免默认蓝色 focus */
+
+    /* primary 色阶（用于 text-primary-600 / bg-primary-100 等） */
+    --heroui-primary-50: 33.6 100% 95.1% !important; /* #FFF4E6 */
+    --heroui-primary-100: 29.51 100% 88.04% !important; /* #FFE0C2 */
+    --heroui-primary-200: 24.12 100% 80% !important; /* #FFC299 */
+    --heroui-primary-300: 21.82 100% 71.96% !important; /* #FFA470 */
+    --heroui-primary-400: 24.97 100% 66.08% !important; /* #FF9A52 */
+    --heroui-primary-500: 25.81 78.15% 46.67% !important; /* #D46A1A */
+    --heroui-primary-600: 26.74 100% 36.08% !important; /* #B85200 */
+    --heroui-primary-700: 25.38 100% 30.59% !important; /* #9C4200 */
+    --heroui-primary-800: 24.59 100% 23.92% !important; /* #7A3200 */
+    --heroui-primary-900: 24 100% 17.65% !important; /* #5A2400 */
+
+    /* secondary 色阶（浅色模式：暖中性灰系，避免绿/紫占据 UI 基础语义） */
+    --heroui-secondary-50: 36 100% 99.02% !important; /* #FFFDFA */
+    --heroui-secondary-100: 36 20% 95.1% !important; /* #F5F3F0 */
+    --heroui-secondary-200: 33.33 16.36% 89.22% !important; /* #E8E4DF */
+    --heroui-secondary-300: 25.71 5.69% 75.88% !important; /* #C5C1BE */
+    --heroui-secondary-400: 30 4.4% 64.31% !important; /* #A8A4A0 */
+    --heroui-secondary-500: 27.27 5.21% 58.63% !important; /* #9B9590 */
+    --heroui-secondary-600: 27.27 5.42% 39.8% !important; /* #6B6560 */
+    --heroui-secondary-700: 36 5.88% 33.33% !important; /* #5A5650 */
+    --heroui-secondary-800: 30 6.9% 22.75% !important; /* #3E3A36 */
+    --heroui-secondary-900: 30 20% 11.76% !important; /* #241E18 */
   }
 }

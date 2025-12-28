@@ -87,7 +87,12 @@ function AppContent() {
           {renderPage()}
         </ErrorBoundary>
       </div>
-      <Toaster position="bottom-right" richColors closeButton theme={theme === 'system' ? undefined : theme} />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        theme={theme === 'system' ? undefined : theme}
+      />
     </div>
   );
 }

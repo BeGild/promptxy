@@ -68,7 +68,7 @@ function calculateSimilarity(str1: string, str2: string): number {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1,
           matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
+          matrix[i - 1][j] + 1,
         );
       }
     }
@@ -87,13 +87,11 @@ async function parseMarkdownToParagraphs(markdown: string): Promise<ParagraphNod
   }
 
   try {
-    const processor = unified()
-      .use(remarkParse)
-      .use(remarkRehype, { allowDangerousHtml: true });
+    const processor = unified().use(remarkParse).use(remarkRehype, { allowDangerousHtml: true });
 
     const result = await processor.process(markdown);
     // 使用 unknown 作为中间类型来避免类型错误
-    const ast = (result.data as unknown) as Root; // 获取 MDAST
+    const ast = result.data as unknown as Root; // 获取 MDAST
 
     const paragraphs: ParagraphNode[] = [];
 
@@ -216,7 +214,7 @@ async function parseMarkdownToParagraphs(markdown: string): Promise<ParagraphNod
 function matchParagraphs(
   original: ParagraphNode[],
   modified: ParagraphNode[],
-  similarityThreshold: number = 0.7
+  similarityThreshold: number = 0.7,
 ): Map<number, number> {
   const matches = new Map<number, number>();
   const usedModified = new Set<number>();
@@ -250,7 +248,7 @@ function matchParagraphs(
 function detectMoves(
   original: ParagraphNode[],
   modified: ParagraphNode[],
-  matches: Map<number, number>
+  matches: Map<number, number>,
 ): Map<number, number> {
   const moves = new Map<number, number>();
 
@@ -279,7 +277,7 @@ function detectMoves(
 export async function diffMarkdown(
   original: string,
   modified: string,
-  options: { showChangesOnly?: boolean; similarityThreshold?: number } = {}
+  options: { showChangesOnly?: boolean; similarityThreshold?: number } = {},
 ): Promise<MarkdownDiffResult> {
   const { showChangesOnly = false, similarityThreshold = 0.7 } = options;
 
@@ -378,7 +376,7 @@ export async function diffMarkdown(
  */
 export function renderParagraphDiff(
   diff: MarkdownDiffResult,
-  showChangesOnly: boolean
+  showChangesOnly: boolean,
 ): { original: string; modified: string } {
   const originalLines: string[] = [];
   const modifiedLines: string[] = [];

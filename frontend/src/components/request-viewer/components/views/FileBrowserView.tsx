@@ -18,14 +18,8 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Maximize2, Minimize2, Copy, Check } from 'lucide-react';
-import {
-  Panel,
-  Group,
-  Separator,
-  useDefaultLayout,
-} from 'react-resizable-panels';
-import type { ViewNode } from '../../types';
-import { NodeType } from '../../types';
+import { Panel, Group, Separator, useDefaultLayout } from 'react-resizable-panels';
+import { NodeType, type ViewNode } from '../../types';
 import FileTree from '../file-tree/FileTree';
 import FileContentPanel from '../file-tree/FileContentPanel';
 import PathBreadcrumb from '../file-tree/PathBreadcrumb';
@@ -58,7 +52,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
         const normalizedKey = key.startsWith(RESIZABLE_PANELS_STORAGE_PREFIX)
           ? key.slice(RESIZABLE_PANELS_STORAGE_PREFIX.length)
           : key;
-        const value = localStorage.getItem(normalizedKey);
+        const value = globalThis.localStorage?.getItem(normalizedKey);
         if (!value) return null;
 
         // 防御：忽略无效/不匹配的 layout，避免 Group 初始化时被库直接丢弃导致“恢复不生效”
@@ -81,7 +75,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
         const normalizedKey = key.startsWith(RESIZABLE_PANELS_STORAGE_PREFIX)
           ? key.slice(RESIZABLE_PANELS_STORAGE_PREFIX.length)
           : key;
-        localStorage.setItem(normalizedKey, value);
+        globalThis.localStorage?.setItem(normalizedKey, value);
       },
     };
   }, []);
@@ -156,20 +150,17 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
       </Panel>
 
       {/* 分割条 */}
-      <Separator
-        className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary"
-      >
+      <Separator className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary">
         <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-subtle group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
       </Separator>
 
       {/* 右侧：内容面板 */}
-      <Panel
-        id="content"
-        minSize="50%"
-      >
+      <Panel id="content" minSize="50%">
         <div className="h-full flex flex-col">
           {/* 头部：面包屑 + 预览切换 + 全屏按钮 */}
-          <div className={`flex items-center justify-between border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}>
+          <div
+            className={`flex items-center justify-between border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}
+          >
             <div className="flex-1 overflow-hidden">
               <PathBreadcrumb path={selectedNode.path} />
             </div>
@@ -247,9 +238,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   );
 
   return isFullScreen ? (
-    <div className="fixed inset-0 z-50 bg-elevated">
-      {content}
-    </div>
+    <div className="fixed inset-0 z-50 bg-elevated">{content}</div>
   ) : (
     <div className="h-full min-h-0 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
       {content}

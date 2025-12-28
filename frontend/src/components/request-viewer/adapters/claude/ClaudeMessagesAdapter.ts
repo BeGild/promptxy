@@ -1,7 +1,12 @@
 import type { RequestAdapter } from '../../types/adapter';
-import type { RequestMetadata, ViewNode, FieldConfig, ViewGroup } from '../../types';
+import {
+  NodeType,
+  type RequestMetadata,
+  type ViewNode,
+  type FieldConfig,
+  type ViewGroup,
+} from '../../types';
 import { buildTreeFromPath } from '../utils/treeBuilder';
-import { NodeType } from '../../types';
 
 /**
  * Claude Messages API 请求类型
@@ -222,7 +227,7 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
     if (request.system && Array.isArray(request.system)) {
       metadata.systemPromptLength = request.system.reduce(
         (sum, item) => sum + (item.text?.length ?? 0),
-        0
+        0,
       );
     }
 

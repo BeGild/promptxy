@@ -133,9 +133,7 @@ export async function updateSupplier(
 /**
  * 删除供应商
  */
-export async function deleteSupplier(
-  supplierId: string,
-): Promise<SupplierDeleteResponse> {
+export async function deleteSupplier(supplierId: string): Promise<SupplierDeleteResponse> {
   const response = await apiClient.delete(`/_promptxy/suppliers/${supplierId}`);
   return response.data;
 }
@@ -158,7 +156,10 @@ export async function toggleSupplier(
 /**
  * 获取所有设置
  */
-export async function fetchSettings(): Promise<{ success: boolean; settings: Record<string, string> }> {
+export async function fetchSettings(): Promise<{
+  success: boolean;
+  settings: Record<string, string>;
+}> {
   const response = await apiClient.get('/_promptxy/settings');
   return response.data;
 }

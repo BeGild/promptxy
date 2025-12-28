@@ -39,8 +39,15 @@ export default {
         },
         /* 强调色 */
         accent: {
-          purple: 'var(--color-accent-purple)',
-          pink: 'var(--color-accent-pink)',
+          DEFAULT: 'var(--color-accent)',
+          light: 'var(--color-accent-light)',
+        },
+        /* 状态色（推荐：text-status-success / bg-status-error 等） */
+        status: {
+          success: 'var(--color-status-success)',
+          warning: 'var(--color-status-warning)',
+          error: 'var(--color-status-error)',
+          info: 'var(--color-status-info)',
         },
         /* 状态色 */
         success: 'var(--color-status-success)',
@@ -107,9 +114,9 @@ export default {
         gap2: 'var(--spacing-gap2)',
         gap3: 'var(--spacing-gap3)',
         /* 特殊小数值 */
-        '35': 'var(--spacing-35)',
-        '15': 'var(--spacing-15)',
-        '25': 'var(--spacing-25)',
+        35: 'var(--spacing-35)',
+        15: 'var(--spacing-15)',
+        25: 'var(--spacing-25)',
       },
       fontSize: {
         xs: 'var(--font-size-xs)',
@@ -174,44 +181,44 @@ export default {
         light: {
           colors: {
             background: '#ffffff',
-            foreground: '#1a1a1a',
+            foreground: '#1a1612',
             primary: {
-              DEFAULT: '#007acc',
-              foreground: '#ffffff',
+              DEFAULT: '#d46a1a',
+              foreground: '#1a1612',
             },
             success: {
-              DEFAULT: '#4ec9b0',
-              foreground: '#ffffff',
+              DEFAULT: '#7a9b6a',
+              foreground: '#1a1612',
             },
             warning: {
-              DEFAULT: '#ce9178',
-              foreground: '#ffffff',
+              DEFAULT: '#d4a373',
+              foreground: '#1a1612',
             },
             danger: {
-              DEFAULT: '#f48771',
-              foreground: '#ffffff',
+              DEFAULT: '#e8998c',
+              foreground: '#1a1612',
             },
           },
         },
         dark: {
           colors: {
-            background: '#1a1a1a',
-            foreground: '#ffffff',
+            background: '#1a1612',
+            foreground: '#e8e4df',
             primary: {
-              DEFAULT: '#007acc',
-              foreground: '#ffffff',
+              DEFAULT: '#ff9a52',
+              foreground: '#1a1612',
             },
             success: {
-              DEFAULT: '#4ec9b0',
-              foreground: '#ffffff',
+              DEFAULT: '#9aad81',
+              foreground: '#1a1612',
             },
             warning: {
-              DEFAULT: '#ce9178',
-              foreground: '#ffffff',
+              DEFAULT: '#e8c4a8',
+              foreground: '#1a1612',
             },
             danger: {
-              DEFAULT: '#f48771',
-              foreground: '#ffffff',
+              DEFAULT: '#ffb3a6',
+              foreground: '#1a1612',
             },
           },
         },

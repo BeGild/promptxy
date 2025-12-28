@@ -14,7 +14,9 @@
   }
 
   .card-hoverable {
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
   }
 
   .card-hoverable:hover {
@@ -60,7 +62,9 @@
 
   /* ==================== 悬停效果 ==================== */
   .hover-lift {
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
   }
 
   .hover-lift:hover {

@@ -17,8 +17,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import type { ViewNode } from '../../types';
-import { DiffStatus } from '../../types';
+import { DiffStatus, type ViewNode } from '../../types';
 
 interface StringLongRendererProps {
   node: ViewNode;
@@ -51,11 +50,11 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
   const getDiffClass = () => {
     switch (diffStatus) {
       case DiffStatus.ADDED:
-        return 'border-l-4 border-green-500 bg-status-success/10';
+        return 'border-l-4 border-status-success bg-status-success/10';
       case DiffStatus.REMOVED:
-        return 'border-l-4 border-red-500 bg-status-error/10';
+        return 'border-l-4 border-status-error bg-status-error/10';
       case DiffStatus.MODIFIED:
-        return 'border-l-4 border-yellow-500 bg-status-warning/10';
+        return 'border-l-4 border-status-warning bg-status-warning/10';
       default:
         return 'border-l-4 border-transparent';
     }
@@ -69,9 +68,7 @@ const StringLongRenderer: React.FC<StringLongRendererProps> = ({ node }) => {
       {/* 头部：显示摘要和操作按钮 */}
       {(isLong || node.collapsible) && (
         <div className="flex items-center justify-between px-3 py-2 bg-secondary rounded-t">
-          <span className="text-xs text-tertiary">
-            {displayValue.length} 字符
-          </span>
+          <span className="text-xs text-tertiary">{displayValue.length} 字符</span>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}

@@ -1,0 +1,76 @@
+/**
+ * highlight.js 主题（暖炭橙系）
+ *
+ * 目标：
+ * - 避免默认主题里常见的蓝/紫/绿高亮（尤其深色模式下会显得“AI 风/发绿”）
+ * - 使用现有 Design Tokens（var(--color-*)），浅色/深色自动随主题变化
+ *
+ * 说明：
+ * - 这里不设置 `.hljs` 的背景色，避免与外层 `pre` 的语义背景（bg-secondary / bg-canvas）冲突
+ * - 只负责语法 token 的前景色与少量字体样式
+ */
+
+.hljs {
+  color: var(--color-text-primary);
+  background: transparent;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-name,
+.hljs-doctag,
+.hljs-built_in {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-symbol,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: var(--color-brand-primary);
+}
+
+.hljs-number,
+.hljs-type,
+.hljs-class,
+.hljs-function,
+.hljs-params,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--color-status-warning);
+}
+
+.hljs-meta,
+.hljs-meta-keyword,
+.hljs-meta-string {
+  color: var(--color-text-tertiary);
+}
+
+.hljs-addition {
+  color: var(--color-status-warning);
+}
+
+.hljs-deletion {
+  color: var(--color-status-error);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+

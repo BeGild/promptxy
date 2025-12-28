@@ -79,23 +79,33 @@ const regexHelpContent = (
       <h5 className="font-bold text-sm mb-2">常用示例</h5>
       <div className="space-y-2 text-xs">
         <div className="flex items-start gap-2">
-          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">^/v1/messages$</code>
+          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">
+            ^/v1/messages$
+          </code>
           <span className="text-secondary">精确匹配路径</span>
         </div>
         <div className="flex items-start gap-2">
-          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">claude-3.*</code>
+          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">
+            claude-3.*
+          </code>
           <span className="text-secondary">匹配 claude-3 开头</span>
         </div>
         <div className="flex items-start gap-2">
-          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">{'\\d{3,5}'}</code>
+          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">
+            {'\\d{3,5}'}
+          </code>
           <span className="text-secondary">匹配3-5位数字</span>
         </div>
         <div className="flex items-start gap-2">
-          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">https?://.*</code>
+          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">
+            https?://.*
+          </code>
           <span className="text-secondary">匹配 http/https</span>
         </div>
         <div className="flex items-start gap-2">
-          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">\[.*?\]</code>
+          <code className="bg-canvas dark:bg-secondary px-1 rounded whitespace-nowrap">
+            \[.*?\]
+          </code>
           <span className="text-secondary">匹配方括号内容(非贪婪)</span>
         </div>
       </div>
@@ -104,7 +114,7 @@ const regexHelpContent = (
     <div>
       <h5 className="font-bold text-sm mb-2">特殊字符转义</h5>
       <div className="text-xs text-secondary">
-        如需匹配 . * + ? ^ $ { } ( ) [ ] \ | 等特殊字符，请在前面加 \
+        如需匹配 . * + ? ^ $ {} ( ) [ ] \ | 等特殊字符，请在前面加 \
       </div>
     </div>
   </div>
@@ -118,7 +128,9 @@ const flagsHelpContent = (
     <h5 className="font-bold text-sm">正则标志说明</h5>
     <div className="space-y-2 text-xs">
       <div className="flex items-start gap-3 p-2 bg-canvas dark:bg-secondary/50 rounded">
-        <Chip size="sm" color="primary" variant="flat">g</Chip>
+        <Chip size="sm" color="primary" variant="flat">
+          g
+        </Chip>
         <div>
           <div className="font-semibold">global (全局匹配)</div>
           <div className="text-secondary">找到所有匹配项，而不只是第一个</div>
@@ -126,7 +138,9 @@ const flagsHelpContent = (
       </div>
 
       <div className="flex items-start gap-3 p-2 bg-canvas dark:bg-secondary/50 rounded">
-        <Chip size="sm" color="primary" variant="flat">i</Chip>
+        <Chip size="sm" color="primary" variant="flat">
+          i
+        </Chip>
         <div>
           <div className="font-semibold">ignore case (忽略大小写)</div>
           <div className="text-secondary">匹配时不区分大小写字母</div>
@@ -134,7 +148,9 @@ const flagsHelpContent = (
       </div>
 
       <div className="flex items-start gap-3 p-2 bg-canvas dark:bg-secondary/50 rounded">
-        <Chip size="sm" color="primary" variant="flat">m</Chip>
+        <Chip size="sm" color="primary" variant="flat">
+          m
+        </Chip>
         <div>
           <div className="font-semibold">multiline (多行模式)</div>
           <div className="text-secondary">^ 和 $ 匹配每行的开始/结束</div>
@@ -142,7 +158,9 @@ const flagsHelpContent = (
       </div>
 
       <div className="flex items-start gap-3 p-2 bg-canvas dark:bg-secondary/50 rounded">
-        <Chip size="sm" color="primary" variant="flat">s</Chip>
+        <Chip size="sm" color="primary" variant="flat">
+          s
+        </Chip>
         <div>
           <div className="font-semibold">dotall (点号匹配换行)</div>
           <div className="text-secondary">让 . 匹配包括换行符在内的所有字符</div>
@@ -150,7 +168,9 @@ const flagsHelpContent = (
       </div>
 
       <div className="flex items-start gap-3 p-2 bg-canvas dark:bg-secondary/50 rounded">
-        <Chip size="sm" color="primary" variant="flat">u</Chip>
+        <Chip size="sm" color="primary" variant="flat">
+          u
+        </Chip>
         <div>
           <div className="font-semibold">unicode (Unicode 模式)</div>
           <div className="text-secondary">正确处理 Unicode 字符（如中文、emoji）</div>
@@ -158,7 +178,9 @@ const flagsHelpContent = (
       </div>
 
       <div className="flex items-start gap-3 p-2 bg-canvas dark:bg-secondary/50 rounded">
-        <Chip size="sm" color="primary" variant="flat">y</Chip>
+        <Chip size="sm" color="primary" variant="flat">
+          y
+        </Chip>
         <div>
           <div className="font-semibold">sticky (粘滞模式)</div>
           <div className="text-secondary">从 lastIndex 位置开始匹配</div>
@@ -202,9 +224,7 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({ type }) => {
           <HelpCircle size={16} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent>
-        {getHelpContent()}
-      </PopoverContent>
+      <PopoverContent>{getHelpContent()}</PopoverContent>
     </Popover>
   );
 };

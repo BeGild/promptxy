@@ -34,19 +34,20 @@ const PathBreadcrumb: React.FC<PathBreadcrumbProps> = React.memo(({ path, onSegm
   const segments = useMemo(() => path.split('.'), [path]);
 
   // 处理点击事件
-  const handleClick = useCallback((segment: string, index: number) => {
-    if (onSegmentClick) {
-      onSegmentClick(segment, index);
-    }
-  }, [onSegmentClick]);
+  const handleClick = useCallback(
+    (segment: string, index: number) => {
+      if (onSegmentClick) {
+        onSegmentClick(segment, index);
+      }
+    },
+    [onSegmentClick],
+  );
 
   return (
     <div className="flex items-center gap-1 text-sm text-secondary overflow-x-auto">
       {segments.map((segment, index) => (
         <React.Fragment key={index}>
-          {index > 0 && (
-            <span className="flex-shrink-0 text-tertiary">/</span>
-          )}
+          {index > 0 && <span className="flex-shrink-0 text-tertiary">/</span>}
           <button
             onClick={() => handleClick(segment, index)}
             className="flex-shrink-0 hover:text-primary dark:hover:text-primary hover:underline transition-colors truncate max-w-[150px]"

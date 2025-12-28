@@ -186,14 +186,11 @@ export const SupplierManagement: React.FC = () => {
 
   // 删除供应商
   const handleDeleteSupplier = async (supplier: Supplier) => {
-    toast.promise(
-      deleteMutation.mutateAsync(supplier.id),
-      {
-        loading: '正在删除供应商...',
-        success: '供应商已删除！',
-        error: (err) => `删除失败: ${err?.message || '未知错误'}`,
-      }
-    );
+    toast.promise(deleteMutation.mutateAsync(supplier.id), {
+      loading: '正在删除供应商...',
+      success: '供应商已删除！',
+      error: err => `删除失败: ${err?.message || '未知错误'}`,
+    });
   };
 
   // 切换供应商状态
@@ -224,9 +221,7 @@ export const SupplierManagement: React.FC = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <Network size={24} className="text-status-success" />
-              <h4 className="text-lg font-bold text-primary">
-                供应商管理
-              </h4>
+              <h4 className="text-lg font-bold text-primary">供应商管理</h4>
             </div>
             <Button
               color="primary"
@@ -257,18 +252,24 @@ export const SupplierManagement: React.FC = () => {
                     </span>
                     <span className="text-secondary">({group.suppliers.length} 个供应商)</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {group.suppliers.map(supplier => (
                       <Card
                         key={supplier.id}
-                        className={`border-l-4 transition-all hover:shadow-md ${
+                        className={`relative overflow-hidden transition-all hover:shadow-md ${
                           supplier.enabled
-                            ? 'border-l-success border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5'
-                            : 'border-l-default border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 opacity-80 hover:opacity-100'
+                            ? 'border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5'
+                            : 'border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 opacity-80 hover:opacity-100'
                         }`}
                         shadow="none"
                       >
+                        <div
+                          aria-hidden="true"
+                          className={`absolute left-0 top-0 h-full w-1.5 ${
+                            supplier.enabled ? 'bg-status-success' : 'bg-border-strong'
+                          }`}
+                        />
                         <CardBody className="p-p4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-2">
@@ -287,7 +288,10 @@ export const SupplierManagement: React.FC = () => {
                                     {supplier.localPrefix}
                                   </span>
                                   <span className="text-tertiary">→</span>
-                                  <span className="truncate max-w-[180px] text-secondary" title={supplier.baseUrl}>
+                                  <span
+                                    className="truncate max-w-[180px] text-secondary"
+                                    title={supplier.baseUrl}
+                                  >
                                     {supplier.baseUrl}
                                   </span>
                                 </div>
@@ -301,7 +305,7 @@ export const SupplierManagement: React.FC = () => {
                                   onValueChange={() => handleToggleSupplier(supplier)}
                                   isDisabled={toggleMutation.isPending}
                                   classNames={{
-                                    wrapper: "group-data-[selected=true]:bg-green-500",
+                                    wrapper: 'group-data-[selected=true]:bg-success',
                                   }}
                                 />
                               </div>
@@ -347,7 +351,21 @@ export const SupplierManagement: React.FC = () => {
       </Card>
 
       {/* 新增供应商模态框 */}
-      <Modal isOpen={isAddModalOpen} onClose={handleCloseAddModal} size="2xl" backdrop="blur">
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseAddModal}
+        size="2xl"
+        backdrop="blur"
+        placement="center"
+        scrollBehavior="outside"
+        classNames={{
+          base: 'border border-brand-primary/30 dark:border-brand-primary/20 bg-canvas dark:bg-secondary',
+          backdrop: 'bg-overlay',
+          header: 'bg-canvas dark:bg-secondary border-b border-subtle',
+          body: 'bg-canvas dark:bg-secondary',
+          footer: 'bg-canvas dark:bg-secondary border-t border-subtle',
+        }}
+      >
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
             <span className="text-xl font-bold">添加供应商</span>
@@ -406,7 +424,13 @@ export const SupplierManagement: React.FC = () => {
                   radius="lg"
                   variant="bordered"
                   className="flex-1"
-                  startContent={<span className="text-tertiary">{selectedPrefixOption !== 'custom' ? getPrefixColor(newSupplier.localPrefix) : '🔹'}</span>}
+                  startContent={
+                    <span className="text-tertiary">
+                      {selectedPrefixOption !== 'custom'
+                        ? getPrefixColor(newSupplier.localPrefix)
+                        : '🔹'}
+                    </span>
+                  }
                 />
               </div>
             </div>
@@ -450,7 +474,21 @@ export const SupplierManagement: React.FC = () => {
       </Modal>
 
       {/* 编辑供应商模态框 */}
-      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} size="2xl" backdrop="blur">
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        size="2xl"
+        backdrop="blur"
+        placement="center"
+        scrollBehavior="outside"
+        classNames={{
+          base: 'border border-brand-primary/30 dark:border-brand-primary/20 bg-canvas dark:bg-secondary',
+          backdrop: 'bg-overlay',
+          header: 'bg-canvas dark:bg-secondary border-b border-subtle',
+          body: 'bg-canvas dark:bg-secondary',
+          footer: 'bg-canvas dark:bg-secondary border-t border-subtle',
+        }}
+      >
         <ModalContent>
           <ModalHeader>编辑供应商</ModalHeader>
           <ModalBody className="space-y-md">
@@ -460,9 +498,7 @@ export const SupplierManagement: React.FC = () => {
                   label="名称"
                   placeholder="例如：Claude Official"
                   value={editingSupplier.name}
-                  onChange={e =>
-                    setEditingSupplier({ ...editingSupplier, name: e.target.value })
-                  }
+                  onChange={e => setEditingSupplier({ ...editingSupplier, name: e.target.value })}
                   isRequired
                   radius="lg"
                   variant="bordered"
@@ -480,7 +516,11 @@ export const SupplierManagement: React.FC = () => {
                   radius="lg"
                   variant="bordered"
                   labelPlacement="outside"
-                  startContent={<span className="text-tertiary">{getPrefixColor(editingSupplier.localPrefix)}</span>}
+                  startContent={
+                    <span className="text-tertiary">
+                      {getPrefixColor(editingSupplier.localPrefix)}
+                    </span>
+                  }
                 />
 
                 <Input
@@ -499,9 +539,7 @@ export const SupplierManagement: React.FC = () => {
                 <div className="flex items-center gap-2 p-3 bg-canvas dark:bg-secondary rounded-lg">
                   <Switch
                     isSelected={editingSupplier.enabled}
-                    onValueChange={enabled =>
-                      setEditingSupplier({ ...editingSupplier, enabled })
-                    }
+                    onValueChange={enabled => setEditingSupplier({ ...editingSupplier, enabled })}
                     size="sm"
                   >
                     <span className="text-sm font-medium">启用此供应商</span>

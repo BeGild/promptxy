@@ -17,8 +17,13 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { RequestMetadata, ViewNode, ViewGroup, RequestAdapter } from '../types';
-import { RenderMode } from '../types';
+import {
+  RenderMode,
+  type RequestMetadata,
+  type ViewNode,
+  type ViewGroup,
+  type RequestAdapter,
+} from '../types';
 import { AdapterRegistry } from '../adapters/Registry';
 import { ClaudeMessagesAdapter } from '../adapters/claude/ClaudeMessagesAdapter';
 import SummaryView from './views/SummaryView';
@@ -107,11 +112,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
   }, [adapter, request, originalRequest, responseStatus, responseDuration]);
 
   if (!adapter || !viewTree) {
-    return (
-      <div className="p-4 text-center text-secondary">
-        正在加载请求详情...
-      </div>
-    );
+    return <div className="p-4 text-center text-secondary">正在加载请求详情...</div>;
   }
 
   return (
@@ -149,11 +150,13 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             {metadata.responseStatus && (
               <div className="flex items-center gap-1">
                 <span className="text-secondary">Status:</span>
-                <span className={`font-medium ${
-                  metadata.responseStatus >= 200 && metadata.responseStatus < 300
-                    ? 'text-status-success'
-                    : 'text-status-error'
-                }`}>
+                <span
+                  className={`font-medium ${
+                    metadata.responseStatus >= 200 && metadata.responseStatus < 300
+                      ? 'text-status-success'
+                      : 'text-status-error'
+                  }`}
+                >
                   {metadata.responseStatus}
                 </span>
               </div>
@@ -202,17 +205,13 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             <SummaryView viewTree={viewTree} groups={groups} />
           </div>
         )}
-        {viewMode === RenderMode.FULL && (
-          <FileBrowserView viewTree={viewTree} />
-        )}
+        {viewMode === RenderMode.FULL && <FileBrowserView viewTree={viewTree} />}
         {viewMode === RenderMode.DIFF && (
           <div className="h-full overflow-auto p-4">
             {originalTree ? (
               <DiffView originalTree={originalTree} modifiedTree={viewTree} />
             ) : (
-              <div className="text-center text-secondary py-8">
-                无原始请求，无法显示差异对比
-              </div>
+              <div className="text-center text-secondary py-8">无原始请求，无法显示差异对比</div>
             )}
           </div>
         )}

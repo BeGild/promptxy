@@ -28,7 +28,7 @@ const VIEWED_STORAGE_KEY = 'promptxy_viewed_requests';
 function readViewedIdsArray(): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
+    const stored = globalThis.localStorage?.getItem(VIEWED_STORAGE_KEY);
     const parsed = stored ? JSON.parse(stored) : [];
     if (!Array.isArray(parsed)) return [];
     const unique = new Set<string>();
@@ -58,17 +58,20 @@ export const RequestsPage: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(VIEWED_STORAGE_KEY, JSON.stringify(viewedIdsArray));
+      globalThis.localStorage?.setItem(VIEWED_STORAGE_KEY, JSON.stringify(viewedIdsArray));
     } catch {
       // 忽略存储错误
     }
   }, [viewedIdsArray]);
 
-  const handleRowClick = useCallback((id: string) => {
-    setSelectedId(id);
-    setViewedIdsArray(prev => (prev.includes(id) ? prev : [...prev, id]));
-    onOpen();
-  }, [onOpen]);
+  const handleRowClick = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setViewedIdsArray(prev => (prev.includes(id) ? prev : [...prev, id]));
+      onOpen();
+    },
+    [onOpen],
+  );
 
   const handleClose = useCallback(() => {
     onClose();
@@ -102,7 +105,7 @@ export const RequestsPage: React.FC = () => {
       {/* 顶部标题栏 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-accent-purple to-accent-pink bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent bg-clip-text text-transparent">
             请求监控
           </h1>
           <p className="text-sm text-secondary mt-1">实时查看经过代理的请求历史和修改详情</p>
@@ -118,7 +121,9 @@ export const RequestsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">总请求</div>
+            <div className="text-sm text-brand-primary dark:text-brand-primary/80 font-medium">
+              总请求
+            </div>
             <div className="text-2xl font-bold text-brand-primary dark:text-brand-primary/90">
               {data?.total || 0}
             </div>
@@ -126,7 +131,9 @@ export const RequestsPage: React.FC = () => {
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">当前页</div>
+            <div className="text-sm text-status-success dark:text-status-success/80 font-medium">
+              当前页
+            </div>
             <div className="text-2xl font-bold text-status-success dark:text-status-success/90">
               {data?.items?.length || 0}
             </div>
@@ -134,14 +141,16 @@ export const RequestsPage: React.FC = () => {
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-accent-purple dark:text-accent-purple/80 font-medium">当前页码</div>
-            <div className="text-2xl font-bold text-accent-purple dark:text-accent-purple/90">{page}</div>
+            <div className="text-sm text-accent dark:text-accent/80 font-medium">当前页码</div>
+            <div className="text-2xl font-bold text-accent dark:text-accent/90">{page}</div>
           </CardBody>
         </Card>
         <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
           <CardBody className="p-p4">
-            <div className="text-sm text-accent-orange dark:text-accent-orange/80 font-medium">总页数</div>
-            <div className="text-2xl font-bold text-accent-orange dark:text-accent-orange/90">
+            <div className="text-sm text-status-warning dark:text-status-warning/80 font-medium">
+              总页数
+            </div>
+            <div className="text-2xl font-bold text-status-warning dark:text-status-warning/90">
               {Math.ceil((data?.total || 0) / 50)}
             </div>
           </CardBody>

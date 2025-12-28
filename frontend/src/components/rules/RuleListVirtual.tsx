@@ -83,7 +83,13 @@ const VirtualRuleRow = (props: {
 
   return (
     <div style={style} className="px-2 py-1">
-      <RuleCard rule={rule} onEdit={onEdit} onCopy={onCopy} onDelete={onDelete} onToggle={onToggle} />
+      <RuleCard
+        rule={rule}
+        onEdit={onEdit}
+        onCopy={onCopy}
+        onDelete={onDelete}
+        onToggle={onToggle}
+      />
     </div>
   );
 };
@@ -193,8 +199,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
           className="flex-1"
           radius="lg"
           classNames={{
-            inputWrapper:
-              'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
+            inputWrapper: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
         />
 
@@ -204,8 +209,7 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
           className="w-full md:w-48"
           radius="lg"
           classNames={{
-            trigger:
-              'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
+            trigger: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
         >
           <SelectItem key="all">所有客户端</SelectItem>
@@ -285,8 +289,17 @@ const RuleListVirtualComponent: React.FC<RuleListVirtualProps> = ({
         style: CSSProperties;
       } & RuleRowCustomProps,
     ): ReactElement => {
-      const { index, style, rules, onEdit, onCopy, onDelete, onToggle, isScrolling, ariaAttributes } =
-        props;
+      const {
+        index,
+        style,
+        rules,
+        onEdit,
+        onCopy,
+        onDelete,
+        onToggle,
+        isScrolling,
+        ariaAttributes,
+      } = props;
       return (
         <VirtualRuleRow
           ariaAttributes={ariaAttributes}

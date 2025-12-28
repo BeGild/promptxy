@@ -68,7 +68,7 @@ export const PreviewPanel: React.FC = () => {
     <div className="flex gap-md flex-wrap">
       {/* 输入区域 */}
       <div className="flex-1 min-w-[300px]">
-        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-md h-full">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-elevated dark:bg-secondary p-md h-full">
           <h4 className="mb-mb3">测试输入</h4>
 
           <div className="flex flex-col gap-sm">
@@ -79,6 +79,10 @@ export const PreviewPanel: React.FC = () => {
                   selectedKeys={[client]}
                   onChange={e => setClient(e.target.value as PromptxyClient)}
                   fullWidth
+                  classNames={{
+                    trigger:
+                      'shadow-sm bg-canvas dark:bg-secondary border border-subtle data-[hover=true]:border-strong group-data-[focus=true]:border-focused transition-colors',
+                  }}
                 >
                   {CLIENT_OPTIONS.map(opt => (
                     <SelectItem key={opt.value}>{opt.label}</SelectItem>
@@ -91,6 +95,10 @@ export const PreviewPanel: React.FC = () => {
                   selectedKeys={[field]}
                   onChange={e => setField(e.target.value as PromptxyField)}
                   fullWidth
+                  classNames={{
+                    trigger:
+                      'shadow-sm bg-canvas dark:bg-secondary border border-subtle data-[hover=true]:border-strong group-data-[focus=true]:border-focused transition-colors',
+                  }}
                 >
                   {FIELD_OPTIONS.map(opt => (
                     <SelectItem key={opt.value}>{opt.label}</SelectItem>
@@ -105,6 +113,10 @@ export const PreviewPanel: React.FC = () => {
               value={model}
               onChange={e => setModel(e.target.value)}
               fullWidth
+              classNames={{
+                inputWrapper:
+                  'shadow-sm bg-canvas dark:bg-secondary border border-subtle data-[hover=true]:border-strong group-data-[focus=true]:border-focused transition-colors',
+              }}
             />
 
             <Input
@@ -113,6 +125,10 @@ export const PreviewPanel: React.FC = () => {
               value={path}
               onChange={e => setPath(e.target.value)}
               fullWidth
+              classNames={{
+                inputWrapper:
+                  'shadow-sm bg-canvas dark:bg-secondary border border-subtle data-[hover=true]:border-strong group-data-[focus=true]:border-focused transition-colors',
+              }}
             />
 
             <Input
@@ -121,6 +137,10 @@ export const PreviewPanel: React.FC = () => {
               value={method}
               onChange={e => setMethod(e.target.value)}
               fullWidth
+              classNames={{
+                inputWrapper:
+                  'shadow-sm bg-canvas dark:bg-secondary border border-subtle data-[hover=true]:border-strong group-data-[focus=true]:border-focused transition-colors',
+              }}
             />
 
             <Textarea
@@ -130,6 +150,10 @@ export const PreviewPanel: React.FC = () => {
               onChange={e => setInput(e.target.value)}
               fullWidth
               minRows={8}
+              classNames={{
+                inputWrapper:
+                  'shadow-sm bg-canvas dark:bg-secondary border border-subtle data-[hover=true]:border-strong group-data-[focus=true]:border-focused transition-colors',
+              }}
             />
           </div>
 
@@ -150,7 +174,7 @@ export const PreviewPanel: React.FC = () => {
 
       {/* 输出区域 */}
       <div className="flex-1 min-w-[300px]">
-        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-md h-full">
+        <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-elevated dark:bg-secondary p-md h-full">
           <h4 className="mb-mb3">预览结果</h4>
 
           {previewMutation.isPending && (
@@ -160,35 +184,25 @@ export const PreviewPanel: React.FC = () => {
           )}
 
           {previewMutation.isError && (
-            <Card
-              className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm"
-            >
+            <Card className="border border-subtle bg-canvas dark:bg-secondary/50 p-sm">
               <div className="text-error">{previewMutation.error?.message || '预览失败'}</div>
             </Card>
           )}
 
           {result && (
             <>
-              <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm mb-2">
-                <div className="font-semibold text-sm mb-1">
-                  原始文本:
-                </div>
-                <div
-                  className="font-mono bg-canvas p-sm rounded-sm whitespace-pre-wrap text-xs"
-                >
+              <Card className="border border-subtle bg-canvas dark:bg-secondary/50 p-sm mb-2">
+                <div className="font-semibold text-sm mb-1">原始文本:</div>
+                <div className="font-mono bg-canvas p-sm rounded-sm whitespace-pre-wrap text-xs">
                   {typeof result.original === 'object'
                     ? JSON.stringify(result.original, null, 2)
                     : String(result.original)}
                 </div>
               </Card>
 
-              <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm mb-2">
-                <div className="font-semibold text-sm mb-1">
-                  修改后:
-                </div>
-                <div
-                  className="font-mono bg-canvas p-sm rounded-sm whitespace-pre-wrap text-xs text-success"
-                >
+              <Card className="border border-subtle bg-canvas dark:bg-secondary/50 p-sm mb-2">
+                <div className="font-semibold text-sm mb-1">修改后:</div>
+                <div className="font-mono bg-canvas p-sm rounded-sm whitespace-pre-wrap text-xs text-success">
                   {typeof result.modified === 'object'
                     ? JSON.stringify(result.modified, null, 2)
                     : String(result.modified)}
@@ -196,10 +210,8 @@ export const PreviewPanel: React.FC = () => {
               </Card>
 
               {result.matches.length > 0 && (
-                <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm">
-                  <div className="font-semibold text-sm mb-1">
-                    匹配规则:
-                  </div>
+                <Card className="border border-subtle bg-canvas dark:bg-secondary/50 p-sm">
+                  <div className="font-semibold text-sm mb-1">匹配规则:</div>
                   {result.matches.map((match: any, i: number) => (
                     <div key={i} className="font-mono text-xs">
                       • {match.ruleId} ({match.opType})
@@ -209,10 +221,8 @@ export const PreviewPanel: React.FC = () => {
               )}
 
               {result.matches.length === 0 && (
-                <Card className="border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 p-sm">
-                  <div className="text-secondary text-xs">
-                    无规则匹配
-                  </div>
+                <Card className="border border-subtle bg-canvas dark:bg-secondary/50 p-sm">
+                  <div className="text-secondary text-xs">无规则匹配</div>
                 </Card>
               )}
             </>

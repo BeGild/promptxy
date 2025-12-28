@@ -85,6 +85,11 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   onViewedToggle,
 }) => {
   const suppressNextRowActionRef = useRef(false);
+  const [activeRowId, setActiveRowId] = useState<string | null>(selectedId ?? null);
+
+  useEffect(() => {
+    setActiveRowId(selectedId ?? null);
+  }, [selectedId]);
 
   // 使用 useMemo 优化分页计算
   const totalPages = useMemo(() => {
@@ -161,7 +166,9 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         suppressNextRowActionRef.current = false;
         return;
       }
-      onRowClick(key as string);
+      const id = key as string;
+      setActiveRowId(id);
+      onRowClick(id);
     },
     [onRowClick],
   );
@@ -190,7 +197,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   type RequestTableItem = RequestListItem & { _isViewed: boolean };
   const tableItems = useMemo<RequestTableItem[]>(() => {
     if (enableVirtualScroll) return [];
-    return requests.map((request) => ({
+    return requests.map(request => ({
       ...request,
       _isViewed: viewedIds.has(request.id),
     }));
@@ -306,101 +313,107 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         )}
       </div>
 
-	      {/* 请求表格 */}
-	      <Table
-	        aria-label="请求历史表"
-	        onRowAction={handleRowClick}
-	        classNames={{
-	          wrapper: 'shadow-md rounded-xl border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10',
-	          th: 'bg-brand-primary/10 dark:bg-brand-primary/20 text-sm font-semibold',
-	          tr: 'hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 transition-colors',
-	        }}
-	      >
-		        <TableHeader>
-		          <TableColumn className="w-w12">已查看</TableColumn>
-		          <TableColumn className="w-w1" aria-label="指示条">
-		            {' '}
-		          </TableColumn>
-		          <TableColumn>时间</TableColumn>
-		          <TableColumn>客户端</TableColumn>
-		          <TableColumn>路径</TableColumn>
-		          <TableColumn>匹配规则</TableColumn>
-	          <TableColumn>状态</TableColumn>
-	          <TableColumn>大小</TableColumn>
-	          <TableColumn>耗时</TableColumn>
-	          <TableColumn>操作</TableColumn>
-	        </TableHeader>
-	        <TableBody
-	          items={tableItems}
-	          isLoading={isLoading}
-	          emptyContent={<div className="py-12 text-center text-tertiary">暂无数据</div>}
-	        >
-	          {item => {
-	            const isSelected = selectedId === item.id;
-	            const isViewed = item._isViewed;
+      {/* 请求表格 */}
+      <Table
+        aria-label="请求历史表"
+        onRowAction={handleRowClick}
+        classNames={{
+          wrapper:
+            'shadow-md rounded-xl border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10',
+          th: 'bg-brand-primary/10 dark:bg-brand-primary/20 text-sm font-semibold',
+          tr: 'hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 transition-colors',
+          td: 'bg-transparent',
+        }}
+      >
+        <TableHeader>
+          <TableColumn className="w-w12">已查看</TableColumn>
+          <TableColumn className="w-w1" aria-label="指示条">
+            {' '}
+          </TableColumn>
+          <TableColumn>时间</TableColumn>
+          <TableColumn>客户端</TableColumn>
+          <TableColumn>路径</TableColumn>
+          <TableColumn>匹配规则</TableColumn>
+          <TableColumn>状态</TableColumn>
+          <TableColumn>大小</TableColumn>
+          <TableColumn>耗时</TableColumn>
+          <TableColumn>操作</TableColumn>
+        </TableHeader>
+        <TableBody
+          items={tableItems}
+          isLoading={isLoading}
+          emptyContent={<div className="py-12 text-center text-tertiary">暂无数据</div>}
+        >
+          {item => {
+            const isSelected = activeRowId === item.id;
+            const isViewed = item._isViewed;
 
-	            return (
-	              <TableRow key={item.id}>
-	                {/* 已查看指示器 - 仅视觉显示 */}
-	                <TableCell className={`w-12 ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
-	                  {onViewedToggle ? (
-	                    <button
-	                      type="button"
-	                      aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
-	                      onPointerDown={() => {
-	                        suppressNextRowActionRef.current = true;
-	                      }}
-	                      onClick={(e) => {
-	                        e.preventDefault();
-	                        e.stopPropagation();
-	                        onViewedToggle(item.id);
-	                      }}
-	                      className="w-8 h-8 inline-flex items-center justify-center select-none rounded hover:bg-secondary dark:hover:bg-secondary transition-colors"
-	                    >
-	                      <span
-	                        className={[
-	                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
-	                          isViewed
-	                            ? 'bg-accent-purple border-accent-purple dark:bg-accent-purple dark:border-accent-purple'
-	                            : 'bg-transparent border-subtle dark:border-subtle',
-	                        ].join(' ')}
-	                      />
-	                    </button>
-	                  ) : (
-	                    <div className="w-8 h-8 inline-flex items-center justify-center select-none">
-	                      <span
-	                        className={[
-	                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
-	                          isViewed
-	                            ? 'bg-accent-purple border-accent-purple dark:bg-accent-purple dark:border-accent-purple'
-	                            : 'bg-transparent border-subtle dark:border-subtle',
-	                        ].join(' ')}
-	                      />
-	                    </div>
-	                  )}
-	                </TableCell>
-
-                {/* 紫色指示条 */}
-                <TableCell className={`w-1 p-0 ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
-                  {(isSelected || isViewed) && (
-                    <div className="h-full w-1 bg-accent-purple rounded-r" />
+            return (
+              <TableRow
+                key={item.id}
+                className={[
+                  'group transition-colors',
+                  isSelected ? 'bg-accent/10 dark:bg-accent/20' : '',
+                ].join(' ')}
+              >
+                {/* 已查看指示器 - 仅视觉显示 */}
+                <TableCell className="w-12">
+                  {onViewedToggle ? (
+                    <button
+                      type="button"
+                      aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
+                      onPointerDown={() => {
+                        suppressNextRowActionRef.current = true;
+                      }}
+                      onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onViewedToggle(item.id);
+                      }}
+                      className="w-8 h-8 inline-flex items-center justify-center select-none rounded hover:bg-secondary dark:hover:bg-secondary transition-colors"
+                    >
+                      <span
+                        className={[
+                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+                          isViewed
+                            ? 'bg-accent border-accent dark:bg-accent dark:border-accent'
+                            : 'bg-canvas dark:bg-secondary border-strong dark:border-strong',
+                        ].join(' ')}
+                      />
+                    </button>
+                  ) : (
+                    <div className="w-8 h-8 inline-flex items-center justify-center select-none">
+                      <span
+                        className={[
+                          'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+                          isViewed
+                            ? 'bg-accent border-accent dark:bg-accent dark:border-accent'
+                            : 'bg-canvas dark:bg-secondary border-strong dark:border-strong',
+                        ].join(' ')}
+                      />
+                    </div>
                   )}
                 </TableCell>
 
-                <TableCell className={`text-sm font-mono text-xs text-primary dark:text-primary ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
+                {/* 强调色指示条 */}
+                <TableCell className="w-1 p-0">
+                  {(isSelected || isViewed) && <div className="h-full w-1 bg-accent rounded-r" />}
+                </TableCell>
+
+                <TableCell className="text-sm font-mono text-xs text-primary dark:text-primary">
                   {formatTimeWithMs(item.timestamp)}
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
+                <TableCell>
                   <span className="text-sm font-medium text-primary dark:text-primary">
                     {formatClient(item.client)}
                   </span>
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
+                <TableCell>
                   <span className="font-mono text-xs text-primary dark:text-primary truncate max-w-[200px] block">
                     {item.path}
                   </span>
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
+                <TableCell>
                   {item.matchedRules && item.matchedRules.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {item.matchedRules.slice(0, 3).map(ruleId => (
@@ -424,7 +437,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     <span className="text-tertiary text-sm">-</span>
                   )}
                 </TableCell>
-                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
+                <TableCell>
                   <Chip
                     size="sm"
                     color={getStatusColor(item.responseStatus)}
@@ -434,7 +447,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     {item.responseStatus || 'N/A'}
                   </Chip>
                 </TableCell>
-                <TableCell className={`text-sm text-primary dark:text-primary ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
+                <TableCell className="text-sm text-primary dark:text-primary">
                   {item.requestSize || item.responseSize ? (
                     <span className="text-xs">
                       {item.requestSize && (
@@ -444,7 +457,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                       )}
                       {item.requestSize && item.responseSize && ' '}
                       {item.responseSize && (
-                        <span className="text-status-success dark:text-status-success">
+                        <span className="text-success dark:text-success">
                           ↓{formatBytes(item.responseSize)}
                         </span>
                       )}
@@ -453,26 +466,26 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     '-'
                   )}
                 </TableCell>
-                <TableCell className={`text-sm text-primary dark:text-primary ${isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}`}>
+                <TableCell className="text-sm text-primary dark:text-primary">
                   {item.durationMs ? formatDuration(item.durationMs) : '-'}
                 </TableCell>
-	                <TableCell className={isSelected ? 'bg-accent-purple/10 dark:bg-accent-purple/10' : ''}>
-	                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-	                    <Button
-	                      size="sm"
-	                      variant="light"
-	                      onPress={() => handleRowClick(item.id)}
-	                      className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/10"
-                          isIconOnly
-	                    >
-	                      <Eye size={18} />
-	                    </Button>
-	                    <Button
-	                      size="sm"
-	                      color="danger"
-	                      variant="light"
+                <TableCell>
+                  <div className="flex gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onPress={() => handleRowClick(item.id)}
+                      className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/10"
+                      isIconOnly
+                    >
+                      <Eye size={18} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      color="danger"
+                      variant="light"
                       onPress={() => handleDelete(item.id)}
-                      className="text-status-error hover:bg-status-error/10 dark:hover:bg-status-error/10"
+                      className="text-error hover:bg-secondary dark:hover:bg-secondary"
                       isIconOnly
                     >
                       <Trash2 size={18} />

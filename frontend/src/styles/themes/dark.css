@@ -8,38 +8,144 @@
 @layer base {
   .dark {
     /* ==================== 背景色（深色） ==================== */
-    --color-bg-primary: #1e1e1e;
-    --color-bg-secondary: #252526;
-    --color-bg-elevated: #2d2d30;
-    --color-bg-canvas: #1a1a1a;
+    --color-bg-primary: #1a1612;
+    --color-bg-secondary: #241e18;
+    --color-bg-elevated: #2e2620;
+    --color-bg-canvas: #16120e;
     --color-bg-overlay: rgba(0, 0, 0, 0.7);
-    --color-bg-backdrop: rgba(30, 30, 30, 0.8);
+    --color-bg-backdrop: rgba(26, 22, 18, 0.8);
+
+    /* ==================== 背景透明度变体（深色） ==================== */
+    --color-bg-secondary-alpha-30: rgba(36, 30, 24, 0.3);
+    --color-bg-secondary-alpha-50: rgba(36, 30, 24, 0.5);
+    --color-bg-secondary-alpha-60: rgba(36, 30, 24, 0.6);
+    --color-bg-secondary-alpha-90: rgba(36, 30, 24, 0.9);
+
+    --color-bg-canvas-alpha-20: rgba(22, 18, 14, 0.2);
+    --color-bg-canvas-alpha-50: rgba(22, 18, 14, 0.5);
 
     /* ==================== 文本色（深色） ==================== */
-    --color-text-primary: #cccccc;
-    --color-text-secondary: #858585;
-    --color-text-tertiary: #6a6a6a;
-    --color-text-muted: #4a4a4a;
-    --color-text-disabled: #3a3a3a;
-    --color-text-inverse: #1a1a1a;
+    --color-text-primary: #e8e4df;
+    --color-text-secondary: #a8a4a0;
+    --color-text-tertiary: #78746e;
+    --color-text-muted: #484642;
+    --color-text-disabled: #3a3734;
+    --color-text-inverse: #1a1612;
 
     /* ==================== 品牌色（深色调整） ==================== */
-    --color-brand-primary: #007acc;
-    --color-brand-primary-hover: #3399ff;
-    --color-brand-primary-active: #66b3ff;
-    --color-brand-primary-light: #004477;
-    --color-brand-primary-on-primary: #ffffff;
+    --color-brand-primary: #ff9a52;
+    --color-brand-primary-hover: #d46a1a;
+    --color-brand-primary-active: #b85200;
+    --color-brand-primary-light: #3e2608;
+    --color-brand-primary-on-primary: #1a1612;
+    /* 品牌色透明度（深色模式：对齐 --color-brand-primary，避免 /10 /20 /30 等不生效或取到浅色值） */
+    --color-brand-primary-alpha: rgba(255, 154, 82, 0.1);
+    --color-brand-primary-alpha-weak: rgba(255, 154, 82, 0.05);
+    --color-brand-primary-alpha-20: rgba(255, 154, 82, 0.2);
+    --color-brand-primary-alpha-medium: rgba(255, 154, 82, 0.3);
+    --color-brand-primary-alpha-strong: rgba(255, 154, 82, 0.6);
+    --color-brand-primary-alpha-80: rgba(255, 154, 82, 0.8);
+    --color-brand-primary-alpha-90: rgba(255, 154, 82, 0.9);
+    --color-brand-primary-alpha-full: rgba(255, 154, 82, 1);
+
+    /* 次品牌色：深色模式同样“去绿（仅 success 用绿）”，使用暖沙色阶 */
+    --color-brand-secondary: #d0b090;
+    --color-brand-secondary-hover: #b08a5b;
+    --color-brand-secondary-active: #9c774a;
 
     /* ==================== 边框色（深色） ==================== */
-    --color-border-default: #3e3e42;
-    --color-border-subtle: #2d2d30;
-    --color-border-strong: #5a5a5a;
+    --color-border-default: #3e3a36;
+    --color-border-subtle: #2e2620;
+    --color-border-strong: #5a5650;
+    --color-border-focused: #ff9a52;
+    --color-border-error: #ffb3a6;
 
-    /* ==================== 强调色（深色调整） ==================== */
-    --color-accent-purple: #c084fc;
-    --color-accent-purple-light: #581c87;
-    --color-accent-pink: #f472b6;
-    --color-accent-pink-light: #831843;
+    /* ==================== 强调色（深色-提亮） ==================== */
+    --color-accent: #ff8266;
+    --color-accent-hover: #c45c3e;
+    --color-accent-active: #a8422a;
+    --color-accent-light: #3e1a10;
+    /* 强调色透明度变体（深色模式，对齐 --color-accent） */
+    --color-accent-alpha-10: rgba(255, 130, 102, 0.1);
+    --color-accent-alpha-20: rgba(255, 130, 102, 0.2);
+    --color-accent-alpha-30: rgba(255, 130, 102, 0.3);
+    --color-accent-alpha-80: rgba(255, 130, 102, 0.8);
+    --color-accent-alpha-90: rgba(255, 130, 102, 0.9);
+
+    /* ==================== 功能色（深色-提亮） ==================== */
+    --color-status-success: #9aad81;
+    --color-status-warning: #e8c4a8;
+    --color-status-error: #ffb3a6;
+    --color-status-info: #ff9a52;
+    /* 状态色透明度（深色模式：对齐提亮后的 status 色，避免 /10 /20 /30 等取到浅色值） */
+    --color-status-success-alpha: rgba(154, 173, 129, 0.1);
+    --color-status-success-alpha-20: rgba(154, 173, 129, 0.2);
+    --color-status-success-alpha-30: rgba(154, 173, 129, 0.3);
+    --color-status-success-alpha-strong: rgba(154, 173, 129, 0.6);
+    --color-status-success-alpha-80: rgba(154, 173, 129, 0.8);
+    --color-status-success-alpha-90: rgba(154, 173, 129, 0.9);
+
+    --color-status-warning-alpha: rgba(232, 196, 168, 0.1);
+    --color-status-warning-alpha-20: rgba(232, 196, 168, 0.2);
+    --color-status-warning-alpha-30: rgba(232, 196, 168, 0.3);
+    --color-status-warning-alpha-80: rgba(232, 196, 168, 0.8);
+    --color-status-warning-alpha-90: rgba(232, 196, 168, 0.9);
+
+    --color-status-error-alpha: rgba(255, 179, 166, 0.1);
+    --color-status-error-alpha-20: rgba(255, 179, 166, 0.2);
+    --color-status-error-alpha-30: rgba(255, 179, 166, 0.3);
+    --color-status-error-alpha-80: rgba(255, 179, 166, 0.8);
+    --color-status-error-alpha-90: rgba(255, 179, 166, 0.9);
+
+    --color-status-info-alpha: rgba(255, 154, 82, 0.1);
+    --color-status-info-alpha-20: rgba(255, 154, 82, 0.2);
+    --color-status-info-alpha-30: rgba(255, 154, 82, 0.3);
+    --color-status-info-alpha-80: rgba(255, 154, 82, 0.8);
+    --color-status-info-alpha-90: rgba(255, 154, 82, 0.9);
+
+    /* ==================== HeroUI 主题色覆盖（避免默认蓝/紫） ==================== */
+    /* 深色模式下同样覆盖 HeroUI 的 HSL 变量，确保所有组件无蓝/紫残留 */
+    --heroui-primary: 24.97 100% 66.08% !important; /* #FF9A52 */
+    --heroui-primary-foreground: 30 18.18% 8.63% !important; /* #1A1612 */
+
+    /* secondary：按最新取向“去绿（仅 success 用绿）”，secondary 设为暖中性灰（避免全局发绿） */
+    --heroui-secondary: 30 4.4% 64.31% !important; /* #A8A4A0 */
+    --heroui-secondary-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-success: 85.91 21.15% 59.22% !important; /* #9AAD81 */
+    --heroui-success-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-warning: 26.25 58.18% 78.43% !important; /* #E8C4A8 */
+    --heroui-warning-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-danger: 8.76 100% 82.55% !important; /* #FFB3A6 */
+    --heroui-danger-foreground: 30 18.18% 8.63% !important;
+
+    --heroui-focus: 24.97 100% 66.08% !important; /* 亮暖橙 focus */
+
+    /* primary 色阶（深色模式：偏“由暗到亮”，避免 text-primary-600 过暗） */
+    --heroui-primary-50: 33.33 77.14% 13.73% !important; /* #3E2608 */
+    --heroui-primary-100: 24 100% 17.65% !important; /* #5A2400 */
+    --heroui-primary-200: 24.59 100% 23.92% !important; /* #7A3200 */
+    --heroui-primary-300: 25.38 100% 30.59% !important; /* #9C4200 */
+    --heroui-primary-400: 26.74 100% 36.08% !important; /* #B85200 */
+    --heroui-primary-500: 25.81 78.15% 46.67% !important; /* #D46A1A */
+    --heroui-primary-600: 24.97 100% 66.08% !important; /* #FF9A52 */
+    --heroui-primary-700: 21.82 100% 71.96% !important; /* #FFA470 */
+    --heroui-primary-800: 24.12 100% 80% !important; /* #FFC299 */
+    --heroui-primary-900: 29.51 100% 88.04% !important; /* #FFE0C2 */
+
+    /* secondary 色阶（深色模式：暖中性灰系，避免绿/紫占据 UI 基础语义） */
+    --heroui-secondary-50: 30 20% 11.76% !important; /* #241E18 */
+    --heroui-secondary-100: 30 6.9% 22.75% !important; /* #3E3A36 */
+    --heroui-secondary-200: 36 5.88% 33.33% !important; /* #5A5650 */
+    --heroui-secondary-300: 27.27 5.42% 39.8% !important; /* #6B6560 */
+    --heroui-secondary-400: 36 4.35% 45.1% !important; /* #78746E */
+    --heroui-secondary-500: 30 4.4% 64.31% !important; /* #A8A4A0 */
+    --heroui-secondary-600: 25.71 5.69% 75.88% !important; /* #C5C1BE */
+    --heroui-secondary-700: 33.33 16.36% 89.22% !important; /* #E8E4DF */
+    --heroui-secondary-800: 36 20% 95.1% !important; /* #F5F3F0 */
+    --heroui-secondary-900: 36 100% 99.02% !important; /* #FFFDFA */
 
     /* ==================== 阴影（深色调整） ==================== */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);

@@ -19,7 +19,7 @@ function generateTestData(count: number) {
     description: `This is a test item with some content ${i}`,
     timestamp: Date.now() + i,
     client: ['claude', 'openai', 'gemini'][i % 3],
-    status: ['success', 'pending', 'error'][i % 3]
+    status: ['success', 'pending', 'error'][i % 3],
   }));
 }
 
@@ -94,11 +94,15 @@ describe('虚拟滚动性能', () => {
     const VirtualList = () => (
       <div style={{ height: '400px', width: '100%' }}>
         <div data-testid="list-container">
-          {data.slice(0, 50).map(item => ( // 只渲染可见部分
-            <div key={item.id} data-testid={`virtual-${item.id}`} style={{ height: '35px' }}>
-              {item.title}
-            </div>
-          ))}
+          {data.slice(0, 50).map(
+            (
+              item, // 只渲染可见部分
+            ) => (
+              <div key={item.id} data-testid={`virtual-${item.id}`} style={{ height: '35px' }}>
+                {item.title}
+              </div>
+            ),
+          )}
         </div>
       </div>
     );
@@ -144,9 +148,12 @@ describe('虚拟滚动性能', () => {
     render(<ScrollableList />);
 
     // 等待一些滚动发生
-    await waitFor(() => {
-      expect(renderCount).toBeGreaterThan(2);
-    }, { timeout: 200 });
+    await waitFor(
+      () => {
+        expect(renderCount).toBeGreaterThan(2);
+      },
+      { timeout: 200 },
+    );
 
     const end = performance.now();
 
@@ -168,7 +175,7 @@ describe('Zustand 状态更新性能', () => {
     const useStore = create<StoreState>(set => ({
       count: 0,
       increment: () => set(state => ({ count: state.count + 1 })),
-      setCount: (n) => set({ count: n })
+      setCount: n => set({ count: n }),
     }));
 
     const TestComponent = () => {
@@ -176,7 +183,9 @@ describe('Zustand 状态更新性能', () => {
       return (
         <div>
           <div data-testid="count">{count}</div>
-          <button onClick={increment} data-testid="increment">Increment</button>
+          <button onClick={increment} data-testid="increment">
+            Increment
+          </button>
         </div>
       );
     };
@@ -213,20 +222,23 @@ describe('Zustand 状态更新性能', () => {
       items: Array.from({ length: 100 }, (_, i) => ({
         id: `item-${i}`,
         value: i,
-        nested: { deep: true }
+        nested: { deep: true },
       })),
-      updateItem: (id, value) => set(state => ({
-        items: state.items.map(item =>
-          item.id === id ? { ...item, value } : item
-        )
-      })),
-      addItem: () => set(state => ({
-        items: [...state.items, {
-          id: `item-${state.items.length}`,
-          value: state.items.length,
-          nested: { deep: true }
-        }]
-      }))
+      updateItem: (id, value) =>
+        set(state => ({
+          items: state.items.map(item => (item.id === id ? { ...item, value } : item)),
+        })),
+      addItem: () =>
+        set(state => ({
+          items: [
+            ...state.items,
+            {
+              id: `item-${state.items.length}`,
+              value: state.items.length,
+              nested: { deep: true },
+            },
+          ],
+        })),
     }));
 
     const ComplexComponent = () => {
@@ -234,8 +246,12 @@ describe('Zustand 状态更新性能', () => {
       return (
         <div>
           <div data-testid="item-count">{items.length}</div>
-          <button onClick={() => updateItem('item-50', 999)} data-testid="update">Update</button>
-          <button onClick={addItem} data-testid="add">Add</button>
+          <button onClick={() => updateItem('item-50', 999)} data-testid="update">
+            Update
+          </button>
+          <button onClick={addItem} data-testid="add">
+            Add
+          </button>
         </div>
       );
     };
@@ -255,9 +271,12 @@ describe('Zustand 状态更新性能', () => {
 
     const end = performance.now();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('item-count').textContent).toBe('110'); // 100 + 10 additions
-    }, { timeout: 1000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('item-count').textContent).toBe('110'); // 100 + 10 additions
+      },
+      { timeout: 1000 },
+    );
 
     // 复杂状态更新应该在1秒内完成
     expect(end - start).toBeLessThan(1000);
@@ -304,11 +323,7 @@ describe('内存和资源管理', () => {
 
   it('应该处理大量组件创建和销毁', async () => {
     const createComponent = (id: number) => {
-      return () => (
-        <div data-testid={`comp-${id}`}>
-          Component {id}
-        </div>
-      );
+      return () => <div data-testid={`comp-${id}`}>Component {id}</div>;
     };
 
     const start = performance.now();
@@ -396,7 +411,9 @@ describe('综合性能测试', () => {
     const min = Math.min(...times);
 
     // 记录性能指标
-    console.log(`渲染时间分布: 平均 ${avg.toFixed(2)}ms, 最大 ${max.toFixed(2)}ms, 最小 ${min.toFixed(2)}ms`);
+    console.log(
+      `渲染时间分布: 平均 ${avg.toFixed(2)}ms, 最大 ${max.toFixed(2)}ms, 最小 ${min.toFixed(2)}ms`,
+    );
 
     expect(avg).toBeLessThan(100); // 平均渲染时间应该小于100ms
     expect(max).toBeLessThan(500); // 最大渲染时间应该小于500ms

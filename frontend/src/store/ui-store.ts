@@ -121,8 +121,8 @@ export const useUIStore = create<UIState>()(
           closeSettings: () => dedupedSet({ isSettingsOpen: false }),
 
           setActiveTab: tab => dedupedSet({ activeTab: tab }),
-          
-          setTheme: (theme) => dedupedSet({ theme }),
+
+          setTheme: theme => dedupedSet({ theme }),
 
           toggleSidebar: () =>
             dedupedSet((state: UIState) => ({ sidebarCollapsed: !state.sidebarCollapsed })),

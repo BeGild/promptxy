@@ -162,7 +162,9 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => copyToClipboard(isNoChanges ? originalStr : modifiedStr, '修改后请求')}
+                  onPress={() =>
+                    copyToClipboard(isNoChanges ? originalStr : modifiedStr, '修改后请求')
+                  }
                   className="min-w-6 h-6"
                 >
                   <Copy size={14} />
@@ -222,7 +224,12 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => copyToClipboard(isNoChanges ? originalStr : modifiedStr, isNoChanges ? '原始请求' : '修改后请求')}
+                  onPress={() =>
+                    copyToClipboard(
+                      isNoChanges ? originalStr : modifiedStr,
+                      isNoChanges ? '原始请求' : '修改后请求',
+                    )
+                  }
                   className="min-w-6 h-6"
                 >
                   <Copy size={14} />

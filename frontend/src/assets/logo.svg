@@ -2,8 +2,8 @@
   <!-- 定义渐变 -->
   <defs>
     <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#007AFF;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0055D4;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#D46A1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C45C3E;stop-opacity:1" />
     </linearGradient>
   </defs>
 

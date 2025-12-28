@@ -34,28 +34,35 @@ interface FileContentPanelProps {
  * 仅渲染节点内容
  * 面包屑、预览切换和全屏按钮由父组件 FileBrowserView 控制
  */
-const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(({
-  selectedNode,
-  isFullScreen = false,
-  isMarkdownPreview = false,
-}) => {
-  return (
-    <div className="h-full flex flex-col">
-      {/* 内容区域 */}
-      <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-        {isFullScreen ? (
-          <div className="h-full">
-            <InlineNodeRenderer node={selectedNode} title={selectedNode.label} isMarkdownPreview={isMarkdownPreview} isFullScreen={true} />
-          </div>
-        ) : (
-          <div className="h-full">
-            <InlineNodeRenderer node={selectedNode} isMarkdownPreview={isMarkdownPreview} isFullScreen={false} />
-          </div>
-        )}
+const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(
+  ({ selectedNode, isFullScreen = false, isMarkdownPreview = false }) => {
+    return (
+      <div className="h-full flex flex-col">
+        {/* 内容区域 */}
+        <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+          {isFullScreen ? (
+            <div className="h-full">
+              <InlineNodeRenderer
+                node={selectedNode}
+                title={selectedNode.label}
+                isMarkdownPreview={isMarkdownPreview}
+                isFullScreen={true}
+              />
+            </div>
+          ) : (
+            <div className="h-full">
+              <InlineNodeRenderer
+                node={selectedNode}
+                isMarkdownPreview={isMarkdownPreview}
+                isFullScreen={false}
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 FileContentPanel.displayName = 'FileContentPanel';
 

@@ -19,10 +19,10 @@ import type {
  * 前缀颜色映射
  */
 const PREFIX_COLORS: Record<string, string> = {
-  '/claude': '🟦',
+  '/claude': '🟧',
   '/openai': '🟩',
-  '/gemini': '🟪',
-  '/test': '🟧',
+  '/gemini': '🟨',
+  '/test': '🟫',
   '/custom': '🟥',
 };
 
@@ -30,10 +30,10 @@ const PREFIX_COLORS: Record<string, string> = {
  * 常用前缀选项
  */
 export const COMMON_PREFIX_OPTIONS: CommonPrefixOption[] = [
-  { prefix: '/claude', label: '/claude', description: 'Claude API', color: '🟦' },
+  { prefix: '/claude', label: '/claude', description: 'Claude API', color: '🟧' },
   { prefix: '/openai', label: '/openai', description: 'OpenAI API', color: '🟩' },
-  { prefix: '/gemini', label: '/gemini', description: 'Gemini API', color: '🟪' },
-  { prefix: '/test', label: '/test', description: '测试用', color: '🟧' },
+  { prefix: '/gemini', label: '/gemini', description: 'Gemini API', color: '🟨' },
+  { prefix: '/test', label: '/test', description: '测试用', color: '🟫' },
 ];
 
 /**
@@ -45,7 +45,7 @@ export function getPrefixColor(prefix: string): string {
   }
 
   // 基于哈希生成颜色
-  const colors = ['🟦', '🟩', '🟪', '🟧', '🟥', '⬛', '🟨', '⬜'];
+  const colors = ['🟧', '🟩', '🟥', '🟨', '🟫', '⬛', '⬜'];
   const hash = prefix.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return colors[hash % colors.length];
 }
@@ -109,7 +109,13 @@ export function useUpdateSupplier() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ supplierId, request }: { supplierId: string; request: SupplierUpdateRequest }) => {
+    mutationFn: async ({
+      supplierId,
+      request,
+    }: {
+      supplierId: string;
+      request: SupplierUpdateRequest;
+    }) => {
       return await updateSupplier(supplierId, request);
     },
     onSuccess: () => {
@@ -143,7 +149,13 @@ export function useToggleSupplier() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ supplierId, request }: { supplierId: string; request: SupplierToggleRequest }) => {
+    mutationFn: async ({
+      supplierId,
+      request,
+    }: {
+      supplierId: string;
+      request: SupplierToggleRequest;
+    }) => {
       return await toggleSupplier(supplierId, request);
     },
     onSuccess: () => {

@@ -98,11 +98,7 @@ export const PathAutocomplete: React.FC<PathAutocompleteProps> = ({
       endContent={externalLoading && !loading && <Spinner size="sm" color="primary" />}
       className={className}
     >
-      {(item: PathItem) => (
-        <AutocompleteItem key={item.key}>
-          {item.value}
-        </AutocompleteItem>
-      )}
+      {(item: PathItem) => <AutocompleteItem key={item.key}>{item.value}</AutocompleteItem>}
     </Autocomplete>
   );
 };

@@ -24,13 +24,10 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize from 'rehype-sanitize';
 import { rehypeXmlHighlight } from '@/utils/rehype-xml-highlight';
-import type { ViewNode } from '../../types';
-import { DiffStatus } from '../../types';
+import { DiffStatus, type ViewNode } from '../../types';
 
 // 导入 KaTeX 样式
 import 'katex/dist/katex.min.css';
-// 导入 highlight.js 样式
-import 'highlight.js/styles/github-dark.css';
 
 interface MarkdownRendererProps {
   node: ViewNode;
@@ -77,7 +74,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
     if (!isFullScreen) return;
 
     const handleScroll = () => {
-      const headingElements = headings.map(h => document.getElementById(h.id)).filter(Boolean) as HTMLElement[];
+      const headingElements = headings
+        .map(h => document.getElementById(h.id))
+        .filter(Boolean) as HTMLElement[];
       const scrollTop = window.scrollY + 100;
 
       for (let i = headingElements.length - 1; i >= 0; i--) {
@@ -96,16 +95,19 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
     setIsExpanded(prev => !prev);
   }, []);
 
-  const handleCopy = useCallback(async (source: boolean) => {
-    try {
-      const contentToCopy = source ? markdownContent : markdownContent.replace(/[#*`_\[\]]/g, '');
-      await navigator.clipboard.writeText(contentToCopy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  }, [markdownContent]);
+  const handleCopy = useCallback(
+    async (source: boolean) => {
+      try {
+        const contentToCopy = source ? markdownContent : markdownContent.replace(/[#*`_[\]]/g, '');
+        await navigator.clipboard.writeText(contentToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    },
+    [markdownContent],
+  );
 
   const scrollToHeading = useCallback((headingId: string) => {
     const element = document.getElementById(headingId);
@@ -115,125 +117,210 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
   }, []);
 
   // 自定义渲染组件
-  const components = useMemo(() => ({
-    // 标题
-    h1: ({ children, ...props }: any) => {
-      const index = headings.findIndex(h => h.text === String(children));
-      return <h1 id={`heading-${index}`} className="text-2xl font-bold mt-6 mb-4 text-primary dark:text-primary" {...props}>{children}</h1>;
-    },
-    h2: ({ children, ...props }: any) => {
-      const index = headings.findIndex(h => h.text === String(children));
-      return <h2 id={`heading-${index}`} className="text-xl font-bold mt-5 mb-3 text-primary dark:text-primary" {...props}>{children}</h2>;
-    },
-    h3: ({ children, ...props }: any) => {
-      const index = headings.findIndex(h => h.text === String(children));
-      return <h3 id={`heading-${index}`} className="text-lg font-bold mt-4 mb-2 text-primary dark:text-primary" {...props}>{children}</h3>;
-    },
-    h4: ({ children, ...props }: any) => {
-      const index = headings.findIndex(h => h.text === String(children));
-      return <h4 id={`heading-${index}`} className="text-base font-bold mt-3 mb-2 text-primary dark:text-primary" {...props}>{children}</h4>;
-    },
-    h5: ({ children, ...props }: any) => {
-      const index = headings.findIndex(h => h.text === String(children));
-      return <h5 id={`heading-${index}`} className="text-sm font-bold mt-2 mb-1 text-primary dark:text-primary" {...props}>{children}</h5>;
-    },
-    h6: ({ children, ...props }: any) => {
-      const index = headings.findIndex(h => h.text === String(children));
-      return <h6 id={`heading-${index}`} className="text-xs font-bold mt-2 mb-1 text-secondary dark:text-secondary" {...props}>{children}</h6>;
-    },
-    // 段落
-    p: ({ children, ...props }: any) => (
-      <p className="text-sm text-secondary leading-relaxed mb-3" {...props}>{children}</p>
-    ),
-    // 代码块
-    code: ({ inline, className, children, ...props }: any) => {
-      // XML 标签高亮
-      if (className?.includes('xml-tag-highlight')) {
+  const components = useMemo(
+    () => ({
+      // 标题
+      h1: ({ children, ...props }: any) => {
+        const index = headings.findIndex(h => h.text === String(children));
         return (
-          <code className="px-0.5 py-0 text-emerald-600 dark:text-emerald-400 font-mono text-xs" {...props}>
+          <h1
+            id={`heading-${index}`}
+            className="text-2xl font-bold mt-6 mb-4 text-primary dark:text-primary"
+            {...props}
+          >
             {children}
-          </code>
+          </h1>
         );
-      }
-      // 内联代码
-      if (inline) {
+      },
+      h2: ({ children, ...props }: any) => {
+        const index = headings.findIndex(h => h.text === String(children));
         return (
-          <code className="px-1 py-0.5 bg-secondary text-red-600 dark:text-red-400 rounded text-xs font-mono" {...props}>
+          <h2
+            id={`heading-${index}`}
+            className="text-xl font-bold mt-5 mb-3 text-primary dark:text-primary"
+            {...props}
+          >
             {children}
-          </code>
+          </h2>
         );
-      }
-      // 代码块中的代码
-      return (
-        <code className={className} {...props}>
+      },
+      h3: ({ children, ...props }: any) => {
+        const index = headings.findIndex(h => h.text === String(children));
+        return (
+          <h3
+            id={`heading-${index}`}
+            className="text-lg font-bold mt-4 mb-2 text-primary dark:text-primary"
+            {...props}
+          >
+            {children}
+          </h3>
+        );
+      },
+      h4: ({ children, ...props }: any) => {
+        const index = headings.findIndex(h => h.text === String(children));
+        return (
+          <h4
+            id={`heading-${index}`}
+            className="text-base font-bold mt-3 mb-2 text-primary dark:text-primary"
+            {...props}
+          >
+            {children}
+          </h4>
+        );
+      },
+      h5: ({ children, ...props }: any) => {
+        const index = headings.findIndex(h => h.text === String(children));
+        return (
+          <h5
+            id={`heading-${index}`}
+            className="text-sm font-bold mt-2 mb-1 text-primary dark:text-primary"
+            {...props}
+          >
+            {children}
+          </h5>
+        );
+      },
+      h6: ({ children, ...props }: any) => {
+        const index = headings.findIndex(h => h.text === String(children));
+        return (
+          <h6
+            id={`heading-${index}`}
+            className="text-xs font-bold mt-2 mb-1 text-secondary dark:text-secondary"
+            {...props}
+          >
+            {children}
+          </h6>
+        );
+      },
+      // 段落
+      p: ({ children, ...props }: any) => (
+        <p className="text-sm text-secondary leading-relaxed mb-3" {...props}>
           {children}
-        </code>
-      );
-    },
-    pre: ({ children, ...props }: any) => (
-      <pre className="bg-canvas text-primary p-4 rounded-lg overflow-x-auto mb-4 text-xs font-mono" {...props}>
-        {children}
-      </pre>
-    ),
-    // 列表
-    ul: ({ children, ...props }: any) => (
-      <ul className="list-disc list-inside text-sm text-secondary mb-3 space-y-1" {...props}>{children}</ul>
-    ),
-    ol: ({ children, ...props }: any) => (
-      <ol className="list-decimal list-inside text-sm text-secondary mb-3 space-y-1" {...props}>{children}</ol>
-    ),
-    li: ({ children, ...props }: any) => (
-      <li className="ml-4" {...props}>{children}</li>
-    ),
-    // 引用
-    blockquote: ({ children, ...props }: any) => (
-      <blockquote className="border-l-4 border-subtle pl-4 italic text-tertiary my-3" {...props}>
-        {children}
-      </blockquote>
-    ),
-    // 表格
-    table: ({ children, ...props }: any) => (
-      <div className="overflow-x-auto mb-4">
-        <table className="min-w-full border border-subtle" {...props}>{children}</table>
-      </div>
-    ),
-    thead: ({ children, ...props }: any) => (
-      <thead className="bg-secondary" {...props}>{children}</thead>
-    ),
-    tbody: ({ children, ...props }: any) => (
-      <tbody className="divide-y divide-subtle" {...props}>{children}</tbody>
-    ),
-    tr: ({ children, ...props }: any) => (
-      <tr className="hover:bg-secondary" {...props}>{children}</tr>
-    ),
-    th: ({ children, ...props }: any) => (
-      <th className="px-4 py-2 text-left text-xs font-semibold text-secondary uppercase" {...props}>{children}</th>
-    ),
-    td: ({ children, ...props }: any) => (
-      <td className="px-4 py-2 text-sm text-secondary" {...props}>{children}</td>
-    ),
-    // 水平线
-    hr: (props: any) => (
-      <hr className="my-4 border-subtle" {...props} />
-    ),
-    // 强调
-    strong: ({ children, ...props }: any) => (
-      <strong className="font-bold text-primary" {...props}>{children}</strong>
-    ),
-    em: ({ children, ...props }: any) => (
-      <em className="italic text-secondary" {...props}>{children}</em>
-    ),
-  }), [headings]);
+        </p>
+      ),
+      // 代码块
+      code: ({ inline, className, children, ...props }: any) => {
+        // XML 标签高亮
+        if (className?.includes('xml-tag-highlight')) {
+          return (
+            <code
+              className="px-0.5 py-0 text-brand-primary dark:text-brand-primary/80 font-mono text-xs"
+              {...props}
+            >
+              {children}
+            </code>
+          );
+        }
+        // 内联代码
+        if (inline) {
+          return (
+            <code
+              className="px-1 py-0.5 bg-secondary text-accent dark:text-accent/90 rounded text-xs font-mono"
+              {...props}
+            >
+              {children}
+            </code>
+          );
+        }
+        // 代码块中的代码
+        return (
+          <code className={className} {...props}>
+            {children}
+          </code>
+        );
+      },
+      pre: ({ children, ...props }: any) => (
+        <pre
+          className="bg-canvas text-primary p-4 rounded-lg overflow-x-auto mb-4 text-xs font-mono"
+          {...props}
+        >
+          {children}
+        </pre>
+      ),
+      // 列表
+      ul: ({ children, ...props }: any) => (
+        <ul className="list-disc list-inside text-sm text-secondary mb-3 space-y-1" {...props}>
+          {children}
+        </ul>
+      ),
+      ol: ({ children, ...props }: any) => (
+        <ol className="list-decimal list-inside text-sm text-secondary mb-3 space-y-1" {...props}>
+          {children}
+        </ol>
+      ),
+      li: ({ children, ...props }: any) => (
+        <li className="ml-4" {...props}>
+          {children}
+        </li>
+      ),
+      // 引用
+      blockquote: ({ children, ...props }: any) => (
+        <blockquote className="border-l-4 border-subtle pl-4 italic text-tertiary my-3" {...props}>
+          {children}
+        </blockquote>
+      ),
+      // 表格
+      table: ({ children, ...props }: any) => (
+        <div className="overflow-x-auto mb-4">
+          <table className="min-w-full border border-subtle" {...props}>
+            {children}
+          </table>
+        </div>
+      ),
+      thead: ({ children, ...props }: any) => (
+        <thead className="bg-secondary" {...props}>
+          {children}
+        </thead>
+      ),
+      tbody: ({ children, ...props }: any) => (
+        <tbody className="divide-y divide-subtle" {...props}>
+          {children}
+        </tbody>
+      ),
+      tr: ({ children, ...props }: any) => (
+        <tr className="hover:bg-secondary" {...props}>
+          {children}
+        </tr>
+      ),
+      th: ({ children, ...props }: any) => (
+        <th
+          className="px-4 py-2 text-left text-xs font-semibold text-secondary uppercase"
+          {...props}
+        >
+          {children}
+        </th>
+      ),
+      td: ({ children, ...props }: any) => (
+        <td className="px-4 py-2 text-sm text-secondary" {...props}>
+          {children}
+        </td>
+      ),
+      // 水平线
+      hr: (props: any) => <hr className="my-4 border-subtle" {...props} />,
+      // 强调
+      strong: ({ children, ...props }: any) => (
+        <strong className="font-bold text-primary" {...props}>
+          {children}
+        </strong>
+      ),
+      em: ({ children, ...props }: any) => (
+        <em className="italic text-secondary" {...props}>
+          {children}
+        </em>
+      ),
+    }),
+    [headings],
+  );
 
   // 根据差异状态获取样式
   const getDiffClass = () => {
     switch (diffStatus) {
       case DiffStatus.ADDED:
-        return 'border-l-4 border-green-500 bg-status-success/10';
+        return 'border-l-4 border-status-success bg-status-success/10';
       case DiffStatus.REMOVED:
-        return 'border-l-4 border-red-500 bg-status-error/10';
+        return 'border-l-4 border-status-error bg-status-error/10';
       case DiffStatus.MODIFIED:
-        return 'border-l-4 border-yellow-500 bg-status-warning/10';
+        return 'border-l-4 border-status-warning bg-status-warning/10';
       default:
         return 'border-l-4 border-transparent';
     }
@@ -255,9 +342,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
       <div className={`rounded ${getDiffClass()}`}>
         {/* 头部：显示摘要和操作按钮 */}
         <div className="flex items-center justify-between px-3 py-2 bg-secondary rounded-t">
-          <span className="text-xs text-tertiary">
-            Markdown ({markdownContent.length} 字符)
-          </span>
+          <span className="text-xs text-tertiary">Markdown ({markdownContent.length} 字符)</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleCopy(false)}
@@ -292,11 +377,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
         </div>
 
         {/* 内容 */}
-        {isExpanded && (
-          <div className="p-4 overflow-auto max-h-[600px]">
-            {markdownContentEl}
-          </div>
-        )}
+        {isExpanded && <div className="p-4 overflow-auto max-h-[600px]">{markdownContentEl}</div>}
       </div>
 
       {/* 全屏阅读模式 */}
@@ -328,9 +409,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
           <div className="flex-1 flex overflow-hidden">
             {/* Markdown 内容 */}
             <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-4xl mx-auto">
-                {markdownContentEl}
-              </div>
+              <div className="max-w-4xl mx-auto">{markdownContentEl}</div>
             </div>
 
             {/* 目录 */}

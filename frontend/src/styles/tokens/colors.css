@@ -9,85 +9,118 @@
   :root {
     /* ==================== 背景色 ==================== */
     --color-bg-primary: #ffffff;
-    --color-bg-secondary: #f5f5f5;
-    --color-bg-elevated: #ffffff;
-    --color-bg-canvas: #fafafa;
+    --color-bg-secondary: #faf8f5;
+    --color-bg-elevated: #fffdfa;
+    --color-bg-canvas: #f5f3f0;
     --color-bg-overlay: rgba(0, 0, 0, 0.5);
-    --color-bg-backdrop: rgba(255, 255, 255, 0.8);
+    --color-bg-backdrop: rgba(255, 253, 250, 0.8);
+
+    /* ==================== 背景透明度变体（用于 /20 /30 /50 /60 /90 等场景） ==================== */
+    /* 说明：避免依赖第三方主题（如 HeroUI secondary）生成半透明背景，确保语义类名稳定可控 */
+    --color-bg-secondary-alpha-30: rgba(250, 248, 245, 0.3);
+    --color-bg-secondary-alpha-50: rgba(250, 248, 245, 0.5);
+    --color-bg-secondary-alpha-60: rgba(250, 248, 245, 0.6);
+    --color-bg-secondary-alpha-90: rgba(250, 248, 245, 0.9);
+
+    --color-bg-canvas-alpha-20: rgba(245, 243, 240, 0.2);
+    --color-bg-canvas-alpha-50: rgba(245, 243, 240, 0.5);
 
     /* ==================== 文本色 ==================== */
-    --color-text-primary: #1a1a1a;
-    --color-text-secondary: #666666;
-    --color-text-tertiary: #999999;
-    --color-text-muted: #cccccc;
-    --color-text-disabled: #e0e0e0;
+    --color-text-primary: #1a1612;
+    --color-text-secondary: #6b6560;
+    --color-text-tertiary: #9b9590;
+    --color-text-muted: #c5c1be;
+    --color-text-disabled: #c5c1be;
     --color-text-inverse: #ffffff;
 
     /* ==================== 品牌色 ==================== */
-    --color-brand-primary: #007acc;
-    --color-brand-primary-hover: #0066b3;
-    --color-brand-primary-active: #005599;
-    --color-brand-primary-light: #e6f3ff;
-    --color-brand-primary-on-primary: #ffffff;
+    --color-brand-primary: #d46a1a;
+    --color-brand-primary-hover: #b85200;
+    --color-brand-primary-active: #9c4200;
+    --color-brand-primary-light: #fff4e6;
+    /* 强色背景上的文本色（保证对比度） */
+    --color-brand-primary-on-primary: #1a1612;
 
-    --color-brand-secondary: #4ec9b0;
-    --color-brand-secondary-hover: #3eb39c;
-    --color-brand-secondary-active: #2e8d7a;
+    /* 次品牌色：按最新取向“去绿（仅 success 用绿）”，这里使用暖中性色（避免深色模式大面积发绿） */
+    --color-brand-secondary: #b08a5b;
+    --color-brand-secondary-hover: #9c774a;
+    --color-brand-secondary-active: #85653d;
 
     /* ==================== 功能色 ==================== */
-    --color-status-success: #4ec9b0;
-    --color-status-success-bg: #e6fff9;
-    --color-status-success-light: #ccfff2;
+    --color-status-success: #7a9b6a;
+    --color-status-success-bg: #f0f4ed;
+    --color-status-success-light: #e0e9db;
 
-    --color-status-warning: #ce9178;
+    --color-status-warning: #d4a373;
     --color-status-warning-bg: #fff5eb;
     --color-status-warning-light: #ffedd5;
 
-    --color-status-error: #f48771;
+    --color-status-error: #e8998c;
     --color-status-error-bg: #fff5f0;
     --color-status-error-light: #ffe4dd;
 
-    --color-status-info: #569cd6;
-    --color-status-info-bg: #e6f3ff;
-    --color-status-info-light: #cce6ff;
+    --color-status-info: #d46a1a;
+    --color-status-info-bg: #fff4e6;
+    --color-status-info-light: #ffe0c2;
 
     /* ==================== 强调色 ==================== */
-    --color-accent: #ce9178;
-    --color-accent-light: #fff5eb;
-
-    /* 渐变强调色 */
-    --color-accent-purple: #a855f7;
-    --color-accent-purple-light: #f3e8ff;
-    --color-accent-pink: #ec4899;
-    --color-accent-pink-light: #fce7f3;
+    --color-accent: #c45c3e;
+    --color-accent-hover: #a8422a;
+    --color-accent-active: #8c3a20;
+    --color-accent-light: #fff0e6;
+    /* 强调色透明度变体（用于 bg-accent/10、text-accent/80 等场景） */
+    --color-accent-alpha-10: rgba(196, 92, 62, 0.1);
+    --color-accent-alpha-20: rgba(196, 92, 62, 0.2);
+    --color-accent-alpha-30: rgba(196, 92, 62, 0.3);
+    --color-accent-alpha-80: rgba(196, 92, 62, 0.8);
+    --color-accent-alpha-90: rgba(196, 92, 62, 0.9);
 
     /* ==================== 边框色 ==================== */
-    --color-border-default: #e0e0e0;
-    --color-border-subtle: #f0f0f0;
-    --color-border-strong: #cccccc;
-    --color-border-focused: #007acc;
-    --color-border-error: #f48771;
+    --color-border-default: #e8e4df;
+    --color-border-subtle: #f0ede8;
+    --color-border-strong: #c5c1be;
+    --color-border-focused: #d46a1a;
+    --color-border-error: #e8998c;
 
     /* ==================== 图标色 ==================== */
-    --color-icon-default: #666666;
-    --color-icon-subtle: #999999;
-    --color-icon-primary: #007acc;
+    --color-icon-default: #6b6560;
+    --color-icon-subtle: #9b9590;
+    --color-icon-primary: #d46a1a;
     --color-icon-inverse: #ffffff;
 
     /* ==================== 透明度变体 ==================== */
     /* 状态色透明度 - 用于背景、阴影等 */
-    --color-status-success-alpha: rgba(78, 201, 176, 0.1);
-    --color-status-success-alpha-strong: rgba(78, 201, 176, 0.6);
-    --color-status-error-alpha: rgba(244, 135, 113, 0.1);
-    --color-status-warning-alpha: rgba(206, 145, 120, 0.1);
-    --color-status-info-alpha: rgba(86, 156, 214, 0.1);
+    --color-status-success-alpha: rgba(122, 155, 106, 0.1);
+    --color-status-success-alpha-20: rgba(122, 155, 106, 0.2);
+    --color-status-success-alpha-30: rgba(122, 155, 106, 0.3);
+    --color-status-success-alpha-strong: rgba(122, 155, 106, 0.6);
+    --color-status-success-alpha-80: rgba(122, 155, 106, 0.8);
+    --color-status-success-alpha-90: rgba(122, 155, 106, 0.9);
+    --color-status-error-alpha: rgba(232, 153, 140, 0.1);
+    --color-status-error-alpha-20: rgba(232, 153, 140, 0.2);
+    --color-status-error-alpha-30: rgba(232, 153, 140, 0.3);
+    --color-status-error-alpha-80: rgba(232, 153, 140, 0.8);
+    --color-status-error-alpha-90: rgba(232, 153, 140, 0.9);
+    --color-status-warning-alpha: rgba(212, 163, 115, 0.1);
+    --color-status-warning-alpha-20: rgba(212, 163, 115, 0.2);
+    --color-status-warning-alpha-30: rgba(212, 163, 115, 0.3);
+    --color-status-warning-alpha-80: rgba(212, 163, 115, 0.8);
+    --color-status-warning-alpha-90: rgba(212, 163, 115, 0.9);
+    --color-status-info-alpha: rgba(212, 106, 26, 0.1);
+    --color-status-info-alpha-20: rgba(212, 106, 26, 0.2);
+    --color-status-info-alpha-30: rgba(212, 106, 26, 0.3);
+    --color-status-info-alpha-80: rgba(212, 106, 26, 0.8);
+    --color-status-info-alpha-90: rgba(212, 106, 26, 0.9);
 
     /* 品牌色透明度 */
-    --color-brand-primary-alpha: rgba(0, 122, 204, 0.1);
-    --color-brand-primary-alpha-weak: rgba(0, 122, 204, 0.05);
-    --color-brand-primary-alpha-medium: rgba(0, 122, 204, 0.3);
-    --color-brand-primary-alpha-strong: rgba(0, 122, 204, 0.6);
-    --color-brand-primary-alpha-full: rgba(0, 122, 204, 1);
+    --color-brand-primary-alpha: rgba(212, 106, 26, 0.1);
+    --color-brand-primary-alpha-weak: rgba(212, 106, 26, 0.05);
+    --color-brand-primary-alpha-20: rgba(212, 106, 26, 0.2);
+    --color-brand-primary-alpha-medium: rgba(212, 106, 26, 0.3);
+    --color-brand-primary-alpha-strong: rgba(212, 106, 26, 0.6);
+    --color-brand-primary-alpha-80: rgba(212, 106, 26, 0.8);
+    --color-brand-primary-alpha-90: rgba(212, 106, 26, 0.9);
+    --color-brand-primary-alpha-full: rgba(212, 106, 26, 1);
 
     /* 黑白透明度 */
     --color-white-alpha: rgba(255, 255, 255, 0.5);

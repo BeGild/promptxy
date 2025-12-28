@@ -187,8 +187,8 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                 radius="lg"
                 description="唯一标识符，自动生成"
                 classNames={{
-                  input: "text-tertiary text-xs font-mono",
-                  description: "text-xs"
+                  input: 'text-tertiary text-xs font-mono',
+                  description: 'text-xs',
                 }}
               />
             </div>
@@ -275,10 +275,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
 
           <div className="space-y-xmd">
             {formData.ops.map((op, index) => (
-              <Card
-                key={index}
-                className="bg-canvas dark:bg-secondary/30 border border-subtle"
-              >
+              <Card key={index} className="bg-canvas dark:bg-secondary/30 border border-subtle">
                 <CardBody className="space-y-xmd">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import type { ViewNode } from '../../types';
+import { NodeType, type ViewNode } from '../../types';
 import FileTreeNode from './FileTreeNode';
+import { isNumericArray } from '../../utils/arrayHelper';
 
 interface FileTreeProps {
   /** 根节点 */
@@ -19,7 +20,10 @@ const STORAGE_KEY_SELECTED = 'request-viewer:file-tree-selected';
 /**
  * 构建节点 ID 到节点的映射（用于键盘导航）
  */
-function buildNodeMap(node: ViewNode, map: Map<string, ViewNode> = new Map()): Map<string, ViewNode> {
+function buildNodeMap(
+  node: ViewNode,
+  map: Map<string, ViewNode> = new Map(),
+): Map<string, ViewNode> {
   map.set(node.id, node);
   if (node.children) {
     node.children.forEach(child => buildNodeMap(child, map));
@@ -30,7 +34,11 @@ function buildNodeMap(node: ViewNode, map: Map<string, ViewNode> = new Map()): M
 /**
  * 获取节点的所有可见子节点（按顺序）
  */
-function getVisibleNodes(node: ViewNode, expanded: Set<string>, nodes: ViewNode[] = []): ViewNode[] {
+function getVisibleNodes(
+  node: ViewNode,
+  expanded: Set<string>,
+  nodes: ViewNode[] = [],
+): ViewNode[] {
   nodes.push(node);
   if (expanded.has(node.id) && node.children) {
     node.children.forEach(child => getVisibleNodes(child, expanded, nodes));
@@ -53,18 +61,23 @@ const FileTree: React.FC<FileTreeProps> = ({
   // 展开的节点集合
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   // 选中的节点 ID
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialSelectedId ?? rootNode.id);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
+    initialSelectedId ?? rootNode.id,
+  );
 
   // 构建节点映射（用于键盘导航）
   const nodeMap = useMemo(() => buildNodeMap(rootNode), [rootNode]);
 
   // 获取可见节点列表（用于键盘导航）
-  const visibleNodes = useMemo(() => getVisibleNodes(rootNode, expandedNodes), [rootNode, expandedNodes]);
+  const visibleNodes = useMemo(
+    () => getVisibleNodes(rootNode, expandedNodes),
+    [rootNode, expandedNodes],
+  );
 
   // 初始化：从 localStorage 恢复状态
   useEffect(() => {
     // 恢复展开状态
-    const storedExpanded = localStorage.getItem(STORAGE_KEY_EXPANDED);
+    const storedExpanded = globalThis.localStorage?.getItem(STORAGE_KEY_EXPANDED);
     if (storedExpanded) {
       try {
         const parsed = JSON.parse(storedExpanded);
@@ -75,7 +88,7 @@ const FileTree: React.FC<FileTreeProps> = ({
     }
 
     // 恢复选中状态
-    const storedSelected = localStorage.getItem(STORAGE_KEY_SELECTED);
+    const storedSelected = globalThis.localStorage?.getItem(STORAGE_KEY_SELECTED);
     if (storedSelected) {
       setSelectedNodeId(storedSelected);
     }
@@ -87,14 +100,17 @@ const FileTree: React.FC<FileTreeProps> = ({
   // 保存展开状态到 localStorage
   useEffect(() => {
     if (expandedNodes.size > 0) {
-      localStorage.setItem(STORAGE_KEY_EXPANDED, JSON.stringify(Array.from(expandedNodes)));
+      globalThis.localStorage?.setItem(
+        STORAGE_KEY_EXPANDED,
+        JSON.stringify(Array.from(expandedNodes)),
+      );
     }
   }, [expandedNodes]);
 
   // 保存选中状态到 localStorage
   useEffect(() => {
     if (selectedNodeId) {
-      localStorage.setItem(STORAGE_KEY_SELECTED, selectedNodeId);
+      globalThis.localStorage?.setItem(STORAGE_KEY_SELECTED, selectedNodeId);
     }
   }, [selectedNodeId]);
 
@@ -127,7 +143,7 @@ const FileTree: React.FC<FileTreeProps> = ({
           }
           break;
 
-        case 'ArrowRight':
+        case 'ArrowRight': {
           e.preventDefault();
           // 展开（如果是文件夹）
           const currentNode = visibleNodes[currentIndex];
@@ -135,8 +151,9 @@ const FileTree: React.FC<FileTreeProps> = ({
             handleToggleExpand(currentNode.id);
           }
           break;
+        }
 
-        case 'ArrowLeft':
+        case 'ArrowLeft': {
           e.preventDefault();
           // 折叠或选择父节点
           const current = visibleNodes[currentIndex];
@@ -146,7 +163,7 @@ const FileTree: React.FC<FileTreeProps> = ({
           } else {
             // 否则选择父节点
             const parentPath = current.path.split('.').slice(0, -1).join('.');
-            const parentNode = nodeMap.get(parentPath + `.${current.label.split(' ')[0]}`);
+            const parentNode = nodeMap.get(`${parentPath}.${current.label.split(' ')[0]}`);
             if (parentNode) {
               // 尝试通过路径查找父节点
               const parentId = Object.keys(Object.fromEntries(nodeMap)).find(id => {
@@ -163,8 +180,9 @@ const FileTree: React.FC<FileTreeProps> = ({
             }
           }
           break;
+        }
 
-        case 'Enter':
+        case 'Enter': {
           e.preventDefault();
           // 切换展开/折叠或选中
           const node = visibleNodes[currentIndex];
@@ -176,6 +194,7 @@ const FileTree: React.FC<FileTreeProps> = ({
             onNodeSelect(node);
           }
           break;
+        }
       }
     };
 
@@ -189,11 +208,7 @@ const FileTree: React.FC<FileTreeProps> = ({
   /**
    * 递归展开到指定深度
    */
-  function expandToDepth(
-    node: ViewNode,
-    depth: number,
-    expanded: Set<string>
-  ): Set<string> {
+  function expandToDepth(node: ViewNode, depth: number, expanded: Set<string>): Set<string> {
     if (depth <= 0) return expanded;
 
     const newExpanded = new Set(expanded);
@@ -230,10 +245,13 @@ const FileTree: React.FC<FileTreeProps> = ({
   /**
    * 处理节点选中
    */
-  const handleNodeSelect = useCallback((nodeId: string, node: ViewNode) => {
-    setSelectedNodeId(nodeId);
-    onNodeSelect(node);
-  }, [onNodeSelect]);
+  const handleNodeSelect = useCallback(
+    (nodeId: string, node: ViewNode) => {
+      setSelectedNodeId(nodeId);
+      onNodeSelect(node);
+    },
+    [onNodeSelect],
+  );
 
   return (
     <div
@@ -257,15 +275,11 @@ const FileTree: React.FC<FileTreeProps> = ({
  * 判断节点是否为"文件夹"（可展开）
  */
 function isFolder(node: ViewNode): boolean {
-  const { NodeType } = require('../../types');
-  const { isNumericArray } = require('../../utils/arrayHelper');
-
   if (node.type === NodeType.ARRAY && Array.isArray(node.value)) {
     return !isNumericArray(node.value);
   }
   const hasChildren = node.children && node.children.length > 0;
-  return node.type === NodeType.JSON ||
-         (node.type === NodeType.ARRAY && hasChildren === true);
+  return node.type === NodeType.JSON || (node.type === NodeType.ARRAY && hasChildren === true);
 }
 
 export default React.memo(FileTree);

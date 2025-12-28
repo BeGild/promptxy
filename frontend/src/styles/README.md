@@ -50,9 +50,7 @@ styles/
 --color-brand-primary   /* 主品牌色 */
 
 /* 强调色 */
---color-accent-purple   /* 紫色强调 */
---color-accent-pink     /* 粉色强调 */
---color-accent-orange   /* 橙色强调 */
+--color-accent          /* 强调色（赤陶红） */
 
 /* 状态色 */
 --color-status-success  /* 成功状态 */
@@ -104,12 +102,12 @@ styles/
 
 CSS 变量已映射到 Tailwind 语义类名，优先使用 Tailwind 类名：
 
-| 语义类名 | 对应 CSS 变量 | 示例 |
-|---------|-------------|------|
-| `text-primary` | `--color-text-primary` | `<h1 className="text-primary">` |
-| `bg-elevated` | `--color-bg-elevated` | `<div className="bg-elevated">` |
-| `border-subtle` | `--color-border-subtle` | `<div className="border border-subtle">` |
-| `p-md` | `--spacing-md` | `<div className="p-md">` |
+| 语义类名              | 对应 CSS 变量            | 示例                                     |
+| --------------------- | ------------------------ | ---------------------------------------- |
+| `text-primary`        | `--color-text-primary`   | `<h1 className="text-primary">`          |
+| `bg-elevated`         | `--color-bg-elevated`    | `<div className="bg-elevated">`          |
+| `border-subtle`       | `--color-border-subtle`  | `<div className="border border-subtle">` |
+| `p-md`                | `--spacing-md`           | `<div className="p-md">`                 |
 | `text-status-success` | `--color-status-success` | `<span className="text-status-success">` |
 
 ## 主题切换
@@ -143,9 +141,7 @@ const theme = localStorage.getItem('theme') || 'system';
 ### 系统主题检测
 
 ```typescript
-const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-  ? 'dark'
-  : 'light';
+const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 ```
 
 ## 组件样式迁移指南
@@ -164,7 +160,7 @@ const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
 // 硬编码颜色
 className="text-gray-500"
 className="from-green-600 to-blue-600"
-style={{ color: '#007AFF' }}
+style={{ color: '#D46A1A' }}
 
 // 硬编码背景
 className="bg-white dark:bg-gray-900"
@@ -195,22 +191,22 @@ style={{ padding: 'var(--spacing-md)' }}
 
 ### 样式映射参考
 
-| 原硬编码值 | 语义化替代 |
-|-----------|-----------|
-| `text-gray-900/100` | `text-primary` |
-| `text-gray-700/300` | `text-secondary` |
-| `text-gray-600/400/500` | `text-tertiary` |
-| `bg-white/gray-50/100` | `bg-elevated/bg-canvas` |
-| `bg-gray-800/900/950` | `bg-secondary` (dark) |
-| `border-gray-200/700` | `border-subtle` |
-| `text-green-700/600` | `text-status-success` |
-| `text-red-700/600` | `text-status-error` |
-| `text-yellow-700/600` | `text-status-warning` |
-| `text-blue-700/600` | `text-brand-primary` |
-| `bg-blue-50/100` | `bg-brand-primary/10` |
-| `text-purple-700/600` | `text-accent-purple` |
-| `text-pink-700/600` | `text-accent-pink` |
-| `text-orange-700/600` | `text-accent-orange` |
+| 原硬编码值              | 语义化替代              |
+| ----------------------- | ----------------------- |
+| `text-gray-900/100`     | `text-primary`          |
+| `text-gray-700/300`     | `text-secondary`        |
+| `text-gray-600/400/500` | `text-tertiary`         |
+| `bg-white/gray-50/100`  | `bg-elevated/bg-canvas` |
+| `bg-gray-800/900/950`   | `bg-secondary` (dark)   |
+| `border-gray-200/700`   | `border-subtle`         |
+| `text-green-700/600`    | `text-status-success`   |
+| `text-red-700/600`      | `text-status-error`     |
+| `text-yellow-700/600`   | `text-status-warning`   |
+| `text-blue-700/600`     | `text-brand-primary`    |
+| `bg-blue-50/100`        | `bg-brand-primary/10`   |
+| `text-purple-700/600`   | `text-accent`           |
+| `text-pink-700/600`     | `text-accent`           |
+| `text-orange-700/600`   | `text-status-warning`   |
 
 ## HeroUI 主题配置
 
@@ -256,6 +252,7 @@ theme: {
 ### Q: 深色模式样式不生效？
 
 确保：
+
 1. Tailwind 配置中设置了 `darkMode: 'class'`
 2. 组件类名中使用了 `dark:` 前缀（如 `dark:bg-secondary`）
 3. 主题切换正确添加/移除了 `dark` class

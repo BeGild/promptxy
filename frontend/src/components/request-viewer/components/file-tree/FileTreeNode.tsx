@@ -17,9 +17,18 @@
  */
 
 import React, { memo } from 'react';
-import { ChevronRight, ChevronDown, File, FileText, Code, Hash, List, Folder, FolderOpen } from 'lucide-react';
-import type { ViewNode } from '../../types';
-import { NodeType } from '../../types';
+import {
+  ChevronRight,
+  ChevronDown,
+  File,
+  FileText,
+  Code,
+  Hash,
+  List,
+  Folder,
+  FolderOpen,
+} from 'lucide-react';
+import { NodeType, type ViewNode } from '../../types';
 import { isNumericArray } from '../../utils/arrayHelper';
 
 interface FileTreeNodeProps {
@@ -48,8 +57,7 @@ function isFolder(node: ViewNode): boolean {
   }
   // 对象类型、有子节点的数组都是文件夹
   const hasChildren = node.children && node.children.length > 0;
-  return node.type === NodeType.JSON ||
-         (node.type === NodeType.ARRAY && hasChildren === true);
+  return node.type === NodeType.JSON || (node.type === NodeType.ARRAY && hasChildren === true);
 }
 
 /**
@@ -102,7 +110,7 @@ function getNodeLabel(node: ViewNode): string {
 
   // 叶子节点：添加值预览
   const valueStr = String(node.value ?? '');
-  const preview = valueStr.length > 30 ? valueStr.slice(0, 30) + '...' : valueStr;
+  const preview = valueStr.length > 30 ? `${valueStr.slice(0, 30)}...` : valueStr;
 
   if (node.type === NodeType.PRIMITIVE && typeof node.value !== 'string') {
     // 非字符串简单值，不显示预览
@@ -116,92 +124,85 @@ function getNodeLabel(node: ViewNode): string {
  * 文件树节点组件
  * 支持递归渲染，根据节点类型显示不同图标
  */
-const FileTreeNode: React.FC<FileTreeNodeProps> = memo(({
-  node,
-  level,
-  selectedNodeId,
-  expandedNodes,
-  onNodeSelect,
-  onToggleExpand,
-}) => {
-  const isExpanded = expandedNodes.has(node.id);
-  const isSelected = selectedNodeId === node.id;
-  const folder = isFolder(node);
-  const IconComponent = getNodeIcon(node, isExpanded);
+const FileTreeNode: React.FC<FileTreeNodeProps> = memo(
+  ({ node, level, selectedNodeId, expandedNodes, onNodeSelect, onToggleExpand }) => {
+    const isExpanded = expandedNodes.has(node.id);
+    const isSelected = selectedNodeId === node.id;
+    const folder = isFolder(node);
+    const IconComponent = getNodeIcon(node, isExpanded);
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
 
-    if (folder) {
-      // 文件夹：切换展开/折叠
-      onToggleExpand(node.id);
-    } else {
-      // 叶子节点：选中
-      onNodeSelect(node.id, node);
-    }
-  };
+      if (folder) {
+        // 文件夹：切换展开/折叠
+        onToggleExpand(node.id);
+      } else {
+        // 叶子节点：选中
+        onNodeSelect(node.id, node);
+      }
+    };
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (folder) {
-      // 双击文件夹：选中并展开
-      onToggleExpand(node.id);
-      onNodeSelect(node.id, node);
-    }
-  };
+    const handleDoubleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (folder) {
+        // 双击文件夹：选中并展开
+        onToggleExpand(node.id);
+        onNodeSelect(node.id, node);
+      }
+    };
 
-  return (
-    <div>
-      {/* 节点行 */}
-      <div
-        className={`
+    return (
+      <div>
+        {/* 节点行 */}
+        <div
+          className={`
           flex items-center gap-1 py-1 px-2 rounded cursor-pointer select-none
           hover:bg-canvas dark:hover:bg-secondary
           transition-colors duration-150
           ${isSelected ? 'bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary dark:text-brand-primary/80' : 'text-primary'}
         `}
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        title={node.path}
-      >
-        {/* 展开/折叠指示器 */}
-        {folder ? (
-          <span className="flex-shrink-0 text-tertiary">
-            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </span>
-        ) : (
-          <span className="w-[14px] flex-shrink-0" />
-        )}
+          style={{ paddingLeft: `${level * 12 + 8}px` }}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          title={node.path}
+        >
+          {/* 展开/折叠指示器 */}
+          {folder ? (
+            <span className="flex-shrink-0 text-tertiary">
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </span>
+          ) : (
+            <span className="w-[14px] flex-shrink-0" />
+          )}
 
-        {/* 节点图标 */}
-        <IconComponent size={14} className="flex-shrink-0 text-secondary" />
+          {/* 节点图标 */}
+          <IconComponent size={14} className="flex-shrink-0 text-secondary" />
 
-        {/* 节点标签 */}
-        <span className="text-sm truncate flex-1">
-          {getNodeLabel(node)}
-        </span>
-      </div>
-
-      {/* 子节点 */}
-      {folder && isExpanded && node.children && node.children.length > 0 && (
-        <div>
-          {node.children.map(child => (
-            <FileTreeNode
-              key={child.id}
-              node={child}
-              level={level + 1}
-              selectedNodeId={selectedNodeId}
-              expandedNodes={expandedNodes}
-              onNodeSelect={onNodeSelect}
-              onToggleExpand={onToggleExpand}
-            />
-          ))}
+          {/* 节点标签 */}
+          <span className="text-sm truncate flex-1">{getNodeLabel(node)}</span>
         </div>
-      )}
-    </div>
-  );
-});
+
+        {/* 子节点 */}
+        {folder && isExpanded && node.children && node.children.length > 0 && (
+          <div>
+            {node.children.map(child => (
+              <FileTreeNode
+                key={child.id}
+                node={child}
+                level={level + 1}
+                selectedNodeId={selectedNodeId}
+                expandedNodes={expandedNodes}
+                onNodeSelect={onNodeSelect}
+                onToggleExpand={onToggleExpand}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  },
+);
 
 FileTreeNode.displayName = 'FileTreeNode';
 
