@@ -181,6 +181,7 @@ export default {
         light: {
           colors: {
             background: '#ffffff',
+            content: '#ffffff',
             foreground: '#1a1612',
             primary: {
               DEFAULT: '#d46a1a',
@@ -203,6 +204,7 @@ export default {
         dark: {
           colors: {
             background: '#1a1612',
+            content: '#2e2620',
             foreground: '#e8e4df',
             primary: {
               DEFAULT: '#ff9a52',

@@ -184,7 +184,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
       )}
 
       {/* 基本信息 */}
-      <Card className="rounded-lg overflow-hidden border border-subtle">
+      <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
         <CardBody className="space-y-sm">
           <h4 className="text-sm font-bold">基本信息</h4>
           <Input
@@ -211,7 +211,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
       <Divider />
 
       {/* 匹配条件 */}
-      <Card className="rounded-lg overflow-hidden border border-subtle">
+      <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
         <CardBody className="space-y-sm">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold">匹配条件</h4>
@@ -267,7 +267,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
       <Divider />
 
       {/* 操作序列 */}
-      <Card className="rounded-lg overflow-hidden border border-subtle">
+      <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
         <CardBody className="space-y-sm">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold">操作序列</h4>

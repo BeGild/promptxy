@@ -128,117 +128,116 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
   }, [isFullScreen]);
 
   const content = (
-    <Group
-      orientation="horizontal"
-      defaultLayout={defaultLayout}
-      onLayoutChange={handleLayoutChange}
-      className="h-full min-h-0 w-full"
-    >
-      {/* 左侧：文件树 */}
-      <Panel
-        id="tree"
-        minSize="15%"
-        maxSize="50%"
-        className={isFullScreen ? 'bg-brand-primary/10 dark:bg-brand-primary/20' : ''}
-      >
-        <FileTree
-          rootNode={viewTree}
-          onNodeSelect={handleNodeSelect}
-          initialSelectedId={selectedNode.id}
-          defaultExpandDepth={1}
-        />
-      </Panel>
-
-      {/* 分割条 */}
-      <Separator className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary">
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-subtle group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
-      </Separator>
-
-      {/* 右侧：内容面板 */}
-      <Panel id="content" minSize="50%">
-        <div className="h-full flex flex-col">
-          {/* 头部：面包屑 + 预览切换 + 全屏按钮 */}
-          <div
-            className={`flex items-center justify-between border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20 ${isFullScreen ? 'px-6 py-4' : 'px-4 py-2'}`}
+    <div className="h-full flex flex-col">
+      {/* HEAD：面包屑 + 预览切换 + 全屏按钮 - 横跨左右两侧 */}
+      <div className="flex items-center justify-between border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20 px-4 py-1.5 shrink-0">
+        <div className="flex-1 overflow-hidden">
+          <PathBreadcrumb path={selectedNode.path} />
+        </div>
+        <div className="flex items-center gap-2">
+          {/* 预览切换按钮 - 仅对 MARKDOWN 和 STRING_LONG 类型显示 */}
+          {[NodeType.MARKDOWN, NodeType.STRING_LONG].includes(selectedNode.type) && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsMarkdownPreview(false)}
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                  !isMarkdownPreview
+                    ? 'bg-brand-primary text-white'
+                    : 'text-secondary hover:bg-canvas dark:hover:bg-secondary'
+                }`}
+              >
+                纯文本
+              </button>
+              <button
+                onClick={() => setIsMarkdownPreview(true)}
+                className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                  isMarkdownPreview
+                    ? 'bg-brand-primary text-white'
+                    : 'text-secondary hover:bg-canvas dark:hover:bg-secondary'
+                }`}
+              >
+                预览
+              </button>
+            </div>
+          )}
+          {/* 复制按钮 */}
+          <button
+            onClick={handleCopy}
+            className="flex-shrink-0 p-1 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-1"
+            title={copied ? '已复制' : '复制'}
           >
-            <div className="flex-1 overflow-hidden">
-              <PathBreadcrumb path={selectedNode.path} />
-            </div>
-            <div className="flex items-center gap-2">
-              {/* 预览切换按钮 - 仅对 MARKDOWN 和 STRING_LONG 类型显示 */}
-              {[NodeType.MARKDOWN, NodeType.STRING_LONG].includes(selectedNode.type) && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setIsMarkdownPreview(false)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                      !isMarkdownPreview
-                        ? 'bg-brand-primary text-white'
-                        : 'text-secondary hover:bg-canvas dark:hover:bg-secondary'
-                    }`}
-                  >
-                    纯文本
-                  </button>
-                  <button
-                    onClick={() => setIsMarkdownPreview(true)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                      isMarkdownPreview
-                        ? 'bg-brand-primary text-white'
-                        : 'text-secondary hover:bg-canvas dark:hover:bg-secondary'
-                    }`}
-                  >
-                    预览
-                  </button>
-                </div>
-              )}
-              {/* 复制按钮 */}
-              <button
-                onClick={handleCopy}
-                className="flex-shrink-0 p-1.5 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-1.5"
-                title={copied ? '已复制' : '复制'}
-              >
-                {copied ? (
-                  <>
-                    <Check size={14} />
-                    <span className="text-xs">已复制</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={14} />
-                    <span className="text-xs">复制</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleToggleFullScreen}
-                className="flex-shrink-0 p-1.5 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-2"
-                title={isFullScreen ? '退出全屏 (ESC)' : '全屏'}
-              >
-                {isFullScreen ? (
-                  <>
-                    <Minimize2 size={16} />
-                    <span className="text-sm">退出全屏</span>
-                  </>
-                ) : (
-                  <Maximize2 size={16} />
-                )}
-              </button>
-            </div>
-          </div>
-          {/* 内容面板 */}
-          <div className="flex-1 overflow-hidden">
-            <FileContentPanel
-              selectedNode={selectedNode}
-              isFullScreen={isFullScreen}
-              isMarkdownPreview={isMarkdownPreview}
+            {copied ? (
+              <>
+                <Check size={14} />
+                <span className="text-xs">已复制</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                <span className="text-xs">复制</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleToggleFullScreen}
+            className="flex-shrink-0 p-1 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-1.5"
+            title={isFullScreen ? '退出全屏 (ESC)' : '全屏'}
+          >
+            {isFullScreen ? (
+              <>
+                <Minimize2 size={14} />
+                <span className="text-xs">退出全屏</span>
+              </>
+            ) : (
+              <Maximize2 size={14} />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* 下方左右分栏 */}
+      <Group
+        orientation="horizontal"
+        defaultLayout={defaultLayout}
+        onLayoutChange={handleLayoutChange}
+        className="flex-1 min-h-0 w-full"
+      >
+        {/* 左侧：文件树 */}
+        <Panel
+          id="tree"
+          minSize="15%"
+          maxSize="50%"
+          className="bg-canvas dark:bg-secondary"
+        >
+          <div className="h-full pt-4 overflow-auto">
+            <FileTree
+              rootNode={viewTree}
+              onNodeSelect={handleNodeSelect}
+              initialSelectedId={selectedNode.id}
+              defaultExpandDepth={1}
             />
           </div>
-        </div>
-      </Panel>
-    </Group>
+        </Panel>
+
+        {/* 分割条 */}
+        <Separator className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary">
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-subtle group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
+        </Separator>
+
+        {/* 右侧：内容面板 */}
+        <Panel id="content" minSize="50%">
+          <FileContentPanel
+            selectedNode={selectedNode}
+            isFullScreen={isFullScreen}
+            isMarkdownPreview={isMarkdownPreview}
+          />
+        </Panel>
+      </Group>
+    </div>
   );
 
   return isFullScreen ? (
-    <div className="fixed inset-0 z-50 bg-elevated">{content}</div>
+    <div className="fixed inset-0 z-50 bg-canvas dark:bg-secondary pt-14">{content}</div>
   ) : (
     <div className="h-full min-h-0 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
       {content}
