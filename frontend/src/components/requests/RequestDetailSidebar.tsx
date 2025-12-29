@@ -16,13 +16,14 @@
  * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Tabs, Tab, Spinner } from '@heroui/react';
 import { RequestRecord, PromptxyRule } from '@/types';
 import { useUIStore } from '@/store';
 import { RequestDetailInSidebar, ResponsePanel } from '@/components/requests';
 import { QuickRuleEditor } from '@/components/rules';
 import { toast } from 'sonner';
+import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
 interface RequestDetailSidebarProps {
   request: RequestRecord | null;
@@ -34,10 +35,17 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
   isLoading,
 }) => {
   const { sidebarMode, setSidebarMode, selectedRequestId } = useUIStore();
+  const [initialRegex, setInitialRegex] = useState<{
+    field: 'pathRegex' | 'modelRegex' | 'op';
+    value: string;
+    flags?: string;
+    selectedText?: string;
+  } | undefined>(undefined);
 
-  // 当请求改变时，重置为详情模式
+  // 当请求改变时，重置为详情模式和初始正则
   useEffect(() => {
     setSidebarMode('detail');
+    setInitialRegex(undefined);
   }, [selectedRequestId, setSidebarMode]);
 
   const handleSaveRule = useCallback((rule: PromptxyRule) => {
@@ -58,7 +66,29 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
     console.log('测试规则:', rule);
   }, []);
 
-  const handleSwitchToRuleMode = useCallback(() => {
+  /**
+   * 处理基于选中内容创建规则
+   * 选中的是请求内容（system prompt 或 messages），正则用于操作序列
+   */
+  const handleSelectionBasedCreate = useCallback(
+    (selectedText: string, mode: MatchMode, ignoreCase: boolean, multiline: boolean, result: RegexResult) => {
+      // 选中的内容用于操作序列，创建一个 replace 操作
+      setInitialRegex({
+        field: 'op',
+        value: result.pattern,
+        flags: result.flags,
+        selectedText,
+      });
+      setSidebarMode('rule');
+    },
+    [setSidebarMode]
+  );
+
+  /**
+   * 处理基于当前请求创建规则
+   */
+  const handleBasedOnRequestCreate = useCallback(() => {
+    setInitialRegex(undefined);
     setSidebarMode('rule');
   }, [setSidebarMode]);
 
@@ -104,7 +134,8 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
           <RequestDetailInSidebar
             request={request}
             isLoading={isLoading}
-            onSwitchToRuleMode={handleSwitchToRuleMode}
+            onSelectionBasedCreate={handleSelectionBasedCreate}
+            onBasedOnRequestCreate={handleBasedOnRequestCreate}
           />
         )}
         {sidebarMode === 'response' && (
@@ -119,6 +150,7 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
               onSave={handleSaveRule}
               onCancel={handleCancelRule}
               onTest={handleTestRule}
+              initialRegex={initialRegex}
             />
           </div>
         )}

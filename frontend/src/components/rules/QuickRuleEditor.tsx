@@ -32,12 +32,22 @@ import {
 import { PromptxyRule, PromptxyOp, PromptxyOpType, RequestRecord } from '@/types';
 import { validateRule, createDefaultRule, generateUUID } from '@/utils';
 import { PlayCircle, CheckCircle, XCircle } from 'lucide-react';
+import { RegexGenerator, RegexResult } from '@/utils/regexGenerator';
+import { MatchMode } from '@/utils/regexGenerator';
 
 interface QuickRuleEditorProps {
-  request: RequestRecord;  // 当前请求，用于预填充
+  request: RequestRecord; // 当前请求，用于预填充
   onSave: (rule: PromptxyRule) => void;
   onCancel: () => void;
-  onTest?: (rule: PromptxyRule) => void;  // 测试规则回调
+  onTest?: (rule: PromptxyRule) => void; // 测试规则回调
+  /** 预填充的正则表达式选项（来自选中内容） */
+  initialRegex?: {
+    /** 用于 when 条件（pathRegex 或 modelRegex）或操作序列 */
+    field: 'pathRegex' | 'modelRegex' | 'op';
+    value: string;
+    flags?: string;
+    selectedText?: string;
+  };
 }
 
 const CLIENT_OPTIONS = [
@@ -52,23 +62,100 @@ const FIELD_OPTIONS = [
 ];
 
 const OP_TYPE_OPTIONS = [
+  { value: 'set', label: 'Set (设置)' },
   { value: 'append', label: 'Append (追加)' },
   { value: 'prepend', label: 'Prepend (前置)' },
   { value: 'replace', label: 'Replace (替换)' },
-  { value: 'set', label: 'Set (设置)' },
+  { value: 'delete', label: 'Delete (删除)' },
+  { value: 'insert_before', label: 'Insert Before (前插)' },
+  { value: 'insert_after', label: 'Insert After (后插)' },
 ];
 
-// 从请求创建默认规则
-const createRuleFromRequest = (request: RequestRecord): PromptxyRule => {
+/**
+ * 从请求的 originalBody 中提取 model 字段
+ * @param request 请求记录
+ * @returns model 值或 undefined
+ */
+const extractModelFromRequest = (request: RequestRecord): string | undefined => {
+  try {
+    let body: any;
+    if (typeof request.originalBody === 'string') {
+      body = JSON.parse(request.originalBody);
+    } else if (request.originalBody) {
+      body = request.originalBody;
+    } else {
+      return undefined;
+    }
+    return body?.model;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * 从请求创建默认规则
+ * @param request 请求记录
+ * @param initialRegex 预填充的正则表达式选项（可选）
+ * @returns 规则对象
+ */
+const createRuleFromRequest = (
+  request: RequestRecord,
+  initialRegex?: { field: 'pathRegex' | 'modelRegex' | 'op'; value: string; flags?: string; selectedText?: string }
+): PromptxyRule => {
   const rule = createDefaultRule();
-  rule.name = `基于请求 ${request.id.slice(0, 8)} 的规则`;
-  rule.description = `从请求路径 ${request.path} 创建的规则`;
+
+  // 生成规则名称
+  if (initialRegex?.selectedText) {
+    const truncatedText =
+      initialRegex.selectedText.length > 20
+        ? initialRegex.selectedText.slice(0, 20) + '...'
+        : initialRegex.selectedText;
+    rule.name = `基于选中内容 "${truncatedText}" 的规则`;
+    rule.description = `匹配选中内容: ${initialRegex.selectedText}`;
+  } else {
+    rule.name = `基于请求 ${request.id.slice(0, 8)} 的规则`;
+    rule.description = `从请求路径 ${request.path} 创建的规则`;
+  }
+
   // 将 string 类型的 client 转换为 PromptxyClient 类型
-  rule.when.client = (request.client === 'claude' || request.client === 'codex' || request.client === 'gemini')
-    ? request.client
-    : 'claude'; // 默认值
+  rule.when.client =
+    request.client === 'claude' || request.client === 'codex' || request.client === 'gemini'
+      ? request.client
+      : 'claude'; // 默认值
+
   rule.when.method = request.method;
-  rule.when.pathRegex = `^${request.path}$`;
+
+  // 路径正则：使用 initialRegex 的值或默认值
+  if (initialRegex?.field === 'pathRegex') {
+    rule.when.pathRegex = initialRegex.value;
+  } else {
+    rule.when.pathRegex = `^${request.path}$`;
+  }
+
+  // Model 正则：从请求中提取 model 或使用 initialRegex 的值
+  if (initialRegex?.field === 'modelRegex') {
+    rule.when.modelRegex = initialRegex.value;
+  } else {
+    const model = extractModelFromRequest(request);
+    if (model) {
+      rule.when.modelRegex = `^${model}$`;
+    }
+  }
+
+  // 如果 initialRegex 是用于操作序列，创建一个默认操作
+  if (initialRegex?.field === 'op' && initialRegex.selectedText) {
+    // 创建一个 replace 操作作为默认
+    // 用户可以根据需要修改为 delete、insert_before、insert_after 等
+    rule.ops = [
+      {
+        type: 'replace',
+        regex: initialRegex.value,
+        flags: initialRegex.flags || '',
+        replacement: '', // 用户需要填写替换内容
+      },
+    ];
+  }
+
   return rule;
 };
 
@@ -77,8 +164,9 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
   onSave,
   onCancel,
   onTest,
+  initialRegex,
 }) => {
-  const [formData, setFormData] = useState<PromptxyRule>(createRuleFromRequest(request));
+  const [formData, setFormData] = useState<PromptxyRule>(createRuleFromRequest(request, initialRegex));
   const [validation, setValidation] = useState({
     valid: true,
     errors: [] as string[],
@@ -89,6 +177,11 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
     error?: string;
   } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+
+  // 当 initialRegex 变化时重新初始化表单
+  useEffect(() => {
+    setFormData(createRuleFromRequest(request, initialRegex));
+  }, [request.id, initialRegex]);
 
   useEffect(() => {
     const result = validateRule(formData);
@@ -328,26 +421,44 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
                       />
                     )}
 
-                    {/* replace 操作 */}
-                    {op.type === 'replace' && (
+                    {/* replace/delete 操作 */}
+                    {(op.type === 'replace' || op.type === 'delete') && (
                       <>
                         <Input
+                          label="匹配文本 (可选)"
+                          placeholder="要匹配的文本"
+                          value={op.match || ''}
+                          onChange={e => updateOp(index, { match: e.target.value || undefined })}
+                          size="sm"
+                          radius="lg"
+                        />
+                        <Input
                           label="正则表达式"
-                          placeholder="要匹配的模式"
+                          placeholder="pattern"
                           value={op.regex || ''}
                           onChange={e => updateOp(index, { regex: e.target.value || undefined })}
                           size="sm"
                           radius="lg"
                         />
                         <Input
-                          label="替换为"
-                          placeholder="替换后的文本"
-                          value={op.replacement || ''}
-                          onChange={e => updateOp(index, { replacement: e.target.value })}
+                          label="正则标志 (可选)"
+                          placeholder="gi"
+                          value={op.flags || ''}
+                          onChange={e => updateOp(index, { flags: e.target.value || undefined })}
                           size="sm"
                           radius="lg"
-                          isRequired
                         />
+                        {op.type === 'replace' && (
+                          <Input
+                            label="替换为"
+                            placeholder="替换后的文本"
+                            value={op.replacement || ''}
+                            onChange={e => updateOp(index, { replacement: e.target.value })}
+                            size="sm"
+                            radius="lg"
+                            isRequired
+                          />
+                        )}
                       </>
                     )}
 
@@ -356,12 +467,20 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
                       <>
                         <Input
                           label="正则表达式"
-                          placeholder="匹配位置"
+                          placeholder="pattern"
                           value={op.regex || ''}
-                          onChange={e => updateOp(index, { regex: e.target.value })}
+                          onChange={e => updateOp(index, { regex: e.target.value || undefined })}
                           size="sm"
                           radius="lg"
                           isRequired
+                        />
+                        <Input
+                          label="正则标志 (可选)"
+                          placeholder="gi"
+                          value={op.flags || ''}
+                          onChange={e => updateOp(index, { flags: e.target.value || undefined })}
+                          size="sm"
+                          radius="lg"
                         />
                         <Textarea
                           label="插入文本"

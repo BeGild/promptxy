@@ -29,6 +29,7 @@ import { ClaudeMessagesAdapter } from '../adapters/claude/ClaudeMessagesAdapter'
 import SummaryView from './views/SummaryView';
 import FileBrowserView from './views/FileBrowserView';
 import DiffView from './views/DiffView';
+import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
 interface RequestDetailPanelProps {
   /** 修改后的请求对象 */
@@ -41,6 +42,16 @@ interface RequestDetailPanelProps {
   responseStatus?: number;
   /** 响应耗时（毫秒） */
   responseDuration?: number;
+  /** 基于选中内容创建规则的回调 */
+  onSelectionBasedCreate?: (
+    selectedText: string,
+    mode: MatchMode,
+    ignoreCase: boolean,
+    multiline: boolean,
+    result: RegexResult
+  ) => void;
+  /** 基于当前请求创建规则的回调 */
+  onBasedOnRequestCreate?: () => void;
 }
 
 /**
@@ -53,6 +64,8 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
   adapter: providedAdapter,
   responseStatus,
   responseDuration,
+  onSelectionBasedCreate,
+  onBasedOnRequestCreate,
 }) => {
   const [viewMode, setViewMode] = useState<RenderMode>(RenderMode.FULL);
   const [adapter, setAdapter] = useState<RequestAdapter | undefined>(providedAdapter);
@@ -205,7 +218,13 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
             <SummaryView viewTree={viewTree} groups={groups} />
           </div>
         )}
-        {viewMode === RenderMode.FULL && <FileBrowserView viewTree={viewTree} />}
+        {viewMode === RenderMode.FULL && (
+          <FileBrowserView
+            viewTree={viewTree}
+            onSelectionBasedCreate={onSelectionBasedCreate}
+            onBasedOnRequestCreate={onBasedOnRequestCreate}
+          />
+        )}
         {viewMode === RenderMode.DIFF && (
           <div className="h-full overflow-auto p-4">
             {originalTree ? (

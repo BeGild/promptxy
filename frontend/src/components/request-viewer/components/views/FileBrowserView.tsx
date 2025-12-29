@@ -17,17 +17,29 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Maximize2, Minimize2, Copy, Check } from 'lucide-react';
+import { Maximize2, Minimize2, Copy, Check, Sparkles } from 'lucide-react';
 import { Panel, Group, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { NodeType, type ViewNode } from '../../types';
 import FileTree from '../file-tree/FileTree';
 import FileContentPanel from '../file-tree/FileContentPanel';
 import PathBreadcrumb from '../file-tree/PathBreadcrumb';
 import { getNodeCopyContent, copyToClipboard } from '../../utils/clipboard';
+import { MatchModeSelector } from '@/components/rules/MatchModeSelector';
+import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
 interface FileBrowserViewProps {
   /** 视图树根节点 */
   viewTree: ViewNode;
+  /** 基于选中内容创建规则的回调 */
+  onSelectionBasedCreate?: (
+    selectedText: string,
+    mode: MatchMode,
+    ignoreCase: boolean,
+    multiline: boolean,
+    result: RegexResult
+  ) => void;
+  /** 基于当前请求创建规则的回调 */
+  onBasedOnRequestCreate?: () => void;
 }
 
 const STORAGE_KEY_PANEL_SIZES = 'request-viewer:panel-sizes';
@@ -39,11 +51,14 @@ const RESIZABLE_PANELS_STORAGE_PREFIX = 'react-resizable-panels:';
  * 左侧：文件树，右侧：内容面板
  * 支持拖拽调整面板宽度
  */
-const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }) => {
-  const [selectedNode, setSelectedNode] = useState<ViewNode>(viewTree);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isMarkdownPreview, setIsMarkdownPreview] = useState(false);
-  const [copied, setCopied] = useState(false);
+const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(
+  ({ viewTree, onSelectionBasedCreate, onBasedOnRequestCreate }) => {
+    const [selectedNode, setSelectedNode] = useState<ViewNode>(viewTree);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+    const [isMarkdownPreview, setIsMarkdownPreview] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [selectedText, setSelectedText] = useState('');
+    const [showRuleCreator, setShowRuleCreator] = useState(false);
 
   // 自定义 storage：让 useDefaultLayout 仍然写入我们既有的 localStorage key（不引入新的前缀 key）
   const panelLayoutStorage = useMemo(() => {
@@ -114,6 +129,37 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
     }
   }, [selectedNode]);
 
+  /**
+   * 处理选中文本变化
+   */
+  const handleSelectionChange = useCallback((text: string) => {
+    setSelectedText(text);
+  }, []);
+
+  // 判断当前节点是否支持快速创建（仅纯文本模式下的 STRING_LONG 和 MARKDOWN）
+  const supportsQuickCreate = useMemo(() => {
+    return (
+      !isMarkdownPreview &&
+      [NodeType.STRING_LONG, NodeType.MARKDOWN].includes(selectedNode.type)
+    );
+  }, [selectedNode.type, isMarkdownPreview]);
+
+  /**
+   * 处理匹配模式选择确认
+   */
+  const handleMatchModeConfirm = useCallback(
+    (mode: MatchMode, ignoreCase: boolean, multiline: boolean, result: RegexResult) => {
+      if (mode === MatchMode.BASED_ON_REQUEST) {
+        onBasedOnRequestCreate?.();
+      } else {
+        onSelectionBasedCreate?.(selectedText, mode, ignoreCase, multiline, result);
+      }
+      // 确认后隐藏规则创建器
+      setShowRuleCreator(false);
+    },
+    [selectedText, onSelectionBasedCreate, onBasedOnRequestCreate]
+  );
+
   // 处理 ESC 键退出全屏
   useEffect(() => {
     if (isFullScreen) {
@@ -178,6 +224,21 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
               </>
             )}
           </button>
+          {/* 快速创建规则按钮 - 始终可用（支持基于选中内容或基于当前请求） */}
+          {supportsQuickCreate && (onSelectionBasedCreate || onBasedOnRequestCreate) && (
+            <button
+              onClick={() => setShowRuleCreator(!showRuleCreator)}
+              className={`flex-shrink-0 p-1 transition-colors flex items-center gap-1.5 rounded ${
+                showRuleCreator
+                  ? 'text-brand-primary bg-brand-primary/10 dark:bg-brand-primary/20'
+                  : 'text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary'
+              }`}
+              title="快速创建规则（可选基于选中内容）"
+            >
+              <Sparkles size={14} />
+              <span className="text-xs">{showRuleCreator ? '收起' : '创建规则'}</span>
+            </button>
+          )}
           <button
             onClick={handleToggleFullScreen}
             className="flex-shrink-0 p-1 text-secondary hover:text-primary dark:hover:text-primary hover:bg-canvas dark:hover:bg-secondary rounded transition-colors flex items-center gap-1.5"
@@ -194,6 +255,18 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
           </button>
         </div>
       </div>
+
+      {/* 规则创建器（展开时显示） */}
+      {showRuleCreator && supportsQuickCreate && (
+        <div className="border-b border-brand-primary/30 dark:border-brand-primary/20 bg-elevated dark:bg-secondary px-4 py-3 shrink-0">
+          <MatchModeSelector
+            onConfirm={handleMatchModeConfirm}
+            selectedText={selectedText}
+            supportBasedOnRequest={!!onBasedOnRequestCreate}
+            triggerLabel="匹配模式"
+          />
+        </div>
+      )}
 
       {/* 下方左右分栏 */}
       <Group
@@ -230,6 +303,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(({ viewTree }
             selectedNode={selectedNode}
             isFullScreen={isFullScreen}
             isMarkdownPreview={isMarkdownPreview}
+            onSelectionChange={handleSelectionChange}
           />
         </Panel>
       </Group>

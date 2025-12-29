@@ -17,22 +17,32 @@
  */
 
 import React from 'react';
-import { Card, CardBody, CardHeader, Chip, Spinner, Divider, Button, Tabs, Tab } from '@heroui/react';
-import { Plus } from 'lucide-react';
+import { Card, CardBody, CardHeader, Chip, Spinner, Divider, Tabs, Tab } from '@heroui/react';
 import { RequestRecord } from '@/types';
 import { formatTimeWithMs, formatDuration, getStatusColor, formatClient, formatSize } from '@/utils';
 import { RequestDetailPanel } from '@/components/request-viewer';
+import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
 interface RequestDetailInSidebarProps {
   request: RequestRecord | null;
   isLoading: boolean;
-  onSwitchToRuleMode?: () => void;
+  /** 基于选中内容创建规则的回调 */
+  onSelectionBasedCreate?: (
+    selectedText: string,
+    mode: MatchMode,
+    ignoreCase: boolean,
+    multiline: boolean,
+    result: RegexResult
+  ) => void;
+  /** 基于当前请求创建规则的回调 */
+  onBasedOnRequestCreate?: () => void;
 }
 
 export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
   request,
   isLoading,
-  onSwitchToRuleMode,
+  onSelectionBasedCreate,
+  onBasedOnRequestCreate,
 }) => {
   if (isLoading) {
     return (
@@ -155,22 +165,11 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
             originalRequest={request.originalBody}
             responseStatus={request.responseStatus}
             responseDuration={request.durationMs}
+            onSelectionBasedCreate={onSelectionBasedCreate}
+            onBasedOnRequestCreate={onBasedOnRequestCreate}
           />
         </div>
       </div>
-
-      {/* 快速创建规则按钮 */}
-      {onSwitchToRuleMode && (
-        <Button
-          color="primary"
-          variant="flat"
-          onPress={onSwitchToRuleMode}
-          className="w-full"
-          startContent={<Plus size={16} />}
-        >
-          快速创建规则
-        </Button>
-      )}
     </div>
   );
 };
