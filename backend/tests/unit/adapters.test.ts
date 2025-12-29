@@ -7,7 +7,8 @@ import { PromptxyRule } from '../../src/promptxy/types.js';
 describe('Adapters', () => {
   const baseRules: PromptxyRule[] = [
     {
-      id: 'test-rule',
+      uuid: 'test-rule',
+      name: 'test-rule',
       when: { client: 'claude', field: 'system' },
       ops: [{ type: 'append', text: ' [MODIFIED]' }],
     },
@@ -45,7 +46,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'array-rule',
+          uuid: 'array-rule',
+          name: 'array-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -75,7 +77,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'mixed-rule',
+          uuid: 'mixed-rule',
+          name: 'mixed-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -104,7 +107,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'array-text',
+          uuid: 'array-text',
+          name: 'array-text',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -176,12 +180,14 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'rule-1',
+          uuid: 'rule-1',
+          name: 'rule-1',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'prepend', text: 'A' }],
         },
         {
-          id: 'rule-2',
+          uuid: 'rule-2',
+          name: 'rule-2',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: 'B' }],
         },
@@ -206,12 +212,14 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'claude-rule',
+          uuid: 'claude-rule',
+          name: 'claude-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: '-claude' }],
         },
         {
-          id: 'codex-rule',
+          uuid: 'codex-rule',
+          name: 'codex-rule',
           when: { client: 'codex', field: 'system' },
           ops: [{ type: 'append', text: '-codex' }],
         },
@@ -239,7 +247,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'codex-rule',
+          uuid: 'codex-rule',
+          name: 'codex-rule',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: ' [CODEX]' }],
         },
@@ -265,7 +274,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -291,7 +301,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -317,7 +328,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'prefix-change',
+          uuid: 'prefix-change',
+          name: 'prefix-change',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'set', text: 'Completely different instructions' }],
         },
@@ -344,7 +356,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'slight-change',
+          uuid: 'slight-change',
+          name: 'slight-change',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: ' and more' }],
         },
@@ -371,12 +384,14 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'rule-1',
+          uuid: 'rule-1',
+          name: 'rule-1',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'prepend', text: 'A' }],
         },
         {
-          id: 'rule-2',
+          uuid: 'rule-2',
+          name: 'rule-2',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: 'B' }],
         },
@@ -404,7 +419,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'gemini-rule',
+          uuid: 'gemini-rule',
+          name: 'gemini-rule',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' [GEMINI]' }],
         },
@@ -430,7 +446,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'gemini-rule',
+          uuid: 'gemini-rule',
+          name: 'gemini-rule',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' [GEMINI]' }],
         },
@@ -457,7 +474,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'gemini-parts',
+          uuid: 'gemini-parts',
+          name: 'gemini-parts',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +parts' }],
         },
@@ -483,7 +501,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'model-test',
+          uuid: 'model-test',
+          name: 'model-test',
           when: { client: 'gemini', field: 'system', modelRegex: 'gemini-pro' },
           ops: [{ type: 'append', text: ' matched' }],
         },
@@ -507,7 +526,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'model-test',
+          uuid: 'model-test',
+          name: 'model-test',
           when: { client: 'gemini', field: 'system', modelRegex: 'gemini-pro' },
           ops: [{ type: 'append', text: ' matched' }],
         },
@@ -533,7 +553,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'model-test',
+          uuid: 'model-test',
+          name: 'model-test',
           when: { client: 'gemini', field: 'system', modelRegex: 'gemini-ultra' },
           ops: [{ type: 'append', text: ' matched' }],
         },
@@ -558,7 +579,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -590,7 +612,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'mixed-parts',
+          uuid: 'mixed-parts',
+          name: 'mixed-parts',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -618,7 +641,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'empty-parts',
+          uuid: 'empty-parts',
+          name: 'empty-parts',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -644,7 +668,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -669,12 +694,14 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'rule-1',
+          uuid: 'rule-1',
+          name: 'rule-1',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'prepend', text: 'A' }],
         },
         {
-          id: 'rule-2',
+          uuid: 'rule-2',
+          name: 'rule-2',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: 'B' }],
         },
@@ -700,7 +727,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'priority',
+          uuid: 'priority',
+          name: 'priority',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -727,7 +755,8 @@ describe('Adapters', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -742,7 +771,8 @@ describe('Adapters', () => {
 
       const codexRules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: ' +1' }],
         },
@@ -757,7 +787,8 @@ describe('Adapters', () => {
 
       const geminiRules: PromptxyRule[] = [
         {
-          id: 'test',
+          uuid: 'test',
+          name: 'test',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },

@@ -68,7 +68,7 @@ describe('End-to-End Flow Integration Tests', () => {
         },
       ],
       rules: [
-        createTestRule('e2e-rule-1', 'claude', 'instructions', [
+        createTestRule('e2e-rule-1', 'claude', 'system', [
           { type: 'append', text: ' [E2E]' },
         ]),
       ],
@@ -131,66 +131,69 @@ describe('End-to-End Flow Integration Tests', () => {
         sseEvents.push({ event, data });
       });
 
-      // 等待 SSE 连接建立
-      await new Promise(resolve => setTimeout(resolve, 100));
+      try {
+        // 等待 SSE 连接建立
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-      // 2. CLI 发送请求到 Gateway
-      const cliRequest = {
-        instructions: 'Hello from CLI',
-        model: 'claude-3-5-sonnet-20241022',
-      };
+        // 2. CLI 发送请求到 Gateway
+        const cliRequest = {
+          system: 'Hello from CLI',
+        };
 
-      const gatewayResponse = await gatewayClient.post('/v1/messages', cliRequest, {
-        'x-api-key': 'cli-test-key',
-      });
+        const gatewayResponse = await gatewayClient.post('/claude/v1/messages', cliRequest, {
+          'x-api-key': 'cli-test-key',
+        });
 
-      // 3. 验证 Gateway 响应
-      expect(gatewayResponse.status).toBe(200);
-      const gatewayBody = JSON.parse(gatewayResponse.body);
-      expect(gatewayBody.id).toBe('mock-response');
+        // 3. 验证 Gateway 响应
+        expect(gatewayResponse.status).toBe(200);
+        const gatewayBody = JSON.parse(gatewayResponse.body);
+        expect(gatewayBody.id).toBe('mock-response');
 
-      // 4. 等待 SSE 事件
-      await waitForCondition(() => {
+        // 4. 等待 SSE 事件
+        await waitForCondition(() => {
+          const requestEvents = sseEvents.filter(e => e.event === 'request');
+          return requestEvents.length > 0;
+        }, 2000);
+
+        // 5. 验证 SSE 事件
         const requestEvents = sseEvents.filter(e => e.event === 'request');
-        return requestEvents.length > 0;
-      }, 2000);
+        expect(requestEvents.length).toBeGreaterThan(0);
 
-      // 5. 验证 SSE 事件
-      const requestEvents = sseEvents.filter(e => e.event === 'request');
-      expect(requestEvents.length).toBeGreaterThan(0);
+        const sseEvent = requestEvents[0].data;
+        expect(sseEvent.client).toBe('claude');
+        expect(sseEvent.path).toBe('/v1/messages');
+        expect(sseEvent.method).toBe('POST');
+        expect(sseEvent.matchedRules).toContain('e2e-rule-1');
 
-      const sseEvent = requestEvents[0].data;
-      expect(sseEvent.client).toBe('claude');
-      expect(sseEvent.path).toBe('/v1/messages');
-      expect(sseEvent.method).toBe('POST');
-      expect(sseEvent.matchedRules).toContain('e2e-rule-1');
+        // 6. 验证数据库记录
+        await waitForCondition(async () => {
+          const list = await getRequestList({ limit: 10 });
+          return list.total > 0;
+        }, 2000);
 
-      // 6. 验证数据库记录
-      await waitForCondition(async () => {
-        const list = await getRequestList({ limit: 10 });
-        return list.total > 0;
-      }, 2000);
+        const dbList = await getRequestList({ limit: 10 });
+        expect(dbList.total).toBe(1);
 
-      const dbList = await getRequestList({ limit: 10 });
-      expect(dbList.total).toBe(1);
+        const dbRecord = await getRequestDetail(dbList.items[0].id);
+        expect(dbRecord).toBeDefined();
+        expect(dbRecord!.client).toBe('claude');
+        const originalBody = JSON.parse(dbRecord!.originalBody);
+        const modifiedBody = JSON.parse(dbRecord!.modifiedBody);
+        expect(originalBody).toEqual({ system: 'Hello from CLI' });
+        expect(modifiedBody.system).toContain('[E2E]');
+        expect(dbRecord!.responseStatus).toBe(200);
 
-      const dbRecord = await getRequestDetail(dbList.items[0].id);
-      expect(dbRecord).toBeDefined();
-      expect(dbRecord!.client).toBe('claude');
-      expect(dbRecord!.originalBody).toEqual({ instructions: 'Hello from CLI' });
-      expect(dbRecord!.modifiedBody.instructions).toContain('[E2E]');
-      expect(dbRecord!.responseStatus).toBe(200);
+        // 7. 通过 API 验证请求详情
+        const apiResponse = await apiClient.get(`/_promptxy/requests/${dbList.items[0].id}`);
+        expect(apiResponse.status).toBe(200);
 
-      // 7. 通过 API 验证请求详情
-      const apiResponse = await apiClient.get(`/_promptxy/requests/${dbList.items[0].id}`);
-      expect(apiResponse.status).toBe(200);
-
-      const apiBody = JSON.parse(apiResponse.body);
-      expect(apiBody.id).toBe(dbList.items[0].id);
-      expect(apiBody.originalBody.instructions).toBe('Hello from CLI');
-      expect(apiBody.modifiedBody.instructions).toContain('[E2E]');
-
-      sseConnection.close();
+        const apiBody = JSON.parse(apiResponse.body);
+        expect(apiBody.id).toBe(dbList.items[0].id);
+        expect(apiBody.originalBody.system).toBe('Hello from CLI');
+        expect(apiBody.modifiedBody.system).toContain('[E2E]');
+      } finally {
+        sseConnection.close();
+      }
     });
 
     it('应该处理完整流程中的错误情况', async () => {
@@ -208,7 +211,7 @@ describe('End-to-End Flow Integration Tests', () => {
 
       try {
         // 3. 发送请求（应该失败）
-        const response = await gatewayClient.post('/v1/messages', { instructions: 'Will fail' });
+        const response = await gatewayClient.post('/claude/v1/messages', { system: 'Will fail' });
 
         expect(response.status).toBe(500);
 
@@ -252,9 +255,8 @@ describe('End-to-End Flow Integration Tests', () => {
 
       for (let i = 0; i < concurrentCount; i++) {
         promises.push(
-          gatewayClient.post('/v1/messages', {
-            instructions: `Concurrent request ${i}`,
-            model: 'claude-3-5-sonnet-20241022',
+          gatewayClient.post('/claude/v1/messages', {
+            system: `Concurrent request ${i}`,
           }),
         );
       }
@@ -292,8 +294,10 @@ describe('End-to-End Flow Integration Tests', () => {
 
         // 验证详情
         const detail = await getRequestDetail(item.id);
-        expect(detail!.originalBody.instructions).toContain('Concurrent request');
-        expect(detail!.modifiedBody.instructions).toContain('[E2E]');
+        const originalBody = JSON.parse(detail!.originalBody);
+        const modifiedBody = JSON.parse(detail!.modifiedBody);
+        expect(originalBody.system).toContain('Concurrent request');
+        expect(modifiedBody.system).toContain('[E2E]');
       }
 
       sseConnection.close();
@@ -310,37 +314,28 @@ describe('End-to-End Flow Integration Tests', () => {
 
       // 2. 准备混合请求
       const originalUpstream = config.suppliers[0].baseUrl;
-      const promises = [];
+      try {
+        // 先发成功请求（确保在修改上游前完成）
+        const successPromises = [];
+        for (let i = 0; i < 3; i++) {
+          successPromises.push(gatewayClient.post('/claude/v1/messages', { system: `Success ${i}` }));
+        }
+        const successResults = await Promise.all(successPromises);
+        successResults.forEach(r => expect(r.status).toBe(200));
 
-      // 前 3 个应该成功
-      for (let i = 0; i < 3; i++) {
-        promises.push(gatewayClient.post('/v1/messages', { instructions: `Success ${i}` }));
+        // 临时修改上游为失败
+        config.suppliers[0].baseUrl = 'http://127.0.0.1:1';
+
+        const failPromises = [];
+        for (let i = 0; i < 2; i++) {
+          failPromises.push(gatewayClient.post('/claude/v1/messages', { system: `Fail ${i}` }));
+        }
+        const failResults = await Promise.all(failPromises);
+        failResults.forEach(r => expect(r.status).toBe(500));
+      } finally {
+        // 恢复上游并等待所有记录
+        config.suppliers[0].baseUrl = originalUpstream;
       }
-
-      // 临时修改上游为失败
-      config.suppliers[0].baseUrl = 'http://127.0.0.1:1';
-
-      // 后 2 个应该失败
-      for (let i = 0; i < 2; i++) {
-        promises.push(gatewayClient.post('/v1/messages', { instructions: `Fail ${i}` }));
-      }
-
-      // 3. 执行所有请求
-      const results = await Promise.allSettled(promises);
-
-      // 4. 验证结果
-      const successCount = results.filter(
-        r => r.status === 'fulfilled' && r.value.status === 200,
-      ).length;
-      const failCount = results.filter(
-        r => r.status === 'fulfilled' && r.value.status === 500,
-      ).length;
-
-      expect(successCount).toBe(3);
-      expect(failCount).toBe(2);
-
-      // 5. 恢复上游并等待所有记录
-      config.suppliers[0].baseUrl = originalUpstream;
 
       await waitForCondition(async () => {
         const list = await getRequestList({ limit: 100 });
@@ -364,7 +359,7 @@ describe('End-to-End Flow Integration Tests', () => {
   describe('Rule Update Real-time Effect', () => {
     it('应该在规则更新后立即生效', async () => {
       // 1. 发送初始请求，使用原始规则
-      const response1 = await gatewayClient.post('/v1/messages', { instructions: 'Initial' });
+      const response1 = await gatewayClient.post('/claude/v1/messages', { system: 'Initial' });
       expect(response1.status).toBe(200);
 
       // 验证初始规则已应用
@@ -379,15 +374,15 @@ describe('End-to-End Flow Integration Tests', () => {
 
       try {
         // 重新发送请求以捕获修改后的 body
-        await gatewayClient.post('/v1/messages', { instructions: 'Test' });
-        expect(capturedBody.instructions).toContain('[E2E]');
+        await gatewayClient.post('/claude/v1/messages', { system: 'Test' });
+        expect(capturedBody.system).toContain('[E2E]');
 
         // 2. 通过 API 更新规则
         const newRules = [
-          createTestRule('e2e-rule-1', 'claude', 'instructions', [
+          createTestRule('e2e-rule-1', 'claude', 'system', [
             { type: 'append', text: ' [UPDATED]' },
           ]),
-          createTestRule('e2e-rule-2', 'claude', 'instructions', [
+          createTestRule('e2e-rule-2', 'claude', 'system', [
             { type: 'prepend', text: 'START: ' },
           ]),
         ];
@@ -397,11 +392,11 @@ describe('End-to-End Flow Integration Tests', () => {
 
         // 3. 立即发送新请求，验证新规则生效
         capturedBody = null;
-        await gatewayClient.post('/v1/messages', { instructions: 'After update' });
+        await gatewayClient.post('/claude/v1/messages', { system: 'After update' });
 
-        expect(capturedBody.instructions).toContain('[UPDATED]');
-        expect(capturedBody.instructions).toContain('START: ');
-        expect(capturedBody.instructions).not.toContain('[E2E]'); // 旧规则不应生效
+        expect(capturedBody.system).toContain('[UPDATED]');
+        expect(capturedBody.system).toContain('START: ');
+        expect(capturedBody.system).not.toContain('[E2E]'); // 旧规则不应生效
       } finally {
         global.fetch = originalFetch;
       }
@@ -426,7 +421,7 @@ describe('End-to-End Flow Integration Tests', () => {
     it('应该处理规则更新过程中的并发请求', async () => {
       // 1. 开始更新规则
       const newRules = [
-        createTestRule('concurrent-rule', 'claude', 'instructions', [
+        createTestRule('concurrent-rule', 'claude', 'system', [
           { type: 'append', text: ' [CONCURRENT]' },
         ]),
       ];
@@ -438,7 +433,7 @@ describe('End-to-End Flow Integration Tests', () => {
       const requestPromises = [];
       for (let i = 0; i < 5; i++) {
         requestPromises.push(
-          gatewayClient.post('/v1/messages', { instructions: `Concurrent ${i}` }),
+          gatewayClient.post('/claude/v1/messages', { system: `Concurrent ${i}` }),
         );
       }
 
@@ -467,7 +462,7 @@ describe('End-to-End Flow Integration Tests', () => {
   describe('Data Persistence and Cleanup', () => {
     it('应该在服务器重启后保持数据完整性', async () => {
       // 1. 发送请求并验证记录
-      await gatewayClient.post('/v1/messages', { instructions: 'Persistence test' });
+      await gatewayClient.post('/claude/v1/messages', { system: 'Persistence test' });
 
       await waitForCondition(async () => {
         const list = await getRequestList({ limit: 10 });
@@ -492,7 +487,8 @@ describe('End-to-End Flow Integration Tests', () => {
 
       // 5. 验证详情完整性
       const detail = await getRequestDetail(recordId);
-      expect(detail!.originalBody.instructions).toBe('Persistence test');
+      const originalBody = JSON.parse(detail!.originalBody);
+      expect(originalBody.system).toBe('Persistence test');
     });
 
     it('应该正确执行数据清理流程', async () => {
@@ -575,13 +571,13 @@ describe('End-to-End Flow Integration Tests', () => {
     it('应该正确处理不同客户端的完整流程', async () => {
       // 1. 为不同客户端添加规则
       const multiRules = [
-        createTestRule('claude-rule', 'claude', 'instructions', [
+        createTestRule('claude-rule', 'claude', 'system', [
           { type: 'append', text: ' [CLAUDE]' },
         ]),
         createTestRule('codex-rule', 'codex', 'instructions', [
           { type: 'append', text: ' [CODEX]' },
         ]),
-        createTestRule('gemini-rule', 'gemini', 'instructions', [
+        createTestRule('gemini-rule', 'gemini', 'system', [
           { type: 'append', text: ' [GEMINI]' },
         ]),
       ];
@@ -591,16 +587,16 @@ describe('End-to-End Flow Integration Tests', () => {
 
       // 2. 发送不同客户端的请求
       const requests = [
-        { client: 'claude', path: '/v1/messages', body: { instructions: 'Claude test' } },
+        { client: 'claude', path: '/claude/v1/messages', body: { system: 'Claude test' } },
         {
           client: 'codex',
-          path: '/openai/v1/chat/completions',
-          body: { messages: [{ role: 'user', content: 'Codex test' }] },
+          path: '/openai/v1/responses',
+          body: { model: 'gpt-4', instructions: 'Codex test', input: [] },
         },
         {
           client: 'gemini',
           path: '/gemini/v1beta/models/gemini-1.5-flash:generateContent',
-          body: { contents: [{ parts: [{ text: 'Gemini test' }] }] },
+          body: { system_instruction: 'Gemini test', contents: [{ parts: [{ text: 'hi' }] }] },
         },
       ];
 

@@ -94,7 +94,7 @@ describe('Config Module', () => {
       expect(config.suppliers[1].localPrefix).toBe('/openai');
       expect(config.suppliers[2].localPrefix).toBe('/gemini');
       expect(config.rules).toEqual([]);
-      expect(config.storage.maxHistory).toBe(100);
+      expect(config.storage.maxHistory).toBe(1000);
       expect(config.storage.autoCleanup).toBe(true);
       expect(config.storage.cleanupInterval).toBe(1);
       expect(config.debug).toBe(false);
@@ -109,7 +109,8 @@ describe('Config Module', () => {
         debug: true,
         rules: [
           {
-            id: 'test-rule',
+            uuid: 'test-rule',
+            name: 'test-rule',
             when: { client: 'claude', field: 'system' },
             ops: [{ type: 'set', text: 'test' }],
           },
@@ -129,7 +130,8 @@ describe('Config Module', () => {
       expect(config.api.port).toBe(8081);
       expect(config.debug).toBe(true);
       expect(config.rules).toHaveLength(1);
-      expect(config.rules[0].id).toBe('test-rule');
+      expect(config.rules[0].uuid).toBe('test-rule');
+      expect(config.rules[0].name).toBe('test-rule');
     });
 
     it('should load config from current working directory', async () => {
@@ -395,7 +397,8 @@ describe('Config Module', () => {
         suppliers: DEFAULT_SUPPLIERS,
         rules: [
           {
-            id: 'save-test',
+            uuid: 'save-test',
+            name: 'save-test',
             when: { client: 'claude', field: 'system' },
             ops: [{ type: 'set', text: 'saved' }],
           },
@@ -416,7 +419,7 @@ describe('Config Module', () => {
       const parsed = JSON.parse(savedContent);
 
       expect(parsed.listen.port).toBe(7070);
-      expect(parsed.rules[0].id).toBe('save-test');
+      expect(parsed.rules[0].uuid).toBe('save-test');
     });
 
     it('should save config to custom location via env var', async () => {
@@ -505,7 +508,8 @@ describe('Config Module', () => {
       const complexConfig: Partial<PromptxyConfig> = {
         rules: [
           {
-            id: 'complex-1',
+            uuid: 'complex-1',
+            name: 'complex-1',
             when: {
               client: 'claude',
               field: 'system',

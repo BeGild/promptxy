@@ -29,11 +29,12 @@ import {
   Divider,
   Spinner,
 } from '@heroui/react';
-import { PromptxyRule, PromptxyOp, PromptxyOpType, RequestRecord } from '@/types';
+import { PromptxyRule, PromptxyOp, PromptxyOpType, RequestRecord, PromptxyClient } from '@/types';
 import { validateRule, createDefaultRule, generateUUID } from '@/utils';
 import { PlayCircle, CheckCircle, XCircle } from 'lucide-react';
 import { RegexGenerator, RegexResult } from '@/utils/regexGenerator';
 import { MatchMode } from '@/utils/regexGenerator';
+import { previewRule } from '@/api/rules';
 
 interface QuickRuleEditorProps {
   request: RequestRecord; // 当前请求，用于预填充
@@ -178,9 +179,16 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
     valid: true,
     errors: [] as string[],
   });
+  // 测试结果类型定义
   const [testResult, setTestResult] = useState<{
     matched: boolean;
-    result?: any;
+    original?: any;
+    modified?: any;
+    previewData?: {
+      originalText: string;
+      modifiedText: string;
+      field: string;
+    };
     error?: string;
   } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
@@ -240,23 +248,95 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
   }, [validation.valid, formData, onSave]);
 
   const handleTest = useCallback(async () => {
-    if (!onTest || !validation.valid) return;
+    if (!validation.valid) return;
 
     setIsTesting(true);
     setTestResult(null);
 
     try {
-      // 简单的匹配测试
-      const isMatch =
-        formData.when.client === request.client &&
-        (!formData.when.method || formData.when.method === request.method) &&
-        (!formData.when.pathRegex || new RegExp(formData.when.pathRegex).test(request.path));
+      // 验证 client 是否为有效的 PromptxyClient
+      const validClients: PromptxyClient[] = ['claude', 'codex', 'gemini'];
+      const client: PromptxyClient = validClients.includes(request.client as PromptxyClient)
+        ? (request.client as PromptxyClient)
+        : 'claude';
+
+      // 解析请求 body
+      let body: any;
+      if (typeof request.originalBody === 'string') {
+        body = JSON.parse(request.originalBody);
+      } else {
+        body = request.originalBody;
+      }
+
+      // 提取 model
+      const model = body?.model;
+
+      // 辅助函数：从 system 或 instructions 字段提取文本内容
+      // 支持：
+      // - string
+      // - string[]
+      // - Claude system blocks: [{type: 'text', text: '...'}] / [{type:'text', text: string[]}]
+      const extractText = (value: any): string => {
+        if (typeof value === 'string') {
+          return value;
+        }
+        if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+          return value.join('');
+        }
+        if (Array.isArray(value)) {
+          // 处理 Claude API 格式: [{type: 'text', text: '...'}, ...]
+          return value
+            .filter(item => item?.type === 'text' && item?.text !== undefined && item?.text !== null)
+            .map(item => {
+              if (typeof item?.text === 'string') return item.text;
+              if (Array.isArray(item?.text) && item.text.every((t: any) => typeof t === 'string')) {
+                return item.text.join('');
+              }
+              return '';
+            })
+            .join('');
+        }
+        return '';
+      };
+
+      // 获取原始文本 - 从原始请求 body 中提取
+      const field = formData.when.field;
+      const originalText = extractText(field === 'system' ? body.system : body.instructions);
+
+      // 调用 API 测试规则
+      const result = await previewRule(
+        request.originalBody,
+        client,
+        field,
+        model,
+        request.path,
+        request.method,
+        formData, // 传入正在测试的规则
+      );
+
+      // 获取修改后的文本 - 使用同样的 extractText 函数
+      const modifiedText = extractText(
+        field === 'system' ? result.modified?.system : result.modified?.instructions
+      );
+
+      // 检查是否有匹配（matches 数组不为空）
+      const matched = result.matches && result.matches.length > 0;
 
       setTestResult({
-        matched: isMatch,
-        result: isMatch ? { message: '规则匹配成功' } : undefined,
-        error: isMatch ? undefined : '规则不匹配当前请求',
+        matched,
+        original: result.original,
+        modified: result.modified,
+        previewData: {
+          originalText,
+          modifiedText,
+          field,
+        },
       });
+
+      // 如果有 onTest 回调，也调用它（保持兼容）
+      if (onTest) {
+        onTest(formData);
+      }
     } catch (error) {
       setTestResult({
         matched: false,
@@ -265,7 +345,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
     } finally {
       setIsTesting(false);
     }
-  }, [formData, request, onTest, validation.valid]);
+  }, [validation.valid, formData, request, onTest]);
 
   return (
     <div className="space-y-3">
@@ -522,7 +602,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
           className={`rounded-lg overflow-hidden border ${testResult.matched ? 'border-status-success/30 bg-status-success/10' : 'border-status-error/30 bg-status-error/10'}`}
         >
           <CardBody className="p-p3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-2">
               {testResult.matched ? (
                 <CheckCircle size={16} className="text-status-success" />
               ) : (
@@ -531,14 +611,53 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
               <span
                 className={`text-sm font-medium ${testResult.matched ? 'text-status-success' : 'text-status-error'}`}
               >
-                {testResult.matched ? '测试成功 - 规则匹配' : '测试失败'}
+                {testResult.matched ? '规则匹配成功' : '规则未匹配'}
               </span>
             </div>
             {testResult.error && (
               <div className="text-xs text-status-error mt-1">{testResult.error}</div>
             )}
-            {testResult.result && (
-              <div className="text-xs text-status-success mt-1">{testResult.result.message}</div>
+            {testResult.previewData && (
+              <div className="mt-2 space-y-2">
+                {/* 字段信息 */}
+                <div className="text-xs text-secondary">
+                  修改字段: <span className="font-mono">{testResult.previewData.field}</span>
+                </div>
+
+                {/* 大小变化 */}
+                <div className="text-xs text-secondary">
+                  原始: {testResult.previewData.originalText.length} 字符 →
+                  修改后: {testResult.previewData.modifiedText.length} 字符
+                  {testResult.previewData.modifiedText.length > testResult.previewData.originalText.length ? (
+                    <span className="text-status-success"> (+{testResult.previewData.modifiedText.length - testResult.previewData.originalText.length})</span>
+                  ) : testResult.previewData.modifiedText.length < testResult.previewData.originalText.length ? (
+                    <span className="text-status-error"> ({testResult.previewData.modifiedText.length - testResult.previewData.originalText.length})</span>
+                  ) : (
+                    <span> (无变化)</span>
+                  )}
+                </div>
+
+                {/* 内容差异预览 - 只显示前 100 字符 */}
+                {(testResult.previewData.originalText !== testResult.previewData.modifiedText) && (
+                  <div className="mt-2 p-2 bg-canvas dark:bg-secondary/30 rounded border border-subtle">
+                    <div className="text-xs font-medium mb-1">内容变化:</div>
+                    <div className="text-xs font-mono space-y-1 max-h-32 overflow-auto">
+                      {testResult.previewData.originalText.length > 0 && (
+                        <div className="text-status-error/70">
+                          - {testResult.previewData.originalText.slice(0, 100)}
+                          {testResult.previewData.originalText.length > 100 ? '...' : ''}
+                        </div>
+                      )}
+                      {testResult.previewData.modifiedText.length > 0 && (
+                        <div className="text-status-success/70">
+                          + {testResult.previewData.modifiedText.slice(0, 100)}
+                          {testResult.previewData.modifiedText.length > 100 ? '...' : ''}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </CardBody>
         </Card>

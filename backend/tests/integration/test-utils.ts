@@ -19,7 +19,12 @@ import * as os from 'node:os';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 // 测试配置目录
-const TEST_CONFIG_DIR = path.join(os.homedir(), '.promptxy-test');
+// 注意：vitest 会并发执行多个 test file；如果所有套件共用同一个目录会导致 rm/写库 互相打架，产生 SQLITE_IOERR/READONLY
+const TEST_RUN_ID =
+  process.env.VITEST_WORKER_ID !== undefined
+    ? `worker-${process.env.VITEST_WORKER_ID}`
+    : `pid-${process.pid}`;
+const TEST_CONFIG_DIR = path.join(os.tmpdir(), `promptxy-test-${TEST_RUN_ID}`);
 const TEST_DB_PATH = path.join(TEST_CONFIG_DIR, 'promptxy-test.db');
 const TEST_CONFIG_PATH = path.join(TEST_CONFIG_DIR, 'config-test.json');
 
@@ -486,7 +491,8 @@ export function createTestRule(
   ops: PromptxyRule['ops'],
 ): PromptxyRule {
   return {
-    id,
+    uuid: id,
+    name: id,
     description: `Test rule ${id}`,
     when: {
       client,

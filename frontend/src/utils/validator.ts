@@ -18,7 +18,7 @@ export function validateRule(rule: PromptxyRule): RuleValidationResult {
   if (!rule.uuid || typeof rule.uuid !== 'string') {
     errors.push('规则UUID是必需的');
   }
-  if (!rule.name || typeof rule.name !== 'string') {
+  if (!rule.name || typeof rule.name !== 'string' || !rule.name.trim()) {
     errors.push('规则名称是必需的');
   }
 
@@ -79,6 +79,8 @@ function validateOp(op: PromptxyOp): string[] {
     case 'prepend':
       if (!('text' in op) || typeof op.text !== 'string') {
         errors.push('需要 text 字段');
+      } else if (!op.text.trim()) {
+        errors.push('text 字段不能为空');
       }
       break;
 
@@ -88,6 +90,8 @@ function validateOp(op: PromptxyOp): string[] {
       }
       if (!('replacement' in op)) {
         errors.push('需要 replacement');
+      } else if (typeof (op as any).replacement !== 'string' || !(op as any).replacement.trim()) {
+        errors.push('replacement 不能为空');
       }
       break;
 
@@ -101,9 +105,13 @@ function validateOp(op: PromptxyOp): string[] {
     case 'insert_after':
       if (!('regex' in op) || typeof (op as any).regex !== 'string') {
         errors.push('需要 regex');
+      } else if (!(op as any).regex.trim()) {
+        errors.push('regex 不能为空');
       }
       if (!('text' in op) || typeof (op as any).text !== 'string') {
         errors.push('需要 text');
+      } else if (!(op as any).text.trim()) {
+        errors.push('text 不能为空');
       }
       break;
 

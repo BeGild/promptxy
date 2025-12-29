@@ -58,6 +58,7 @@ export async function previewRule(
   model?: string,
   path?: string,
   method?: string,
+  testRule?: PromptxyRule, // 可选：传入要测试的单个规则
 ) {
   const response = await apiClient.post('/_promptxy/preview', {
     body,
@@ -66,6 +67,7 @@ export async function previewRule(
     model,
     path,
     method,
+    testRule, // 传入要测试的规则（如果提供）
   });
   return response.data;
 }

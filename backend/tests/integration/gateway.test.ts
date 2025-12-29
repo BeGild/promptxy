@@ -64,7 +64,7 @@ describe('Gateway Integration Tests', () => {
         },
       ],
       rules: [
-        createTestRule('gateway-rule-1', 'claude', 'instructions', [
+        createTestRule('gateway-rule-1', 'claude', 'system', [
           { type: 'append', text: ' [GATEWAY-MODIFIED]' },
         ]),
         createTestRule('gateway-rule-2', 'codex', 'instructions', [
@@ -124,11 +124,11 @@ describe('Gateway Integration Tests', () => {
   describe('Request Forwarding', () => {
     it('应该转发 Claude 请求到上游', async () => {
       const requestBody = {
-        instructions: 'Hello world',
+        system: 'Hello world',
         model: 'claude-3-5-sonnet-20241022',
       };
 
-      const response = await gatewayClient.post('/v1/messages', requestBody, {
+      const response = await gatewayClient.post('/claude/v1/messages', requestBody, {
         'x-api-key': 'test-key',
         'anthropic-version': '2023-06-01',
       });
@@ -175,8 +175,8 @@ describe('Gateway Integration Tests', () => {
     });
 
     it('应该保留上游响应头', async () => {
-      const response = await gatewayClient.post('/v1/messages', {
-        instructions: 'test',
+      const response = await gatewayClient.post('/claude/v1/messages', {
+        system: 'test',
       });
 
       expect(response.status).toBe(200);
@@ -188,7 +188,7 @@ describe('Gateway Integration Tests', () => {
   describe('Rule Application', () => {
     it('应该应用规则修改请求体', async () => {
       const originalBody = {
-        instructions: 'Hello world',
+        system: 'Hello world',
       };
 
       // 捕获实际发送到上游的请求体
@@ -202,18 +202,18 @@ describe('Gateway Integration Tests', () => {
       };
 
       try {
-        await gatewayClient.post('/v1/messages', originalBody);
+        await gatewayClient.post('/claude/v1/messages', originalBody);
 
         // 验证规则已应用
         expect(capturedUpstreamBody).toBeDefined();
-        expect(capturedUpstreamBody.instructions).toContain('[GATEWAY-MODIFIED]');
+        expect(capturedUpstreamBody.system).toContain('[GATEWAY-MODIFIED]');
       } finally {
         global.fetch = originalFetch;
       }
     });
 
     it('应该为不同客户端应用对应规则', async () => {
-      // Codex 规则应该添加前缀
+      // Codex 规则应该修改 instructions 字段
       let capturedBody: any = null;
       const originalFetch = global.fetch;
       global.fetch = async (url: any, options: any) => {
@@ -224,21 +224,23 @@ describe('Gateway Integration Tests', () => {
       };
 
       try {
-        await gatewayClient.post('/openai/v1/chat/completions', {
-          messages: [{ role: 'user', content: 'Test' }],
+        await gatewayClient.post('/openai/v1/responses', {
+          model: 'gpt-4',
+          instructions: 'Test',
+          input: [],
         });
 
         // 验证 Codex 规则已应用（添加前缀）
-        expect(capturedBody.messages[0].content).toContain('PREFIX: ');
+        expect(capturedBody.instructions).toContain('PREFIX: ');
       } finally {
         global.fetch = originalFetch;
       }
     });
 
     it('应该记录匹配的规则到数据库', async () => {
-      const requestBody = { instructions: 'Test' };
+      const requestBody = { system: 'Test' };
 
-      await gatewayClient.post('/v1/messages', requestBody);
+      await gatewayClient.post('/claude/v1/messages', requestBody);
 
       // 等待数据库记录完成
       await waitForCondition(async () => {
@@ -264,9 +266,9 @@ describe('Gateway Integration Tests', () => {
 
   describe('Database Recording', () => {
     it('应该记录成功请求到数据库', async () => {
-      const requestBody = { instructions: 'Record me' };
+      const requestBody = { system: 'Record me' };
 
-      await gatewayClient.post('/v1/messages', requestBody);
+      await gatewayClient.post('/claude/v1/messages', requestBody);
 
       // 等待异步记录
       await waitForCondition(async () => {
@@ -286,9 +288,9 @@ describe('Gateway Integration Tests', () => {
     });
 
     it('应该记录原始和修改后的请求体', async () => {
-      const requestBody = { instructions: 'Original' };
+      const requestBody = { system: 'Original' };
 
-      await gatewayClient.post('/v1/messages', requestBody);
+      await gatewayClient.post('/claude/v1/messages', requestBody);
 
       await waitForCondition(async () => {
         const list = await getRequestList({ limit: 10 });
@@ -299,12 +301,14 @@ describe('Gateway Integration Tests', () => {
       const detail = await getRequestDetail(list.items[0].id);
 
       expect(detail).toBeDefined();
-      expect(detail!.originalBody).toEqual({ instructions: 'Original' });
-      expect(detail!.modifiedBody.instructions).toContain('[GATEWAY-MODIFIED]');
+      const originalBody = JSON.parse(detail!.originalBody);
+      const modifiedBody = JSON.parse(detail!.modifiedBody);
+      expect(originalBody).toEqual({ system: 'Original' });
+      expect(modifiedBody.system).toContain('[GATEWAY-MODIFIED]');
     });
 
     it('应该记录响应头信息', async () => {
-      await gatewayClient.post('/v1/messages', { instructions: 'Test' });
+      await gatewayClient.post('/claude/v1/messages', { system: 'Test' });
 
       await waitForCondition(async () => {
         const list = await getRequestList({ limit: 10 });
@@ -332,7 +336,7 @@ describe('Gateway Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // 发送请求
-      await gatewayClient.post('/v1/messages', { instructions: 'SSE Test' });
+      await gatewayClient.post('/claude/v1/messages', { system: 'SSE Test' });
 
       // 等待事件广播
       await waitForCondition(() => {
@@ -370,7 +374,7 @@ describe('Gateway Integration Tests', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       try {
-        await gatewayClient.post('/v1/messages', { instructions: 'Error test' });
+        await gatewayClient.post('/claude/v1/messages', { system: 'Error test' });
       } catch {
         // 预期会失败
       }
@@ -391,28 +395,28 @@ describe('Gateway Integration Tests', () => {
 
   describe('Error Handling', () => {
     it('应该处理上游服务器错误', async () => {
-      // 临时修改上游 URL 为不存在的地址
-      const originalUpstream = config.upstreams.anthropic;
-      config.upstreams.anthropic = 'http://127.0.0.1:1'; // 不可能连接的端口
+      // 临时修改 Claude 供应商上游 URL 为不存在的地址
+      const originalUpstream = config.suppliers[0].baseUrl;
+      config.suppliers[0].baseUrl = 'http://127.0.0.1:1'; // 不可能连接的端口
 
       try {
-        const response = await gatewayClient.post('/v1/messages', { instructions: 'Test' });
+        const response = await gatewayClient.post('/claude/v1/messages', { system: 'Test' });
 
         expect(response.status).toBe(500);
         const body = JSON.parse(response.body);
         expect(body.error).toBe('promptxy_error');
         expect(body.message).toBeDefined();
       } finally {
-        config.upstreams.anthropic = originalUpstream;
+        config.suppliers[0].baseUrl = originalUpstream;
       }
     });
 
     it('应该记录错误请求到数据库', async () => {
-      const originalUpstream = config.upstreams.anthropic;
-      config.upstreams.anthropic = 'http://127.0.0.1:1';
+      const originalUpstream = config.suppliers[0].baseUrl;
+      config.suppliers[0].baseUrl = 'http://127.0.0.1:1';
 
       try {
-        await gatewayClient.post('/v1/messages', { instructions: 'Error test' });
+        await gatewayClient.post('/claude/v1/messages', { system: 'Error test' });
 
         await waitForCondition(async () => {
           const list = await getRequestList({ limit: 10 });
@@ -425,36 +429,39 @@ describe('Gateway Integration Tests', () => {
         expect(detail!.error).toBeDefined();
         expect(detail!.responseStatus).toBeUndefined();
       } finally {
-        config.upstreams.anthropic = originalUpstream;
+        config.suppliers[0].baseUrl = originalUpstream;
       }
     });
 
     it('应该处理无效的 JSON 请求体', async () => {
-      const req = http.request(
-        {
-          hostname: '127.0.0.1',
-          port: servers.gatewayPort,
-          path: '/v1/messages',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': 10,
+      const invalid = 'invalid';
+      await new Promise<void>((resolve, reject) => {
+        const req = http.request(
+          {
+            hostname: '127.0.0.1',
+            port: servers.gatewayPort,
+            path: '/claude/v1/messages',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(invalid).toString(),
+            },
           },
-        },
-        res => {
-          // 即使 JSON 无效，也应该传递给上游或优雅处理
-          expect(res.statusCode).toBeDefined();
-        },
-      );
+          res => {
+            // 即使 JSON 无效，也应该传递给上游或优雅处理
+            expect(res.statusCode).toBeDefined();
+            res.resume();
+            res.on('end', () => resolve());
+          },
+        );
 
-      req.write('invalid');
-      req.end();
-
-      await new Promise(resolve => setTimeout(resolve, 100));
+        req.on('error', reject);
+        req.end(invalid);
+      });
     });
 
     it('应该处理缺少必要头的请求', async () => {
-      const response = await gatewayClient.post('/v1/messages', { instructions: 'Test' }, {});
+      const response = await gatewayClient.post('/claude/v1/messages', { system: 'Test' }, {});
 
       // 应该仍然尝试转发（可能失败，但不应该崩溃）
       expect(response.status).toBeDefined();
@@ -476,7 +483,7 @@ describe('Gateway Integration Tests', () => {
       const promises = [];
 
       for (let i = 0; i < 5; i++) {
-        promises.push(gatewayClient.post('/v1/messages', { instructions: `Concurrent ${i}` }));
+        promises.push(gatewayClient.post('/claude/v1/messages', { system: `Concurrent ${i}` }));
       }
 
       const results = await Promise.all(promises);
@@ -500,7 +507,7 @@ describe('Gateway Integration Tests', () => {
       const promises = [];
 
       for (let i = 0; i < 3; i++) {
-        promises.push(gatewayClient.post('/v1/messages', { instructions: `Test ${i}` }));
+        promises.push(gatewayClient.post('/claude/v1/messages', { system: `Test ${i}` }));
       }
 
       await Promise.all(promises);
@@ -523,24 +530,36 @@ describe('Gateway Integration Tests', () => {
     it('应该正确路由不同前缀的请求', async () => {
       // 测试不同客户端的路由
       const tests = [
-        { path: '/v1/messages', expectedClient: 'claude' },
-        { path: '/openai/v1/chat/completions', expectedClient: 'codex' },
         {
-          path: '/gemini/v1beta/models/gemini-1.5-flash:generateContent',
+          requestPath: '/claude/v1/messages',
+          expectedClient: 'claude',
+          expectedStoredPath: '/v1/messages',
+          body: { system: 'data' },
+        },
+        {
+          requestPath: '/openai/v1/chat/completions',
+          expectedClient: 'codex',
+          expectedStoredPath: '/v1/chat/completions',
+          body: { test: 'data' },
+        },
+        {
+          requestPath: '/gemini/v1beta/models/gemini-1.5-flash:generateContent',
           expectedClient: 'gemini',
+          expectedStoredPath: '/v1beta/models/gemini-1.5-flash:generateContent',
+          body: { test: 'data' },
         },
       ];
 
       for (const test of tests) {
-        await gatewayClient.post(test.path, { test: 'data' });
+        await gatewayClient.post(test.requestPath, test.body);
 
         await waitForCondition(async () => {
           const list = await getRequestList({ limit: 10 });
-          return list.items.some(item => item.path === test.path);
+          return list.items.some(item => item.path === test.expectedStoredPath);
         }, 1000);
 
         const list = await getRequestList({ limit: 10, client: test.expectedClient });
-        const item = list.items.find(i => i.path === test.path);
+        const item = list.items.find(i => i.path === test.expectedStoredPath);
         expect(item).toBeDefined();
         expect(item!.client).toBe(test.expectedClient);
       }

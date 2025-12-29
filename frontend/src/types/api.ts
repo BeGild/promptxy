@@ -20,6 +20,8 @@ export interface PreviewRequest {
   method?: string;
   path?: string;
   model?: string;
+  // 可选：传入要测试的单个规则，如果提供则只测试该规则
+  testRule?: import('./rule').PromptxyRule;
 }
 
 export interface PreviewResponse {

@@ -44,6 +44,7 @@ import {
 } from './config.js';
 import { applyPromptRules } from './rules/engine.js';
 import { readRequestBody } from './http.js';
+import { mutateClaudeBody } from './adapters/claude.js';
 
 // SSE 连接管理
 const sseConnections = new Set<http.ServerResponse>();
@@ -358,6 +359,31 @@ function handlePreview(
         return;
       }
 
+      // 应用规则 - 如果提供了 testRule 则只测试该规则，否则使用所有已保存的规则
+      const rulesToApply = previewRequest.testRule ? [previewRequest.testRule] : rules;
+
+      // Claude 的 system 可能是 content blocks 数组；为保持与真实网关一致，这里复用 adapter 的结构化处理逻辑
+      if (previewRequest.client === 'claude' && previewRequest.field === 'system') {
+        const original = previewRequest.body;
+        const modifiedBody = structuredClone(previewRequest.body);
+
+        const result = mutateClaudeBody({
+          body: modifiedBody,
+          method: previewRequest.method || 'POST',
+          path: previewRequest.path || '/',
+          rules: rulesToApply,
+        });
+
+        const response: PreviewResponse = {
+          original,
+          modified: result.body,
+          matches: result.matches,
+        };
+
+        sendJson(res, 200, response);
+        return;
+      }
+
       // 应用规则
       let text: string;
       if (previewRequest.field === 'system') {
@@ -377,7 +403,7 @@ function handlePreview(
         model: previewRequest.model,
       };
 
-      const result = applyPromptRules(text, ctx, rules);
+      const result = applyPromptRules(text, ctx, rulesToApply);
 
       // 构建修改后的请求体
       const modifiedBody = { ...previewRequest.body };

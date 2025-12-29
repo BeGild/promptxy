@@ -528,7 +528,7 @@ describe('API Server Integration Tests', () => {
       const updatedConfig = JSON.parse(configResponse.body);
 
       expect(updatedConfig.rules).toHaveLength(2);
-      expect(updatedConfig.rules[0].id).toBe('new-rule-1');
+      expect(updatedConfig.rules[0].uuid).toBe('new-rule-1');
     });
 
     it('应该拒绝无效的规则格式', async () => {
@@ -586,6 +586,42 @@ describe('API Server Integration Tests', () => {
 
       expect(body.original).toEqual({ system: 'You are a helpful assistant' });
       expect(body.modified).toBeDefined();
+    });
+
+    it('应该支持 Claude system 的 text blocks 数组（避免 0 字符）', async () => {
+      const previewRequest = {
+        body: {
+          model: 'claude-3-5-sonnet',
+          system: [
+            { type: 'text', text: ['You are a helpful assistant.', '\nFollow policy.'] },
+            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AA==' } },
+          ],
+        },
+        client: 'claude',
+        field: 'system',
+        testRule: {
+          uuid: 'preview-test-rule-system',
+          name: 'Preview Test Rule (system)',
+          when: { client: 'claude', field: 'system' },
+          ops: [{ type: 'append', text: '\n[PREVIEW_OK]' }],
+          enabled: true,
+        },
+      };
+
+      const response = await apiClient.post('/_promptxy/preview', previewRequest);
+
+      expect(response.status).toBe(200);
+      const body = JSON.parse(response.body);
+
+      expect(Array.isArray(body.original.system)).toBe(true);
+      expect(Array.isArray(body.modified.system)).toBe(true);
+
+      // 修改应该落在 text block 上，并保留非 text block
+      expect(body.modified.system[0].type).toBe('text');
+      expect(String(body.modified.system[0].text)).toContain('[PREVIEW_OK]');
+      expect(body.modified.system[1].type).toBe('image');
+      expect(Array.isArray(body.matches)).toBe(true);
+      expect(body.matches.length).toBeGreaterThan(0);
     });
   });
 

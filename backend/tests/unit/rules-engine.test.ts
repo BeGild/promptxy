@@ -15,7 +15,8 @@ describe('Rules Engine', () => {
     it('should apply set operation', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'set-rule',
+          uuid: 'set-rule',
+          name: 'set-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'set', text: 'new system prompt' }],
         },
@@ -31,7 +32,8 @@ describe('Rules Engine', () => {
     it('should apply append operation', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'append-rule',
+          uuid: 'append-rule',
+          name: 'append-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' appended' }],
         },
@@ -44,7 +46,8 @@ describe('Rules Engine', () => {
     it('should apply prepend operation', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'prepend-rule',
+          uuid: 'prepend-rule',
+          name: 'prepend-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'prepend', text: 'prepended ' }],
         },
@@ -57,7 +60,8 @@ describe('Rules Engine', () => {
     it('should apply replace operation with match', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'replace-rule',
+          uuid: 'replace-rule',
+          name: 'replace-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', match: 'old', replacement: 'new' }],
         },
@@ -70,7 +74,8 @@ describe('Rules Engine', () => {
     it('should apply replace operation with regex', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'replace-regex',
+          uuid: 'replace-regex',
+          name: 'replace-regex',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', regex: '\\d+', replacement: 'NUMBER' }],
         },
@@ -83,7 +88,8 @@ describe('Rules Engine', () => {
     it('should apply delete operation with match', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'delete-rule',
+          uuid: 'delete-rule',
+          name: 'delete-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'delete', match: 'unwanted' }],
         },
@@ -96,7 +102,8 @@ describe('Rules Engine', () => {
     it('should apply delete operation with regex', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'delete-regex',
+          uuid: 'delete-regex',
+          name: 'delete-regex',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'delete', regex: '\\[.*?\\]' }],
         },
@@ -109,7 +116,8 @@ describe('Rules Engine', () => {
     it('should apply insert_before operation', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'insert-before',
+          uuid: 'insert-before',
+          name: 'insert-before',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'insert_before', regex: 'target', text: 'BEFORE-' }],
         },
@@ -122,7 +130,8 @@ describe('Rules Engine', () => {
     it('should apply insert_after operation', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'insert-after',
+          uuid: 'insert-after',
+          name: 'insert-after',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'insert_after', regex: 'target', text: '-AFTER' }],
         },
@@ -137,7 +146,8 @@ describe('Rules Engine', () => {
     it('should apply multiple operations in sequence', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'multi-op',
+          uuid: 'multi-op',
+          name: 'multi-op',
           when: { client: 'claude', field: 'system' },
           ops: [
             { type: 'prepend', text: 'START: ' },
@@ -155,12 +165,14 @@ describe('Rules Engine', () => {
     it('should apply multiple rules in order', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'rule-1',
+          uuid: 'rule-1',
+          name: 'rule-1',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' +1' }],
         },
         {
-          id: 'rule-2',
+          uuid: 'rule-2',
+          name: 'rule-2',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' +2' }],
         },
@@ -178,12 +190,14 @@ describe('Rules Engine', () => {
     it('should only apply rules matching client', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'claude-only',
+          uuid: 'claude-only',
+          name: 'claude-only',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' claude' }],
         },
         {
-          id: 'codex-only',
+          uuid: 'codex-only',
+          name: 'codex-only',
           when: { client: 'codex', field: 'system' },
           ops: [{ type: 'append', text: ' codex' }],
         },
@@ -198,12 +212,14 @@ describe('Rules Engine', () => {
     it('should only apply rules matching field', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'system-field',
+          uuid: 'system-field',
+          name: 'system-field',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' system' }],
         },
         {
-          id: 'instructions-field',
+          uuid: 'instructions-field',
+          name: 'instructions-field',
           when: { client: 'claude', field: 'instructions' },
           ops: [{ type: 'append', text: ' instructions' }],
         },
@@ -216,7 +232,8 @@ describe('Rules Engine', () => {
     it('should match path regex', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'path-rule',
+          uuid: 'path-rule',
+          name: 'path-rule',
           when: { client: 'claude', field: 'system', pathRegex: '^/v1/' },
           ops: [{ type: 'append', text: ' v1' }],
         },
@@ -229,7 +246,8 @@ describe('Rules Engine', () => {
     it('should not match when path regex fails', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'path-rule',
+          uuid: 'path-rule',
+          name: 'path-rule',
           when: { client: 'claude', field: 'system', pathRegex: '^/v2/' },
           ops: [{ type: 'append', text: ' v2' }],
         },
@@ -242,7 +260,8 @@ describe('Rules Engine', () => {
     it('should match model regex', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'model-rule',
+          uuid: 'model-rule',
+          name: 'model-rule',
           when: { client: 'claude', field: 'system', modelRegex: 'sonnet' },
           ops: [{ type: 'append', text: ' sonnet' }],
         },
@@ -255,7 +274,8 @@ describe('Rules Engine', () => {
     it('should match method', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'method-rule',
+          uuid: 'method-rule',
+          name: 'method-rule',
           when: { client: 'claude', field: 'system', method: 'POST' },
           ops: [{ type: 'append', text: ' POST' }],
         },
@@ -268,7 +288,8 @@ describe('Rules Engine', () => {
     it('should not match when method differs', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'method-rule',
+          uuid: 'method-rule',
+          name: 'method-rule',
           when: { client: 'claude', field: 'system', method: 'GET' },
           ops: [{ type: 'append', text: ' GET' }],
         },
@@ -283,12 +304,14 @@ describe('Rules Engine', () => {
     it('should skip disabled rules', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'enabled',
+          uuid: 'enabled',
+          name: 'enabled',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' enabled' }],
         },
         {
-          id: 'disabled',
+          uuid: 'disabled',
+          name: 'disabled',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' disabled' }],
           enabled: false,
@@ -306,13 +329,15 @@ describe('Rules Engine', () => {
     it('should stop processing when stop flag is set', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'stop-rule',
+          uuid: 'stop-rule',
+          name: 'stop-rule',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'set', text: 'stopped' }],
           stop: true,
         },
         {
-          id: 'should-not-run',
+          uuid: 'should-not-run',
+          name: 'should-not-run',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: ' extra' }],
         },
@@ -329,7 +354,8 @@ describe('Rules Engine', () => {
     it('should apply regex with flags', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'case-insensitive',
+          uuid: 'case-insensitive',
+          name: 'case-insensitive',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', regex: 'test', flags: 'gi', replacement: 'PASS' }],
         },
@@ -342,7 +368,8 @@ describe('Rules Engine', () => {
     it('should handle regex with multiline flag', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'multiline',
+          uuid: 'multiline',
+          name: 'multiline',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'delete', regex: '^line$', flags: 'gm' }],
         },
@@ -357,7 +384,8 @@ describe('Rules Engine', () => {
     it('should throw error for invalid regex in replace', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'invalid-regex',
+          uuid: 'invalid-regex',
+          name: 'invalid-regex',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', regex: '[invalid', replacement: 'test' }],
         },
@@ -369,7 +397,8 @@ describe('Rules Engine', () => {
     it('should throw error for empty match in replace', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'empty-match',
+          uuid: 'empty-match',
+          name: 'empty-match',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', match: '', replacement: 'test' }],
         },
@@ -381,7 +410,8 @@ describe('Rules Engine', () => {
     it('should throw error for empty match in delete', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'empty-delete',
+          uuid: 'empty-delete',
+          name: 'empty-delete',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'delete', match: '' }],
         },
@@ -393,7 +423,8 @@ describe('Rules Engine', () => {
     it('should throw error for replace without match or regex', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'bad-replace',
+          uuid: 'bad-replace',
+          name: 'bad-replace',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', replacement: 'test' } as any],
         },
@@ -407,7 +438,8 @@ describe('Rules Engine', () => {
     it('should throw error for delete without match or regex', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'bad-delete',
+          uuid: 'bad-delete',
+          name: 'bad-delete',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'delete' } as any],
         },
@@ -423,7 +455,8 @@ describe('Rules Engine', () => {
     it('should handle regex with capture groups in replace', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'capture-groups',
+          uuid: 'capture-groups',
+          name: 'capture-groups',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', regex: '(\\w+)\\s+(\\w+)', replacement: '$2, $1' }],
         },
@@ -436,7 +469,8 @@ describe('Rules Engine', () => {
     it('should handle multiple insert operations', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'multi-insert',
+          uuid: 'multi-insert',
+          name: 'multi-insert',
           when: { client: 'claude', field: 'system' },
           ops: [
             { type: 'insert_before', regex: 'A', text: 'X' },
@@ -452,7 +486,8 @@ describe('Rules Engine', () => {
     it('should handle empty input', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'empty-input',
+          uuid: 'empty-input',
+          name: 'empty-input',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'append', text: 'added' }],
         },
@@ -465,7 +500,8 @@ describe('Rules Engine', () => {
     it('should handle special characters in text', () => {
       const rules: PromptxyRule[] = [
         {
-          id: 'special-chars',
+          uuid: 'special-chars',
+          name: 'special-chars',
           when: { client: 'claude', field: 'system' },
           ops: [{ type: 'replace', match: 'test', replacement: '$pecial @chars!' }],
         },
@@ -487,7 +523,8 @@ describe('Rules Engine', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'codex-rule',
+          uuid: 'codex-rule',
+          name: 'codex-rule',
           when: { client: 'codex', field: 'instructions' },
           ops: [{ type: 'append', text: ' codex' }],
         },
@@ -507,7 +544,8 @@ describe('Rules Engine', () => {
 
       const rules: PromptxyRule[] = [
         {
-          id: 'gemini-rule',
+          uuid: 'gemini-rule',
+          name: 'gemini-rule',
           when: { client: 'gemini', field: 'system' },
           ops: [{ type: 'append', text: ' gemini' }],
         },

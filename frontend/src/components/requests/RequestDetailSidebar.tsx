@@ -18,12 +18,14 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Tabs, Tab, Spinner } from '@heroui/react';
-import { RequestRecord, PromptxyRule } from '@/types';
+import { RequestRecord, PromptxyRule, PromptxyClient } from '@/types';
 import { useUIStore } from '@/store';
 import { RequestDetailInSidebar, ResponsePanel } from '@/components/requests';
 import { QuickRuleEditor } from '@/components/rules';
 import { toast } from 'sonner';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
+import { useCreateRule, usePreviewRule } from '@/hooks';
+import { validateRule } from '@/utils';
 
 interface RequestDetailSidebarProps {
   request: RequestRecord | null;
@@ -35,6 +37,8 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
   isLoading,
 }) => {
   const { sidebarMode, setSidebarMode, selectedRequestId } = useUIStore();
+  const createRuleMutation = useCreateRule();
+  const previewRuleMutation = usePreviewRule();
   const [initialRegex, setInitialRegex] = useState<
     | {
         field: 'pathRegex' | 'modelRegex' | 'op';
@@ -52,14 +56,24 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
   }, [selectedRequestId, setSidebarMode]);
 
   const handleSaveRule = useCallback(
-    (rule: PromptxyRule) => {
-      // TODO: 实现保存规则逻辑
-      console.log('保存规则:', rule);
-      toast.success('规则已保存');
-      // 保存后切换回详情模式
-      setSidebarMode('detail');
+    async (rule: PromptxyRule) => {
+      // 验证规则
+      const validation = validateRule(rule);
+      if (!validation.valid) {
+        toast.error(`验证失败:\n${validation.errors.join('\n')}`);
+        return;
+      }
+
+      try {
+        await createRuleMutation.mutateAsync(rule);
+        toast.success('规则已保存');
+        // 保存后切换回详情模式
+        setSidebarMode('detail');
+      } catch (error: any) {
+        toast.error(`保存失败: ${error?.message || '未知错误'}`);
+      }
     },
-    [setSidebarMode],
+    [createRuleMutation, setSidebarMode],
   );
 
   const handleCancelRule = useCallback(() => {
@@ -67,10 +81,51 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
     setSidebarMode('detail');
   }, [setSidebarMode]);
 
-  const handleTestRule = useCallback((rule: PromptxyRule) => {
-    // TODO: 实现测试规则逻辑
-    console.log('测试规则:', rule);
-  }, []);
+  const handleTestRule = useCallback(
+    async (rule: PromptxyRule) => {
+      // 验证规则
+      const validation = validateRule(rule);
+      if (!validation.valid) {
+        const error = new Error(`验证失败:\n${validation.errors.join('\n')}`);
+        throw error;
+      }
+
+      if (!request) {
+        throw new Error('请求不存在，无法测试');
+      }
+
+      // 验证 client 是否为有效的 PromptxyClient
+      const validClients: PromptxyClient[] = ['claude', 'codex', 'gemini'];
+      const client: PromptxyClient = validClients.includes(request.client as PromptxyClient)
+        ? (request.client as PromptxyClient)
+        : 'claude';
+
+      // 解析请求 body
+      let body: any;
+      if (typeof request.originalBody === 'string') {
+        body = JSON.parse(request.originalBody);
+      } else {
+        body = request.originalBody;
+      }
+
+      // 提取 model
+      const model = body?.model;
+
+      const result = await previewRuleMutation.mutateAsync({
+        body: request.originalBody,
+        client,
+        field: rule.when.field,
+        model: model,
+        path: request.path,
+        method: request.method,
+        testRule: rule, // 传入正在测试的规则
+      });
+
+      // 返回测试结果供组件使用
+      return result;
+    },
+    [previewRuleMutation, request],
+  );
 
   /**
    * 处理基于选中内容创建规则
