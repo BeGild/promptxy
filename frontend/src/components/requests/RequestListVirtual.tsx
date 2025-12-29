@@ -571,11 +571,17 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           onChange={onPageChange}
           color="primary"
           showShadow={true}
+          showControls={true}
           classNames={{
             wrapper: 'gap-xs',
-            item: 'min-w-9 h-9',
+            // 未选中页：添加边框和阴影增强视觉区分
+            item:
+              'min-w-9 h-9 text-small border border-subtle shadow-sm hover:shadow-md hover:border-brand-primary/50',
+            // 修复选中页颜色对比度：使用纯色背景+白色文字
             cursor:
-              'shadow-lg bg-gradient-to-r from-brand-primary to-accent text-primary dark:text-inverse font-bold',
+              'bg-brand-primary text-white dark:bg-brand-primary dark:text-white font-bold shadow-lg border-2 border-brand-primary',
+            prev: 'text-small shadow-sm',
+            next: 'text-small shadow-sm',
           }}
         />
       </div>
