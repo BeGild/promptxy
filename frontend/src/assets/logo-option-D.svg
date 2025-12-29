@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9a52"/>
+      <stop offset="100%" style="stop-color:#c45c3e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="128" height="128" rx="24" fill="url(#gradD)"/>
+
+  <!-- 方案D: 几何科技 - 方块风格 -->
+  <!-- 小写p用几何图形构建 -->
+  <rect x="32" y="32" width="12" height="56" rx="2" fill="white"/>
+  <rect x="32" y="32" width="24" height="12" rx="2" fill="white"/>
+  <circle cx="56" cy="56" r="10" fill="white"/>
+
+  <!-- XY 也用几何线条 -->
+  <path d="M72 36 L88 56 L72 76 L80 76 L92 60 L80 44 L72 44 Z" fill="white"/>
+  <path d="M96 36 L80 56 L96 76 L88 76 L76 60 L88 44 L96 44 Z" fill="white"/>
+</svg>

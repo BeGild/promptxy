@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptXY Logo 方案选择</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 20px;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    .subtitle {
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 40px;
+      font-size: 1.1rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      text-align: center;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    }
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .card-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #ff9a52, #c45c3e);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-bottom: 15px;
+    }
+    .icon-preview {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      min-height: 140px;
+    }
+    .icon-preview svg {
+      width: 100px;
+      height: 100px;
+    }
+    .card-desc {
+      color: #666;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      margin-bottom: 15px;
+    }
+    .select-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #ff9a52, #c45c3e);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    .select-btn:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <h1>PromptXY Logo 方案选择</h1>
+  <p class="subtitle">点击下方的方案选择按钮，或在终端输入 A-F 选择方案</p>
+
+  <div class="grid">
+    <!-- 方案 A -->
+    <div class="card" onclick="selectOption('A')">
+      <span class="card-title">方案 A</span>
+      <br><span class="card-badge">简洁经典</span>
+      <div class="icon-preview">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradA" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff9a52"/>
+              <stop offset="100%" style="stop-color:#c45c3e"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#gradA)"/>
+          <!-- 小写 p -->
+          <path d="M38 36 L38 92 L50 92 L50 64 C50 64 50 60 54 60 C58 60 58 64 58 64 L58 92 L70 92 L70 64 C70 52 62 44 54 44 C48 44 44 48 42 52 L42 36 Z" fill="white"/>
+          <!-- XY -->
+          <text x="75" y="85" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">XY</text>
+        </svg>
+      </div>
+      <p class="card-desc">标准小写 p + XY<br>清晰易读，经典专业</p>
+      <button class="select-btn">选择 A</button>
+    </div>
+
+    <!-- 方案 B -->
+    <div class="card" onclick="selectOption('B')">
+      <span class="card-title">方案 B</span>
+      <br><span class="card-badge">扭曲动态</span>
+      <div class="icon-preview">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff9a52"/>
+              <stop offset="100%" style="stop-color:#c45c3e"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#gradB)"/>
+          <!-- 扭曲的小写 p -->
+          <path d="M36 30 Q40 28 44 32 L48 36 Q52 40 50 48 L46 60 Q44 68 46 76 L48 84 Q50 92 46 96 L42 98 Q38 96 38 90 L38 30 Z" fill="white"/>
+          <circle cx="52" cy="58" r="12" fill="white"/>
+          <!-- XY 斜向 -->
+          <text x="68" y="80" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" transform="rotate(-10, 80, 60)">XY</text>
+        </svg>
+      </div>
+      <p class="card-desc">流线型扭曲 p + 斜向 XY<br>动感现代，活力十足</p>
+      <button class="select-btn">选择 B</button>
+    </div>
+
+    <!-- 方案 C -->
+    <div class="card" onclick="selectOption('C')">
+      <span class="card-title">方案 C</span>
+      <br><span class="card-badge">意向抽象</span>
+      <div class="icon-preview">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradC" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff9a52"/>
+              <stop offset="100%" style="stop-color:#c45c3e"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#gradC)"/>
+          <!-- 抽象融合 -->
+          <path d="M30 36 L30 92 L46 92 L46 68 L54 68 L54 92 L68 92 L68 68 L54 68 Q54 56 64 56 Q74 56 78 46 L82 36 L64 36 Q58 36 54 42 L54 56 L46 56 L46 36 Z" fill="white" opacity="0.9"/>
+          <path d="M68 36 L68 92 L82 92 L82 72 L92 72 L92 92 L106 92 L106 72 L92 72 Q92 60 102 60 L106 56 L106 36 L92 36 L92 56 L82 56 L82 36 Z" fill="white" opacity="0.7"/>
+        </svg>
+      </div>
+      <p class="card-desc">p 与 XY 融合交织<br>抽象艺术，层次丰富</p>
+      <button class="select-btn">选择 C</button>
+    </div>
+
+    <!-- 方案 D -->
+    <div class="card" onclick="selectOption('D')">
+      <span class="card-title">方案 D</span>
+      <br><span class="card-badge">几何科技</span>
+      <div class="icon-preview">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradD" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff9a52"/>
+              <stop offset="100%" style="stop-color:#c45c3e"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#gradD)"/>
+          <!-- 几何方块 p -->
+          <rect x="32" y="32" width="12" height="56" rx="2" fill="white"/>
+          <rect x="32" y="32" width="24" height="12" rx="2" fill="white"/>
+          <circle cx="56" cy="56" r="10" fill="white"/>
+          <!-- XY 几何线条 -->
+          <path d="M72 36 L88 56 L72 76 L80 76 L92 60 L80 44 L72 44 Z" fill="white"/>
+          <path d="M96 36 L80 56 L96 76 L88 76 L76 60 L88 44 L96 44 Z" fill="white"/>
+        </svg>
+      </div>
+      <p class="card-desc">几何方块构建<br>科技感强，专业理性</p>
+      <button class="select-btn">选择 D</button>
+    </div>
+
+    <!-- 方案 E -->
+    <div class="card" onclick="selectOption('E')">
+      <span class="card-title">方案 E</span>
+      <br><span class="card-badge">连续线条</span>
+      <div class="icon-preview">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradE" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff9a52"/>
+              <stop offset="100%" style="stop-color:#c45c3e"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#gradE)"/>
+          <!-- 线条 p -->
+          <path d="M32 40 L32 88 L48 88 L48 64 L56 64 C64 64 68 60 68 52 C68 44 64 40 56 40 L32 40 Z M48 48 L52 48 C54 48 56 50 56 52 C56 54 54 56 52 56 L48 56 L48 48 Z" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- X 线条 -->
+          <path d="M76 40 L92 64 L76 88" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M88 40 L72 64 L88 88" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <!-- Y 线条 -->
+          <path d="M96 40 L104 56 L112 40" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M104 56 L104 88" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p class="card-desc">连续线条勾勒<br>优雅简洁，流畅一体</p>
+      <button class="select-btn">选择 E</button>
+    </div>
+
+    <!-- 方案 F -->
+    <div class="card" onclick="selectOption('F')">
+      <span class="card-title">方案 F</span>
+      <br><span class="card-badge">现代极简</span>
+      <div class="icon-preview">
+        <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradF" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff9a52"/>
+              <stop offset="100%" style="stop-color:#c45c3e"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="24" fill="url(#gradF)"/>
+          <!-- 实心 p -->
+          <path d="M36 36 L36 92 L52 92 L52 64 C52 56 58 50 66 50 C74 50 80 56 80 64 L80 92 L96 92 L96 64 C96 48 84 36 66 36 C58 36 52 40 48 46 L48 36 Z" fill="white"/>
+          <!-- XY 两笔 -->
+          <path d="M76 50 L88 70 L76 90" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <path d="M100 50 L88 70 L100 90" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p class="card-desc">实心 p + 简化 XY<br>极简高级，现代设计</p>
+      <button class="select-btn">选择 F</button>
+    </div>
+  </div>
+
+  <script>
+    function selectOption(option) {
+      console.log('Selected option:', option);
+      alert('你选择了方案 ' + option + '！\n\n请在终端告诉我确认选择（输入字母 ' + option + '），我会更新代码。');
+    }
+  </script>
+</body>
+</html>

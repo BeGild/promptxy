@@ -1,0 +1,18 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9a52"/>
+      <stop offset="100%" style="stop-color:#c45c3e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="128" height="128" rx="24" fill="url(#gradA)"/>
+
+  <!-- 方案A: 简洁经典 - 小写p + XY -->
+  <!-- 小写 p -->
+  <path d="M38 36 L38 92 L50 92 L50 64 C50 64 50 60 54 60 C58 60 58 64 58 64 L58 92 L70 92 L70 64 C70 52 62 44 54 44 C48 44 44 48 42 52 L42 36 Z" fill="white"/>
+
+  <!-- XY -->
+  <text x="78" y="82" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">XY</text>
+</svg>

@@ -1,0 +1,19 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradB" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9a52"/>
+      <stop offset="100%" style="stop-color:#c45c3e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="128" height="128" rx="24" fill="url(#gradB)"/>
+
+  <!-- 方案B: 扭曲动态 - 流线型p + XY -->
+  <!-- 扭曲的小写 p -->
+  <path d="M36 30 Q40 28 44 32 L48 36 Q52 40 50 48 L46 60 Q44 68 46 76 L48 84 Q50 92 46 96 L42 98 Q38 96 38 90 L38 30 Z" fill="white"/>
+  <path d="M46 48 Q52 48 56 52 Q60 56 58 62 Q56 68 50 68 Q46 68 44 64 Q42 60 46 48 Z" fill="url(#gradB)"/>
+
+  <!-- XY 斜向排列 -->
+  <text x="68" y="75" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" transform="rotate(-10, 80, 60)">XY</text>
+</svg>

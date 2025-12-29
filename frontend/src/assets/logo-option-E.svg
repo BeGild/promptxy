@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradE" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9a52"/>
+      <stop offset="100%" style="stop-color:#c45c3e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="128" height="128" rx="24" fill="url(#gradE)"/>
+
+  <!-- 方案E: 连续线条 - pXY一体化 -->
+  <!-- 用一条连续的线画出p+XY -->
+  <path d="M32 40 L32 88 L48 88 L48 64 L56 64 C64 64 68 60 68 52 C68 44 64 40 56 40 L32 40 Z M48 48 L52 48 C54 48 56 50 56 52 C56 54 54 56 52 56 L48 56 L48 48 Z"
+        stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- X线条 -->
+  <path d="M76 40 L92 64 L76 88" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M88 40 L72 64 L88 88" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Y线条 -->
+  <path d="M96 40 L104 56 L112 40" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M104 56 L104 88" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>

@@ -36,50 +36,39 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' })
       <defs>
         <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style={{ stopColor: 'var(--color-brand-primary)', stopOpacity: 1 }} />
-          <stop
-            offset="100%"
-            style={{ stopColor: 'var(--color-brand-primary-hover)', stopOpacity: 1 }}
-          />
+          <stop offset="100%" style={{ stopColor: 'var(--color-accent)', stopOpacity: 1 }} />
         </linearGradient>
       </defs>
 
       {/* 背景圆角矩形 */}
       <rect x="2" y="2" width="28" height="28" rx="6" fill="url(#logoGradient)" opacity="0.15" />
 
-      {/* P 字母主体 */}
+      {/* 方案B: 扭曲动态 - 流线型小写 p + XY */}
+      {/* 扭曲的小写 p - 使用贝塞尔曲线 */}
       <path
-        d="M10 8 L10 24 L14 24 L14 18 L18 18 C21.3137 18 24 15.3137 24 12 C24 8.68629 21.3137 6 18 6 L10 6 L10 8 Z M14 10 L17 10 C18.6569 10 20 11.3431 20 13 C20 14.6569 18.6569 16 17 16 L14 16 L14 10 Z"
+        d="M9 7.5 Q11 7 12 8 L13 9 Q14 10 13.5 12 L12.5 15 Q12 17 12.5 19 L13 21 Q13.5 23 12.5 24 L11.5 24.5 Q10.5 24 10.5 22.5 L10.5 7.5 Z"
         fill="url(#logoGradient)"
-        stroke="url(#logoGradient)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
+      />
+      {/* p 的圆形部分 - 负空间 */}
+      <circle
+        cx="12.5"
+        cy="14.5"
+        r="3"
+        fill="url(#logoGradient)"
       />
 
-      {/* 向上箭头 (代表变换/提升) */}
-      <path
-        d="M22 14 L26 10 L30 14"
-        fill="none"
-        stroke="url(#logoGradient)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M26 10 L26 18"
-        fill="none"
-        stroke="url(#logoGradient)"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-
-      {/* XY 坐标轴装饰 */}
-      <path
-        d="M4 28 L4 24 M4 28 L8 28"
-        stroke="url(#logoGradient)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity={0.6}
-      />
+      {/* XY 文字 - 斜向排列 */}
+      <text
+        x="17"
+        y="20"
+        fontSize="9"
+        fontWeight="bold"
+        fill="url(#logoGradient)"
+        transform="rotate(-10, 20, 16)"
+        style={{ fontFamily: 'Arial, sans-serif' }}
+      >
+        XY
+      </text>
     </svg>
   );
 };

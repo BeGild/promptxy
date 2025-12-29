@@ -9,20 +9,16 @@
   <!-- 背景 -->
   <rect x="0" y="0" width="128" height="128" rx="28" fill="url(#favGradient)"/>
 
-  <!-- 内部装饰圆环 -->
-  <circle cx="64" cy="64" r="52" fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+  <!-- 方案B: 扭曲动态 - 流线型小写 p + XY -->
+  <!-- 扭曲的小写 p - 使用贝塞尔曲线 -->
+  <path d="M36 30 Q40 28 44 32 L48 36 Q52 40 50 48 L46 60 Q44 68 46 76 L48 84 Q50 92 46 96 L42 98 Q38 96 38 90 L38 30 Z" fill="white"/>
 
-  <!-- PX 字母组合 -->
-  <!-- P 字母 -->
-  <path d="M28 34 L28 94 L44 94 L44 64 L54 64 C63.5 64 70 57.5 70 48 C70 38.5 63.5 32 54 32 L28 32 L28 34 Z M44 46 L52 46 C55.5 46 58 48.5 58 52 C58 55.5 55.5 58 52 58 L44 58 L44 46 Z" fill="white"/>
+  <!-- p 的圆形部分 - 负空间使用渐变填充 -->
+  <circle cx="50" cy="58" r="12" fill="url(#favGradient)"/>
 
-  <!-- X 字母 - 用两个V形拼接 -->
-  <!-- 左上到右下的V -->
-  <path d="M82 32 L98 56 L82 80 L88 80 L100 60 L88 40 L82 40 Z" fill="white"/>
-  <!-- 右上到左下的V -->
-  <path d="M108 32 L92 56 L108 80 L102 80 L90 60 L102 40 L108 40 Z" fill="white"/>
+  <!-- XY 文字 - 斜向排列 -->
+  <text x="68" y="80" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" transform="rotate(-10, 80, 60)">XY</text>
 
   <!-- 光点装饰 -->
   <circle cx="104" cy="24" r="4" fill="white" fill-opacity="0.25"/>
-  <circle cx="112" cy="32" r="2" fill="white" fill-opacity="0.15"/>
 </svg>

@@ -1,0 +1,18 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradF" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9a52"/>
+      <stop offset="100%" style="stop-color:#c45c3e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="128" height="128" rx="24" fill="url(#gradF)"/>
+
+  <!-- 方案F: 现代极简 - 负空间设计 -->
+  <!-- 小写p用实心，XY用负空间或线条 -->
+  <path d="M36 36 L36 92 L52 92 L52 64 C52 56 58 50 66 50 C74 50 80 56 80 64 L80 92 L96 92 L96 64 C96 48 84 36 66 36 C58 36 52 40 48 46 L48 36 Z" fill="white"/>
+
+  <!-- XY简化为两笔 -->
+  <path d="M76 50 L88 70 L76 90 M100 50 L88 70 L100 90" stroke="url(#gradF)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
