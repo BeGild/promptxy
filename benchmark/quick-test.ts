@@ -4,7 +4,11 @@
  */
 
 import * as os from 'node:os';
-import { PerformanceBenchmark, TestScenario, SuccessCriteria } from './performance-benchmark-framework.js';
+import {
+  PerformanceBenchmark,
+  TestScenario,
+  SuccessCriteria,
+} from './performance-benchmark-framework.js';
 
 // 简单的测试场景
 const quickTestScenarios: TestScenario[] = [

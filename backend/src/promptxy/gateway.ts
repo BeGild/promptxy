@@ -331,9 +331,10 @@ export function createGateway(config: PromptxyConfig): http.Server {
         } else {
           // 非 JSON 响应，限制保存大小（最多 10KB）
           const maxSize = 10 * 1024;
-          responseBodyStr = responseBodyBuffer.length > maxSize
-            ? responseBodyBuffer.subarray(0, maxSize).toString('utf-8') + '... (truncated)'
-            : responseBodyBuffer.toString('utf-8');
+          responseBodyStr =
+            responseBodyBuffer.length > maxSize
+              ? responseBodyBuffer.subarray(0, maxSize).toString('utf-8') + '... (truncated)'
+              : responseBodyBuffer.toString('utf-8');
         }
 
         const record: RequestRecord = {

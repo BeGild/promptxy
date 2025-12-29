@@ -27,6 +27,8 @@ interface FileContentPanelProps {
   isFullScreen?: boolean;
   /** 是否显示 Markdown 预览（默认 false 显示纯文本） */
   isMarkdownPreview?: boolean;
+  /** 选中文本变化回调（仅对 PlainTextRenderer 有效） */
+  onSelectionChange?: (selectedText: string) => void;
 }
 
 /**
@@ -35,7 +37,7 @@ interface FileContentPanelProps {
  * 面包屑、预览切换和全屏按钮由父组件 FileBrowserView 控制
  */
 const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(
-  ({ selectedNode, isFullScreen = false, isMarkdownPreview = false }) => {
+  ({ selectedNode, isFullScreen = false, isMarkdownPreview = false, onSelectionChange }) => {
     return (
       <div className="h-full flex flex-col">
         {/* 内容区域 */}
@@ -47,6 +49,7 @@ const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(
                 title={selectedNode.label}
                 isMarkdownPreview={isMarkdownPreview}
                 isFullScreen={true}
+                onSelectionChange={onSelectionChange}
               />
             </div>
           ) : (
@@ -55,6 +58,7 @@ const FileContentPanel: React.FC<FileContentPanelProps> = React.memo(
                 node={selectedNode}
                 isMarkdownPreview={isMarkdownPreview}
                 isFullScreen={false}
+                onSelectionChange={onSelectionChange}
               />
             </div>
           )}

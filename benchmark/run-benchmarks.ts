@@ -159,17 +159,11 @@ class BenchmarkCLI {
     await fs.mkdir(dir, { recursive: true });
 
     // 保存完整数据
-    await fs.writeFile(
-      path.join(dir, 'benchmark-data.json'),
-      JSON.stringify(results, null, 2)
-    );
+    await fs.writeFile(path.join(dir, 'benchmark-data.json'), JSON.stringify(results, null, 2));
 
     // 保存综合报告
     if (results.comprehensive) {
-      await fs.writeFile(
-        path.join(dir, 'comprehensive-report.md'),
-        results.comprehensive
-      );
+      await fs.writeFile(path.join(dir, 'comprehensive-report.md'), results.comprehensive);
     }
 
     // 保存各部分总结
@@ -177,10 +171,7 @@ class BenchmarkCLI {
       if (key === 'comprehensive') continue;
       const section = value as any;
       if (section.summary) {
-        await fs.writeFile(
-          path.join(dir, `${key}-summary.md`),
-          section.summary
-        );
+        await fs.writeFile(path.join(dir, `${key}-summary.md`), section.summary);
       }
     }
 

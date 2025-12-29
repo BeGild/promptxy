@@ -35,12 +35,15 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
   isLoading,
 }) => {
   const { sidebarMode, setSidebarMode, selectedRequestId } = useUIStore();
-  const [initialRegex, setInitialRegex] = useState<{
-    field: 'pathRegex' | 'modelRegex' | 'op';
-    value: string;
-    flags?: string;
-    selectedText?: string;
-  } | undefined>(undefined);
+  const [initialRegex, setInitialRegex] = useState<
+    | {
+        field: 'pathRegex' | 'modelRegex' | 'op';
+        value: string;
+        flags?: string;
+        selectedText?: string;
+      }
+    | undefined
+  >(undefined);
 
   // 当请求改变时，重置为详情模式和初始正则
   useEffect(() => {
@@ -48,13 +51,16 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
     setInitialRegex(undefined);
   }, [selectedRequestId, setSidebarMode]);
 
-  const handleSaveRule = useCallback((rule: PromptxyRule) => {
-    // TODO: 实现保存规则逻辑
-    console.log('保存规则:', rule);
-    toast.success('规则已保存');
-    // 保存后切换回详情模式
-    setSidebarMode('detail');
-  }, [setSidebarMode]);
+  const handleSaveRule = useCallback(
+    (rule: PromptxyRule) => {
+      // TODO: 实现保存规则逻辑
+      console.log('保存规则:', rule);
+      toast.success('规则已保存');
+      // 保存后切换回详情模式
+      setSidebarMode('detail');
+    },
+    [setSidebarMode],
+  );
 
   const handleCancelRule = useCallback(() => {
     // 取消编辑，切换回详情模式
@@ -71,7 +77,13 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
    * 选中的是请求内容（system prompt 或 messages），正则用于操作序列
    */
   const handleSelectionBasedCreate = useCallback(
-    (selectedText: string, mode: MatchMode, ignoreCase: boolean, multiline: boolean, result: RegexResult) => {
+    (
+      selectedText: string,
+      mode: MatchMode,
+      ignoreCase: boolean,
+      multiline: boolean,
+      result: RegexResult,
+    ) => {
       // 选中的内容用于操作序列，创建一个 replace 操作
       setInitialRegex({
         field: 'op',
@@ -81,7 +93,7 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
       });
       setSidebarMode('rule');
     },
-    [setSidebarMode]
+    [setSidebarMode],
   );
 
   /**
@@ -95,7 +107,9 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <Spinner color="primary" size="sm">加载详情中...</Spinner>
+        <Spinner color="primary" size="sm">
+          加载详情中...
+        </Spinner>
       </div>
     );
   }
@@ -113,14 +127,14 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
       {/* 模式切换 Tabs */}
       <Tabs
         selectedKey={sidebarMode}
-        onSelectionChange={(key) => setSidebarMode(key as 'detail' | 'response' | 'rule')}
+        onSelectionChange={key => setSidebarMode(key as 'detail' | 'response' | 'rule')}
         variant="underlined"
         classNames={{
-          base: "w-full px-md pt-sm",
-          tabList: "border-b border-subtle gap-6",
-          cursor: "bg-brand-primary",
-          tab: "px-0 h-7",
-          tabContent: "group-data-[selected=true]:text-primary text-tertiary font-medium text-sm"
+          base: 'w-full px-md pt-sm',
+          tabList: 'border-b border-subtle gap-6',
+          cursor: 'bg-brand-primary',
+          tab: 'px-0 h-7',
+          tabContent: 'group-data-[selected=true]:text-primary text-tertiary font-medium text-sm',
         }}
       >
         <Tab key="detail" title="请求详情" />

@@ -35,7 +35,13 @@ import {
   getSetting,
   updateSetting,
 } from './database.js';
-import { saveConfig, loadConfig, assertUrl, assertSupplier, assertSupplierPathConflicts } from './config.js';
+import {
+  saveConfig,
+  loadConfig,
+  assertUrl,
+  assertSupplier,
+  assertSupplierPathConflicts,
+} from './config.js';
 import { applyPromptRules } from './rules/engine.js';
 import { readRequestBody } from './http.js';
 
@@ -1057,7 +1063,11 @@ export function createApiServer(
       }
 
       // 切换供应商状态
-      if (req.method === 'POST' && url.pathname.startsWith('/_promptxy/suppliers/') && url.pathname.endsWith('/toggle')) {
+      if (
+        req.method === 'POST' &&
+        url.pathname.startsWith('/_promptxy/suppliers/') &&
+        url.pathname.endsWith('/toggle')
+      ) {
         await handleToggleSupplier(req, res, config, url);
         return;
       }

@@ -1,7 +1,13 @@
 import { access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { PromptxyConfig, PromptxyRule, Supplier, PathMapping, LegacyPromptxyRule } from './types.js';
+import {
+  PromptxyConfig,
+  PromptxyRule,
+  Supplier,
+  PathMapping,
+  LegacyPromptxyRule,
+} from './types.js';
 import { randomUUID } from 'node:crypto';
 
 type PartialConfig = Partial<PromptxyConfig> & {
@@ -193,7 +199,7 @@ export function assertSupplierPathConflicts(suppliers: Supplier[]): void {
     if (suppliersForPrefix.length > 1) {
       throw new Error(
         `Local prefix '${prefix}' is used by multiple enabled suppliers: ` +
-        suppliersForPrefix.map(s => s.name).join(', ')
+          suppliersForPrefix.map(s => s.name).join(', '),
       );
     }
   }
@@ -366,7 +372,7 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
 
 async function findConfigPath(): Promise<string | undefined> {
   const fromEnv = process.env.PROMPTXY_CONFIG;
-  if (fromEnv && await fileExists(fromEnv)) return fromEnv;
+  if (fromEnv && (await fileExists(fromEnv))) return fromEnv;
 
   const cwdCandidate = path.join(process.cwd(), 'promptxy.config.json');
   if (await fileExists(cwdCandidate)) return cwdCandidate;

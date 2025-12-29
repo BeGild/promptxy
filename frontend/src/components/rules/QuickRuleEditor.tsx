@@ -100,7 +100,12 @@ const extractModelFromRequest = (request: RequestRecord): string | undefined => 
  */
 const createRuleFromRequest = (
   request: RequestRecord,
-  initialRegex?: { field: 'pathRegex' | 'modelRegex' | 'op'; value: string; flags?: string; selectedText?: string }
+  initialRegex?: {
+    field: 'pathRegex' | 'modelRegex' | 'op';
+    value: string;
+    flags?: string;
+    selectedText?: string;
+  },
 ): PromptxyRule => {
   const rule = createDefaultRule();
 
@@ -166,7 +171,9 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
   onTest,
   initialRegex,
 }) => {
-  const [formData, setFormData] = useState<PromptxyRule>(createRuleFromRequest(request, initialRegex));
+  const [formData, setFormData] = useState<PromptxyRule>(
+    createRuleFromRequest(request, initialRegex),
+  );
   const [validation, setValidation] = useState({
     valid: true,
     errors: [] as string[],
@@ -371,7 +378,10 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
 
           <div className="space-y-sm">
             {formData.ops.map((op, index) => (
-              <Card key={index} className="rounded-lg overflow-hidden bg-canvas dark:bg-secondary/30 border border-subtle">
+              <Card
+                key={index}
+                className="rounded-lg overflow-hidden bg-canvas dark:bg-secondary/30 border border-subtle"
+              >
                 <CardBody className="space-y-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -508,7 +518,9 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
 
       {/* 测试结果 */}
       {testResult && (
-        <Card className={`rounded-lg overflow-hidden border ${testResult.matched ? 'border-status-success/30 bg-status-success/10' : 'border-status-error/30 bg-status-error/10'}`}>
+        <Card
+          className={`rounded-lg overflow-hidden border ${testResult.matched ? 'border-status-success/30 bg-status-success/10' : 'border-status-error/30 bg-status-error/10'}`}
+        >
           <CardBody className="p-p3">
             <div className="flex items-center gap-2">
               {testResult.matched ? (
@@ -516,7 +528,9 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
               ) : (
                 <XCircle size={16} className="text-status-error" />
               )}
-              <span className={`text-sm font-medium ${testResult.matched ? 'text-status-success' : 'text-status-error'}`}>
+              <span
+                className={`text-sm font-medium ${testResult.matched ? 'text-status-success' : 'text-status-error'}`}
+              >
                 {testResult.matched ? '测试成功 - 规则匹配' : '测试失败'}
               </span>
             </div>

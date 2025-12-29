@@ -19,7 +19,13 @@
 import React from 'react';
 import { Card, CardBody, CardHeader, Chip, Spinner, Divider, Tabs, Tab } from '@heroui/react';
 import { RequestRecord } from '@/types';
-import { formatTimeWithMs, formatDuration, getStatusColor, formatClient, formatSize } from '@/utils';
+import {
+  formatTimeWithMs,
+  formatDuration,
+  getStatusColor,
+  formatClient,
+  formatSize,
+} from '@/utils';
 import { RequestDetailPanel } from '@/components/request-viewer';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
@@ -32,7 +38,7 @@ interface RequestDetailInSidebarProps {
     mode: MatchMode,
     ignoreCase: boolean,
     multiline: boolean,
-    result: RegexResult
+    result: RegexResult,
   ) => void;
   /** 基于当前请求创建规则的回调 */
   onBasedOnRequestCreate?: () => void;
@@ -47,7 +53,9 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <Spinner color="primary" size="sm">加载详情中...</Spinner>
+        <Spinner color="primary" size="sm">
+          加载详情中...
+        </Spinner>
       </div>
     );
   }
@@ -77,14 +85,10 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
             </span>
             <span className="text-tertiary">·</span>
             {/* 客户端 */}
-            <span className="text-secondary font-medium">
-              {formatClient(request.client)}
-            </span>
+            <span className="text-secondary font-medium">{formatClient(request.client)}</span>
             <span className="text-tertiary">·</span>
             {/* 方法 */}
-            <span className="text-tertiary uppercase font-medium">
-              {request.method}
-            </span>
+            <span className="text-tertiary uppercase font-medium">{request.method}</span>
             <span className="text-tertiary">·</span>
             {/* 状态 */}
             <Chip
@@ -93,8 +97,8 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
               variant="flat"
               className="h-5 min-h-5 min-w-0"
               classNames={{
-                base: "min-w-0 inline-flex items-center",
-                content: "px-2 py-0.5 min-w-0 inline-flex"
+                base: 'min-w-0 inline-flex items-center',
+                content: 'px-2 py-0.5 min-w-0 inline-flex',
               }}
             >
               {request.responseStatus || 'N/A'}
@@ -103,25 +107,19 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
             {/* 耗时 */}
             {request.durationMs && (
               <>
-                <span className="text-tertiary">
-                  {formatDuration(request.durationMs)}
-                </span>
+                <span className="text-tertiary">{formatDuration(request.durationMs)}</span>
                 <span className="text-tertiary">·</span>
               </>
             )}
             {/* 请求体大小 */}
             {request.requestSize && (
               <>
-                <span className="text-tertiary">
-                  {formatSize(request.requestSize)}
-                </span>
+                <span className="text-tertiary">{formatSize(request.requestSize)}</span>
                 <span className="text-tertiary">·</span>
               </>
             )}
             {/* 路径 */}
-            <span className="font-mono text-secondary truncate flex-1 min-w-0">
-              {request.path}
-            </span>
+            <span className="font-mono text-secondary truncate flex-1 min-w-0">{request.path}</span>
           </div>
         </CardBody>
       </Card>
@@ -142,8 +140,8 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
                       variant="flat"
                       className="h-5 min-h-5 text-xs uppercase px-2 min-w-0"
                       classNames={{
-                        base: "min-w-0 inline-flex items-center",
-                        content: "px-2 py-0.5 min-w-0 inline-flex"
+                        base: 'min-w-0 inline-flex items-center',
+                        content: 'px-2 py-0.5 min-w-0 inline-flex',
                       }}
                     >
                       {match.opType}
@@ -159,7 +157,10 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
       {/* 请求详情 */}
       <div className="space-y-sm">
         <h4 className="text-base font-bold">请求详情</h4>
-        <div className="border border-subtle rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 350px)' }}>
+        <div
+          className="border border-subtle rounded-lg overflow-hidden"
+          style={{ height: 'calc(100vh - 350px)' }}
+        >
           <RequestDetailPanel
             request={request.modifiedBody}
             originalRequest={request.originalBody}

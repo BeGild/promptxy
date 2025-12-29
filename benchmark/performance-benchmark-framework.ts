@@ -13,34 +13,34 @@
 export interface PerformanceMetrics {
   // 时间指标
   latency: {
-    min: number;      // 最小延迟 (ms)
-    max: number;      // 最大延迟 (ms)
-    avg: number;      // 平均延迟 (ms)
-    p50: number;      // 50th 百分位延迟 (ms)
-    p95: number;      // 95th 百分位延迟 (ms)
-    p99: number;      // 99th 百分位延迟 (ms)
+    min: number; // 最小延迟 (ms)
+    max: number; // 最大延迟 (ms)
+    avg: number; // 平均延迟 (ms)
+    p50: number; // 50th 百分位延迟 (ms)
+    p95: number; // 95th 百分位延迟 (ms)
+    p99: number; // 99th 百分位延迟 (ms)
   };
 
   // 吞吐量指标
   throughput: {
-    rps: number;      // 每秒请求数
-    totalRequests: number;  // 总请求数
-    successfulRequests: number;  // 成功请求数
-    failedRequests: number;  // 失败请求数
-    successRate: number;  // 成功率 (%)
+    rps: number; // 每秒请求数
+    totalRequests: number; // 总请求数
+    successfulRequests: number; // 成功请求数
+    failedRequests: number; // 失败请求数
+    successRate: number; // 成功率 (%)
   };
 
   // 资源使用
   resources: {
     memory: {
-      initial: number;  // 初始内存 (MB)
-      peak: number;     // 峰值内存 (MB)
-      final: number;    // 最终内存 (MB)
-      delta: number;    // 内存变化 (MB)
+      initial: number; // 初始内存 (MB)
+      peak: number; // 峰值内存 (MB)
+      final: number; // 最终内存 (MB)
+      delta: number; // 内存变化 (MB)
     };
     cpu: {
-      avg: number;      // 平均 CPU 使用率 (%)
-      peak: number;     // 峰值 CPU 使用率 (%)
+      avg: number; // 平均 CPU 使用率 (%)
+      peak: number; // 峰值 CPU 使用率 (%)
     };
   };
 
@@ -53,27 +53,27 @@ export interface PerformanceMetrics {
 export interface SuccessCriteria {
   // 延迟标准
   latency: {
-    maxAvgLatency: number;      // 最大平均延迟 (ms)
-    maxP95Latency: number;      // 最大 P95 延迟 (ms)
-    maxP99Latency: number;      // 最大 P99 延迟 (ms)
+    maxAvgLatency: number; // 最大平均延迟 (ms)
+    maxP95Latency: number; // 最大 P95 延迟 (ms)
+    maxP99Latency: number; // 最大 P99 延迟 (ms)
   };
 
   // 吞吐量标准
   throughput: {
-    minRPS: number;             // 最小 RPS
-    minSuccessRate: number;     // 最小成功率 (%)
+    minRPS: number; // 最小 RPS
+    minSuccessRate: number; // 最小成功率 (%)
   };
 
   // 资源标准
   resources: {
-    maxMemoryIncrease: number;  // 最大内存增长 (MB)
-    maxMemoryLeakRate: number;  // 最大内存泄漏率 (MB/分钟)
+    maxMemoryIncrease: number; // 最大内存增长 (MB)
+    maxMemoryLeakRate: number; // 最大内存泄漏率 (MB/分钟)
   };
 
   // 稳定性标准
   stability: {
-    maxErrorRate: number;       // 最大错误率 (%)
-    maxConnectionFailures: number;  // 最大连接失败数
+    maxErrorRate: number; // 最大错误率 (%)
+    maxConnectionFailures: number; // 最大连接失败数
   };
 }
 
@@ -96,16 +96,16 @@ export interface TestConfig {
 
   // 数据规模
   dataScale?: {
-    rules?: number;        // 规则数量
-    records?: number;      // 数据库记录数
-    items?: number;        // 列表项数
+    rules?: number; // 规则数量
+    records?: number; // 数据库记录数
+    items?: number; // 列表项数
   };
 
   // 持续时间
   duration?: {
-    warmup: number;        // 预热时间 (ms)
-    test: number;          // 测试时间 (ms)
-    cooldown: number;      // 冷却时间 (ms)
+    warmup: number; // 预热时间 (ms)
+    test: number; // 测试时间 (ms)
+    cooldown: number; // 冷却时间 (ms)
   };
 
   // 特定配置
@@ -140,7 +140,7 @@ export interface BenchmarkReport {
     totalTests: number;
     passed: number;
     failed: number;
-    overallScore: number;  // 0-100
+    overallScore: number; // 0-100
   };
 
   results: BenchmarkResult[];
@@ -212,36 +212,36 @@ export const PerformanceBaselines = {
   backend: {
     // 吞吐量
     throughput: {
-      lowConcurrency: { rps: 50, successRate: 95 },      // 10-50 并发
-      mediumConcurrency: { rps: 30, successRate: 98 },   // 50-100 并发
-      highConcurrency: { rps: 20, successRate: 99 },     // 100+ 并发
+      lowConcurrency: { rps: 50, successRate: 95 }, // 10-50 并发
+      mediumConcurrency: { rps: 30, successRate: 98 }, // 50-100 并发
+      highConcurrency: { rps: 20, successRate: 99 }, // 100+ 并发
     },
 
     // 规则引擎
     rules: {
-      singleRule: { avgLatency: 1.0, maxLatency: 5.0 },   // 单条规则
+      singleRule: { avgLatency: 1.0, maxLatency: 5.0 }, // 单条规则
       multipleRules: { avgLatency: 2.0, maxLatency: 10.0 }, // 多条规则
-      throughput: 100000,  // req/s
+      throughput: 100000, // req/s
     },
 
     // 数据库
     database: {
-      singleWrite: { avgLatency: 10.0, maxLatency: 50.0 },  // 单条写入
-      batchWrite: { avgLatency: 5.0, maxLatency: 20.0 },    // 批量写入
-      query: { avgLatency: 5.0, maxLatency: 20.0 },         // 查询
+      singleWrite: { avgLatency: 10.0, maxLatency: 50.0 }, // 单条写入
+      batchWrite: { avgLatency: 5.0, maxLatency: 20.0 }, // 批量写入
+      query: { avgLatency: 5.0, maxLatency: 20.0 }, // 查询
     },
 
     // SSE
     sse: {
-      connectionTime: { avg: 50.0, max: 100.0 },  // 连接建立时间
-      maxConnections: 100,                        // 最大并发连接
-      eventLatency: { avg: 10.0, max: 50.0 },    // 事件推送延迟
+      connectionTime: { avg: 50.0, max: 100.0 }, // 连接建立时间
+      maxConnections: 100, // 最大并发连接
+      eventLatency: { avg: 10.0, max: 50.0 }, // 事件推送延迟
     },
 
     // 资源
     resources: {
-      memory: { maxIncrease: 50.0, leakRate: 0.1 },  // 内存使用
-      cpu: { maxUsage: 80 },                         // CPU 使用率
+      memory: { maxIncrease: 50.0, leakRate: 0.1 }, // 内存使用
+      cpu: { maxUsage: 80 }, // CPU 使用率
     },
   },
 
@@ -249,36 +249,36 @@ export const PerformanceBaselines = {
   frontend: {
     // 渲染性能
     rendering: {
-      componentMount: { avg: 5.0, max: 10.0 },      // 组件挂载
-      listRender: { avg: 50.0, max: 100.0 },        // 列表渲染 (100项)
-      update: { avg: 20.0, max: 50.0 },             // 组件更新
+      componentMount: { avg: 5.0, max: 10.0 }, // 组件挂载
+      listRender: { avg: 50.0, max: 100.0 }, // 列表渲染 (100项)
+      update: { avg: 20.0, max: 50.0 }, // 组件更新
     },
 
     // 虚拟滚动
     virtualScroll: {
-      initialRender: { avg: 100.0, max: 200.0 },    // 初始渲染 (10k项)
+      initialRender: { avg: 100.0, max: 200.0 }, // 初始渲染 (10k项)
       scrollPerformance: { avg: 30.0, max: 100.0 }, // 滚动性能
     },
 
     // 状态管理
     stateManagement: {
-      simpleUpdate: { avg: 1.0, max: 5.0 },         // 简单状态更新
-      batchUpdate: { avg: 10.0, max: 50.0 },        // 批量更新
-      subscription: { avg: 0.5, max: 2.0 },         // 订阅通知
+      simpleUpdate: { avg: 1.0, max: 5.0 }, // 简单状态更新
+      batchUpdate: { avg: 10.0, max: 50.0 }, // 批量更新
+      subscription: { avg: 0.5, max: 2.0 }, // 订阅通知
     },
 
     // 内存
     memory: {
-      leakTolerance: 0.5,                           // 内存泄漏容忍度 (MB)
-      componentLifecycle: { avg: 5.0, max: 10.0 },  // 组件生命周期
+      leakTolerance: 0.5, // 内存泄漏容忍度 (MB)
+      componentLifecycle: { avg: 5.0, max: 10.0 }, // 组件生命周期
     },
   },
 
   // 端到端基线
   e2e: {
-    completeFlow: { avg: 100.0, max: 200.0 },       // 完整请求流程
-    ruleApplication: { avg: 50.0, max: 100.0 },     // 规则应用到响应
-    uiUpdate: { avg: 30.0, max: 60.0 },             // UI 更新到显示
+    completeFlow: { avg: 100.0, max: 200.0 }, // 完整请求流程
+    ruleApplication: { avg: 50.0, max: 100.0 }, // 规则应用到响应
+    uiUpdate: { avg: 30.0, max: 60.0 }, // UI 更新到显示
   },
 };
 
@@ -313,7 +313,9 @@ export class PerformanceTimer {
     return this.measurements.get(label) || [];
   }
 
-  getStats(label: string): { avg: number; min: number; max: number; p95: number; p99: number } | null {
+  getStats(
+    label: string,
+  ): { avg: number; min: number; max: number; p95: number; p99: number } | null {
     const measurements = this.getMeasurements(label);
     if (measurements.length === 0) return null;
 
@@ -455,8 +457,10 @@ export class DataGenerator {
         instructions: 'Please provide detailed responses with examples.',
       },
       large: {
-        system: 'You are an expert AI assistant with deep knowledge across multiple domains including technology, science, mathematics, and creative writing.',
-        instructions: 'When responding, please provide comprehensive explanations with multiple examples, consider edge cases, and structure your answers clearly with headings and bullet points for better readability.',
+        system:
+          'You are an expert AI assistant with deep knowledge across multiple domains including technology, science, mathematics, and creative writing.',
+        instructions:
+          'When responding, please provide comprehensive explanations with multiple examples, consider edge cases, and structure your answers clearly with headings and bullet points for better readability.',
       },
     };
     return sizes[size];
@@ -528,19 +532,19 @@ export class ReportGenerator {
 
     if (report.bottlenecks.critical.length > 0) {
       md += `### 🔴 关键瓶颈\n`;
-      report.bottlenecks.critical.forEach(b => md += `- ${b}\n`);
+      report.bottlenecks.critical.forEach(b => (md += `- ${b}\n`));
       md += '\n';
     }
 
     if (report.bottlenecks.warning.length > 0) {
       md += `### 🟡 警告\n`;
-      report.bottlenecks.warning.forEach(b => md += `- ${b}\n`);
+      report.bottlenecks.warning.forEach(b => (md += `- ${b}\n`));
       md += '\n';
     }
 
     if (report.bottlenecks.info.length > 0) {
       md += `### 🔵 信息\n`;
-      report.bottlenecks.info.forEach(b => md += `- ${b}\n`);
+      report.bottlenecks.info.forEach(b => (md += `- ${b}\n`));
       md += '\n';
     }
 
@@ -549,19 +553,19 @@ export class ReportGenerator {
 
     if (report.recommendations.immediate.length > 0) {
       md += `### 🚀 立即实施 (P0)\n`;
-      report.recommendations.immediate.forEach(r => md += `- ${r}\n`);
+      report.recommendations.immediate.forEach(r => (md += `- ${r}\n`));
       md += '\n';
     }
 
     if (report.recommendations.shortTerm.length > 0) {
       md += `### ⚡ 短期实施 (P1)\n`;
-      report.recommendations.shortTerm.forEach(r => md += `- ${r}\n`);
+      report.recommendations.shortTerm.forEach(r => (md += `- ${r}\n`));
       md += '\n';
     }
 
     if (report.recommendations.longTerm.length > 0) {
       md += `### 🎯 长期优化 (P2)\n`;
-      report.recommendations.longTerm.forEach(r => md += `- ${r}\n`);
+      report.recommendations.longTerm.forEach(r => (md += `- ${r}\n`));
       md += '\n';
     }
 
@@ -673,7 +677,7 @@ export class PerformanceBenchmark implements BenchmarkExecutor {
       criteria: scenario.criteria,
       violations: [],
       analysis: [],
-      recommendations: []
+      recommendations: [],
     });
 
     // 生成分析和建议
@@ -760,23 +764,33 @@ export class PerformanceBenchmark implements BenchmarkExecutor {
 
     // 延迟检查
     if (metrics.latency.avg > criteria.latency.maxAvgLatency) {
-      violations.push(`平均延迟 ${metrics.latency.avg.toFixed(2)}ms 超过阈值 ${criteria.latency.maxAvgLatency}ms`);
+      violations.push(
+        `平均延迟 ${metrics.latency.avg.toFixed(2)}ms 超过阈值 ${criteria.latency.maxAvgLatency}ms`,
+      );
     }
     if (metrics.latency.p95 > criteria.latency.maxP95Latency) {
-      violations.push(`P95延迟 ${metrics.latency.p95.toFixed(2)}ms 超过阈值 ${criteria.latency.maxP95Latency}ms`);
+      violations.push(
+        `P95延迟 ${metrics.latency.p95.toFixed(2)}ms 超过阈值 ${criteria.latency.maxP95Latency}ms`,
+      );
     }
 
     // 吞吐量检查
     if (metrics.throughput.rps < criteria.throughput.minRPS) {
-      violations.push(`RPS ${metrics.throughput.rps.toFixed(1)} 低于阈值 ${criteria.throughput.minRPS}`);
+      violations.push(
+        `RPS ${metrics.throughput.rps.toFixed(1)} 低于阈值 ${criteria.throughput.minRPS}`,
+      );
     }
     if (metrics.throughput.successRate < criteria.throughput.minSuccessRate) {
-      violations.push(`成功率 ${metrics.throughput.successRate.toFixed(1)}% 低于阈值 ${criteria.throughput.minSuccessRate}%`);
+      violations.push(
+        `成功率 ${metrics.throughput.successRate.toFixed(1)}% 低于阈值 ${criteria.throughput.minSuccessRate}%`,
+      );
     }
 
     // 资源检查
     if (metrics.resources.memory.delta > criteria.resources.maxMemoryIncrease) {
-      violations.push(`内存增长 ${metrics.resources.memory.delta.toFixed(2)}MB 超过阈值 ${criteria.resources.maxMemoryIncrease}MB`);
+      violations.push(
+        `内存增长 ${metrics.resources.memory.delta.toFixed(2)}MB 超过阈值 ${criteria.resources.maxMemoryIncrease}MB`,
+      );
     }
 
     return {
@@ -905,13 +919,11 @@ export class PerformanceBenchmark implements BenchmarkExecutor {
     const longTerm: string[] = [];
 
     // 基于测试结果生成建议
-    const hasDatabaseIssues = results.some(r =>
-      r.scenario.includes('数据库') && r.metrics.resources.memory.delta > 10
+    const hasDatabaseIssues = results.some(
+      r => r.scenario.includes('数据库') && r.metrics.resources.memory.delta > 10,
     );
 
-    const hasLatencyIssues = results.some(r =>
-      r.metrics.latency.avg > 50
-    );
+    const hasLatencyIssues = results.some(r => r.metrics.latency.avg > 50);
 
     if (hasDatabaseIssues) {
       immediate.push('实现数据库批量写入优化');
@@ -936,7 +948,13 @@ export class PerformanceBenchmark implements BenchmarkExecutor {
   private createEmptyMetrics(): PerformanceMetrics {
     return {
       latency: { min: 0, max: 0, avg: 0, p50: 0, p95: 0, p99: 0 },
-      throughput: { rps: 0, totalRequests: 0, successfulRequests: 0, failedRequests: 0, successRate: 0 },
+      throughput: {
+        rps: 0,
+        totalRequests: 0,
+        successfulRequests: 0,
+        failedRequests: 0,
+        successRate: 0,
+      },
       resources: {
         memory: { initial: 0, peak: 0, final: 0, delta: 0 },
         cpu: { avg: 0, peak: 0 },

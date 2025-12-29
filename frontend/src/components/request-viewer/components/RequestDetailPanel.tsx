@@ -48,7 +48,7 @@ interface RequestDetailPanelProps {
     mode: MatchMode,
     ignoreCase: boolean,
     multiline: boolean,
-    result: RegexResult
+    result: RegexResult,
   ) => void;
   /** 基于当前请求创建规则的回调 */
   onBasedOnRequestCreate?: () => void;

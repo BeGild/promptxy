@@ -41,9 +41,9 @@ export class RegexGenerator {
   static escapeRegex(text: string): string {
     // 先转义换行符等控制字符
     let escaped = text
-      .replace(/\n/g, '\\n')   // 换行符
-      .replace(/\r/g, '\\r')   // 回车符
-      .replace(/\t/g, '\\t');  // 制表符
+      .replace(/\n/g, '\\n') // 换行符
+      .replace(/\r/g, '\\r') // 回车符
+      .replace(/\t/g, '\\t'); // 制表符
     // 再转义正则表达式特殊字符
     return escaped.replace(this.SPECIAL_CHARS, '\\$&');
   }
@@ -157,7 +157,7 @@ export class RegexGenerator {
     text: string,
     ignoreCase = false,
     multiline = false,
-    chars = 10
+    chars = 10,
   ): RegexResult {
     // 取开头和结尾各 chars 个字符
     const prefix = text.slice(0, Math.min(chars, text.length));
@@ -229,7 +229,7 @@ export class RegexGenerator {
     text: string,
     mode: MatchMode,
     ignoreCase = false,
-    multiline = false
+    multiline = false,
   ): RegexResult {
     switch (mode) {
       case MatchMode.EXACT:

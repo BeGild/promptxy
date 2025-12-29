@@ -1,0 +1,40 @@
+# 依赖
+node_modules/
+**/node_modules/
+
+# 构建产物
+dist/
+build/
+**/dist/
+**/build/
+
+# 缓存
+.cache/
+*.log
+*.tsbuildinfo
+
+# 测试覆盖率
+coverage/
+**/coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 其他
+.env
+.env.*
+*.min.js
+*.min.css
+
+# 参考项目（不需要格式化）
+refence/
+
+# openspec 文档（保持原样）
+openspec/
+
+# 临时文件
+*.tmp
+.DS_Store

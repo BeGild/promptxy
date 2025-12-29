@@ -20,17 +20,20 @@ npm install react-window@2.2.3
 **文件位置**: `frontend/src/hooks/useVirtualList.ts`
 
 **功能**:
+
 - 统一的虚拟滚动逻辑封装
 - 滚动状态检测与防抖
 - 动态高度支持
 - 性能监控
 
 **导出函数**:
+
 - `useVirtualList<TItem>(items, itemHeight, options)`: 主 Hook
 - `useItemHeightEstimator(baseHeight, variance)`: 高度估算器
 - `useVirtualListPerf()`: 性能监控器
 
 **优化策略**:
+
 - 滚动状态检测 (150ms 防抖)
 - 动态高度缓存
 - 程序滚动 vs 用户滚动区分
@@ -40,12 +43,14 @@ npm install react-window@2.2.3
 **文件位置**: `frontend/src/components/requests/RequestListVirtual.tsx`
 
 **特性**:
+
 - **固定高度**: 64px 行高
 - **虚拟列表**: 使用 `react-window` 的 `List` 组件
 - **滚动优化**: 快速滚动时显示简化占位符
 - **功能完整**: 保持所有原有功能（过滤、搜索、分页）
 
 **性能优化**:
+
 ```typescript
 // 滚动状态检测
 const handleRowsRendered = useCallback(() => {
@@ -62,11 +67,13 @@ const handleRowsRendered = useCallback(() => {
 **文件位置**: `frontend/src/components/rules/RuleListVirtual.tsx`
 
 **特性**:
+
 - **动态高度**: 根据规则内容计算高度
 - **智能估算**: 考虑描述、正则表达式、操作数量
 - **高度范围**: 140px - 280px，避免过大或过小
 
 **高度计算算法**:
+
 ```typescript
 rowHeight={(index: number) => {
   const rule = filteredRules[index];
@@ -84,6 +91,7 @@ rowHeight={(index: number) => {
 ### 5. 组件兼容性
 
 **RequestList** (`frontend/src/components/requests/RequestList.tsx`):
+
 ```typescript
 interface RequestListProps {
   // ... 其他 props
@@ -96,6 +104,7 @@ if (enableVirtualScroll) {
 ```
 
 **RuleList** (`frontend/src/components/rules/RuleList.tsx`):
+
 ```typescript
 interface RuleListProps {
   // ... 其他 props
@@ -130,12 +139,12 @@ if (enableVirtualScroll) {
 
 ### 性能对比
 
-| 场景 | 传统渲染 | 虚拟滚动 | 提升 |
-|------|----------|----------|------|
-| 50 项 | 正常 | 正常 | - |
-| 100 项 | 轻微延迟 | 流畅 | 30-50% |
-| 500 项 | 明显卡顿 | 流畅 | 80-90% |
-| 1000+ 项 | 严重卡顿 | 流畅 | 95%+ |
+| 场景     | 传统渲染 | 虚拟滚动 | 提升   |
+| -------- | -------- | -------- | ------ |
+| 50 项    | 正常     | 正常     | -      |
+| 100 项   | 轻微延迟 | 流畅     | 30-50% |
+| 500 项   | 明显卡顿 | 流畅     | 80-90% |
+| 1000+ 项 | 严重卡顿 | 流畅     | 95%+   |
 
 ## 技术架构
 
@@ -162,11 +171,13 @@ VirtualRow / VirtualRuleRow
 ## 优化策略
 
 ### 1. 只渲染可见区域
+
 - 使用 `react-window` 的 `List` 组件
 - 自动计算可见范围
 - 复用 DOM 节点
 
 ### 2. 滚动状态检测
+
 ```typescript
 // 滚动时显示简化内容
 if (isScrolling) {
@@ -175,11 +186,13 @@ if (isScrolling) {
 ```
 
 ### 3. 动态高度处理
+
 - 预计算每个项目的高度
 - 缓存高度信息
 - 平滑滚动体验
 
 ### 4. 防抖优化
+
 ```typescript
 // 150ms 防抖，避免频繁状态更新
 scrollTimerRef.current = setTimeout(() => {
@@ -190,18 +203,21 @@ scrollTimerRef.current = setTimeout(() => {
 ## 验证结果
 
 ### TypeScript 编译 ✅
+
 ```bash
 npm run build
 # ✅ 成功编译，无错误
 ```
 
 ### ESLint 检查 ✅
+
 ```bash
 npm run lint
 # ✅ 通过，无新增错误
 ```
 
 ### 功能验证 ✅
+
 - ✅ 组件导入正常
 - ✅ 虚拟滚动启用/禁用切换
 - ✅ 搜索过滤功能完整
@@ -212,12 +228,14 @@ npm run lint
 ## 文件清单
 
 ### 新增文件
+
 - `frontend/src/hooks/useVirtualList.ts` - 虚拟滚动 Hook
 - `frontend/src/components/requests/RequestListVirtual.tsx` - 请求列表虚拟滚动
 - `frontend/src/components/rules/RuleListVirtual.tsx` - 规则列表虚拟滚动
 - `frontend/tests/virtual-scroll/` - 测试文件
 
 ### 修改文件
+
 - `frontend/src/hooks/index.ts` - 导出新 Hook
 - `frontend/src/components/requests/RequestList.tsx` - 添加虚拟滚动支持
 - `frontend/src/components/rules/RuleList.tsx` - 添加虚拟滚动支持
@@ -226,12 +244,14 @@ npm run lint
 ## 性能指标
 
 ### 渲染性能
+
 - **首次渲染**: < 100ms (1000 项)
 - **滚动帧率**: 60 FPS 稳定
 - **内存使用**: 减少 80%+
 - **DOM 节点**: 减少 90%+
 
 ### 用户体验
+
 - 滚动丝滑，无卡顿
 - 搜索响应 < 50ms
 - 过滤切换即时响应
@@ -247,6 +267,7 @@ npm run lint
 ## 总结
 
 虚拟滚动实现成功完成了所有既定目标：
+
 - ✅ 安装并配置了 react-window
 - ✅ 实现了 RequestList 虚拟滚动
 - ✅ 实现了 RuleList 虚拟滚动

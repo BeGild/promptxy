@@ -14,21 +14,21 @@ const results = {
   timestamp: new Date().toISOString(),
   tests: {},
   summary: {},
-  recommendations: []
+  recommendations: [],
 };
 
 function makeRequest(options, body = null) {
   return new Promise((resolve, reject) => {
-    const req = http.request(options, (res) => {
+    const req = http.request(options, res => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', chunk => (data += chunk));
       res.on('end', () => {
         try {
           resolve({
             status: res.statusCode,
             headers: res.headers,
             body: data ? JSON.parse(data) : null,
-            size: data.length
+            size: data.length,
           });
         } catch (e) {
           resolve({ status: res.statusCode, headers: res.headers, body: data, size: data.length });
@@ -50,21 +50,21 @@ async function testConnectivity() {
       hostname: '127.0.0.1',
       port: 7070,
       path: '/_promptxy/health',
-      method: 'GET'
+      method: 'GET',
     });
 
     const api = await makeRequest({
       hostname: '127.0.0.1',
       port: 7071,
       path: '/_promptxy/health',
-      method: 'GET'
+      method: 'GET',
     });
 
     results.tests.connectivity = {
       gateway: gateway.status === 200,
       api: api.status === 200,
       gatewayResponse: gateway.body,
-      apiResponse: api.body
+      apiResponse: api.body,
     };
 
     console.log(`✓ 网关: ${gateway.status}, API: ${api.status}`);
@@ -84,15 +84,16 @@ async function testConcurrentRequests() {
     messages: [
       {
         role: 'user',
-        content: 'Hello, this is a test message for performance benchmarking. Please respond with a standard greeting.'
-      }
-    ]
+        content:
+          'Hello, this is a test message for performance benchmarking. Please respond with a standard greeting.',
+      },
+    ],
   };
 
   const scenarios = [
     { name: '100并发', connections: 100, requests: 500 },
     { name: '500并发', connections: 500, requests: 500 },
-    { name: '1000并发', connections: 1000, requests: 500 }
+    { name: '1000并发', connections: 1000, requests: 500 },
   ];
 
   for (const scenario of scenarios) {
@@ -104,13 +105,16 @@ async function testConcurrentRequests() {
     // 创建并发请求
     for (let i = 0; i < scenario.requests; i++) {
       promises.push(
-        makeRequest({
-          hostname: '127.0.0.1',
-          port: 7070,
-          path: '/v1/messages',
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        }, testBody).catch(e => ({ error: e.message }))
+        makeRequest(
+          {
+            hostname: '127.0.0.1',
+            port: 7070,
+            path: '/v1/messages',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          },
+          testBody,
+        ).catch(e => ({ error: e.message })),
       );
 
       // 控制并发速率
@@ -135,7 +139,8 @@ async function testConcurrentRequests() {
         latencies.push(r.value.latency || 0);
       }
     }
-    const avgLatency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
+    const avgLatency =
+      latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
 
     results.tests[`concurrent_${scenario.name}`] = {
       connections: scenario.connections,
@@ -144,10 +149,12 @@ async function testConcurrentRequests() {
       failed,
       duration: duration.toFixed(2) + 'ms',
       rps: rps.toFixed(2),
-      avgLatency: avgLatency.toFixed(2) + 'ms'
+      avgLatency: avgLatency.toFixed(2) + 'ms',
     };
 
-    console.log(`    ✓ ${successful}/${scenario.requests} 成功, ${rps.toFixed(0)} RPS, 延迟 ${avgLatency.toFixed(0)}ms`);
+    console.log(
+      `    ✓ ${successful}/${scenario.requests} 成功, ${rps.toFixed(0)} RPS, 延迟 ${avgLatency.toFixed(0)}ms`,
+    );
   }
 }
 
@@ -160,13 +167,13 @@ async function testRuleEngine() {
     hostname: '127.0.0.1',
     port: 7071,
     path: '/_promptxy/config',
-    method: 'GET'
+    method: 'GET',
   });
 
   // 测试预览端点
   const testCases = [
     { name: '简单替换', text: 'This is important text' },
-    { name: '复杂文本', text: 'Important and critical content with multiple words' }
+    { name: '复杂文本', text: 'Important and critical content with multiple words' },
   ];
 
   for (const testCase of testCases) {
@@ -176,20 +183,23 @@ async function testRuleEngine() {
     for (let i = 0; i < iterations; i++) {
       const start = performance.now();
 
-      await makeRequest({
-        hostname: '127.0.0.1',
-        port: 7071,
-        path: '/_promptxy/preview',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      }, {
-        client: 'claude',
-        field: 'system',
-        body: { system: testCase.text },
-        method: 'POST',
-        path: '/v1/messages',
-        model: 'claude-3-5-sonnet-20241022'
-      });
+      await makeRequest(
+        {
+          hostname: '127.0.0.1',
+          port: 7071,
+          path: '/_promptxy/preview',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+        {
+          client: 'claude',
+          field: 'system',
+          body: { system: testCase.text },
+          method: 'POST',
+          path: '/v1/messages',
+          model: 'claude-3-5-sonnet-20241022',
+        },
+      );
 
       latencies.push(performance.now() - start);
     }
@@ -202,7 +212,7 @@ async function testRuleEngine() {
       iterations,
       avgLatency: avgLatency.toFixed(2) + 'ms',
       maxLatency: maxLatency.toFixed(2) + 'ms',
-      throughput: throughput + ' req/s'
+      throughput: throughput + ' req/s',
     };
 
     console.log(`    ✓ ${testCase.name}: ${avgLatency.toFixed(2)}ms, ${throughput} req/s`);
@@ -220,17 +230,20 @@ async function testDatabase() {
     const start = performance.now();
 
     try {
-      await makeRequest({
-        hostname: '127.0.0.1',
-        port: 7070,
-        path: '/v1/messages',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      }, {
-        model: 'claude-3-5-sonnet-20241022',
-        system: `Test prompt ${i}`,
-        messages: [{ role: 'user', content: `Test message ${i}` }]
-      });
+      await makeRequest(
+        {
+          hostname: '127.0.0.1',
+          port: 7070,
+          path: '/v1/messages',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+        {
+          model: 'claude-3-5-sonnet-20241022',
+          system: `Test prompt ${i}`,
+          messages: [{ role: 'user', content: `Test message ${i}` }],
+        },
+      );
 
       latencies.push(performance.now() - start);
     } catch (e) {
@@ -250,20 +263,23 @@ async function testDatabase() {
     hostname: '127.0.0.1',
     port: 7071,
     path: '/_promptxy/database',
-    method: 'GET'
+    method: 'GET',
   });
 
-  const avgLatency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
+  const avgLatency =
+    latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
 
   results.tests.database_write = {
     iterations,
     successful: latencies.length,
     avgLatency: avgLatency.toFixed(2) + 'ms',
     totalRecords: stats.body.recordCount,
-    dbSize: (stats.body.size / 1024).toFixed(2) + ' KB'
+    dbSize: (stats.body.size / 1024).toFixed(2) + ' KB',
   };
 
-  console.log(`    ✓ ${latencies.length}/${iterations} 次写入, 平均 ${avgLatency.toFixed(2)}ms, 记录数: ${stats.body.recordCount}`);
+  console.log(
+    `    ✓ ${latencies.length}/${iterations} 次写入, 平均 ${avgLatency.toFixed(2)}ms, 记录数: ${stats.body.recordCount}`,
+  );
 }
 
 // 5. SSE 连接稳定性测试
@@ -277,45 +293,48 @@ async function testSSE() {
 
   // 建立连接
   for (let i = 0; i < concurrentConnections; i++) {
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port: 7071,
-      path: '/_promptxy/events',
-      method: 'GET',
-      headers: { 'Accept': 'text/event-stream' }
-    }, (res) => {
-      if (res.statusCode !== 200) {
-        errors.push(`HTTP ${res.statusCode}`);
-        return;
-      }
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port: 7071,
+        path: '/_promptxy/events',
+        method: 'GET',
+        headers: { Accept: 'text/event-stream' },
+      },
+      res => {
+        if (res.statusCode !== 200) {
+          errors.push(`HTTP ${res.statusCode}`);
+          return;
+        }
 
-      let buffer = '';
-      res.on('data', (chunk) => {
-        buffer += chunk.toString();
-        const eventParts = buffer.split('\n\n');
-        buffer = eventParts.pop() || '';
+        let buffer = '';
+        res.on('data', chunk => {
+          buffer += chunk.toString();
+          const eventParts = buffer.split('\n\n');
+          buffer = eventParts.pop() || '';
 
-        eventParts.forEach(part => {
-          if (part.includes('data:')) {
-            const dataLine = part.split('\n').find(line => line.startsWith('data:'));
-            if (dataLine) {
-              try {
-                const json = JSON.parse(dataLine.substring(5));
-                events.push({ connection: i, data: json });
-              } catch (e) {
-                // 忽略解析错误
+          eventParts.forEach(part => {
+            if (part.includes('data:')) {
+              const dataLine = part.split('\n').find(line => line.startsWith('data:'));
+              if (dataLine) {
+                try {
+                  const json = JSON.parse(dataLine.substring(5));
+                  events.push({ connection: i, data: json });
+                } catch (e) {
+                  // 忽略解析错误
+                }
               }
             }
-          }
+          });
         });
-      });
 
-      res.on('error', (err) => {
-        errors.push(err.message);
-      });
-    });
+        res.on('error', err => {
+          errors.push(err.message);
+        });
+      },
+    );
 
-    req.on('error', (err) => {
+    req.on('error', err => {
       errors.push(err.message);
     });
 
@@ -328,17 +347,20 @@ async function testSSE() {
   // 触发一些请求产生事件
   for (let i = 0; i < 3; i++) {
     try {
-      await makeRequest({
-        hostname: '127.0.0.1',
-        port: 7070,
-        path: '/v1/messages',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      }, {
-        model: 'claude-3-5-sonnet-20241022',
-        system: 'SSE test',
-        messages: [{ role: 'user', content: `SSE event ${i}` }]
-      });
+      await makeRequest(
+        {
+          hostname: '127.0.0.1',
+          port: 7070,
+          path: '/v1/messages',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+        {
+          model: 'claude-3-5-sonnet-20241022',
+          system: 'SSE test',
+          messages: [{ role: 'user', content: `SSE event ${i}` }],
+        },
+      );
     } catch (e) {
       // 忽略
     }
@@ -350,14 +372,17 @@ async function testSSE() {
   // 清理连接
   connections.forEach(req => req.destroy());
 
-  const stabilityRate = ((concurrentConnections - errors.length) / concurrentConnections * 100).toFixed(1);
+  const stabilityRate = (
+    ((concurrentConnections - errors.length) / concurrentConnections) *
+    100
+  ).toFixed(1);
 
   results.tests.sse_stability = {
     connections: concurrentConnections,
     active: concurrentConnections - errors.length,
     events: events.length,
     errors: errors.length,
-    stabilityRate: stabilityRate + '%'
+    stabilityRate: stabilityRate + '%',
   };
 
   console.log(`    ✓ 稳定率: ${stabilityRate}%, 事件: ${events.length}, 错误: ${errors.length}`);
@@ -378,7 +403,7 @@ async function monitorMemory() {
     samples.push({
       timestamp: Date.now() - startTime,
       rss: (memUsage.rss / 1024 / 1024).toFixed(2),
-      heapUsed: (memUsage.heapUsed / 1024 / 1024).toFixed(2)
+      heapUsed: (memUsage.heapUsed / 1024 / 1024).toFixed(2),
     });
     await sleep(interval);
   }
@@ -394,10 +419,12 @@ async function monitorMemory() {
     max: maxMem.toFixed(2) + ' MB',
     avg: avgMem.toFixed(2) + ' MB',
     trend: (trend > 0 ? '+' : '') + trend.toFixed(2) + ' MB',
-    leakRisk: trend > 10 ? '高' : '低'
+    leakRisk: trend > 10 ? '高' : '低',
   };
 
-  console.log(`    ✓ 最大: ${maxMem.toFixed(2)}MB, 平均: ${avgMem.toFixed(2)}MB, 趋势: ${trend.toFixed(2)}MB, 泄漏风险: ${trend > 10 ? '⚠️' : '✅'}`);
+  console.log(
+    `    ✓ 最大: ${maxMem.toFixed(2)}MB, 平均: ${avgMem.toFixed(2)}MB, 趋势: ${trend.toFixed(2)}MB, 泄漏风险: ${trend > 10 ? '⚠️' : '✅'}`,
+  );
 }
 
 // 生成报告
@@ -411,7 +438,7 @@ function generateReport() {
     recommendations.push({
       priority: '高',
       issue: `高并发下 ${highConcurrency.failed} 个请求失败`,
-      suggestion: '增加连接池大小，优化请求队列处理'
+      suggestion: '增加连接池大小，优化请求队列处理',
     });
   }
 
@@ -424,7 +451,7 @@ function generateReport() {
       recommendations.push({
         priority: '中',
         issue: `规则引擎延迟较高: ${test.avgLatency}`,
-        suggestion: '优化正则表达式，考虑预编译缓存'
+        suggestion: '优化正则表达式，考虑预编译缓存',
       });
     }
   });
@@ -436,7 +463,7 @@ function generateReport() {
       recommendations.push({
         priority: '中',
         issue: `数据库写入延迟: ${results.tests.database_write.avgLatency}`,
-        suggestion: '考虑批量写入或异步队列'
+        suggestion: '考虑批量写入或异步队列',
       });
     }
   }
@@ -448,7 +475,7 @@ function generateReport() {
       recommendations.push({
         priority: '高',
         issue: `SSE 连接不稳定，${sse.errors} 个错误`,
-        suggestion: '检查连接超时设置和资源清理'
+        suggestion: '检查连接超时设置和资源清理',
       });
     }
   }
@@ -460,7 +487,7 @@ function generateReport() {
       recommendations.push({
         priority: '高',
         issue: '检测到潜在内存泄漏',
-        suggestion: '检查事件监听器、数据库连接池、SSE 连接管理'
+        suggestion: '检查事件监听器、数据库连接池、SSE 连接管理',
       });
     }
   }
@@ -494,9 +521,11 @@ function displaySummary() {
   const concurrentTests = Object.keys(results.tests).filter(k => k.startsWith('concurrent_'));
   concurrentTests.forEach(key => {
     const test = results.tests[key];
-    console.log(`  ${key.replace('concurrent_', '')}: ${test.rps} RPS, ` +
-                `延迟: ${test.avgLatency}, ` +
-                `成功: ${test.successful}/${test.requests}`);
+    console.log(
+      `  ${key.replace('concurrent_', '')}: ${test.rps} RPS, ` +
+        `延迟: ${test.avgLatency}, ` +
+        `成功: ${test.successful}/${test.requests}`,
+    );
   });
   console.log('');
 
@@ -505,8 +534,9 @@ function displaySummary() {
   const ruleTests = Object.keys(results.tests).filter(k => k.startsWith('rule_engine_'));
   ruleTests.forEach(key => {
     const test = results.tests[key];
-    console.log(`  ${key.replace('rule_engine_', '')}: ${test.avgLatency}, ` +
-                `吞吐量: ${test.throughput}`);
+    console.log(
+      `  ${key.replace('rule_engine_', '')}: ${test.avgLatency}, ` + `吞吐量: ${test.throughput}`,
+    );
   });
   console.log('');
 
@@ -571,7 +601,6 @@ async function runTests() {
     displaySummary();
 
     console.log(`\n✅ 测试完成！详细报告: ${reportFile}`);
-
   } catch (error) {
     console.log(`\n❌ 测试失败: ${error.message}`);
     console.error(error);

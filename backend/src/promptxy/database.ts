@@ -96,9 +96,7 @@ export async function initializeDatabase(): Promise<Database> {
   // 数据库迁移：为已有数据库添加新列
   try {
     // 检查列是否存在
-    const tableInfo = await dbInstance.all(
-      `PRAGMA table_info(requests)`
-    );
+    const tableInfo = await dbInstance.all(`PRAGMA table_info(requests)`);
 
     // 迁移 response_body 列
     const hasResponseBody = tableInfo.some((col: any) => col.name === 'response_body');
@@ -443,7 +441,9 @@ export async function getSetting(key: string): Promise<string | null> {
  */
 export async function getAllSettings(): Promise<Record<string, string>> {
   const db = getDatabase();
-  const rows = await db.all<Array<{ key: string; value: string }>>(`SELECT key, value FROM settings`);
+  const rows = await db.all<Array<{ key: string; value: string }>>(
+    `SELECT key, value FROM settings`,
+  );
   const settings: Record<string, string> = {};
   for (const row of rows) {
     settings[row.key] = row.value;
@@ -465,7 +465,9 @@ export async function updateSetting(key: string, value: string): Promise<void> {
  */
 export async function getFilteredPaths(): Promise<string[]> {
   const db = getDatabase();
-  const result = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, ['filtered_paths']);
+  const result = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [
+    'filtered_paths',
+  ]);
   if (!result?.value) {
     return [];
   }

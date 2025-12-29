@@ -43,15 +43,15 @@ function createMockService(port, name, delayMs = 0) {
           content: [
             {
               type: 'text',
-              text: `Mock Claude Response: Processed ${body.length} bytes. [${new Date().toISOString()}]`
-            }
+              text: `Mock Claude Response: Processed ${body.length} bytes. [${new Date().toISOString()}]`,
+            },
           ],
           model: 'claude-3-5-sonnet-20241022',
           stop_reason: 'end_turn',
           usage: {
             input_tokens: Math.floor(Math.random() * 100) + 50,
-            output_tokens: Math.floor(Math.random() * 200) + 100
-          }
+            output_tokens: Math.floor(Math.random() * 200) + 100,
+          },
         };
       } else if (serviceName === 'openai') {
         responseData = {
@@ -64,16 +64,16 @@ function createMockService(port, name, delayMs = 0) {
               index: 0,
               message: {
                 role: 'assistant',
-                content: `Mock OpenAI Response: Processed ${body.length} bytes. [${new Date().toISOString()}]`
+                content: `Mock OpenAI Response: Processed ${body.length} bytes. [${new Date().toISOString()}]`,
               },
-              finish_reason: 'stop'
-            }
+              finish_reason: 'stop',
+            },
           ],
           usage: {
             prompt_tokens: Math.floor(Math.random() * 100) + 50,
             completion_tokens: Math.floor(Math.random() * 200) + 100,
-            total_tokens: Math.floor(Math.random() * 300) + 150
-          }
+            total_tokens: Math.floor(Math.random() * 300) + 150,
+          },
         };
       } else if (serviceName === 'gemini') {
         responseData = {
@@ -82,20 +82,20 @@ function createMockService(port, name, delayMs = 0) {
               content: {
                 parts: [
                   {
-                    text: `Mock Gemini Response: Processed ${body.length} bytes. [${new Date().toISOString()}]`
-                  }
+                    text: `Mock Gemini Response: Processed ${body.length} bytes. [${new Date().toISOString()}]`,
+                  },
                 ],
-                role: 'model'
+                role: 'model',
               },
               finishReason: 'STOP',
-              index: 0
-            }
+              index: 0,
+            },
           ],
           usageMetadata: {
             promptTokenCount: Math.floor(Math.random() * 100) + 50,
             candidatesTokenCount: Math.floor(Math.random() * 200) + 100,
-            totalTokenCount: Math.floor(Math.random() * 300) + 150
-          }
+            totalTokenCount: Math.floor(Math.random() * 300) + 150,
+          },
         };
       }
 
@@ -104,7 +104,7 @@ function createMockService(port, name, delayMs = 0) {
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
+          Connection: 'keep-alive',
         });
 
         // 发送多个事件
@@ -118,12 +118,17 @@ function createMockService(port, name, delayMs = 0) {
           }
 
           const chunk = {
-            type: eventCount === 0 ? 'content_block_start' : (eventCount === maxEvents - 1 ? 'content_block_stop' : 'content_block_delta'),
+            type:
+              eventCount === 0
+                ? 'content_block_start'
+                : eventCount === maxEvents - 1
+                  ? 'content_block_stop'
+                  : 'content_block_delta',
             index: 0,
             delta: {
               type: 'text',
-              text: `Chunk ${eventCount + 1} of ${maxEvents} `
-            }
+              text: `Chunk ${eventCount + 1} of ${maxEvents} `,
+            },
           };
 
           res.write(`event: content_block_delta\ndata: ${JSON.stringify(chunk)}\n\n`);
@@ -146,7 +151,7 @@ function createMockService(port, name, delayMs = 0) {
       res.writeHead(200, {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(responseStr),
-        'X-Mock-Service': name
+        'X-Mock-Service': name,
       });
       res.end(responseStr);
     });
@@ -160,9 +165,9 @@ function createMockService(port, name, delayMs = 0) {
 }
 
 // 启动三个模拟服务
-const claudeServer = createMockService(8080, 'Claude', 10);      // 10ms 延迟
-const openaiServer = createMockService(8081, 'OpenAI', 15);      // 15ms 延迟
-const geminiServer = createMockService(8082, 'Gemini', 20);      // 20ms 延迟
+const claudeServer = createMockService(8080, 'Claude', 10); // 10ms 延迟
+const openaiServer = createMockService(8081, 'OpenAI', 15); // 15ms 延迟
+const geminiServer = createMockService(8082, 'Gemini', 20); // 20ms 延迟
 
 console.log('Mock upstream services started:');
 console.log('- Claude: http://127.0.0.1:8080');

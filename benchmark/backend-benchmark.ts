@@ -5,7 +5,14 @@
 
 import * as http from 'node:http';
 import * as os from 'node:os';
-import { PerformanceTimer, ResourceMonitor, DataGenerator, PerformanceBenchmark, TestScenario, SuccessCriteria } from './performance-benchmark-framework.js';
+import {
+  PerformanceTimer,
+  ResourceMonitor,
+  DataGenerator,
+  PerformanceBenchmark,
+  TestScenario,
+  SuccessCriteria,
+} from './performance-benchmark-framework.js';
 
 // ==================== 后端测试配置 ====================
 
@@ -124,7 +131,9 @@ export class ThroughputBenchmark {
       try {
         const result = await this.testConcurrency(concurrency, 1000);
         results.push(result);
-        console.log(`✅ ${concurrency} 并发: RPS=${result.rps.toFixed(2)}, 成功率=${result.successRate.toFixed(1)}%`);
+        console.log(
+          `✅ ${concurrency} 并发: RPS=${result.rps.toFixed(2)}, 成功率=${result.successRate.toFixed(1)}%`,
+        );
       } catch (error) {
         console.error(`❌ ${concurrency} 并发测试失败:`, error);
         results.push({ concurrency, error: String(error) });
@@ -139,21 +148,23 @@ export class ThroughputBenchmark {
 
   private async makeRequest(url: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      http.get(url, (res) => {
-        if (res.statusCode === 200) {
-          let data = '';
-          res.on('data', chunk => data += chunk);
-          res.on('end', () => {
-            try {
-              resolve(JSON.parse(data));
-            } catch {
-              resolve(data);
-            }
-          });
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}`));
-        }
-      }).on('error', reject);
+      http
+        .get(url, res => {
+          if (res.statusCode === 200) {
+            let data = '';
+            res.on('data', chunk => (data += chunk));
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(data));
+              } catch {
+                resolve(data);
+              }
+            });
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}`));
+          }
+        })
+        .on('error', reject);
     });
   }
 }
@@ -185,10 +196,12 @@ export class RuleEngineBenchmark {
         method: 'POST',
         pathRegex: '/v1/chat',
       },
-      ops: [{
-        type: 'append',
-        text: '\n\nAdditional context: This is a test rule.',
-      }],
+      ops: [
+        {
+          type: 'append',
+          text: '\n\nAdditional context: This is a test rule.',
+        },
+      ],
     };
 
     const ctx = {
@@ -412,7 +425,7 @@ export class RuleEngineBenchmark {
       label,
       iterations: durations.length,
       latency: { min, max, avg, p50, p95, p99 },
-      throughput: (durations.length / (sorted.reduce((a, b) => a + b, 0) / 1000)), // req/s
+      throughput: durations.length / (sorted.reduce((a, b) => a + b, 0) / 1000), // req/s
     };
   }
 }
@@ -434,7 +447,8 @@ export class DatabaseBenchmark {
   async testSingleWrite(iterations: number = 100): Promise<any> {
     console.log(`🗄️ 测试单条记录写入: ${iterations} 次`);
 
-    const { initializeDatabase, insertRequestRecord, resetDatabaseForTest, getDatabaseInfo } = await import('../backend/src/promptxy/database.js');
+    const { initializeDatabase, insertRequestRecord, resetDatabaseForTest, getDatabaseInfo } =
+      await import('../backend/src/promptxy/database.js');
 
     // 初始化测试数据库
     await resetDatabaseForTest();
@@ -476,7 +490,8 @@ export class DatabaseBenchmark {
   async testBatchWrite(batchSizes: number[] = [10, 100, 1000]): Promise<any> {
     console.log(`🗄️ 测试批量写入: ${batchSizes.join(', ')} 条/批`);
 
-    const { initializeDatabase, insertRequestRecord, resetDatabaseForTest, getDatabaseInfo } = await import('../backend/src/promptxy/database.js');
+    const { initializeDatabase, insertRequestRecord, resetDatabaseForTest, getDatabaseInfo } =
+      await import('../backend/src/promptxy/database.js');
 
     await resetDatabaseForTest();
     const db = await initializeDatabase();
@@ -490,7 +505,9 @@ export class DatabaseBenchmark {
       }
 
       // 批量测试
-      const records = Array.from({ length: batchSize }, (_, i) => this.generateTestRecord(i + 1000));
+      const records = Array.from({ length: batchSize }, (_, i) =>
+        this.generateTestRecord(i + 1000),
+      );
 
       const start = performance.now();
       const startTime = Date.now();
@@ -533,7 +550,8 @@ export class DatabaseBenchmark {
   async testQueryPerformance(): Promise<any> {
     console.log(`🗄️ 测试查询性能`);
 
-    const { initializeDatabase, getRequestList, resetDatabaseForTest, insertRequestRecord } = await import('../backend/src/promptxy/database.js');
+    const { initializeDatabase, getRequestList, resetDatabaseForTest, insertRequestRecord } =
+      await import('../backend/src/promptxy/database.js');
 
     await resetDatabaseForTest();
     const db = await initializeDatabase();
@@ -585,7 +603,8 @@ export class DatabaseBenchmark {
   async testConcurrentWrite(): Promise<any> {
     console.log(`🗄️ 测试并发写入稳定性`);
 
-    const { initializeDatabase, insertRequestRecord, resetDatabaseForTest, getRequestStats } = await import('../backend/src/promptxy/database.js');
+    const { initializeDatabase, insertRequestRecord, resetDatabaseForTest, getRequestStats } =
+      await import('../backend/src/promptxy/database.js');
 
     await resetDatabaseForTest();
     const db = await initializeDatabase();
@@ -631,7 +650,10 @@ export class DatabaseBenchmark {
     // 统计
     const successful = flatResults.filter(r => r.success).length;
     const failed = flatResults.filter(r => !r.success).length;
-    const durations = flatResults.filter(r => r.success).map(r => r.duration).sort((a, b) => a - b);
+    const durations = flatResults
+      .filter(r => r.success)
+      .map(r => r.duration)
+      .sort((a, b) => a - b);
 
     const stats = this.calculateStats(durations, '并发写入');
     const dbStats = await getRequestStats();
@@ -873,7 +895,7 @@ export class SSEBenchmark {
 
   private connectSSE(url: string, timeout: number = 2000): Promise<any> {
     return new Promise((resolve, reject) => {
-      const req = http.get(url, (res) => {
+      const req = http.get(url, res => {
         if (res.statusCode === 200) {
           // SSE 连接成功
           resolve(res);
@@ -1200,33 +1222,32 @@ export class BackendBenchmarkSuite {
 
 // ==================== 主程序入口 ====================
 
-
 // ==================== 主程序入口 ====================
 
 async function main() {
-	console.log('PromptXY v2.0 后端性能基准测试\\n');
+  console.log('PromptXY v2.0 后端性能基准测试\\n');
 
-	const suite = new BackendBenchmarkSuite();
-	const results = await suite.runCompleteSuite();
-	const summary = suite.generateSummary(results);
+  const suite = new BackendBenchmarkSuite();
+  const results = await suite.runCompleteSuite();
+  const summary = suite.generateSummary(results);
 
-	console.log('\\n' + summary);
+  console.log('\\n' + summary);
 
-	// 保存结果到文件
-	const fs = await import('fs/promises');
-	const path = await import('path');
+  // 保存结果到文件
+  const fs = await import('fs/promises');
+  const path = await import('path');
 
-	const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-	const resultFile = path.join(process.cwd(), 'benchmark', `backend-results-${timestamp}.json`);
-	const summaryFile = path.join(process.cwd(), 'benchmark', `backend-summary-${timestamp}.md`);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const resultFile = path.join(process.cwd(), 'benchmark', `backend-results-${timestamp}.json`);
+  const summaryFile = path.join(process.cwd(), 'benchmark', `backend-summary-${timestamp}.md`);
 
-	await fs.mkdir(path.dirname(resultFile), { recursive: true });
-	await fs.writeFile(resultFile, JSON.stringify(results, null, 2));
-	await fs.writeFile(summaryFile, summary);
+  await fs.mkdir(path.dirname(resultFile), { recursive: true });
+  await fs.writeFile(resultFile, JSON.stringify(results, null, 2));
+  await fs.writeFile(summaryFile, summary);
 
-	console.log(`\\n📁 结果已保存:`);
-	console.log(`  - 详细数据: ${resultFile}`);
-	console.log(`  - 总结报告: ${summaryFile}`);
+  console.log(`\\n📁 结果已保存:`);
+  console.log(`  - 详细数据: ${resultFile}`);
+  console.log(`  - 总结报告: ${summaryFile}`);
 }
 
 main().catch(console.error);

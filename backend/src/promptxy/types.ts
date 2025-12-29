@@ -53,8 +53,8 @@ export type PromptxyRuleWhen = {
 };
 
 export type PromptxyRule = {
-  uuid: string;           // 规则唯一标识符（自动生成，不可修改）
-  name: string;           // 规则名称（可编辑）
+  uuid: string; // 规则唯一标识符（自动生成，不可修改）
+  name: string; // 规则名称（可编辑）
   description?: string;
   when: PromptxyRuleWhen;
   ops: PromptxyOp[];
@@ -93,12 +93,12 @@ export interface PathMapping {
  * 供应商配置
  */
 export interface Supplier {
-  id: string;                  // 唯一标识
-  name: string;                // 显示名称
-  baseUrl: string;             // 上游地址
-  localPrefix: string;         // 本地路径前缀（如 /claude）
+  id: string; // 唯一标识
+  name: string; // 显示名称
+  baseUrl: string; // 上游地址
+  localPrefix: string; // 本地路径前缀（如 /claude）
   pathMappings?: PathMapping[]; // 路径映射规则
-  enabled: boolean;            // 是否启用
+  enabled: boolean; // 是否启用
 }
 
 export type PromptxyConfig = {

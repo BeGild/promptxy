@@ -115,7 +115,9 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
 
   // 计算内容层位置，支持开启动画
   const overlayLeft = isOpen
-    ? (isOverlay ? `${100 - width}vw` : `calc(100% - ${width}vw)`)
+    ? isOverlay
+      ? `${100 - width}vw`
+      : `calc(100% - ${width}vw)`
     : '100%';
 
   // 统一结构，根据模式只改变样式，避免重绘
@@ -125,7 +127,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
       <div
         className="flex-shrink-0 relative transition-all duration-300 ease-out"
         style={{
-          width: (!isOpen || isOverlay) ? '0px' : `${width}vw`
+          width: !isOpen || isOverlay ? '0px' : `${width}vw`,
         }}
       >
         {/* 底层透明层 - 挤压左侧内容 */}
@@ -140,10 +142,10 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
           top: '56px',
           width: isOpen ? `${width}vw` : '0px',
           left: overlayLeft,
-          zIndex: (isOpen && isOverlay) ? 50 : 'auto',
+          zIndex: isOpen && isOverlay ? 50 : 'auto',
           height: 'calc(100vh - 56px)',
           opacity: isOpen ? 1 : 0,
-          overflow: isOpen ? 'visible' : 'hidden'
+          overflow: isOpen ? 'visible' : 'hidden',
         }}
       >
         {/* 拖拽手柄 */}
@@ -161,13 +163,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
           <div className="text-sm font-medium text-tertiary">详情面板</div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-tertiary opacity-60">ESC 关闭</span>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={onClose}
-              className="min-w-6 h-6"
-            >
+            <Button isIconOnly size="sm" variant="light" onPress={onClose} className="min-w-6 h-6">
               <X size={16} />
             </Button>
           </div>

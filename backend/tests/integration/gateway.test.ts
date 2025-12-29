@@ -591,9 +591,7 @@ describe('Gateway Integration Tests', () => {
     });
 
     it('应该支持 prefix 类型路径映射', async () => {
-      config.suppliers[0].pathMappings = [
-        { from: '/v1/', to: '/api/v1/', type: 'prefix' },
-      ];
+      config.suppliers[0].pathMappings = [{ from: '/v1/', to: '/api/v1/', type: 'prefix' }];
 
       await servers.shutdown();
       servers = await startTestServers(config, db);
@@ -614,9 +612,7 @@ describe('Gateway Integration Tests', () => {
     });
 
     it('应该支持 regex 类型路径映射', async () => {
-      config.suppliers[0].pathMappings = [
-        { from: '^/old/([^/]+)$', to: '/new/$1', type: 'regex' },
-      ];
+      config.suppliers[0].pathMappings = [{ from: '^/old/([^/]+)$', to: '/new/$1', type: 'regex' }];
 
       await servers.shutdown();
       servers = await startTestServers(config, db);
@@ -663,9 +659,7 @@ describe('Gateway Integration Tests', () => {
     });
 
     it('应该在无匹配映射时使用原路径', async () => {
-      config.suppliers[0].pathMappings = [
-        { from: '/specific', to: '/mapped', type: 'exact' },
-      ];
+      config.suppliers[0].pathMappings = [{ from: '/specific', to: '/mapped', type: 'exact' }];
 
       await servers.shutdown();
       servers = await startTestServers(config, db);

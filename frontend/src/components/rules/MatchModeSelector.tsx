@@ -17,12 +17,25 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Select, SelectItem, Button, Checkbox, Popover, PopoverContent, PopoverTrigger } from '@heroui/react';
+import {
+  Select,
+  SelectItem,
+  Button,
+  Checkbox,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@heroui/react';
 import { RegexGenerator, MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
 export interface MatchModeSelectorProps {
   /** 确认回调，返回选中的匹配模式、忽略大小写、多行选项和生成的正则结果 */
-  onConfirm: (mode: MatchMode, ignoreCase: boolean, multiline: boolean, result: RegexResult) => void;
+  onConfirm: (
+    mode: MatchMode,
+    ignoreCase: boolean,
+    multiline: boolean,
+    result: RegexResult,
+  ) => void;
   /** 选中的文本内容（可选） */
   selectedText?: string;
   /** 是否支持"基于当前请求"选项 */
@@ -43,7 +56,7 @@ export const MatchModeSelector: React.FC<MatchModeSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMode, setSelectedMode] = useState<MatchMode>(
-    selectedText ? MatchMode.EXACT : MatchMode.BASED_ON_REQUEST
+    selectedText ? MatchMode.EXACT : MatchMode.BASED_ON_REQUEST,
   );
   const [ignoreCase, setIgnoreCase] = useState(false);
 
@@ -172,12 +185,7 @@ export const MatchModeSelector: React.FC<MatchModeSelectorProps> = ({
         </span>
       </div>
 
-      <Button
-        color="primary"
-        size="sm"
-        isDisabled={!canConfirm}
-        onPress={handleConfirm}
-      >
+      <Button color="primary" size="sm" isDisabled={!canConfirm} onPress={handleConfirm}>
         确认
       </Button>
     </div>

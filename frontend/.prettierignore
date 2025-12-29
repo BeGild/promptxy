@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+build/
+
+# 缓存
+.cache/
+*.log
+*.tsbuildinfo
+
+# 测试覆盖率
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# 其他
+.env
+.env.*
+*.min.js
+*.min.css
+.DS_Store

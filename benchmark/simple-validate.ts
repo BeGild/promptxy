@@ -2,7 +2,11 @@
  * 简化的框架验证脚本
  */
 
-import { PerformanceTimer, ResourceMonitor, DataGenerator } from './performance-benchmark-framework.js';
+import {
+  PerformanceTimer,
+  ResourceMonitor,
+  DataGenerator,
+} from './performance-benchmark-framework.js';
 
 async function validateFramework() {
   console.log('🧪 PromptXY v2.0 基准测试框架验证\n');
@@ -44,7 +48,9 @@ async function validateFramework() {
 
   const perfDuration = performance.now() - start;
   const throughput = (iterations / perfDuration) * 1000;
-  console.log(`   ✅ 模拟规则: ${iterations} 次, ${perfDuration.toFixed(2)}ms, ${throughput.toFixed(0)} ops/s`);
+  console.log(
+    `   ✅ 模拟规则: ${iterations} 次, ${perfDuration.toFixed(2)}ms, ${throughput.toFixed(0)} ops/s`,
+  );
 
   // 5. 内存压力测试
   console.log('\n5. 内存压力测试');

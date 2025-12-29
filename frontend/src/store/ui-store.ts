@@ -21,7 +21,7 @@ interface UIState {
   // 请求侧边栏状态
   isRequestSidebarOpen: boolean;
   sidebarMode: 'detail' | 'response' | 'rule';
-  sidebarWidth: number;  // 记忆用户偏好 (vw)
+  sidebarWidth: number; // 记忆用户偏好 (vw)
 
   // 操作
   openRuleEditor: (ruleId?: string | null) => void;
@@ -57,7 +57,7 @@ const initialState = {
   // 侧边栏初始状态
   isRequestSidebarOpen: false,
   sidebarMode: 'detail' as 'detail' | 'response' | 'rule',
-  sidebarWidth: 40,  // 默认 40vw
+  sidebarWidth: 40, // 默认 40vw
 };
 
 /**
@@ -159,8 +159,7 @@ export const useUIStore = create<UIState>()(
           setSidebarMode: (mode: 'detail' | 'response' | 'rule') =>
             dedupedSet({ sidebarMode: mode }),
 
-          setSidebarWidth: (width: number) =>
-            dedupedSet({ sidebarWidth: width }),
+          setSidebarWidth: (width: number) => dedupedSet({ sidebarWidth: width }),
 
           reset: () => dedupedSet(initialState),
         };

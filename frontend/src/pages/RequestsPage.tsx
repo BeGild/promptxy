@@ -113,8 +113,10 @@ export const RequestsPage: React.FC = () => {
         className="overflow-auto transition-all duration-300 ease-out"
         style={{
           width: isRequestSidebarOpen
-            ? (isOverlayMode ? '40vw' : `${100 - sidebarWidth}vw`)
-            : '100%'
+            ? isOverlayMode
+              ? '40vw'
+              : `${100 - sidebarWidth}vw`
+            : '100%',
         }}
       >
         <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -197,13 +199,10 @@ export const RequestsPage: React.FC = () => {
         isOpen={isRequestSidebarOpen}
         onClose={handleClose}
         defaultWidth={60}
-        onModeChange={(mode) => setIsOverlayMode(mode === 'overlay')}
+        onModeChange={mode => setIsOverlayMode(mode === 'overlay')}
         onWidthChange={setSidebarWidth}
       >
-        <RequestDetailSidebar
-          request={request || null}
-          isLoading={detailLoading}
-        />
+        <RequestDetailSidebar request={request || null} isLoading={detailLoading} />
       </SideDrawer>
     </div>
   );

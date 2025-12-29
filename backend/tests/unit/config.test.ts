@@ -247,9 +247,7 @@ describe('Config Module', () => {
       await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
       process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
 
-      await expect(loadConfig()).rejects.toThrow(
-        'config.suppliers[0].baseUrl must be a valid URL',
-      );
+      await expect(loadConfig()).rejects.toThrow('config.suppliers[0].baseUrl must be a valid URL');
     });
 
     it('should reject suppliers with empty suppliers array', async () => {
@@ -349,9 +347,7 @@ describe('Config Module', () => {
       await writeFile(TEST_CONFIG_PATH, JSON.stringify(invalidConfig));
       process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
 
-      await expect(loadConfig()).rejects.toThrow(
-        'config.suppliers[0].localPrefix must start with',
-      );
+      await expect(loadConfig()).rejects.toThrow('config.suppliers[0].localPrefix must start with');
     });
 
     it('should reject invalid pathMapping regex', async () => {

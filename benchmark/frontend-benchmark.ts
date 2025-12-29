@@ -3,7 +3,11 @@
  * 包含：渲染性能、状态管理、内存管理、虚拟滚动测试
  */
 
-import { PerformanceTimer, ResourceMonitor, DataGenerator } from './performance-benchmark-framework.js';
+import {
+  PerformanceTimer,
+  ResourceMonitor,
+  DataGenerator,
+} from './performance-benchmark-framework.js';
 
 // ==================== 前端测试配置 ====================
 
@@ -242,13 +246,19 @@ export class ComponentRenderBenchmark {
     while (Date.now() - startTime < duration) {
       // 模拟各种操作
       const component = this.simulateComponentMount();
-      this.simulateComponentDidMount(component, { id: operationCount, data: `test-${operationCount}` });
+      this.simulateComponentDidMount(component, {
+        id: operationCount,
+        data: `test-${operationCount}`,
+      });
 
       // 短暂停留
       await new Promise(resolve => setTimeout(resolve, 5));
 
       // 更新
-      this.simulateComponentUpdate(component, { id: operationCount, data: `updated-${operationCount}` });
+      this.simulateComponentUpdate(component, {
+        id: operationCount,
+        data: `updated-${operationCount}`,
+      });
 
       // 卸载
       this.simulateComponentWillUnmount(component);
@@ -272,7 +282,7 @@ export class ComponentRenderBenchmark {
     return {
       duration,
       operationCount,
-      opsPerSecond: (operationCount / (duration / 1000)),
+      opsPerSecond: operationCount / (duration / 1000),
       memory: {
         initial: stats.avgMemory - delta,
         peak: stats.peakMemory,
@@ -502,7 +512,7 @@ export class StateManagementBenchmark {
       totalNotifications,
       avgPerSubscriber,
       duration,
-      notificationsPerSecond: (totalNotifications / (duration / 1000)),
+      notificationsPerSecond: totalNotifications / (duration / 1000),
       efficiency: avgPerSubscriber === updates, // 每个订阅者应该收到所有更新
     };
   }
@@ -788,7 +798,11 @@ export class VirtualScrollBenchmark {
     }));
   }
 
-  private simulateDynamicHeightRender(items: any[], visibleCount: number, startIndex: number): any[] {
+  private simulateDynamicHeightRender(
+    items: any[],
+    visibleCount: number,
+    startIndex: number,
+  ): any[] {
     // 模拟动态高度渲染
     const endIndex = Math.min(startIndex + visibleCount, items.length);
     const visibleItems = items.slice(startIndex, endIndex);
@@ -1286,33 +1300,32 @@ export class FrontendBenchmarkSuite {
 
 // ==================== 主程序入口 ====================
 
-
 // ==================== 主程序入口 ====================
 
 async function main() {
-	console.log('PromptXY v2.0 前端性能基准测试\\n');
+  console.log('PromptXY v2.0 前端性能基准测试\\n');
 
-	const suite = new FrontendBenchmarkSuite();
-	const results = await suite.runCompleteSuite();
-	const summary = suite.generateSummary(results);
+  const suite = new FrontendBenchmarkSuite();
+  const results = await suite.runCompleteSuite();
+  const summary = suite.generateSummary(results);
 
-	console.log('\\n' + summary);
+  console.log('\\n' + summary);
 
-	// 保存结果到文件
-	const fs = await import('fs/promises');
-	const path = await import('path');
+  // 保存结果到文件
+  const fs = await import('fs/promises');
+  const path = await import('path');
 
-	const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-	const resultFile = path.join(process.cwd(), 'benchmark', `frontend-results-${timestamp}.json`);
-	const summaryFile = path.join(process.cwd(), 'benchmark', `frontend-summary-${timestamp}.md`);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const resultFile = path.join(process.cwd(), 'benchmark', `frontend-results-${timestamp}.json`);
+  const summaryFile = path.join(process.cwd(), 'benchmark', `frontend-summary-${timestamp}.md`);
 
-	await fs.mkdir(path.dirname(resultFile), { recursive: true });
-	await fs.writeFile(resultFile, JSON.stringify(results, null, 2));
-	await fs.writeFile(summaryFile, summary);
+  await fs.mkdir(path.dirname(resultFile), { recursive: true });
+  await fs.writeFile(resultFile, JSON.stringify(results, null, 2));
+  await fs.writeFile(summaryFile, summary);
 
-	console.log(`\\n📁 结果已保存:`);
-	console.log(`  - 详细数据: ${resultFile}`);
-	console.log(`  - 总结报告: ${summaryFile}`);
+  console.log(`\\n📁 结果已保存:`);
+  console.log(`  - 详细数据: ${resultFile}`);
+  console.log(`  - 总结报告: ${summaryFile}`);
 }
 
 main().catch(console.error);

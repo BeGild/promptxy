@@ -4,7 +4,11 @@
  */
 
 import * as http from 'node:http';
-import { PerformanceTimer, ResourceMonitor, DataGenerator } from './performance-benchmark-framework.js';
+import {
+  PerformanceTimer,
+  ResourceMonitor,
+  DataGenerator,
+} from './performance-benchmark-framework.js';
 
 // ==================== 端到端测试配置 ====================
 
@@ -321,10 +325,10 @@ export class CompleteFlowBenchmark {
     const url = `${this.config.baseUrl}:${this.config.gatewayPort}/_promptxy/health`;
 
     return new Promise((resolve, reject) => {
-      const req = http.get(url, (res) => {
+      const req = http.get(url, res => {
         if (res.statusCode === 200) {
           let data = '';
-          res.on('data', chunk => data += chunk);
+          res.on('data', chunk => (data += chunk));
           res.on('end', () => {
             try {
               resolve(JSON.parse(data));
@@ -362,31 +366,35 @@ export class CompleteFlowBenchmark {
     });
 
     return new Promise((resolve, reject) => {
-      const req = http.request(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
+      const req = http.request(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          },
         },
-      }, (res) => {
-        if (res.statusCode === 200) {
-          let data = '';
-          res.on('data', chunk => data += chunk);
-          res.on('end', () => {
-            try {
-              const result = JSON.parse(data);
-              resolve({
-                matchCount: result.matches?.length || 0,
-                modified: result.modified,
-              });
-            } catch {
-              resolve({ matchCount: 0 });
-            }
-          });
-        } else {
-          reject(new Error(`HTTP ${res.statusCode}`));
-        }
-      });
+        res => {
+          if (res.statusCode === 200) {
+            let data = '';
+            res.on('data', chunk => (data += chunk));
+            res.on('end', () => {
+              try {
+                const result = JSON.parse(data);
+                resolve({
+                  matchCount: result.matches?.length || 0,
+                  modified: result.modified,
+                });
+              } catch {
+                resolve({ matchCount: 0 });
+              }
+            });
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}`));
+          }
+        },
+      );
 
       req.on('error', reject);
       req.setTimeout(5000, () => {
@@ -413,7 +421,9 @@ export class CompleteFlowBenchmark {
     // 4. DOM 更新
     const domDelay = Math.random() * 5 + 2; // 2-7ms
 
-    await new Promise(resolve => setTimeout(resolve, sseDelay + stateUpdateDelay + renderDelay + domDelay));
+    await new Promise(resolve =>
+      setTimeout(resolve, sseDelay + stateUpdateDelay + renderDelay + domDelay),
+    );
   }
 
   private calculateLatencyStats(durations: number[]): any {
@@ -681,17 +691,11 @@ export class BenchmarkRunner {
     await fs.mkdir(dir, { recursive: true });
 
     // 保存详细数据
-    await fs.writeFile(
-      path.join(dir, 'complete-results.json'),
-      JSON.stringify(results, null, 2)
-    );
+    await fs.writeFile(path.join(dir, 'complete-results.json'), JSON.stringify(results, null, 2));
 
     // 保存综合报告
     if (results.comprehensive) {
-      await fs.writeFile(
-        path.join(dir, 'comprehensive-report.md'),
-        results.comprehensive
-      );
+      await fs.writeFile(path.join(dir, 'comprehensive-report.md'), results.comprehensive);
     }
 
     // 保存各部分总结
@@ -709,8 +713,8 @@ export class BenchmarkRunner {
   }
 
   private async checkServices(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const req = http.get('http://localhost:7070/_promptxy/health', (res) => {
+    return new Promise(resolve => {
+      const req = http.get('http://localhost:7070/_promptxy/health', res => {
         resolve(res.statusCode === 200);
       });
       req.on('error', () => resolve(false));
@@ -766,12 +770,12 @@ export class BenchmarkRunner {
     const bottlenecks = this.analyzeBottlenecks(results);
     if (bottlenecks.critical.length > 0) {
       report += `### 🔴 关键瓶颈\n`;
-      bottlenecks.critical.forEach((b: string) => report += `- ${b}\n`);
+      bottlenecks.critical.forEach((b: string) => (report += `- ${b}\n`));
       report += '\n';
     }
     if (bottlenecks.warning.length > 0) {
       report += `### 🟡 警告\n`;
-      bottlenecks.warning.forEach((b: string) => report += `- ${b}\n`);
+      bottlenecks.warning.forEach((b: string) => (report += `- ${b}\n`));
       report += '\n';
     }
 
@@ -780,17 +784,17 @@ export class BenchmarkRunner {
     const recommendations = this.generateRecommendations(results);
     if (recommendations.immediate.length > 0) {
       report += `### 🚀 立即实施\n`;
-      recommendations.immediate.forEach((r: string) => report += `- ${r}\n`);
+      recommendations.immediate.forEach((r: string) => (report += `- ${r}\n`));
       report += '\n';
     }
     if (recommendations.shortTerm.length > 0) {
       report += `### ⚡ 短期实施\n`;
-      recommendations.shortTerm.forEach((r: string) => report += `- ${r}\n`);
+      recommendations.shortTerm.forEach((r: string) => (report += `- ${r}\n`));
       report += '\n';
     }
     if (recommendations.longTerm.length > 0) {
       report += `### 🎯 长期优化\n`;
-      recommendations.longTerm.forEach((r: string) => report += `- ${r}\n`);
+      recommendations.longTerm.forEach((r: string) => (report += `- ${r}\n`));
       report += '\n';
     }
 
@@ -815,20 +819,22 @@ export class BenchmarkRunner {
       let count = 0;
 
       if (b.throughput) {
-        const bestRPS = Math.max(...b.throughput.filter((r: any) => !r.error).map((r: any) => r.rps || 0));
+        const bestRPS = Math.max(
+          ...b.throughput.filter((r: any) => !r.error).map((r: any) => r.rps || 0),
+        );
         score += Math.min(100, (bestRPS / 50) * 100);
         count++;
       }
 
       if (b.rules?.single) {
         const avgLatency = b.rules.single.latency.avg;
-        score += Math.max(0, 100 - (avgLatency * 10));
+        score += Math.max(0, 100 - avgLatency * 10);
         count++;
       }
 
       if (b.database?.singleWrite) {
         const avgLatency = b.database.singleWrite.latency.avg;
-        score += Math.max(0, 100 - (avgLatency * 2));
+        score += Math.max(0, 100 - avgLatency * 2);
         count++;
       }
 
@@ -843,7 +849,7 @@ export class BenchmarkRunner {
 
       if (f.rendering?.simple) {
         const avgLatency = f.rendering.simple.latency.avg;
-        score += Math.max(0, 100 - (avgLatency * 20));
+        score += Math.max(0, 100 - avgLatency * 20);
         count++;
       }
 
@@ -855,7 +861,7 @@ export class BenchmarkRunner {
 
       if (f.state?.simple) {
         const avgLatency = f.state.simple.latency.avg;
-        score += Math.max(0, 100 - (avgLatency * 50));
+        score += Math.max(0, 100 - avgLatency * 50);
         count++;
       }
 
@@ -870,7 +876,7 @@ export class BenchmarkRunner {
 
       if (e.completeFlow?.latency) {
         const avgLatency = e.completeFlow.latency.avg;
-        score += Math.max(0, 100 - (avgLatency * 1));
+        score += Math.max(0, 100 - avgLatency * 1);
         count++;
       }
 
@@ -914,22 +920,30 @@ export class BenchmarkRunner {
       }
 
       if (results.backend.database?.singleWrite?.latency.avg > 50) {
-        critical.push(`数据库写入延迟过高: ${results.backend.database.singleWrite.latency.avg.toFixed(2)}ms`);
+        critical.push(
+          `数据库写入延迟过高: ${results.backend.database.singleWrite.latency.avg.toFixed(2)}ms`,
+        );
       }
 
       if (results.backend.sse?.maxConnections?.successRate < 90) {
-        warning.push(`SSE并发连接成功率低: ${results.backend.sse.maxConnections.successRate.toFixed(1)}%`);
+        warning.push(
+          `SSE并发连接成功率低: ${results.backend.sse.maxConnections.successRate.toFixed(1)}%`,
+        );
       }
     }
 
     // 前端瓶颈
     if (results.frontend && !results.frontend.error) {
       if (results.frontend.rendering?.simple?.latency.avg > 10) {
-        warning.push(`组件渲染延迟偏高: ${results.frontend.rendering.simple.latency.avg.toFixed(2)}ms`);
+        warning.push(
+          `组件渲染延迟偏高: ${results.frontend.rendering.simple.latency.avg.toFixed(2)}ms`,
+        );
       }
 
       if (results.frontend.memory?.lifecycle?.memory.leakRate > 0.5) {
-        critical.push(`前端内存泄漏率过高: ${results.frontend.memory.lifecycle.memory.leakRate.toFixed(3)} MB/min`);
+        critical.push(
+          `前端内存泄漏率过高: ${results.frontend.memory.lifecycle.memory.leakRate.toFixed(3)} MB/min`,
+        );
       }
     }
 
@@ -944,7 +958,9 @@ export class BenchmarkRunner {
       }
 
       if (results.e2e.resources?.memory?.leakRate > 1) {
-        critical.push(`端到端内存泄漏严重: ${results.e2e.resources.memory.leakRate.toFixed(3)} MB/min`);
+        critical.push(
+          `端到端内存泄漏严重: ${results.e2e.resources.memory.leakRate.toFixed(3)} MB/min`,
+        );
       }
     }
 
@@ -998,14 +1014,13 @@ export class BenchmarkRunner {
 
 // ==================== 主程序入口 ====================
 
-
 async function main() {
-	const runner = new BenchmarkRunner();
-	const results = await runner.runAllBenchmarks();
-	await runner.saveResults(results);
+  const runner = new BenchmarkRunner();
+  const results = await runner.runAllBenchmarks();
+  await runner.saveResults(results);
 
-	console.log('\\n🎉 所有基准测试完成！');
-	console.log('📊 查看详细报告请查看 benchmark 目录下的结果文件');
+  console.log('\\n🎉 所有基准测试完成！');
+  console.log('📊 查看详细报告请查看 benchmark 目录下的结果文件');
 }
 
 main().catch(console.error);

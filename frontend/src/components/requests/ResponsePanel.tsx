@@ -53,16 +53,20 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ request }) => {
           <h4 className="text-base font-bold">响应状态</h4>
           <div className="flex items-center gap-3">
             <Chip
-              color={request.responseStatus && request.responseStatus >= 200 && request.responseStatus < 300 ? 'success' : 'warning'}
+              color={
+                request.responseStatus &&
+                request.responseStatus >= 200 &&
+                request.responseStatus < 300
+                  ? 'success'
+                  : 'warning'
+              }
               variant="flat"
               size="lg"
             >
               {request.responseStatus || 'N/A'}
             </Chip>
             {request.durationMs && (
-              <div className="text-sm text-secondary">
-                耗时: {request.durationMs}ms
-              </div>
+              <div className="text-sm text-secondary">耗时: {request.durationMs}ms</div>
             )}
           </div>
         </CardBody>
@@ -129,7 +133,9 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ request }) => {
       {request.error && (
         <Card className="rounded-lg overflow-hidden border border-status-error/30 dark:border-status-error/20 bg-gradient-to-br from-elevated to-status-error/5 dark:from-elevated dark:to-status-error/10">
           <CardBody className="space-y-sm">
-            <div className="font-bold text-status-error dark:text-status-error text-sm">错误信息</div>
+            <div className="font-bold text-status-error dark:text-status-error text-sm">
+              错误信息
+            </div>
             <div className="font-mono text-xs text-status-error dark:text-status-error bg-canvas/50 dark:bg-canvas/20 p-3 rounded">
               {request.error}
             </div>

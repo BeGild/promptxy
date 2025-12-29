@@ -39,6 +39,8 @@ interface InlineNodeRendererProps {
   isMarkdownPreview?: boolean;
   /** 是否全屏模式 */
   isFullScreen?: boolean;
+  /** 选中文本变化回调（仅对 PlainTextRenderer 有效） */
+  onSelectionChange?: (selectedText: string) => void;
 }
 
 /**
@@ -184,14 +186,19 @@ const InlineMarkdownRenderer: React.FC<{
 
 /**
  * 纯文本渲染器
- * 显示为可编辑的文本框，无需存储
+ * 显示为可编辑的文本框，支持文本选中检测
  */
-const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen?: boolean }> = ({
-  node,
-  title,
-  isFullScreen,
-}) => {
+const PlainTextRenderer: React.FC<{
+  node: ViewNode;
+  title?: string;
+  isFullScreen?: boolean;
+  onSelectionChange?: (selectedText: string) => void;
+}> = ({ node, title, isFullScreen, onSelectionChange }) => {
   const [content, setContent] = useState(String(node.value));
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  // 使用 ref 保存最新的 content，避免闭包问题
+  const contentRef = React.useRef(content);
+  contentRef.current = content;
   // 全屏时固定左右边距，非全屏时较小边距
   const containerClass = isFullScreen ? 'px-8 py-4' : 'px-4 py-2';
 
@@ -200,10 +207,41 @@ const PlainTextRenderer: React.FC<{ node: ViewNode; title?: string; isFullScreen
     setContent(String(node.value));
   }, [node.value]);
 
+  // 监听文本选中变化
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !onSelectionChange) return;
+
+    const handleSelectionChange = () => {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      // 使用 ref 获取最新内容
+      const currentContent = contentRef.current;
+      if (start !== end) {
+        const selectedText = currentContent.substring(start, end);
+        onSelectionChange(selectedText);
+      } else {
+        onSelectionChange('');
+      }
+    };
+
+    // 监听多个事件：select, keyup, mouseup
+    textarea.addEventListener('select', handleSelectionChange);
+    textarea.addEventListener('keyup', handleSelectionChange);
+    textarea.addEventListener('mouseup', handleSelectionChange);
+
+    return () => {
+      textarea.removeEventListener('select', handleSelectionChange);
+      textarea.removeEventListener('keyup', handleSelectionChange);
+      textarea.removeEventListener('mouseup', handleSelectionChange);
+    };
+  }, [onSelectionChange]); // 只依赖回调函数，不依赖 content
+
   return (
     <div className={`${containerClass} h-full flex flex-col`}>
       {title && <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>}
       <textarea
+        ref={textareaRef}
         value={content}
         onChange={e => setContent(e.target.value)}
         className="flex-1 w-full min-h-0 p-4 font-mono text-sm bg-brand-primary/10 dark:bg-brand-primary/20 text-primary border border-brand-primary/30 dark:border-brand-primary/20 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
@@ -357,6 +395,7 @@ const InlineNodeRendererInternal: React.FC<InlineNodeRendererProps> = ({
   title,
   isMarkdownPreview = false,
   isFullScreen = false,
+  onSelectionChange,
 }) => {
   // 数值数组特殊处理
   if (node.type === NodeType.ARRAY && Array.isArray(node.value) && isNumericArray(node.value)) {
@@ -364,11 +403,17 @@ const InlineNodeRendererInternal: React.FC<InlineNodeRendererProps> = ({
   }
 
   // MARKDOWN 和 STRING_LONG 根据 isMarkdownPreview 切换渲染方式
+  // 只有纯文本模式才支持选中检测
   if (node.type === NodeType.MARKDOWN || node.type === NodeType.STRING_LONG) {
     return isMarkdownPreview ? (
       <InlineMarkdownRenderer node={node} title={title} isFullScreen={isFullScreen} />
     ) : (
-      <PlainTextRenderer node={node} title={title} isFullScreen={isFullScreen} />
+      <PlainTextRenderer
+        node={node}
+        title={title}
+        isFullScreen={isFullScreen}
+        onSelectionChange={onSelectionChange}
+      />
     );
   }
 

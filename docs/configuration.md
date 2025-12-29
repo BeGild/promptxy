@@ -214,6 +214,7 @@
 ```
 
 访问 `/claude/v1/messages` 时：
+
 - 如果 `claude-official` 启用，请求转发到 `https://api.anthropic.com/v1/messages`
 - 如果 `claude-test` 启用，请求转发到 `https://test.example.com/v1/messages`
 
@@ -291,14 +292,14 @@
 
 部分配置项可以通过环境变量覆盖，优先级：**环境变量 > 配置文件 > 默认值**
 
-| 环境变量                  | 配置项           | 示例值                    | 说明         |
-| ------------------------- | ---------------- | ------------------------- | ------------ |
-| `PROMPTXY_HOST`           | `listen.host`    | `127.0.0.1`               | 绑定主机     |
-| `PROMPTXY_PORT`           | `listen.port`    | `7070`                    | 监听端口     |
-| `PROMPTXY_API_HOST`       | `api.host`       | `127.0.0.1`               | API 主机     |
-| `PROMPTXY_API_PORT`       | `api.port`       | `7071`                    | API 端口     |
-| `PROMPTXY_DEBUG`          | `debug`          | `1` 或 `true`             | 调试模式     |
-| `PROMPTXY_CONFIG`         | -                | `/path/to/config.json`    | 配置文件路径 |
+| 环境变量            | 配置项        | 示例值                 | 说明         |
+| ------------------- | ------------- | ---------------------- | ------------ |
+| `PROMPTXY_HOST`     | `listen.host` | `127.0.0.1`            | 绑定主机     |
+| `PROMPTXY_PORT`     | `listen.port` | `7070`                 | 监听端口     |
+| `PROMPTXY_API_HOST` | `api.host`    | `127.0.0.1`            | API 主机     |
+| `PROMPTXY_API_PORT` | `api.port`    | `7071`                 | API 端口     |
+| `PROMPTXY_DEBUG`    | `debug`       | `1` 或 `true`          | 调试模式     |
+| `PROMPTXY_CONFIG`   | -             | `/path/to/config.json` | 配置文件路径 |
 
 **注意**：供应商（suppliers）配置不支持环境变量覆盖，请通过配置文件或 Web UI 管理。
 
