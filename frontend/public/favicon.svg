@@ -1,0 +1,28 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="favGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff9a52;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c45c3e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="url(#favGradient)"/>
+
+  <!-- 内部装饰圆环 -->
+  <circle cx="64" cy="64" r="52" fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+
+  <!-- PX 字母组合 -->
+  <!-- P 字母 -->
+  <path d="M28 34 L28 94 L44 94 L44 64 L54 64 C63.5 64 70 57.5 70 48 C70 38.5 63.5 32 54 32 L28 32 L28 34 Z M44 46 L52 46 C55.5 46 58 48.5 58 52 C58 55.5 55.5 58 52 58 L44 58 L44 46 Z" fill="white"/>
+
+  <!-- X 字母 - 用两个V形拼接 -->
+  <!-- 左上到右下的V -->
+  <path d="M82 32 L98 56 L82 80 L88 80 L100 60 L88 40 L82 40 Z" fill="white"/>
+  <!-- 右上到左下的V -->
+  <path d="M108 32 L92 56 L108 80 L102 80 L90 60 L102 40 L108 40 Z" fill="white"/>
+
+  <!-- 光点装饰 -->
+  <circle cx="104" cy="24" r="4" fill="white" fill-opacity="0.25"/>
+  <circle cx="112" cy="32" r="2" fill="white" fill-opacity="0.15"/>
+</svg>
