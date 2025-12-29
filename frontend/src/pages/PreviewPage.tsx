@@ -18,7 +18,7 @@
 import React from 'react';
 import { PreviewPanel } from '@/components/preview';
 
-export const PreviewPage: React.FC = () => {
+const PreviewPageComponent: React.FC = () => {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* 顶部标题栏 */}
@@ -36,3 +36,9 @@ export const PreviewPage: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * 使用 React.memo 包裹 PreviewPage 组件
+ * 避免父组件状态变化时不必要的重渲染
+ */
+export const PreviewPage = React.memo(PreviewPageComponent);

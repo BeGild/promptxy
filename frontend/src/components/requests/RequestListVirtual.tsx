@@ -25,7 +25,7 @@ import React, {
   CSSProperties,
   ReactElement,
 } from 'react';
-import { Input, Chip, Button, Spinner, Pagination, Badge, Select, SelectItem } from '@heroui/react';
+import { Chip, Button, Spinner, Pagination, Select, SelectItem } from '@heroui/react';
 import { List, ListImperativeAPI } from 'react-window';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
@@ -59,7 +59,6 @@ interface RowCustomProps {
   requests: RequestListItem[];
   onRowClick: (id: string) => void;
   onDelete: (id: string) => void;
-  isScrolling: boolean;
   selectedId?: string | null;
   viewedIds?: Set<string>;
   onViewedToggle?: (id: string) => void;
@@ -67,6 +66,7 @@ interface RowCustomProps {
 
 /**
  * 虚拟滚动列表项渲染器
+ * 使用 CSS table 布局确保表头和内容列宽严格对齐
  */
 interface VirtualRowProps {
   index: number;
@@ -74,7 +74,6 @@ interface VirtualRowProps {
   requests: RequestListItem[];
   onRowClick: (id: string) => void;
   onDelete: (id: string) => void;
-  isScrolling?: boolean;
   selectedId?: string | null;
   viewedIds?: Set<string>;
   onViewedToggle?: (id: string) => void;
@@ -86,7 +85,6 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
   requests,
   onRowClick,
   onDelete,
-  isScrolling,
   selectedId = null,
   viewedIds = new Set(),
   onViewedToggle,
@@ -98,160 +96,156 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
   const isSelected = selectedId === item.id;
   const isViewed = viewedIds.has(item.id);
 
-  // 在快速滚动时，可以显示简化的占位符以提升性能
-  if (isScrolling) {
-    return (
-      <div style={style} className="px-4 py-3 border-b border-subtle">
-        <div className="flex items-center gap-3">
-          <div className="w-24 h-4 bg-subtle rounded animate-pulse" />
-          <div className="w-16 h-4 bg-subtle rounded animate-pulse" />
-          <div className="flex-1 h-4 bg-subtle rounded animate-pulse" />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       style={style}
-      className={`px-4 py-3 border-b border-subtle hover:bg-canvas dark:hover:bg-secondary/50 transition-colors cursor-pointer flex items-center gap-3 ${
+      className={`w-full px-4 py-3 border-b border-subtle hover:bg-canvas dark:hover:bg-secondary/50 transition-colors cursor-pointer ${
         isSelected
           ? 'bg-accent/10 dark:bg-accent/20 hover:bg-accent/20 dark:hover:bg-accent/30'
           : ''
       }`}
       onClick={() => onRowClick(item.id)}
     >
-      {/* 复选框 */}
-      <div className="w-w12">
-        {onViewedToggle && (
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              onViewedToggle(item.id);
-            }}
-            aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
-            className="w-8 h-8 inline-flex items-center justify-center rounded hover:bg-canvas dark:hover:bg-secondary/60 transition-colors"
-          >
-            <span
-              className={[
-                'w-3.5 h-3.5 rounded-full border-2 transition-colors',
-                isViewed
-                  ? 'bg-accent border-accent dark:bg-accent/80 dark:border-accent/80'
-                  : 'bg-transparent border-subtle',
-              ].join(' ')}
-            />
-          </button>
-        )}
-      </div>
+      {/* 使用 table 布局确保列宽与表头完全一致 */}
+      <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '42px' }} /> {/* 已查看 */}
+          <col style={{ width: '140px' }} /> {/* 时间 - 增加宽度显示完整时间 */}
+          <col style={{ width: '64px' }} /> {/* 客户端 */}
+          <col style={{ width: 'auto' }} /> {/* 路径 - 自适应 */}
+          <col style={{ width: '96px' }} /> {/* 匹配规则 */}
+          <col style={{ width: '64px' }} /> {/* 状态 */}
+          <col style={{ width: '96px' }} /> {/* 大小 */}
+          <col style={{ width: '64px' }} /> {/* 耗时 */}
+          <col style={{ width: 'auto' }} /> {/* 操作 */}
+        </colgroup>
+        <tbody>
+          <tr>
+            {/* 已查看按钮 */}
+            <td className="text-center">
+              {onViewedToggle && (
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onViewedToggle(item.id);
+                  }}
+                  aria-label={isViewed ? '取消已查看标记' : '标记为已查看'}
+                  className="w-8 h-8 inline-flex items-center justify-center rounded hover:bg-canvas dark:hover:bg-secondary/60 transition-colors"
+                >
+                  <span
+                    className={[
+                      'w-3.5 h-3.5 rounded-full border-2 transition-colors',
+                      isViewed
+                        ? 'bg-accent border-accent dark:bg-accent/80 dark:border-accent/80'
+                        : 'bg-transparent border-subtle',
+                    ].join(' ')}
+                  />
+                </button>
+              )}
+            </td>
 
-      {/* 强调色指示条 */}
-      {(isSelected || isViewed) && <div className="w-1 h-full bg-accent rounded-r flex-shrink-0" />}
+            {/* 时间 */}
+            <td className="text-xs font-mono text-primary">{formatTimeWithMs(item.timestamp)}</td>
 
-      {/* 时间 */}
-      <div className="w-24 text-xs font-mono text-primary">{formatTimeWithMs(item.timestamp)}</div>
+            {/* 客户端 */}
+            <td className="text-xs font-medium text-primary truncate">{formatClient(item.client)}</td>
 
-      {/* 客户端 */}
-      <div className="w-w16">
-        <span className="text-xs font-medium text-primary">{formatClient(item.client)}</span>
-      </div>
+            {/* 路径 */}
+            <td className="font-mono text-xs text-primary truncate">{item.path}</td>
 
-      {/* 路径 */}
-      <div className="flex-1 min-w-0">
-        <span className="font-mono text-xs text-primary truncate block">{item.path}</span>
-      </div>
+            {/* 匹配规则 */}
+            <td className="overflow-hidden">
+              {item.matchedRules && item.matchedRules.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {item.matchedRules.slice(0, 2).map((ruleId: string) => (
+                    <Chip
+                      key={ruleId}
+                      size="sm"
+                      color="success"
+                      variant="flat"
+                      className="text-[10px] font-mono"
+                    >
+                      {ruleId}
+                    </Chip>
+                  ))}
+                  {item.matchedRules.length > 2 && (
+                    <Chip size="sm" color="default" variant="flat" className="text-[10px]">
+                      +{item.matchedRules.length - 2}
+                    </Chip>
+                  )}
+                </div>
+              ) : (
+                <span className="text-tertiary text-xs">-</span>
+              )}
+            </td>
 
-      {/* 匹配规则 */}
-      <div className="w-w24">
-        {item.matchedRules && item.matchedRules.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {item.matchedRules.slice(0, 2).map((ruleId: string) => (
+            {/* 状态 */}
+            <td className="overflow-hidden">
               <Chip
-                key={ruleId}
                 size="sm"
-                color="success"
+                color={getStatusColor(item.responseStatus)}
                 variant="flat"
-                className="text-[10px] font-mono"
+                className="font-medium text-xs"
               >
-                {ruleId}
+                {item.responseStatus || 'N/A'}
               </Chip>
-            ))}
-            {item.matchedRules.length > 2 && (
-              <Chip size="sm" color="default" variant="flat" className="text-[10px]">
-                +{item.matchedRules.length - 2}
-              </Chip>
-            )}
-          </div>
-        ) : (
-          <span className="text-tertiary text-xs">-</span>
-        )}
-      </div>
+            </td>
 
-      {/* 状态 */}
-      <div className="w-w16">
-        <Chip
-          size="sm"
-          color={getStatusColor(item.responseStatus)}
-          variant="flat"
-          className="font-medium text-xs"
-        >
-          {item.responseStatus || 'N/A'}
-        </Chip>
-      </div>
+            {/* 大小 */}
+            <td className="text-xs text-primary truncate">
+              {item.requestSize || item.responseSize ? (
+                <span>
+                  {item.requestSize && (
+                    <span className="text-brand-primary">↑{formatBytes(item.requestSize)}</span>
+                  )}
+                  {item.requestSize && item.responseSize && ' '}
+                  {item.responseSize && (
+                    <span className="text-status-success">↓{formatBytes(item.responseSize)}</span>
+                  )}
+                </span>
+              ) : (
+                '-'
+              )}
+            </td>
 
-      {/* 大小 */}
-      <div className="w-24 text-xs text-primary">
-        {item.requestSize || item.responseSize ? (
-          <span>
-            {item.requestSize && (
-              <span className="text-brand-primary">↑{formatBytes(item.requestSize)}</span>
-            )}
-            {item.requestSize && item.responseSize && ' '}
-            {item.responseSize && (
-              <span className="text-status-success">↓{formatBytes(item.responseSize)}</span>
-            )}
-          </span>
-        ) : (
-          '-'
-        )}
-      </div>
+            {/* 耗时 */}
+            <td className="text-xs text-primary text-center truncate">
+              {item.durationMs ? formatDuration(item.durationMs) : '-'}
+            </td>
 
-      {/* 耗时 */}
-      <div className="w-16 text-xs text-primary text-center">
-        {item.durationMs ? formatDuration(item.durationMs) : '-'}
-      </div>
-
-      {/* 操作 */}
-      <div className="w-auto">
-        <div className="flex gap-1 items-center">
-          <Button
-            size="sm"
-            variant="light"
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onPress={(e: any) => {
-              e.stopPropagation();
-              onRowClick(item.id);
-            }}
-            className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 text-xs px-2 h-7"
-          >
-            查看
-          </Button>
-          <Button
-            size="sm"
-            color="danger"
-            variant="light"
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onPress={(e: any) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            className="hover:bg-status-error/10 dark:hover:bg-status-error/20 text-xs px-2 h-7"
-          >
-            删除
-          </Button>
-        </div>
-      </div>
+            {/* 操作 */}
+            <td>
+              <div className="flex gap-1 items-center justify-start">
+                <Button
+                  size="sm"
+                  variant="light"
+                  onPress={(e: any) => {
+                    e.stopPropagation();
+                    onRowClick(item.id);
+                  }}
+                  className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 text-xs px-2 h-7"
+                >
+                  查看
+                </Button>
+                <Button
+                  size="sm"
+                  color="danger"
+                  variant="light"
+                  onPress={(e: any) => {
+                    e.stopPropagation();
+                    onDelete(item.id);
+                  }}
+                  className="hover:bg-status-error/10 dark:hover:bg-status-error/20 text-xs px-2 h-7"
+                >
+                  删除
+                </Button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -277,48 +271,62 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
 }) => {
   // 搜索状态
   const [localSearch, setLocalSearch] = useState(filters.search || '');
-  const [isScrolling, setIsScrolling] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<ListImperativeAPI | null>(null);
+
+  // 容器高度状态 - 使用 state 确保响应式更新
+  const [containerHeight, setContainerHeight] = useState(() => {
+    // 初始化时计算高度（宽度自适应父容器）
+    const viewportHeight = window.innerHeight;
+    const headerHeight = 180;
+    const toolbarHeight = 80;
+    const statsHeight = 40;
+    const paginationHeight = Math.ceil(total / 50) > 1 ? 80 : 20;
+    const padding = 48;
+    const maxHeight = viewportHeight - headerHeight - toolbarHeight - statsHeight - paginationHeight - padding;
+    return Math.max(400, Math.floor(maxHeight * 0.9));
+  });
 
   // 分页计算
   const totalPages = useMemo(() => {
     return Math.ceil(total / 50);
   }, [total]);
 
-  // 滚动到顶部 - 需要先定义，因为其他函数会使用它
+  // 响应窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      const viewportHeight = window.innerHeight;
+      const headerHeight = 180;
+      const toolbarHeight = 80;
+      const statsHeight = 40;
+      const paginationHeight = totalPages > 1 ? 80 : 20;
+      const padding = 48;
+      const maxHeight = viewportHeight - headerHeight - toolbarHeight - statsHeight - paginationHeight - padding;
+
+      setContainerHeight(Math.max(400, Math.floor(maxHeight * 0.9)));
+    };
+
+    // 添加防抖，避免频繁计算
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleResize, 100);
+    };
+
+    window.addEventListener('resize', debouncedResize);
+    return () => {
+      window.removeEventListener('resize', debouncedResize);
+      clearTimeout(timeoutId);
+    };
+  }, [totalPages]);
+
+  // 滚动到顶部
   const scrollToTop = useCallback(() => {
     if (listRef.current) {
       listRef.current.scrollToRow({ index: 0, align: 'start' });
     }
-    setIsScrolling(false);
   }, []);
-
-  // 滚动处理 - 使用 onRowsRendered 来检测滚动
-  const handleRowsRendered = useCallback(
-    (
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _visibleRows: { startIndex: number; stopIndex: number },
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _allRows: { startIndex: number; stopIndex: number },
-    ) => {
-      // 当可见行范围变化时，我们假设用户正在滚动
-      setIsScrolling(true);
-
-      // 清除之前的定时器
-      if (scrollTimerRef.current) {
-        clearTimeout(scrollTimerRef.current);
-      }
-
-      // 设置新的防抖定时器
-      scrollTimerRef.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
-    },
-    [],
-  );
 
   // 事件处理函数
   const handleSearchChange = useCallback(
@@ -326,12 +334,10 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
       setLocalSearch(value);
       setIsSearching(true);
 
-      // 清除之前的定时器
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
       }
 
-      // 设置新的防抖定时器
       searchTimerRef.current = setTimeout(() => {
         onFiltersChange({ ...filters, search: value });
         setIsSearching(false);
@@ -349,7 +355,6 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         newFilters.client = value;
       }
       onFiltersChange(newFilters);
-      // 切换筛选时滚动到顶部
       scrollToTop();
     },
     [filters, onFiltersChange, scrollToTop],
@@ -380,30 +385,9 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     };
   }, [requests.length, total]);
 
-  // 列表容器高度和宽度计算
-  const containerHeight = useMemo(() => {
-    // 根据屏幕高度动态计算
-    const viewportHeight = window.innerHeight;
-    const headerHeight = 200; // 工具栏和统计信息高度
-    const paginationHeight = totalPages > 1 ? 80 : 20;
-    const maxHeight = viewportHeight - headerHeight - paginationHeight;
-    return Math.max(300, Math.min(600, maxHeight));
-  }, [totalPages]);
-
-  const containerWidth = useMemo(() => {
-    // 获取父容器宽度，或使用默认值
-    if (typeof window !== 'undefined') {
-      return Math.min(window.innerWidth - 64, 1200); // 考虑边距和最大宽度
-    }
-    return 800;
-  }, []);
-
   // 清理定时器
   useEffect(() => {
     return () => {
-      if (scrollTimerRef.current) {
-        clearTimeout(scrollTimerRef.current);
-      }
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
       }
@@ -458,7 +442,6 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
             清除搜索
           </Button>
         )}
-        {isScrolling && <span className="text-xs text-tertiary ml-auto">滚动中...</span>}
       </div>
     </>
   );
@@ -484,20 +467,36 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
       );
     }
 
-    // 表头（固定显示）
+    // 表头 - 使用 table 布局与内容行完全对齐
+    // overflow-y: scroll 强制显示滚动条轨道，确保与内容行宽度一致
     const tableHeader = (
-      <div className="bg-canvas dark:bg-secondary border-b border-subtle px-4 py-2 text-xs font-semibold text-secondary">
-        <div className="flex items-center gap-3">
-          <div className="w-w12">已查看</div>
-          <div className="w-w24">时间</div>
-          <div className="w-w16">客户端</div>
-          <div className="flex-1">路径</div>
-          <div className="w-w24">匹配规则</div>
-          <div className="w-w16">状态</div>
-          <div className="w-w24">大小</div>
-          <div className="w-16 text-center">耗时</div>
-          <div className="w-auto">操作</div>
-        </div>
+      <div className="bg-canvas dark:bg-secondary border-b border-subtle px-4 py-2 text-xs font-semibold text-secondary overflow-y-scroll">
+        <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '42px' }} /> {/* 已查看 */}
+            <col style={{ width: '140px' }} /> {/* 时间 - 增加宽度显示完整时间 */}
+            <col style={{ width: '64px' }} /> {/* 客户端 */}
+            <col style={{ width: 'auto' }} /> {/* 路径 - 自适应 */}
+            <col style={{ width: '96px' }} /> {/* 匹配规则 */}
+            <col style={{ width: '64px' }} /> {/* 状态 */}
+            <col style={{ width: '96px' }} /> {/* 大小 */}
+            <col style={{ width: '64px' }} /> {/* 耗时 */}
+            <col style={{ width: 'auto' }} /> {/* 操作 */}
+          </colgroup>
+          <tbody>
+            <tr>
+              <th className="text-center">已查看</th>
+              <th>时间</th>
+              <th>客户端</th>
+              <th>路径</th>
+              <th>匹配规则</th>
+              <th>状态</th>
+              <th>大小</th>
+              <th className="text-center">耗时</th>
+              <th>操作</th>
+            </tr>
+          </tbody>
+        </table>
       </div>
     );
 
@@ -515,7 +514,6 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         requests,
         onRowClick,
         onDelete,
-        isScrolling,
         selectedId,
         viewedIds,
         onViewedToggle,
@@ -527,7 +525,6 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           requests={requests}
           onRowClick={onRowClick}
           onDelete={onDelete}
-          isScrolling={isScrolling}
           selectedId={selectedId}
           viewedIds={viewedIds}
           onViewedToggle={onViewedToggle}
@@ -544,20 +541,18 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
             rowCount={requests.length}
             rowHeight={64}
             overscanCount={5}
-            onRowsRendered={handleRowsRendered}
             rowComponent={RowComponent}
             rowProps={
               {
                 requests,
                 onRowClick,
                 onDelete,
-                isScrolling: isScrolling || false,
                 selectedId,
                 viewedIds,
                 onViewedToggle,
               } as RowCustomProps
             }
-            style={{ height: containerHeight, width: containerWidth }}
+            style={{ height: containerHeight }}
           />
         </div>
       </div>

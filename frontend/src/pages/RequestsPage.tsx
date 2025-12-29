@@ -15,7 +15,7 @@
  * - className="border-brand-primary/30 dark:border-brand-primary/20"
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardBody, Chip } from '@heroui/react';
 import { toast } from 'sonner';
 import { RequestList, RequestDetailSidebar } from '@/components/requests';
@@ -42,7 +42,38 @@ function readViewedIdsArray(): string[] {
   }
 }
 
-export const RequestsPage: React.FC = () => {
+/**
+ * 防抖保存 localStorage 的 hook
+ * 避免高频写入导致主线程阻塞
+ */
+function useDebouncedLocalStorage(key: string, value: string[], delay: number = 500) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // 清除之前的定时器
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // 设置新的定时器
+    timeoutRef.current = setTimeout(() => {
+      try {
+        globalThis.localStorage?.setItem(key, JSON.stringify(value));
+      } catch {
+        // 忽略存储错误
+      }
+    }, delay);
+
+    // 清理函数
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [key, value, delay]);
+}
+
+const RequestsPageComponent: React.FC = () => {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<RequestFilters>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,13 +93,8 @@ export const RequestsPage: React.FC = () => {
   // 侧边栏状态管理
   const { isRequestSidebarOpen, openRequestSidebar, closeRequestSidebar } = useUIStore();
 
-  useEffect(() => {
-    try {
-      globalThis.localStorage?.setItem(VIEWED_STORAGE_KEY, JSON.stringify(viewedIdsArray));
-    } catch {
-      // 忽略存储错误
-    }
-  }, [viewedIdsArray]);
+  // 使用防抖保存 localStorage，避免高频写入阻塞主线程
+  useDebouncedLocalStorage(VIEWED_STORAGE_KEY, viewedIdsArray, 500);
 
   const handleRowClick = useCallback(
     (id: string) => {
@@ -207,3 +233,9 @@ export const RequestsPage: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * 使用 React.memo 包裹 RequestsPage 组件
+ * 避免父组件状态变化时不必要的重渲染
+ */
+export const RequestsPage = React.memo(RequestsPageComponent);

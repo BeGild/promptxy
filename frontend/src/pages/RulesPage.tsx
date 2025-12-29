@@ -33,7 +33,7 @@ import { PromptxyRule } from '@/types';
 import { validateRule, createDefaultRule } from '@/utils';
 import { generateUUID } from '@/utils/formatter';
 
-export const RulesPage: React.FC = () => {
+const RulesPageComponent: React.FC = () => {
   const queryClient = useQueryClient();
   const { rules, isLoading, refetch } = useRules();
   const saveRulesMutation = useSaveRules();
@@ -228,3 +228,9 @@ export const RulesPage: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * 使用 React.memo 包裹 RulesPage 组件
+ * 避免父组件状态变化时不必要的重渲染
+ */
+export const RulesPage = React.memo(RulesPageComponent);

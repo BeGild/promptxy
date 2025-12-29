@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { useMemo } from 'react';
+import { immer } from 'zustand/middleware/immer';
 import { PromptxyRule, RequestListItem, SSEConnectionStatus } from '@/types';
 import { getRules, syncRules } from '@/api/rules';
 import { getRequests, getStats } from '@/api/requests';
@@ -49,7 +49,8 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>()(
-  devtools((set, get) => ({
+  immer(
+    devtools((set, get) => ({
     // 初始状态
     rules: [],
     requests: [],
@@ -147,12 +148,17 @@ export const useAppStore = create<AppState>()(
       set({ sseStatus: status });
     },
 
-    // 添加新请求（来自 SSE）
+    // 添加新请求（来自 SSE）- 使用 immer 优化，避免创建新数组
     addNewRequest: (request: RequestListItem) => {
-      set(state => ({
-        requests: [request, ...state.requests].slice(0, 50),
-        requestTotal: state.requestTotal + 1,
-      }));
+      set((state: AppState) => {
+        // 使用 immer 的 draft 模式，直接修改状态
+        state.requests.unshift(request);
+        // 保持最多 50 条记录
+        if (state.requests.length > 50) {
+          state.requests.length = 50;
+        }
+        state.requestTotal += 1;
+      });
     },
 
     // 清除错误
@@ -190,117 +196,67 @@ export const useAppStore = create<AppState>()(
       });
     },
   })),
+  ),
 );
 
 /**
- * 优化的 Memoized 选择器 - 避免不必要的重新渲染
- * 使用 useMemo 缓存计算结果，只有当依赖项变化时才重新计算
+ * 优化的选择器 - 直接使用 Zustand 的选择器
+ *
+ * Zustand 已经提供了状态订阅和浅比较优化，
+ * 额外的 useMemo 反而会增加开销且没有收益。
+ *
+ * 使用方式：
+ * - 单个状态：useAppStore(state => state.rules)
+ * - 多个状态：useAppStore(state => ({ rules: state.rules, loading: state.loading }))
  */
 
 /**
- * 获取规则列表的 Memoized 选择器
- * 只有当 rules 数组变化时才会触发重新渲染
+ * 获取规则列表的选择器
  */
-export const useRulesSelector = () => {
-  const rules = useAppStore(state => state.rules);
-  const loading = useAppStore(state => state.loading.rules);
-  const error = useAppStore(state => state.errors.rules);
-
-  return useMemo(
-    () => ({
-      rules,
-      isLoading: loading,
-      error,
-    }),
-    [rules, loading, error],
-  );
-};
+export const useRulesSelector = () =>
+  useAppStore(state => ({
+    rules: state.rules,
+    isLoading: state.loading.rules,
+    error: state.errors.rules,
+  }));
 
 /**
- * 获取请求列表的 Memoized 选择器
- * 只有当 requests 数组或分页状态变化时才会触发重新渲染
+ * 获取请求列表的选择器
  */
-export const useRequestsSelector = () => {
-  const requests = useAppStore(state => state.requests);
-  const loading = useAppStore(state => state.loading.requests);
-  const error = useAppStore(state => state.errors.requests);
-  const page = useAppStore(state => state.requestPage);
-  const total = useAppStore(state => state.requestTotal);
-
-  return useMemo(
-    () => ({
-      requests,
-      isLoading: loading,
-      error,
-      page,
-      total,
-    }),
-    [requests, loading, error, page, total],
-  );
-};
+export const useRequestsSelector = () =>
+  useAppStore(state => ({
+    requests: state.requests,
+    isLoading: state.loading.requests,
+    error: state.errors.requests,
+    page: state.requestPage,
+    total: state.requestTotal,
+  }));
 
 /**
- * 获取统计信息的 Memoized 选择器
- * 只有当 stats 数据变化时才会触发重新渲染
+ * 获取统计信息的选择器
  */
-export const useStatsSelector = () => {
-  const stats = useAppStore(state => state.stats);
-  const loading = useAppStore(state => state.loading.stats);
-  const error = useAppStore(state => state.errors.stats);
-
-  return useMemo(
-    () => ({
-      stats,
-      isLoading: loading,
-      error,
-    }),
-    [stats, loading, error],
-  );
-};
+export const useStatsSelector = () =>
+  useAppStore(state => ({
+    stats: state.stats,
+    isLoading: state.loading.stats,
+    error: state.errors.stats,
+  }));
 
 /**
- * 获取 SSE 状态的 Memoized 选择器
- * 只有当 SSE 状态变化时才会触发重新渲染
+ * 获取 SSE 状态的选择器
  */
-export const useSSEStatusSelector = () => {
-  const sseStatus = useAppStore(state => state.sseStatus);
-  const apiConnected = useAppStore(state => state.apiConnected);
-
-  return useMemo(
-    () => ({
-      sseStatus,
-      apiConnected,
-    }),
-    [sseStatus, apiConnected],
-  );
-};
+export const useSSEStatusSelector = () =>
+  useAppStore(state => ({
+    sseStatus: state.sseStatus,
+    apiConnected: state.apiConnected,
+  }));
 
 /**
- * 获取加载状态的 Memoized 选择器
- * 只有当加载状态变化时才会触发重新渲染
+ * 获取加载状态的选择器
  */
-export const useLoadingSelector = () => {
-  const loading = useAppStore(state => state.loading);
-
-  return useMemo(
-    () => ({
-      ...loading,
-    }),
-    [loading],
-  );
-};
+export const useLoadingSelector = () => useAppStore(state => state.loading);
 
 /**
- * 获取错误状态的 Memoized 选择器
- * 只有当错误状态变化时才会触发重新渲染
+ * 获取错误状态的选择器
  */
-export const useErrorSelector = () => {
-  const errors = useAppStore(state => state.errors);
-
-  return useMemo(
-    () => ({
-      ...errors,
-    }),
-    [errors],
-  );
-};
+export const useErrorSelector = () => useAppStore(state => state.errors);

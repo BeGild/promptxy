@@ -38,9 +38,21 @@ import {
   Moon,
   Monitor,
   Laptop,
+  LucideIcon,
 } from 'lucide-react';
 import { StatusIndicator, LogoIcon } from '@/components/common';
 import { useUIStore } from '@/store';
+
+/**
+ * 将 menuItems 移到组件外部，避免每次渲染都创建新对象
+ * 这可以减少不必要的子组件重渲染
+ */
+const MENU_ITEMS = [
+  { key: 'rules', label: '规则管理', icon: ClipboardList, desc: '创建和管理修改规则' },
+  { key: 'requests', label: '请求监控', icon: Activity, desc: '查看实时请求历史' },
+  { key: 'preview', label: '预览测试', icon: PlayCircle, desc: '测试规则效果' },
+  { key: 'settings', label: '设置', icon: Settings, desc: '配置和数据管理' },
+] as const;
 
 interface HeaderProps {
   sseConnected: boolean;
@@ -52,13 +64,6 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
   const setActiveTab = useUIStore(state => state.setActiveTab);
   const theme = useUIStore(state => state.theme);
   const setTheme = useUIStore(state => state.setTheme);
-
-  const menuItems = [
-    { key: 'rules', label: '规则管理', icon: ClipboardList, desc: '创建和管理修改规则' },
-    { key: 'requests', label: '请求监控', icon: Activity, desc: '查看实时请求历史' },
-    { key: 'preview', label: '预览测试', icon: PlayCircle, desc: '测试规则效果' },
-    { key: 'settings', label: '设置', icon: Settings, desc: '配置和数据管理' },
-  ];
 
   const getThemeIcon = () => {
     switch (theme) {
@@ -87,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
 
       {/* 中间：Dock 导航图标 */}
       <NavbarContent justify="center" className="gap-sm">
-        {menuItems.map(item => {
+        {MENU_ITEMS.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.key;
           return (

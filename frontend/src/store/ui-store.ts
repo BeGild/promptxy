@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { useMemo } from 'react';
 
 interface UIState {
   // 模态框状态
@@ -176,101 +175,54 @@ export const useUIStore = create<UIState>()(
 );
 
 /**
- * UI Store 的 Memoized 选择器 - 避免不必要的重新渲染
- * 使用 useMemo 缓存计算结果，只有当依赖项变化时才重新计算
+ * UI Store 的选择器 - 直接使用 Zustand 的选择器
+ *
+ * Zustand 已经提供了状态订阅和浅比较优化，
+ * 额外的 useMemo 反而会增加开销且没有收益。
  */
 
 /**
- * 获取模态框状态的 Memoized 选择器
+ * 获取模态框状态的选择器
  */
-export const useModalSelector = () => {
-  const isRuleEditorOpen = useUIStore(state => state.isRuleEditorOpen);
-  const isRequestDetailOpen = useUIStore(state => state.isRequestDetailOpen);
-  const isPreviewOpen = useUIStore(state => state.isPreviewOpen);
-  const isSettingsOpen = useUIStore(state => state.isSettingsOpen);
-
-  return useMemo(
-    () => ({
-      isRuleEditorOpen,
-      isRequestDetailOpen,
-      isPreviewOpen,
-      isSettingsOpen,
-    }),
-    [isRuleEditorOpen, isRequestDetailOpen, isPreviewOpen, isSettingsOpen],
-  );
-};
+export const useModalSelector = () =>
+  useUIStore(state => ({
+    isRuleEditorOpen: state.isRuleEditorOpen,
+    isRequestDetailOpen: state.isRequestDetailOpen,
+    isPreviewOpen: state.isPreviewOpen,
+    isSettingsOpen: state.isSettingsOpen,
+  }));
 
 /**
- * 获取选中项状态的 Memoized 选择器
+ * 获取选中项状态的选择器
  */
-export const useSelectedSelector = () => {
-  const selectedRuleId = useUIStore(state => state.selectedRuleId);
-  const selectedRequestId = useUIStore(state => state.selectedRequestId);
-
-  return useMemo(
-    () => ({
-      selectedRuleId,
-      selectedRequestId,
-    }),
-    [selectedRuleId, selectedRequestId],
-  );
-};
+export const useSelectedSelector = () =>
+  useUIStore(state => ({
+    selectedRuleId: state.selectedRuleId,
+    selectedRequestId: state.selectedRequestId,
+  }));
 
 /**
- * 获取 UI 状态的 Memoized 选择器
+ * 获取 UI 状态的选择器
  */
-export const useUIStateSelector = () => {
-  const sidebarCollapsed = useUIStore(state => state.sidebarCollapsed);
-  const activeTab = useUIStore(state => state.activeTab);
-  const theme = useUIStore(state => state.theme);
-
-  return useMemo(
-    () => ({
-      sidebarCollapsed,
-      activeTab,
-      theme,
-    }),
-    [sidebarCollapsed, activeTab, theme],
-  );
-};
+export const useUIStateSelector = () =>
+  useUIStore(state => ({
+    sidebarCollapsed: state.sidebarCollapsed,
+    activeTab: state.activeTab,
+    theme: state.theme,
+  }));
 
 /**
- * 获取侧边栏状态的 Memoized 选择器
+ * 获取侧边栏状态的选择器
  */
-export const useSidebarSelector = () => {
-  const isRequestSidebarOpen = useUIStore(state => state.isRequestSidebarOpen);
-  const sidebarMode = useUIStore(state => state.sidebarMode);
-  const sidebarWidth = useUIStore(state => state.sidebarWidth);
-
-  return useMemo(
-    () => ({
-      isRequestSidebarOpen,
-      sidebarMode,
-      sidebarWidth,
-    }),
-    [isRequestSidebarOpen, sidebarMode, sidebarWidth],
-  );
-};
+export const useSidebarSelector = () =>
+  useUIStore(state => ({
+    isRequestSidebarOpen: state.isRequestSidebarOpen,
+    sidebarMode: state.sidebarMode,
+    sidebarWidth: state.sidebarWidth,
+  }));
 
 /**
- * 获取所有 UI 状态的 Memoized 选择器（完整版）
+ * 获取所有 UI 状态的选择器（完整版）
+ * 注意：这个选择器返回整个 store，请谨慎使用
  */
-export const useFullUISelector = () => {
-  const state = useUIStore();
-
-  return useMemo(
-    () => ({
-      ...state,
-    }),
-    [
-      state.isRuleEditorOpen,
-      state.isRequestDetailOpen,
-      state.isPreviewOpen,
-      state.isSettingsOpen,
-      state.selectedRuleId,
-      state.selectedRequestId,
-      state.sidebarCollapsed,
-      state.activeTab,
-    ],
-  );
-};
+export const useFullUISelector = () => useUIStore();
