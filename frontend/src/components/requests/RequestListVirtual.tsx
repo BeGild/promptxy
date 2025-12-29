@@ -147,16 +147,16 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 时间 */}
-            <td className="text-xs font-mono text-primary">{formatTimeWithMs(item.timestamp)}</td>
+            <td className="text-xs font-mono text-primary text-left">{formatTimeWithMs(item.timestamp)}</td>
 
             {/* 客户端 */}
-            <td className="text-xs font-medium text-primary truncate">{formatClient(item.client)}</td>
+            <td className="text-xs font-medium text-primary text-left truncate">{formatClient(item.client)}</td>
 
             {/* 路径 */}
-            <td className="font-mono text-xs text-primary truncate">{item.path}</td>
+            <td className="font-mono text-xs text-primary text-left truncate">{item.path}</td>
 
             {/* 匹配规则 */}
-            <td className="overflow-hidden">
+            <td className="overflow-hidden text-left">
               {item.matchedRules && item.matchedRules.length > 0 ? (
                 <div className="flex flex-wrap gap-1">
                   {item.matchedRules.slice(0, 2).map((ruleId: string) => (
@@ -182,7 +182,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 状态 */}
-            <td className="overflow-hidden">
+            <td className="overflow-hidden text-left">
               <Chip
                 size="sm"
                 color={getStatusColor(item.responseStatus)}
@@ -194,7 +194,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 大小 */}
-            <td className="text-xs text-primary truncate">
+            <td className="text-xs text-primary text-left truncate">
               {item.requestSize || item.responseSize ? (
                 <span>
                   {item.requestSize && (
@@ -211,12 +211,12 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 耗时 */}
-            <td className="text-xs text-primary text-center truncate">
+            <td className="text-xs text-primary text-left truncate">
               {item.durationMs ? formatDuration(item.durationMs) : '-'}
             </td>
 
             {/* 操作 */}
-            <td>
+            <td className="text-left">
               <div className="flex gap-1 items-center justify-start">
                 <Button
                   size="sm"
@@ -486,14 +486,14 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           <tbody>
             <tr>
               <th className="text-center">已查看</th>
-              <th>时间</th>
-              <th>客户端</th>
-              <th>路径</th>
-              <th>匹配规则</th>
-              <th>状态</th>
-              <th>大小</th>
+              <th className="text-left">时间</th>
+              <th className="text-left">客户端</th>
+              <th className="text-left">路径</th>
+              <th className="text-left">匹配规则</th>
+              <th className="text-left">状态</th>
+              <th className="text-left">大小</th>
               <th className="text-center">耗时</th>
-              <th>操作</th>
+              <th className="text-left">操作</th>
             </tr>
           </tbody>
         </table>
