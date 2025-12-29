@@ -22,6 +22,14 @@ interface LogoIconProps {
   className?: string;
 }
 
+/**
+ * LogoIcon - XY 抽象设计
+ *
+ * 设计理念：
+ * - 左侧两条曲线汇聚 → X 的拦截（拦截并处理请求）
+ * - 右侧三条路径发散 → Y 的重写（重写并输出响应）
+ * - 中心光晕圆点 → 核心处理节点
+ */
 export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' }) => {
   return (
     <svg
@@ -32,40 +40,56 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' })
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      <defs>
-        {/* 径向渐变：从品牌色到深色背景 */}
-        <radialGradient id="logoRadialGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" style={{ stopColor: 'var(--color-brand-primary)', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: 'var(--color-bg-elevated)', stopOpacity: 1 }} />
-        </radialGradient>
-      </defs>
-
-      {/* 上方曲线 */}
+      {/* 左侧：X 的拦截（柔和的聚拢感） */}
+      {/* 上侧曲线 */}
       <path
-        d="M40 60 C 70 60, 90 90, 100 100"
+        d="M35 55 C 55 55, 75 75, 90 92.5"
         stroke="currentColor"
-        strokeWidth="12"
-        fill="none"
+        strokeWidth="27"
+        strokeLinecap="round"
+      />
+      {/* 下侧曲线（略带透明度，增加层次感） */}
+      <path
+        d="M35 145 C 55 145, 75 125, 90 107.5"
+        stroke="currentColor"
+        strokeWidth="27"
+        strokeLinecap="round"
+        strokeOpacity="0.5"
       />
 
-      {/* 下方曲线（带透明度） */}
+      {/* 右侧：Y 的重写（盛开的花瓣/舒展的羽翼） */}
+      {/* Y 的上部分叉：平滑的 S 曲线 */}
       <path
-        d="M40 140 C 70 140, 90 110, 100 100"
+        d="M110 95 C 125 80, 140 50, 170 50"
         stroke="currentColor"
-        strokeWidth="12"
-        fill="none"
-        opacity="0.6"
+        strokeWidth="27"
+        strokeLinecap="round"
       />
-
-      {/* 三条放射线 */}
+      {/* Y 的下部分叉 */}
       <path
-        d="M100 100 L150 50 M100 100 L160 100 M100 100 L150 150"
+        d="M110 105 C 125 120, 140 150, 170 150"
         stroke="currentColor"
-        strokeWidth="14"
+        strokeWidth="27"
+        strokeLinecap="round"
+      />
+      {/* Y 的中心推进：液滴穿梭而出 */}
+      <path
+        d="M110 100 H 160"
+        stroke="currentColor"
+        strokeWidth="27"
         strokeLinecap="round"
       />
 
-      {/* 中心圆点 */}
+      {/* 核心奇点：向心力的视觉锚点 */}
+      {/* 外部晕染效果（深色） */}
+      <circle
+        cx="100"
+        cy="100"
+        r="22.5"
+        fill="var(--color-bg-elevated)"
+        fillOpacity="0.3"
+      />
+      {/* 核心纯白圆球 */}
       <circle
         cx="100"
         cy="100"
