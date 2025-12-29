@@ -27,48 +27,51 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' })
     <svg
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="0 0 200 200"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      {/* 定义渐变 */}
       <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        {/* 径向渐变：从品牌色到深色背景 */}
+        <radialGradient id="logoRadialGrad" cx="50%" cy="50%" r="50%">
           <stop offset="0%" style={{ stopColor: 'var(--color-brand-primary)', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: 'var(--color-accent)', stopOpacity: 1 }} />
-        </linearGradient>
+          <stop offset="100%" style={{ stopColor: 'var(--color-bg-elevated)', stopOpacity: 1 }} />
+        </radialGradient>
       </defs>
 
-      {/* 背景圆角矩形 */}
-      <rect x="2" y="2" width="28" height="28" rx="6" fill="url(#logoGradient)" opacity="0.15" />
-
-      {/* 方案B: 扭曲动态 - 流线型小写 p + XY */}
-      {/* 扭曲的小写 p - 使用贝塞尔曲线 */}
+      {/* 上方曲线 */}
       <path
-        d="M9 7.5 Q11 7 12 8 L13 9 Q14 10 13.5 12 L12.5 15 Q12 17 12.5 19 L13 21 Q13.5 23 12.5 24 L11.5 24.5 Q10.5 24 10.5 22.5 L10.5 7.5 Z"
-        fill="url(#logoGradient)"
-      />
-      {/* p 的圆形部分 - 负空间 */}
-      <circle
-        cx="12.5"
-        cy="14.5"
-        r="3"
-        fill="url(#logoGradient)"
+        d="M40 60 C 70 60, 90 90, 100 100"
+        stroke="currentColor"
+        strokeWidth="12"
+        fill="none"
       />
 
-      {/* XY 文字 - 斜向排列 */}
-      <text
-        x="17"
-        y="20"
-        fontSize="9"
-        fontWeight="bold"
-        fill="url(#logoGradient)"
-        transform="rotate(-10, 20, 16)"
-        style={{ fontFamily: 'Arial, sans-serif' }}
-      >
-        XY
-      </text>
+      {/* 下方曲线（带透明度） */}
+      <path
+        d="M40 140 C 70 140, 90 110, 100 100"
+        stroke="currentColor"
+        strokeWidth="12"
+        fill="none"
+        opacity="0.6"
+      />
+
+      {/* 三条放射线 */}
+      <path
+        d="M100 100 L150 50 M100 100 L160 100 M100 100 L150 150"
+        stroke="currentColor"
+        strokeWidth="14"
+        strokeLinecap="round"
+      />
+
+      {/* 中心圆点 */}
+      <circle
+        cx="100"
+        cy="100"
+        r="14"
+        fill="currentColor"
+      />
     </svg>
   );
 };
