@@ -127,6 +127,12 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [activeHunkIndex, setActiveHunkIndex] = useState<number | null>(null);
 
+    // 当 viewTree 变化时（用户点击不同请求行），同步更新 selectedNode
+    // 这确保了请求详情内容区域能正确显示新请求的数据
+    useEffect(() => {
+      setSelectedNode(viewTree);
+    }, [viewTree]);
+
     // Refs
     const listRef = React.useRef<ListImperativeAPI | null>(null);
     const rowHeightPx = useMemo(() => getRowHeightPx(), []);
