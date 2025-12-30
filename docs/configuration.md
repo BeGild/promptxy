@@ -16,15 +16,13 @@
 
 ## 📝 配置文件结构
 
+### 完整版配置（带 Web UI）
+
 ```json
 {
   "listen": {
     "host": "127.0.0.1",
     "port": 7070
-  },
-  "api": {
-    "host": "127.0.0.1",
-    "port": 7071
   },
   "suppliers": [
     {
@@ -38,16 +36,40 @@
   ],
   "rules": [
     {
+      "uuid": "rule-001",
+      "name": "添加中文指令",
+      "when": { "client": "claude", "field": "system" },
+      "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }],
+      "enabled": true
+    }
+  ],
+  "storage": {
+    "maxHistory": 1000
+  },
+  "debug": false
+}
+```
+
+### 简化版配置（npm 包）
+
+```json
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  },
+  "upstreams": {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com"
+  },
+  "rules": [
+    {
       "id": "example-rule",
       "when": { "client": "claude", "field": "system" },
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     }
   ],
-  "storage": {
-    "maxHistory": 100,
-    "autoCleanup": true,
-    "cleanupInterval": 1
-  },
   "debug": false
 }
 ```
@@ -87,33 +109,7 @@
 
 ---
 
-### api
-
-**类型**：`object`
-**必需**：是
-
-#### host
-
-**类型**：`string`
-**默认值**：`"127.0.0.1"`
-**说明**：API 服务绑定的主机地址
-
-#### port
-
-**类型**：`number`
-**默认值**：`7071`
-**范围**：`1-65535`
-**说明**：API 服务监听的端口号
-
-**示例**：
-
-```json
-"api": { "host": "127.0.0.1", "port": 7071 }
-```
-
----
-
-### suppliers
+### suppliers（完整版专用）
 
 **类型**：`array<Supplier>`
 **必需**：是
@@ -292,16 +288,26 @@
 
 部分配置项可以通过环境变量覆盖，优先级：**环境变量 > 配置文件 > 默认值**
 
+### 通用环境变量
+
 | 环境变量            | 配置项        | 示例值                 | 说明         |
 | ------------------- | ------------- | ---------------------- | ------------ |
 | `PROMPTXY_HOST`     | `listen.host` | `127.0.0.1`            | 绑定主机     |
 | `PROMPTXY_PORT`     | `listen.port` | `7070`                 | 监听端口     |
-| `PROMPTXY_API_HOST` | `api.host`    | `127.0.0.1`            | API 主机     |
-| `PROMPTXY_API_PORT` | `api.port`    | `7071`                 | API 端口     |
 | `PROMPTXY_DEBUG`    | `debug`       | `1` 或 `true`          | 调试模式     |
 | `PROMPTXY_CONFIG`   | -             | `/path/to/config.json` | 配置文件路径 |
 
-**注意**：供应商（suppliers）配置不支持环境变量覆盖，请通过配置文件或 Web UI 管理。
+### 简化版专用环境变量
+
+| 环境变量                      | 配置项                    | 示例值                                  |
+| ----------------------------- | ------------------------- | --------------------------------------- |
+| `PROMPTXY_UPSTREAM_ANTHROPIC` | `upstreams.anthropic`     | `https://api.anthropic.com`             |
+| `PROMPTXY_UPSTREAM_OPENAI`    | `upstreams.openai`        | `https://api.openai.com`                |
+| `PROMPTXY_UPSTREAM_GEMINI`    | `upstreams.gemini`        | `https://generativelanguage.googleapis.com` |
+
+**注意**：
+- 供应商（suppliers）配置不支持环境变量覆盖，请通过配置文件或 Web UI 管理
+- 简化版使用 `upstreams`，完整版使用 `suppliers`
 
 **使用示例**：
 
@@ -311,6 +317,9 @@ PROMPTXY_PORT=9000 PROMPTXY_DEBUG=1 npm run dev
 
 # 指定配置文件
 PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
+
+# 简化版：覆盖上游地址
+PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
 ```
 
 ---
@@ -567,6 +576,23 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 
 ```json
 {
+  "suppliers": [
+    {
+      "id": "claude-official",
+      "name": "Claude Official",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "enabled": true
+    }
+    // 不需要在这里放 API Key
+  ]
+}
+```
+
+**简化版配置示例**：
+
+```json
+{
   "upstreams": {
     "anthropic": "https://api.anthropic.com"
     // 不需要在这里放 API Key
@@ -592,13 +618,11 @@ PROMPTXY_CONFIG=/etc/promptxy/production.json npm run start
 
 配置文件必须是有效的 JSON，且符合以下结构：
 
+**完整版类型定义**：
+
 ```typescript
 interface PromptxyConfig {
   listen: {
-    host: string;
-    port: number; // 1-65535
-  };
-  api: {
     host: string;
     port: number; // 1-65535
   };
@@ -615,6 +639,40 @@ interface PromptxyConfig {
     enabled: boolean;
   }>;
   rules: Array<{
+    uuid: string;
+    name?: string;
+    when: {
+      client: 'claude' | 'codex' | 'gemini';
+      field: 'system' | 'instructions';
+      method?: string;
+      pathRegex?: string;
+      modelRegex?: string;
+    };
+    ops: Array<any>; // 非空数组
+    stop?: boolean;
+    enabled?: boolean;
+  }>;
+  storage: {
+    maxHistory: number;
+  };
+  debug?: boolean;
+}
+```
+
+**简化版类型定义**：
+
+```typescript
+interface PromptxyConfig {
+  listen: {
+    host: string;
+    port: number; // 1-65535
+  };
+  upstreams: {
+    anthropic: string;
+    openai: string;
+    gemini: string;
+  };
+  rules: Array<{
     id: string;
     when: {
       client: 'claude' | 'codex' | 'gemini';
@@ -626,11 +684,6 @@ interface PromptxyConfig {
     ops: Array<any>; // 非空数组
     stop?: boolean;
   }>;
-  storage: {
-    maxHistory: number;
-    autoCleanup: boolean;
-    cleanupInterval: number;
-  };
   debug?: boolean;
 }
 ```
@@ -656,8 +709,7 @@ Error: Local prefix '/claude' is used by multiple enabled suppliers: Claude Offi
 **修复后**：
 
 ```
-promptxy listening on http://127.0.0.1:7070
-promptxy-api listening on http://127.0.0.1:7071
+PromptXY listening on http://127.0.0.1:7070
 ```
 
 ---
@@ -697,10 +749,26 @@ PROMPTXY_DEBUG=1 npm run dev
 
 ### 最小配置
 
+**简化版**：
+
 ```json
 {
   "listen": { "host": "127.0.0.1", "port": 7070 },
-  "api": { "host": "127.0.0.1", "port": 7071 },
+  "upstreams": {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com"
+  },
+  "rules": [],
+  "debug": false
+}
+```
+
+**完整版**：
+
+```json
+{
+  "listen": { "host": "127.0.0.1", "port": 7070 },
   "suppliers": [
     {
       "id": "claude-anthropic",
@@ -711,56 +779,26 @@ PROMPTXY_DEBUG=1 npm run dev
     }
   ],
   "rules": [],
-  "storage": {
-    "maxHistory": 100,
-    "autoCleanup": true,
-    "cleanupInterval": 1
-  },
+  "storage": { "maxHistory": 1000 },
   "debug": false
 }
 ```
 
-### 完整配置
+### 完整配置示例
+
+**简化版**：
 
 ```json
 {
-  "listen": {
-    "host": "127.0.0.1",
-    "port": 7070
+  "listen": { "host": "127.0.0.1", "port": 7070 },
+  "upstreams": {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com"
   },
-  "api": {
-    "host": "127.0.0.1",
-    "port": 7071
-  },
-  "suppliers": [
-    {
-      "id": "claude-official",
-      "name": "Claude Official",
-      "baseUrl": "https://api.anthropic.com",
-      "localPrefix": "/claude",
-      "pathMappings": [],
-      "enabled": true
-    },
-    {
-      "id": "claude-test",
-      "name": "Claude Test",
-      "baseUrl": "https://test.example.com",
-      "localPrefix": "/claude",
-      "pathMappings": [],
-      "enabled": false
-    },
-    {
-      "id": "openai-official",
-      "name": "OpenAI Official",
-      "baseUrl": "https://api.openai.com",
-      "localPrefix": "/openai",
-      "pathMappings": [],
-      "enabled": true
-    }
-  ],
   "rules": [
     {
-      "id": "force-chinese-all",
+      "id": "force-chinese",
       "when": { "client": "claude", "field": "system" },
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     },
@@ -770,11 +808,55 @@ PROMPTXY_DEBUG=1 npm run dev
       "ops": [{ "type": "delete", "regex": "be concise", "flags": "i" }]
     }
   ],
-  "storage": {
-    "maxHistory": 100,
-    "autoCleanup": true,
-    "cleanupInterval": 1
-  },
+  "debug": true
+}
+```
+
+**完整版**：
+
+```json
+{
+  "listen": { "host": "127.0.0.1", "port": 7070 },
+  "suppliers": [
+    {
+      "id": "claude-official",
+      "name": "Claude Official",
+      "baseUrl": "https://api.anthropic.com",
+      "localPrefix": "/claude",
+      "enabled": true
+    },
+    {
+      "id": "claude-test",
+      "name": "Claude Test",
+      "baseUrl": "https://test.example.com",
+      "localPrefix": "/claude",
+      "enabled": false
+    },
+    {
+      "id": "openai-official",
+      "name": "OpenAI Official",
+      "baseUrl": "https://api.openai.com",
+      "localPrefix": "/openai",
+      "enabled": true
+    }
+  ],
+  "rules": [
+    {
+      "uuid": "rule-chinese",
+      "name": "强制中文响应",
+      "when": { "client": "claude", "field": "system" },
+      "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }],
+      "enabled": true
+    },
+    {
+      "uuid": "rule-remove-limit",
+      "name": "移除简洁限制",
+      "when": { "client": "codex", "field": "instructions" },
+      "ops": [{ "type": "delete", "regex": "be concise", "flags": "i" }],
+      "enabled": true
+    }
+  ],
+  "storage": { "maxHistory": 1000 },
   "debug": true
 }
 ```
