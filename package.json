@@ -7,12 +7,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/promptxy.git"
+    "url": "git+https://github.com/BeGild/promptxy.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/promptxy/issues"
+    "url": "https://github.com/BeGild/promptxy/issues"
   },
-  "homepage": "https://github.com/yourusername/promptxy#readme",
+  "homepage": "https://github.com/BeGild/promptxy#readme",
   "keywords": [
     "http-proxy",
     "ai-gateway",
@@ -22,7 +22,7 @@
     "llm-proxy"
   ],
   "bin": {
-    "promptxy": "./dist/main.js"
+    "promptxy": "dist/main.js"
   },
   "files": [
     "dist",
