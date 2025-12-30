@@ -155,21 +155,18 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
       )}
 
       {/* 请求详情 */}
-      <div className="space-y-sm">
-        <h4 className="text-base font-bold">请求详情</h4>
-        <div
-          className="border border-subtle rounded-lg overflow-hidden"
-          style={{ height: 'calc(100vh - 350px)' }}
-        >
-          <RequestDetailPanel
-            request={request.modifiedBody}
-            originalRequest={request.originalBody}
-            responseStatus={request.responseStatus}
-            responseDuration={request.durationMs}
-            onSelectionBasedCreate={onSelectionBasedCreate}
-            onBasedOnRequestCreate={onBasedOnRequestCreate}
-          />
-        </div>
+      <div
+        className="border border-subtle rounded-lg overflow-hidden"
+        style={{ height: 'calc(100vh - 260px)' }}
+      >
+        <RequestDetailPanel
+          request={request.modifiedBody}
+          originalRequest={request.originalBody}
+          responseStatus={request.responseStatus}
+          responseDuration={request.durationMs}
+          onSelectionBasedCreate={onSelectionBasedCreate}
+          onBasedOnRequestCreate={onBasedOnRequestCreate}
+        />
       </div>
     </div>
   );

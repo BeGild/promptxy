@@ -517,8 +517,8 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
           </Panel>
 
           {/* 分割条 */}
-          <Separator className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary">
-            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-subtle group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
+          <Separator className="group relative w-4 bg-border cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary hover:bg-brand-primary/50 transition-colors">
+            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-brand-primary/40 group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
           </Separator>
 
           {/* 右侧：内容面板（条件渲染） */}
