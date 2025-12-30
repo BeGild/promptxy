@@ -46,13 +46,23 @@ import { applyPromptRules } from './rules/engine.js';
 import { readRequestBody } from './http.js';
 import { mutateClaudeBody } from './adapters/claude.js';
 
-// SSE 连接管理
-const sseConnections = new Set<http.ServerResponse>();
+// SSE 连接管理类型
+export type SSEConnections = Set<http.ServerResponse>;
+
+// SSE 连接管理（每个实例独立）
+let sseConnections: SSEConnections = new Set();
+
+/**
+ * 设置 SSE 连接集合
+ */
+export function setSSEConnections(connections: SSEConnections): void {
+  sseConnections = connections;
+}
 
 /**
  * SSE 连接处理
  */
-function handleSSE(req: http.IncomingMessage, res: http.ServerResponse): void {
+export function handleSSE(req: http.IncomingMessage, res: http.ServerResponse): void {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -86,7 +96,7 @@ export function broadcastRequest(data: SSERequestEvent): void {
 /**
  * 发送 JSON 响应
  */
-function sendJson(res: http.ServerResponse, status: number, data: any): void {
+export function sendJson(res: http.ServerResponse, status: number, data: any): void {
   const body = JSON.stringify(data);
   res.writeHead(status, {
     'Content-Type': 'application/json',
@@ -98,10 +108,11 @@ function sendJson(res: http.ServerResponse, status: number, data: any): void {
 /**
  * 处理请求历史列表
  */
-async function handleGetRequests(
+export async function handleGetRequests(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   url: URL,
+  db: Database,
 ): Promise<void> {
   try {
     const limit = Number(url.searchParams.get('limit')) || 50;
@@ -129,10 +140,11 @@ async function handleGetRequests(
 /**
  * 处理获取路径列表
  */
-async function handleGetPaths(
+export async function handleGetPaths(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   url: URL,
+  db: Database,
 ): Promise<void> {
   try {
     const prefix = url.searchParams.get('prefix') || undefined;
@@ -146,10 +158,11 @@ async function handleGetPaths(
 /**
  * 处理单个请求详情
  */
-async function handleGetRequest(
+export async function handleGetRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   id: string,
+  db: Database,
 ): Promise<void> {
   try {
     const record = await getRequestDetail(id);
@@ -187,7 +200,7 @@ async function handleGetRequest(
 /**
  * 安全解析 JSON，如果失败则返回原始字符串
  */
-function safeParseJson(str: string): any {
+export function safeParseJson(str: string): any {
   try {
     return JSON.parse(str);
   } catch {
@@ -198,7 +211,7 @@ function safeParseJson(str: string): any {
 /**
  * 处理配置读取
  */
-function handleGetConfig(
+export function handleGetConfig(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -209,7 +222,7 @@ function handleGetConfig(
 /**
  * 验证规则格式
  */
-function validateRule(rule: PromptxyRule): RuleValidationResult {
+export function validateRule(rule: PromptxyRule): RuleValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -271,7 +284,7 @@ function validateRule(rule: PromptxyRule): RuleValidationResult {
 /**
  * 验证规则格式
  */
-function validateRules(rules: PromptxyRule[]): RuleValidationResult {
+export function validateRules(rules: PromptxyRule[]): RuleValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -295,7 +308,7 @@ function validateRules(rules: PromptxyRule[]): RuleValidationResult {
 /**
  * 处理配置同步
  */
-async function handleConfigSync(
+export async function handleConfigSync(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -345,7 +358,7 @@ async function handleConfigSync(
 /**
  * 处理预览请求
  */
-function handlePreview(
+export function handlePreview(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   rules: PromptxyRule[],
@@ -429,10 +442,11 @@ function handlePreview(
 /**
  * 处理数据清理
  */
-async function handleCleanup(
+export async function handleCleanup(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   url: URL,
+  db: Database,
 ): Promise<void> {
   try {
     // 优先使用传入的 keep 参数，否则使用数据库中的 max_history 设置
@@ -462,9 +476,10 @@ async function handleCleanup(
 /**
  * 处理获取设置
  */
-async function handleGetSettings(
+export async function handleGetSettings(
   req: http.IncomingMessage,
   res: http.ServerResponse,
+  db: Database,
 ): Promise<void> {
   try {
     const settings = await getAllSettings();
@@ -477,9 +492,10 @@ async function handleGetSettings(
 /**
  * 处理更新设置
  */
-async function handleUpdateSettings(
+export async function handleUpdateSettings(
   req: http.IncomingMessage,
   res: http.ServerResponse,
+  db: Database,
 ): Promise<void> {
   try {
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
@@ -504,10 +520,11 @@ async function handleUpdateSettings(
 /**
  * 处理删除单个请求
  */
-async function handleDeleteRequest(
+export async function handleDeleteRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   id: string,
+  db: Database,
 ): Promise<void> {
   try {
     const success = await deleteRequest(id);
@@ -526,7 +543,7 @@ async function handleDeleteRequest(
 /**
  * 处理健康检查
  */
-function handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void {
+export function handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void {
   sendJson(res, 200, {
     status: 'ok',
     service: 'promptxy-api',
@@ -537,7 +554,11 @@ function handleHealth(req: http.IncomingMessage, res: http.ServerResponse): void
 /**
  * 处理统计信息
  */
-async function handleStats(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+export async function handleStats(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  db: Database,
+): Promise<void> {
   try {
     const stats = await getRequestStats();
     const dbInfo = await getDatabaseInfo();
@@ -554,9 +575,10 @@ async function handleStats(req: http.IncomingMessage, res: http.ServerResponse):
 /**
  * 处理数据库信息
  */
-async function handleDatabaseInfo(
+export async function handleDatabaseInfo(
   req: http.IncomingMessage,
   res: http.ServerResponse,
+  db: Database,
 ): Promise<void> {
   try {
     const info = await getDatabaseInfo();
@@ -569,7 +591,7 @@ async function handleDatabaseInfo(
 /**
  * 处理获取供应商列表
  */
-async function handleGetSuppliers(
+export async function handleGetSuppliers(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -584,14 +606,14 @@ async function handleGetSuppliers(
 /**
  * 生成唯一 ID
  */
-function generateId(): string {
+export function generateId(): string {
   return `supplier-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 /**
  * 处理创建供应商
  */
-async function handleCreateSupplier(
+export async function handleCreateSupplier(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -636,7 +658,7 @@ async function handleCreateSupplier(
 /**
  * 处理更新供应商
  */
-async function handleUpdateSupplier(
+export async function handleUpdateSupplier(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -685,7 +707,7 @@ async function handleUpdateSupplier(
 /**
  * 处理删除供应商
  */
-async function handleDeleteSupplier(
+export async function handleDeleteSupplier(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -729,7 +751,7 @@ async function handleDeleteSupplier(
 /**
  * 处理切换供应商启用状态
  */
-async function handleToggleSupplier(
+export async function handleToggleSupplier(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   config: PromptxyConfig,
@@ -780,8 +802,7 @@ async function handleToggleSupplier(
 /**
  * 保存当前规则到配置文件
  */
-async function saveCurrentRules(rules: PromptxyRule[]): Promise<void> {
-  const config = await loadConfig();
+async function saveCurrentRules(rules: PromptxyRule[], config: PromptxyConfig): Promise<void> {
   const updatedConfig: PromptxyConfig = { ...config, rules };
   await saveConfig(updatedConfig);
 }
@@ -789,10 +810,11 @@ async function saveCurrentRules(rules: PromptxyRule[]): Promise<void> {
 /**
  * 处理创建单个规则
  */
-async function handleCreateRule(
+export async function handleCreateRule(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   currentRules: PromptxyRule[],
+  config: PromptxyConfig,
 ): Promise<void> {
   try {
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 * 1024 });
@@ -809,7 +831,7 @@ async function handleCreateRule(
     currentRules.push(rule);
 
     // 保存到文件
-    await saveCurrentRules(currentRules);
+    await saveCurrentRules(currentRules, config);
 
     sendJson(res, 200, {
       success: true,
@@ -824,11 +846,12 @@ async function handleCreateRule(
 /**
  * 处理更新单个规则
  */
-async function handleUpdateRule(
+export async function handleUpdateRule(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   currentRules: PromptxyRule[],
   url: URL,
+  config: PromptxyConfig,
 ): Promise<void> {
   try {
     const ruleId = url.pathname.split('/').pop();
@@ -850,7 +873,7 @@ async function handleUpdateRule(
     }
 
     currentRules[index] = rule;
-    await saveCurrentRules(currentRules);
+    await saveCurrentRules(currentRules, config);
 
     sendJson(res, 200, {
       success: true,
@@ -865,11 +888,12 @@ async function handleUpdateRule(
 /**
  * 处理删除单个规则
  */
-async function handleDeleteRule(
+export async function handleDeleteRule(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   currentRules: PromptxyRule[],
   url: URL,
+  config: PromptxyConfig,
 ): Promise<void> {
   try {
     const ruleId = url.pathname.split('/').pop();
@@ -883,7 +907,7 @@ async function handleDeleteRule(
 
     const deletedRule = currentRules[index];
     currentRules.splice(index, 1);
-    await saveCurrentRules(currentRules);
+    await saveCurrentRules(currentRules, config);
 
     sendJson(res, 200, {
       success: true,
@@ -893,273 +917,4 @@ async function handleDeleteRule(
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to delete rule', message: error?.message });
   }
-}
-
-/**
- * 获取 MIME 类型
- */
-function getMimeType(extname: string): string {
-  const mimeTypes: Record<string, string> = {
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'application/javascript',
-    '.js.map': 'application/json',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.ico': 'image/x-icon',
-    '.woff': 'font/woff',
-    '.woff2': 'font/woff2',
-    '.ttf': 'font/ttf',
-    '.eot': 'application/vnd.ms-fontobject',
-  };
-  return mimeTypes[extname] || 'application/octet-stream';
-}
-
-/**
- * 处理静态文件服务
- */
-async function serveStaticFile(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  url: URL,
-): Promise<boolean> {
-  // 只处理 GET 请求
-  if (req.method !== 'GET') {
-    return false;
-  }
-
-  // 静态文件目录
-  const publicDir = path.join(process.cwd(), 'public');
-
-  // 如果 public 目录不存在，返回 false
-  if (!fs.existsSync(publicDir)) {
-    return false;
-  }
-
-  // 构建文件路径
-  let filePath: string;
-  if (url.pathname === '/') {
-    filePath = path.join(publicDir, 'index.html');
-  } else {
-    filePath = path.join(publicDir, url.pathname);
-  }
-
-  // 安全检查：防止目录遍历
-  if (!filePath.startsWith(publicDir)) {
-    sendJson(res, 403, { error: 'Forbidden' });
-    return true;
-  }
-
-  try {
-    // 检查文件是否存在
-    const stats = await fs.promises.stat(filePath);
-    if (!stats.isFile()) {
-      return false;
-    }
-
-    // 读取文件
-    const content = await fs.promises.readFile(filePath);
-    const extname = path.extname(filePath);
-    const mimeType = getMimeType(extname);
-
-    // 发送文件
-    res.writeHead(200, {
-      'Content-Type': mimeType,
-      'Content-Length': content.length,
-      'Cache-Control': 'public, max-age=3600', // 缓存 1 小时
-    });
-    res.end(content);
-    return true;
-  } catch {
-    // 文件不存在或其他错误，返回 false 让其他路由处理
-    return false;
-  }
-}
-
-/**
- * 创建 API 服务器
- */
-export function createApiServer(
-  db: Database,
-  config: PromptxyConfig,
-  currentRules: PromptxyRule[],
-): http.Server {
-  return http.createServer(async (req, res) => {
-    try {
-      if (!req.url || !req.method) {
-        sendJson(res, 400, { error: 'Invalid request' });
-        return;
-      }
-
-      const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-
-      // CORS 支持
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-      if (req.method === 'OPTIONS') {
-        res.writeHead(200);
-        res.end();
-        return;
-      }
-
-      // 静态文件服务（优先级最高，除了 API 路由）
-      // 如果不是 API 路由，尝试提供静态文件
-      if (!url.pathname.startsWith('/_promptxy/')) {
-        const served = await serveStaticFile(req, res, url);
-        if (served) {
-          return;
-        }
-      }
-
-      // SSE 端点
-      if (req.method === 'GET' && url.pathname === '/_promptxy/events') {
-        handleSSE(req, res);
-        return;
-      }
-
-      // 请求历史列表
-      if (req.method === 'GET' && url.pathname === '/_promptxy/requests') {
-        await handleGetRequests(req, res, url);
-        return;
-      }
-
-      // 路径列表
-      if (req.method === 'GET' && url.pathname === '/_promptxy/paths') {
-        await handleGetPaths(req, res, url);
-        return;
-      }
-
-      // 请求详情
-      if (req.method === 'GET' && url.pathname.startsWith('/_promptxy/requests/')) {
-        const id = url.pathname.split('/').pop();
-        if (id) {
-          await handleGetRequest(req, res, id);
-          return;
-        }
-      }
-
-      // 删除请求
-      if (req.method === 'DELETE' && url.pathname.startsWith('/_promptxy/requests/')) {
-        const id = url.pathname.split('/').pop();
-        if (id) {
-          await handleDeleteRequest(req, res, id);
-          return;
-        }
-      }
-
-      // 配置读取
-      if (req.method === 'GET' && url.pathname === '/_promptxy/config') {
-        handleGetConfig(req, res, config);
-        return;
-      }
-
-      // 配置同步
-      if (req.method === 'POST' && url.pathname === '/_promptxy/config/sync') {
-        await handleConfigSync(req, res, config, currentRules);
-        return;
-      }
-
-      // 获取供应商列表
-      if (req.method === 'GET' && url.pathname === '/_promptxy/suppliers') {
-        await handleGetSuppliers(req, res, config);
-        return;
-      }
-
-      // 创建供应商
-      if (req.method === 'POST' && url.pathname === '/_promptxy/suppliers') {
-        await handleCreateSupplier(req, res, config);
-        return;
-      }
-
-      // 更新供应商
-      if (req.method === 'PUT' && url.pathname.startsWith('/_promptxy/suppliers/')) {
-        await handleUpdateSupplier(req, res, config, url);
-        return;
-      }
-
-      // 删除供应商
-      if (req.method === 'DELETE' && url.pathname.startsWith('/_promptxy/suppliers/')) {
-        await handleDeleteSupplier(req, res, config, url);
-        return;
-      }
-
-      // 切换供应商状态
-      if (
-        req.method === 'POST' &&
-        url.pathname.startsWith('/_promptxy/suppliers/') &&
-        url.pathname.endsWith('/toggle')
-      ) {
-        await handleToggleSupplier(req, res, config, url);
-        return;
-      }
-
-      // 规则管理路由
-      if (url.pathname === '/_promptxy/rules' && req.method === 'POST') {
-        await handleCreateRule(req, res, currentRules);
-        return;
-      }
-
-      if (url.pathname.startsWith('/_promptxy/rules/') && req.method === 'PUT') {
-        await handleUpdateRule(req, res, currentRules, url);
-        return;
-      }
-
-      if (url.pathname.startsWith('/_promptxy/rules/') && req.method === 'DELETE') {
-        await handleDeleteRule(req, res, currentRules, url);
-        return;
-      }
-
-      // 预览
-      if (req.method === 'POST' && url.pathname === '/_promptxy/preview') {
-        handlePreview(req, res, currentRules);
-        return;
-      }
-
-      // 数据清理
-      if (req.method === 'POST' && url.pathname === '/_promptxy/requests/cleanup') {
-        await handleCleanup(req, res, url);
-        return;
-      }
-
-      // 获取设置
-      if (req.method === 'GET' && url.pathname === '/_promptxy/settings') {
-        await handleGetSettings(req, res);
-        return;
-      }
-
-      // 更新设置
-      if (req.method === 'POST' && url.pathname === '/_promptxy/settings') {
-        await handleUpdateSettings(req, res);
-        return;
-      }
-
-      // 健康检查
-      if (req.method === 'GET' && url.pathname === '/_promptxy/health') {
-        handleHealth(req, res);
-        return;
-      }
-
-      // 统计信息
-      if (req.method === 'GET' && url.pathname === '/_promptxy/stats') {
-        await handleStats(req, res);
-        return;
-      }
-
-      // 数据库信息
-      if (req.method === 'GET' && url.pathname === '/_promptxy/database') {
-        await handleDatabaseInfo(req, res);
-        return;
-      }
-
-      // 404
-      sendJson(res, 404, { error: 'Not Found', path: url.pathname });
-    } catch (error: any) {
-      sendJson(res, 500, { error: 'Internal Server Error', message: error?.message });
-    }
-  });
 }

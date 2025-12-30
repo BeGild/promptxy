@@ -14,7 +14,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/_promptxy': {
-        target: 'http://127.0.0.1:7071',
+        target: process.env.VITE_BACKEND_PORT
+          ? `http://127.0.0.1:${process.env.VITE_BACKEND_PORT}`
+          : 'http://127.0.0.1:7070',
         changeOrigin: true,
       },
     },
@@ -31,11 +33,7 @@ export default defineConfig({
           // React 核心库单独打包
           'react-core': ['react', 'react-dom', 'react-router-dom'],
           // UI 库单独打包
-          'ui-library': [
-            '@heroui/react',
-            '@heroui/system',
-            'framer-motion',
-          ],
+          'ui-library': ['@heroui/react', '@heroui/system', 'framer-motion'],
           // 状态管理库单独打包
           'state-management': ['zustand', '@tanstack/react-query'],
           // 工具库单独打包

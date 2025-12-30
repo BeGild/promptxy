@@ -106,10 +106,6 @@ export type PromptxyConfig = {
     host: string;
     port: number;
   };
-  api: {
-    host: string;
-    port: number;
-  };
   suppliers: Supplier[];
   rules: PromptxyRule[];
   storage: {

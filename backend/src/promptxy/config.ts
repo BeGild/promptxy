@@ -9,10 +9,10 @@ import {
   LegacyPromptxyRule,
 } from './types.js';
 import { randomUUID } from 'node:crypto';
+import { calculateDefaultPort, findAvailablePort } from './port-utils.js';
 
 type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
-  api?: Partial<PromptxyConfig['api']>;
   suppliers?: Supplier[];
   storage?: {
     maxHistory?: number;
@@ -24,11 +24,7 @@ type PartialConfig = Partial<PromptxyConfig> & {
 const DEFAULT_CONFIG: PromptxyConfig = {
   listen: {
     host: '127.0.0.1',
-    port: 7070,
-  },
-  api: {
-    host: '127.0.0.1',
-    port: 7071,
+    port: 0,
   },
   suppliers: [
     {
@@ -224,24 +220,6 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     throw new Error(`config.listen.port must be an integer in [1, 65535]`);
   }
 
-  // API 配置验证
-  if (!config.api || typeof config.api !== 'object') {
-    throw new Error(`config.api must be an object`);
-  }
-
-  if (!config.api.host || typeof config.api.host !== 'string') {
-    throw new Error(`config.api.host must be a string`);
-  }
-
-  if (
-    typeof config.api.port !== 'number' ||
-    !Number.isInteger(config.api.port) ||
-    config.api.port < 1 ||
-    config.api.port > 65535
-  ) {
-    throw new Error(`config.api.port must be an integer in [1, 65535]`);
-  }
-
   if (!config.suppliers || !Array.isArray(config.suppliers)) {
     throw new Error(`config.suppliers must be an array`);
   }
@@ -310,11 +288,11 @@ function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyCon
   return {
     listen: {
       host: incoming.listen?.host ?? base.listen.host,
-      port: incoming.listen?.port ?? base.listen.port,
-    },
-    api: {
-      host: incoming.api?.host ?? base.api.host,
-      port: incoming.api?.port ?? base.api.port,
+      // port: 0 表示使用自动计算，不应该覆盖已设置的端口
+      port:
+        incoming.listen?.port !== undefined && incoming.listen.port !== 0
+          ? incoming.listen.port
+          : base.listen.port,
     },
     suppliers: incoming.suppliers ?? base.suppliers,
     rules: incoming.rules ?? base.rules,
@@ -330,9 +308,6 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
   const port = parsePort(process.env.PROMPTXY_PORT);
   const debug = parseBoolean(process.env.PROMPTXY_DEBUG);
 
-  const apiHost = process.env.PROMPTXY_API_HOST;
-  const apiPort = parsePort(process.env.PROMPTXY_API_PORT);
-
   const maxHistory = parsePort(process.env.PROMPTXY_MAX_HISTORY);
   // PROMPTXY_AUTO_CLEANUP 和 PROMPTXY_CLEANUP_INTERVAL 已废弃
 
@@ -342,10 +317,6 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
       host: host ?? config.listen.host,
       port: port ?? config.listen.port,
     },
-    api: {
-      host: apiHost ?? config.api.host,
-      port: apiPort ?? config.api.port,
-    },
     suppliers: config.suppliers, // 供应商不支持环境变量覆盖
     storage: {
       maxHistory: maxHistory ?? config.storage.maxHistory,
@@ -354,41 +325,84 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
   };
 }
 
-async function findConfigPath(): Promise<string | undefined> {
+type ConfigPaths = {
+  project: string | undefined;
+  global: string | undefined;
+};
+
+async function findConfigPaths(): Promise<ConfigPaths> {
+  // 环境变量优先（仅用于全局配置路径）
   const fromEnv = process.env.PROMPTXY_CONFIG;
-  if (fromEnv && (await fileExists(fromEnv))) return fromEnv;
 
-  const cwdCandidate = path.join(process.cwd(), 'promptxy.config.json');
-  if (await fileExists(cwdCandidate)) return cwdCandidate;
+  // 项目配置：向上查找项目根目录的 promptxy.config.json
+  let projectPath: string | undefined;
+  let currentDir = process.cwd();
 
-  const homeCandidate = path.join(os.homedir(), '.promptxy', 'config.json');
-  if (await fileExists(homeCandidate)) return homeCandidate;
+  // 最多向上查找 3 级目录
+  for (let i = 0; i < 3; i++) {
+    const candidate = path.join(currentDir, 'promptxy.config.json');
+    if (await fileExists(candidate)) {
+      projectPath = candidate;
+      break;
+    }
+    // 向上一级目录
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break; // 已到达根目录
+    currentDir = parentDir;
+  }
 
-  return undefined;
+  // 全局配置：~/.config/promptxy/config.json
+  const globalPath = fromEnv || path.join(os.homedir(), '.config', 'promptxy', 'config.json');
+
+  return {
+    project: projectPath,
+    global: (await fileExists(globalPath)) ? globalPath : undefined,
+  };
 }
 
-export async function loadConfig(): Promise<PromptxyConfig> {
-  const configPath = await findConfigPath();
+export async function loadConfig(cliOptions?: { port?: number }): Promise<PromptxyConfig> {
+  const configPaths = await findConfigPaths();
 
   let config: PromptxyConfig = DEFAULT_CONFIG;
 
-  if (configPath) {
-    const parsed = (await readJsonFile(configPath)) as PartialConfig;
+  // 1. 先加载项目配置（如果存在）
+  if (configPaths.project) {
+    const parsed = (await readJsonFile(configPaths.project)) as PartialConfig;
     config = mergeConfig(DEFAULT_CONFIG, parsed);
+    console.log(`[Config] 加载项目配置: ${configPaths.project}`);
+  }
 
-    // 检测并迁移旧格式的规则
-    const migratedRules = migrateRules(config.rules);
-    const needsMigration = migratedRules !== config.rules;
+  // 2. 再合并全局配置（补充缺失字段）
+  if (configPaths.global) {
+    const parsed = (await readJsonFile(configPaths.global)) as PartialConfig;
+    config = mergeConfig(config, parsed); // 用全局配置补充
+    console.log(`[Config] 合并全局配置: ${configPaths.global}`);
+  }
 
-    if (needsMigration) {
-      config = { ...config, rules: migratedRules };
-      // 自动保存迁移后的配置
-      await saveConfig(config);
-      console.log('[Config] 规则数据已自动迁移到新格式 (uuid + name)');
-    }
+  // 检测并迁移旧格式的规则
+  const migratedRules = migrateRules(config.rules);
+  const needsMigration = migratedRules !== config.rules;
+
+  if (needsMigration) {
+    config = { ...config, rules: migratedRules };
+    // 自动保存迁移后的配置（保存到全局配置）
+    await saveGlobalConfig(config);
+    console.log('[Config] 规则数据已自动迁移到新格式 (uuid + name)');
   }
 
   config = applyEnvOverrides(config);
+
+  // 应用命令行参数（最高优先级）
+  if (cliOptions?.port !== undefined) {
+    config.listen.port = cliOptions.port;
+  }
+
+  // 端口强制校验：如果未显式指定，使用hash计算的端口
+  if (config.listen.port <= 0 || config.listen.port > 65535) {
+    const hashedPort = await findAvailablePort(calculateDefaultPort());
+    config.listen.port = hashedPort;
+    console.log(`[Config] 未指定端口，使用计算端口: ${hashedPort}`);
+  }
 
   return assertConfig(config);
 }
@@ -428,17 +442,20 @@ function migrateRules(rules: PromptxyRule[]): PromptxyRule[] {
   return hasMigration ? migratedRules : rules;
 }
 
-export async function saveConfig(config: PromptxyConfig): Promise<void> {
+/**
+ * 保存全局配置到 ~/.config/promptxy/config.json
+ */
+export async function saveGlobalConfig(config: PromptxyConfig): Promise<void> {
   // 确定保存路径
   const fromEnv = process.env.PROMPTXY_CONFIG;
   const homeDir = os.homedir();
-  const configDir = path.join(homeDir, '.promptxy');
+  const configDir = path.join(homeDir, '.config', 'promptxy');
   const defaultPath = path.join(configDir, 'config.json');
 
   const configPath = fromEnv || defaultPath;
   const saveDir = path.dirname(configPath);
 
-  // 确保目录存在（使用实际保存路径的目录）
+  // 确保目录存在
   await mkdir(saveDir, { recursive: true });
 
   // 写入配置文件
@@ -446,10 +463,17 @@ export async function saveConfig(config: PromptxyConfig): Promise<void> {
   await writeFile(configPath, json, 'utf-8');
 }
 
+/**
+ * 保存配置（别名，保持向后兼容）
+ */
+export async function saveConfig(config: PromptxyConfig): Promise<void> {
+  return saveGlobalConfig(config);
+}
+
 export function getConfigDir(): string {
   const fromEnv = process.env.PROMPTXY_CONFIG;
   if (fromEnv) return path.dirname(fromEnv);
 
   const homeDir = os.homedir();
-  return path.join(homeDir, '.promptxy');
+  return path.join(homeDir, '.config', 'promptxy');
 }

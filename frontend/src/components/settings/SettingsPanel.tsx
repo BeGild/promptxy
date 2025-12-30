@@ -338,19 +338,13 @@ export const SettingsPanel: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-medium">版本</span>
                   <span className="font-mono bg-canvas dark:bg-secondary px-2 py-0.5 rounded text-xs">
-                    v2.0
+                    PromptXY
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Gateway 端口</span>
+                  <span className="font-medium">服务端口</span>
                   <span className="font-mono bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary px-2 py-0.5 rounded text-xs">
-                    7070
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">API 端口</span>
-                  <span className="font-mono bg-accent/10 dark:bg-accent/20 text-accent px-2 py-0.5 rounded text-xs">
-                    7071
+                    自动分配
                   </span>
                 </div>
                 <Divider className="my-my2" />

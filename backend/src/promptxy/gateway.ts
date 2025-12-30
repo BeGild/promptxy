@@ -15,13 +15,41 @@ import {
   PromptxyConfig,
   PromptxyClient,
   PromptxyRuleMatch,
+  PromptxyRule,
   RequestRecord,
   SSERequestEvent,
   Supplier,
   PathMapping,
 } from './types.js';
 import { insertRequestRecord, getFilteredPaths, shouldFilterPath } from './database.js';
-import { broadcastRequest } from './api-server.js';
+import { broadcastRequest, setSSEConnections } from './api-handlers.js';
+import { Database } from 'sqlite';
+import {
+  handleSSE,
+  handleGetRequests,
+  handleGetPaths,
+  handleGetRequest,
+  handleConfigSync,
+  handleGetConfig,
+  handlePreview,
+  handleCleanup,
+  handleGetSettings,
+  handleUpdateSettings,
+  handleDeleteRequest,
+  handleHealth,
+  handleStats,
+  handleDatabaseInfo,
+  handleGetSuppliers,
+  handleCreateSupplier,
+  handleUpdateSupplier,
+  handleDeleteSupplier,
+  handleToggleSupplier,
+  handleCreateRule,
+  handleUpdateRule,
+  handleDeleteRule,
+  sendJson,
+  type SSEConnections,
+} from './api-handlers.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -131,8 +159,16 @@ function generateRequestId(): string {
   return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export function createGateway(config: PromptxyConfig): http.Server {
+export function createGateway(
+  config: PromptxyConfig,
+  db: Database,
+  currentRules: PromptxyRule[],
+): http.Server {
   const logger = createLogger({ debug: config.debug });
+
+  // 创建 SSE 连接集合
+  const sseConnections: SSEConnections = new Set();
+  setSSEConnections(sseConnections);
 
   return http.createServer(async (req, res) => {
     const startTime = Date.now();
@@ -156,12 +192,146 @@ export function createGateway(config: PromptxyConfig): http.Server {
       const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
       method = req.method;
 
-      // 健康检查端点（不记录）
-      if (method === 'GET' && url.pathname === '/_promptxy/health') {
-        jsonError(res, 200, { status: 'ok' });
+      // ========== API路由（优先处理）==========
+      if (url.pathname.startsWith('/_promptxy/')) {
+        // SSE事件
+        if (method === 'GET' && url.pathname === '/_promptxy/events') {
+          handleSSE(req, res);
+          return;
+        }
+
+        // 健康检查
+        if (method === 'GET' && url.pathname === '/_promptxy/health') {
+          handleHealth(req, res);
+          return;
+        }
+
+        // 请求历史
+        if (method === 'GET' && url.pathname === '/_promptxy/requests') {
+          await handleGetRequests(req, res, url, db);
+          return;
+        }
+
+        // 请求详情
+        if (method === 'GET' && url.pathname.startsWith('/_promptxy/requests/')) {
+          const id = url.pathname.split('/').pop();
+          if (id) {
+            await handleGetRequest(req, res, id, db);
+            return;
+          }
+        }
+
+        // 删除请求
+        if (method === 'DELETE' && url.pathname.startsWith('/_promptxy/requests/')) {
+          const id = url.pathname.split('/').pop();
+          if (id) {
+            await handleDeleteRequest(req, res, id, db);
+            return;
+          }
+        }
+
+        // 路径列表
+        if (method === 'GET' && url.pathname === '/_promptxy/paths') {
+          await handleGetPaths(req, res, url, db);
+          return;
+        }
+
+        // 配置
+        if (method === 'GET' && url.pathname === '/_promptxy/config') {
+          handleGetConfig(req, res, config);
+          return;
+        }
+
+        if (method === 'POST' && url.pathname === '/_promptxy/config/sync') {
+          await handleConfigSync(req, res, config, currentRules);
+          return;
+        }
+
+        // 规则管理
+        if (url.pathname === '/_promptxy/rules' && method === 'POST') {
+          await handleCreateRule(req, res, currentRules, config);
+          return;
+        }
+
+        if (url.pathname.startsWith('/_promptxy/rules/') && method === 'PUT') {
+          await handleUpdateRule(req, res, currentRules, url, config);
+          return;
+        }
+
+        if (url.pathname.startsWith('/_promptxy/rules/') && method === 'DELETE') {
+          await handleDeleteRule(req, res, currentRules, url, config);
+          return;
+        }
+
+        // 供应商管理
+        if (method === 'GET' && url.pathname === '/_promptxy/suppliers') {
+          await handleGetSuppliers(req, res, config);
+          return;
+        }
+
+        if (method === 'POST' && url.pathname === '/_promptxy/suppliers') {
+          await handleCreateSupplier(req, res, config);
+          return;
+        }
+
+        if (method === 'PUT' && url.pathname.startsWith('/_promptxy/suppliers/')) {
+          await handleUpdateSupplier(req, res, config, url);
+          return;
+        }
+
+        if (method === 'DELETE' && url.pathname.startsWith('/_promptxy/suppliers/')) {
+          await handleDeleteSupplier(req, res, config, url);
+          return;
+        }
+
+        if (method === 'POST' && url.pathname.endsWith('/toggle')) {
+          await handleToggleSupplier(req, res, config, url);
+          return;
+        }
+
+        // 预览
+        if (method === 'POST' && url.pathname === '/_promptxy/preview') {
+          handlePreview(req, res, currentRules);
+          return;
+        }
+
+        // 数据清理
+        if (method === 'POST' && url.pathname === '/_promptxy/requests/cleanup') {
+          await handleCleanup(req, res, url, db);
+          return;
+        }
+
+        // 设置
+        if (method === 'GET' && url.pathname === '/_promptxy/settings') {
+          await handleGetSettings(req, res, db);
+          return;
+        }
+
+        if (method === 'POST' && url.pathname === '/_promptxy/settings') {
+          await handleUpdateSettings(req, res, db);
+          return;
+        }
+
+        // 统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats') {
+          await handleStats(req, res, db);
+          return;
+        }
+
+        // 数据库信息
+        if (method === 'GET' && url.pathname === '/_promptxy/database') {
+          await handleDatabaseInfo(req, res, db);
+          return;
+        }
+
+        // 404
+        jsonError(res, 404, { error: 'API endpoint not found', path: url.pathname });
         return;
       }
 
+      // ========== Gateway代理路由 ==========
+
+      // 根据路径查找供应商
       route = findSupplierByPath(url.pathname, config.suppliers);
 
       if (!route) {

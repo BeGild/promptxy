@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# PromptXY v2.0 开发环境启动脚本
+# PromptXY 开发环境启动脚本
 # 同时启动后端和前端开发服务器
 
 set -e
 
 echo "========================================="
-echo "  PromptXY v2.0 - 开发环境启动"
+echo "  PromptXY - 开发环境启动"
 echo "========================================="
 echo ""
 
@@ -40,19 +40,38 @@ echo "  启动服务..."
 echo "========================================="
 echo ""
 
-# 启动后端 (使用 tmux 或后台进程)
-echo "启动后端 (端口 7070 + 7071)..."
+# 启动后端
+echo "启动后端服务..."
 cd backend
 npm run dev &
 BACKEND_PID=$!
 cd ..
 
-sleep 2
+# 等待后端启动并检测端口
+echo "等待后端服务启动..."
+sleep 3
 
-# 启动前端
+# 检测后端端口（尝试常见范围）
+BACKEND_PORT=""
+for port in {7070..7100} {8000..8100}; do
+    if curl -s -m 1 "http://127.0.0.1:${port}/_promptxy/health" > /dev/null 2>&1; then
+        BACKEND_PORT=$port
+        break
+    fi
+done
+
+if [ -z "$BACKEND_PORT" ]; then
+    echo "警告: 无法检测到后端端口，使用默认端口 7070"
+    BACKEND_PORT=7070
+fi
+
+echo "检测到后端端口: $BACKEND_PORT"
+echo ""
+
+# 启动前端（传入后端端口）
 echo "启动前端 (端口 5173)..."
 cd frontend
-npm run dev &
+VITE_BACKEND_PORT=$BACKEND_PORT npm run dev &
 FRONTEND_PID=$!
 cd ..
 
@@ -61,9 +80,8 @@ echo "========================================="
 echo "  服务已启动!"
 echo "========================================="
 echo ""
-echo "后端 Gateway:  http://127.0.0.1:7070"
-echo "后端 API:      http://127.0.0.1:7071"
-echo "前端 Web UI:   http://localhost:5173"
+echo "后端服务:     http://127.0.0.1:$BACKEND_PORT"
+echo "前端 Web UI:  http://localhost:5173"
 echo ""
 echo "按 Ctrl+C 停止所有服务"
 echo ""

@@ -1,12 +1,19 @@
 import { loadConfig, getConfigDir } from './promptxy/config.js';
 import { createGateway } from './promptxy/gateway.js';
 import { initializeDatabase } from './promptxy/database.js';
-import { createApiServer } from './promptxy/api-server.js';
 import { createLogger } from './promptxy/logger.js';
 import { mkdir } from 'node:fs/promises';
+import { parseCliArgs, printHelp } from './promptxy/cli.js';
 
 async function main() {
-  const config = await loadConfig();
+  const cliOptions = parseCliArgs();
+
+  if (cliOptions.help) {
+    printHelp();
+    process.exit(0);
+  }
+
+  const config = await loadConfig(cliOptions);
   const logger = createLogger({ debug: config.debug });
 
   // 确保配置目录存在
@@ -17,33 +24,22 @@ async function main() {
   logger.info(`[PromptXY] 初始化数据库...`);
   const db = await initializeDatabase();
 
-  // 创建主代理服务器（端口 7070）
-  const gatewayServer = createGateway(config);
+  // 创建统一服务器（Gateway + API）
+  const server = createGateway(config, db, config.rules);
 
-  // 创建 API 服务器（端口 7071）
-  // 注意：需要传递 config.rules 的引用，以便 API 可以更新它
-  const apiServer = createApiServer(db, config, config.rules);
-
-  // 启动网关服务器
-  gatewayServer.listen(config.listen.port, config.listen.host, () => {
-    logger.info(
-      `[PromptXY] Gateway listening on http://${config.listen.host}:${config.listen.port}`,
-    );
-  });
-
-  // 启动 API 服务器
-  apiServer.listen(config.api.port, config.api.host, () => {
-    logger.info(`[PromptXY] API Server listening on http://${config.api.host}:${config.api.port}`);
+  // 启动服务器
+  server.listen(config.listen.port, config.listen.host, () => {
+    logger.info(`[PromptXY] 服务启动: http://${config.listen.host}:${config.listen.port}`);
+    logger.info(`[PromptXY] API路由: /_promptxy/*`);
+    logger.info(`[PromptXY] 代理路由: /claude/*, /openai/*, /gemini/*`);
   });
 
   // 优雅关闭处理
   const shutdown = () => {
     logger.info(`[PromptXY] 正在关闭服务器...`);
-    gatewayServer.close(() => {
-      apiServer.close(() => {
-        logger.info(`[PromptXY] 服务器已关闭`);
-        process.exit(0);
-      });
+    server.close(() => {
+      logger.info(`[PromptXY] 服务器已关闭`);
+      process.exit(0);
     });
   };
 
