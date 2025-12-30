@@ -17,6 +17,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2, Copy, Check, Sparkles } from 'lucide-react';
 import { Panel, Group, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { NodeType, type ViewNode } from '../../types';
@@ -307,7 +308,10 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(
     );
 
     return isFullScreen ? (
-      <div className="fixed inset-0 z-50 bg-canvas dark:bg-secondary pt-14">{content}</div>
+      createPortal(
+        <div className="fixed inset-0 z-[9999] bg-canvas dark:bg-secondary pt-14">{content}</div>,
+        document.body,
+      )
     ) : (
       <div className="h-full min-h-0 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
         {content}
