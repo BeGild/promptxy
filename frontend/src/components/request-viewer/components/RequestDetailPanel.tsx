@@ -226,7 +226,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
           />
         )}
         {viewMode === RenderMode.DIFF && (
-          <div className="h-full overflow-auto p-4">
+          <div className="h-full overflow-hidden">
             {originalTree ? (
               <DiffView originalTree={originalTree} modifiedTree={viewTree} />
             ) : (

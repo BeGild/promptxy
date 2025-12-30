@@ -28,7 +28,7 @@ import {
   Folder,
   FolderOpen,
 } from 'lucide-react';
-import { NodeType, type ViewNode } from '../../types';
+import { DiffStatus, NodeType, type ViewNode } from '../../types';
 import { isNumericArray } from '../../utils/arrayHelper';
 
 interface FileTreeNodeProps {
@@ -44,6 +44,10 @@ interface FileTreeNodeProps {
   onNodeSelect: (nodeId: string, node: ViewNode) => void;
   /** 展开/折叠切换回调 */
   onToggleExpand: (nodeId: string) => void;
+  /** 变化子孙节点数量（不包含自身） */
+  changedDescendantCountMap: Map<string, number>;
+  /** 单击文件夹时也触发选中（默认 false，保持现有行为） */
+  selectFoldersOnClick: boolean;
 }
 
 /**
@@ -120,16 +124,72 @@ function getNodeLabel(node: ViewNode): string {
   return `${node.label}: ${preview}`;
 }
 
+function getDiffBorderClass(status: DiffStatus, changedDescendantCount: number): string {
+  if (status === DiffStatus.ADDED) return 'border-status-success';
+  if (status === DiffStatus.REMOVED) return 'border-status-error';
+  if (status === DiffStatus.MODIFIED) return 'border-status-warning';
+  if (changedDescendantCount > 0) return 'border-status-warning';
+  return 'border-transparent';
+}
+
+function getDiffBadge(status: DiffStatus, changedDescendantCount: number): React.ReactNode {
+  if (status === DiffStatus.ADDED) {
+    return (
+      <span className="px-2 py-0.5 rounded text-xs bg-status-success/10 dark:bg-status-success/20 text-status-success">
+        🟢 新增
+      </span>
+    );
+  }
+
+  if (status === DiffStatus.REMOVED) {
+    return (
+      <span className="px-2 py-0.5 rounded text-xs bg-status-error/10 dark:bg-status-error/20 text-status-error">
+        🔴 删除
+      </span>
+    );
+  }
+
+  if (changedDescendantCount > 0) {
+    return (
+      <span className="px-2 py-0.5 rounded text-xs bg-status-warning/10 dark:bg-status-warning/20 text-status-warning">
+        🟡 {changedDescendantCount}
+      </span>
+    );
+  }
+
+  if (status === DiffStatus.MODIFIED) {
+    return (
+      <span className="px-2 py-0.5 rounded text-xs bg-status-warning/10 dark:bg-status-warning/20 text-status-warning">
+        🟡 修改
+      </span>
+    );
+  }
+
+  return null;
+}
+
 /**
  * 文件树节点组件
  * 支持递归渲染，根据节点类型显示不同图标
  */
 const FileTreeNode: React.FC<FileTreeNodeProps> = memo(
-  ({ node, level, selectedNodeId, expandedNodes, onNodeSelect, onToggleExpand }) => {
+  ({
+    node,
+    level,
+    selectedNodeId,
+    expandedNodes,
+    onNodeSelect,
+    onToggleExpand,
+    changedDescendantCountMap,
+    selectFoldersOnClick,
+  }) => {
     const isExpanded = expandedNodes.has(node.id);
     const isSelected = selectedNodeId === node.id;
     const folder = isFolder(node);
     const IconComponent = getNodeIcon(node, isExpanded);
+    const changedDescendantCount = changedDescendantCountMap.get(node.id) ?? 0;
+    const diffBorderClass = getDiffBorderClass(node.diffStatus, changedDescendantCount);
+    const diffBadge = getDiffBadge(node.diffStatus, changedDescendantCount);
 
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -137,6 +197,9 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(
       if (folder) {
         // 文件夹：切换展开/折叠
         onToggleExpand(node.id);
+        if (selectFoldersOnClick) {
+          onNodeSelect(node.id, node);
+        }
       } else {
         // 叶子节点：选中
         onNodeSelect(node.id, node);
@@ -157,15 +220,17 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(
         {/* 节点行 */}
         <div
           className={`
-          flex items-center gap-1 py-1 px-2 rounded cursor-pointer select-none
+          flex items-center gap-1 py-1 px-2 rounded cursor-pointer select-none border-l-2
           hover:bg-canvas dark:hover:bg-secondary
           transition-colors duration-150
+          ${diffBorderClass}
           ${isSelected ? 'bg-brand-primary/10 dark:bg-brand-primary/20 text-brand-primary dark:text-brand-primary/80' : 'text-primary'}
         `}
           style={{ paddingLeft: `${level * 12 + 8}px` }}
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
           title={node.path}
+          data-file-tree-node-id={node.id}
         >
           {/* 展开/折叠指示器 */}
           {folder ? (
@@ -181,6 +246,9 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(
 
           {/* 节点标签 */}
           <span className="text-sm truncate flex-1">{getNodeLabel(node)}</span>
+
+          {/* 差异徽章 */}
+          {diffBadge}
         </div>
 
         {/* 子节点 */}
@@ -195,6 +263,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = memo(
                 expandedNodes={expandedNodes}
                 onNodeSelect={onNodeSelect}
                 onToggleExpand={onToggleExpand}
+                changedDescendantCountMap={changedDescendantCountMap}
+                selectFoldersOnClick={selectFoldersOnClick}
               />
             ))}
           </div>

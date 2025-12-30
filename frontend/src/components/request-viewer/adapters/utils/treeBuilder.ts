@@ -1,4 +1,4 @@
-import { NodeType, type ViewNode, type FieldConfig, type DiffStatus } from '../../types';
+import { DiffStatus, NodeType, type FieldConfig, type ViewNode } from '../../types';
 
 /**
  * 树构建选项
@@ -8,6 +8,11 @@ export interface TreeBuilderOptions {
   fieldConfigs?: Map<string, FieldConfig>;
   /** 原始请求对象（用于计算 diff） */
   original?: any;
+  /**
+   * 是否处于“对比模式”（即传入了 original 根对象）
+   * - 用于区分“原始值缺失”是“新增”还是“非 diff 模式默认 same”
+   */
+  hasOriginal?: boolean;
   /** 当前路径（内部使用） */
   currentPath?: string;
   /** 当前深度（内部使用） */
@@ -21,10 +26,16 @@ export interface TreeBuilderOptions {
  * @returns 视图树根节点
  */
 export function buildTreeFromPath(obj: any, options: TreeBuilderOptions = {}): ViewNode {
-  const { fieldConfigs = new Map(), original, currentPath = 'root', depth = 0 } = options;
+  const {
+    fieldConfigs = new Map(),
+    original,
+    hasOriginal = original !== undefined,
+    currentPath = 'root',
+    depth = 0,
+  } = options;
 
   const nodeType = inferNodeType(obj, currentPath, fieldConfigs);
-  const diffStatus = calculateDiffStatus(obj, original, currentPath);
+  const diffStatus = calculateDiffStatus(obj, original, hasOriginal);
 
   // 获取字段配置（支持通配符匹配）
   const fieldConfig = getFieldConfigWithWildcard(currentPath, fieldConfigs);
@@ -78,6 +89,7 @@ export function buildTreeFromPath(obj: any, options: TreeBuilderOptions = {}): V
         currentPath: `${currentPath}.${index}`,
         depth: depth + 1,
         original: original?.[index],
+        hasOriginal,
       }),
     );
   } else if (obj && typeof obj === 'object') {
@@ -87,6 +99,7 @@ export function buildTreeFromPath(obj: any, options: TreeBuilderOptions = {}): V
         currentPath: `${currentPath}.${key}`,
         depth: depth + 1,
         original: original?.[key],
+        hasOriginal,
       }),
     );
   }
@@ -144,31 +157,27 @@ export function inferNodeType(
  * 计算差异状态
  * @param current 当前值
  * @param original 原始值
- * @param path 路径
+ * @param hasOriginal 是否处于 diff 模式
  * @returns 差异状态
  */
-export function calculateDiffStatus(current: any, original: any, path: string): DiffStatus {
-  if (original === undefined) {
-    return 'same' as DiffStatus;
-  }
+export function calculateDiffStatus(current: any, original: any, hasOriginal: boolean): DiffStatus {
+  // 非 diff 模式：保持现有行为（避免 FileBrowserView 等视图出现“新增/修改”的误判）
+  if (!hasOriginal) return DiffStatus.SAME;
 
-  if (current === undefined) {
-    return 'removed' as DiffStatus;
-  }
-
-  if (original === undefined && current !== undefined) {
-    return 'added' as DiffStatus;
-  }
+  // diff 模式：能区分 added / removed
+  if (original === undefined && current !== undefined) return DiffStatus.ADDED;
+  if (original !== undefined && current === undefined) return DiffStatus.REMOVED;
+  if (original === undefined && current === undefined) return DiffStatus.SAME;
 
   // 深度比较
   const currentStr = JSON.stringify(current);
   const originalStr = JSON.stringify(original);
 
   if (currentStr === originalStr) {
-    return 'same' as DiffStatus;
+    return DiffStatus.SAME;
   }
 
-  return 'modified' as DiffStatus;
+  return DiffStatus.MODIFIED;
 }
 
 /**

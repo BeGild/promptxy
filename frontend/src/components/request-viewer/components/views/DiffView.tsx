@@ -16,317 +16,242 @@
  * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { DiffStatus, NodeType, type ViewNode } from '../../types';
-import PrimitiveRenderer from '../renderers/PrimitiveRenderer';
-import MarkdownRenderer from '../renderers/MarkdownRenderer';
-import { diffMarkdown, type MarkdownDiffResult, type ParagraphDiff } from '../../utils/diff';
+import FileTree from '../file-tree/FileTree';
+import DiffContentPanel from '../diff/DiffContentPanel';
+import DiffToolbar from '../diff/DiffToolbar';
+import { getNodeCopyContent } from '../../utils/clipboard';
+import { buildHunks, diffLines } from '../../utils/textDiff';
+import type { ListImperativeAPI } from 'react-window';
+import { isNumericArray } from '../../utils/arrayHelper';
 
 interface DiffViewProps {
   originalTree: ViewNode;
   modifiedTree: ViewNode;
 }
 
+const STORAGE_KEY_PANEL_SIZES = 'request-viewer:panel-sizes';
+const DEFAULT_LAYOUT: Record<string, number> = { tree: 30, content: 70 };
+const RESIZABLE_PANELS_STORAGE_PREFIX = 'react-resizable-panels:';
+
+function findNodeByPath(root: ViewNode, targetPath: string): ViewNode | undefined {
+  if (root.path === targetPath || root.id === targetPath) return root;
+  if (!root.children) return undefined;
+  for (const child of root.children) {
+    const found = findNodeByPath(child, targetPath);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function isFolderNode(node: ViewNode): boolean {
+  // 与 FileTreeNode 的判定保持一致：纯数值数组视为叶子节点，其余对象/数组视为文件夹
+  if (node.type === NodeType.ARRAY && Array.isArray(node.value)) {
+    return !isNumericArray(node.value);
+  }
+
+  const hasChildren = node.children && node.children.length > 0;
+  return node.type === NodeType.JSON || (node.type === NodeType.ARRAY && hasChildren === true);
+}
+
+function collectChangedLeafNodes(node: ViewNode, diffs: ViewNode[] = []): ViewNode[] {
+  const isLeaf = !isFolderNode(node);
+  if (isLeaf && node.diffStatus !== DiffStatus.SAME) {
+    diffs.push(node);
+    return diffs;
+  }
+
+  if (node.children) {
+    node.children.forEach(child => collectChangedLeafNodes(child, diffs));
+  }
+  return diffs;
+}
+
+function getRowHeightPx(): number {
+  // rowHeight 只能是 number（px），优先使用 design token（CSS 变量）来避免硬编码。
+  if (typeof window === 'undefined') return 24;
+  const raw = globalThis
+    .getComputedStyle(globalThis.document.documentElement)
+    .getPropertyValue('--spacing-h6')
+    .trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 24;
+}
+
 /**
- * 差异对比视图
- * 并排对比原始请求和修改后请求
- * 支持 Markdown 段落级 diff
+ * 差异对比视图（左右对比布局）
+ * - 左：目录树（仅 modifiedTree）
+ * - 右：叶子节点=虚拟文件的行级文本 diff（两栏对齐 + 同步滚动）
+ * - 支持拖拽分栏，且与 Content Detail 共享分栏比例
  */
 const DiffView: React.FC<DiffViewProps> = ({ originalTree, modifiedTree }) => {
-  const [showChangesOnly, setShowChangesOnly] = useState(true);
-  const [currentDiffIndex, setCurrentDiffIndex] = useState(0);
-  const [markdownDiffs, setMarkdownDiffs] = useState<Map<string, MarkdownDiffResult>>(new Map());
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [activeHunkIndex, setActiveHunkIndex] = useState<number | null>(null);
 
-  // 收集所有有变化的节点
-  const collectDiffNodes = (node: ViewNode, diffs: ViewNode[] = []): ViewNode[] => {
-    if (node.diffStatus !== DiffStatus.SAME) {
-      diffs.push(node);
-    }
-    if (node.children) {
-      node.children.forEach(child => collectDiffNodes(child, diffs));
-    }
-    return diffs;
-  };
+  const listRef = React.useRef<ListImperativeAPI | null>(null);
+  const rowHeightPx = useMemo(() => getRowHeightPx(), []);
 
-  const diffNodes = collectDiffNodes(modifiedTree);
+  const changedLeafNodes = useMemo(
+    () => collectChangedLeafNodes(modifiedTree),
+    [modifiedTree],
+  );
+  const hasAnyChanges = changedLeafNodes.length > 0;
 
-  // 查找节点的原始值
-  const findOriginalNode = (
-    tree: ViewNode | undefined,
-    targetPath: string,
-  ): ViewNode | undefined => {
-    if (!tree) return undefined;
-    if (tree.path === targetPath) return tree;
-    if (tree.children) {
-      for (const child of tree.children) {
-        const found = findOriginalNode(child, targetPath);
-        if (found) return found;
-      }
-    }
-    return undefined;
-  };
-
-  // 计算段落级 diff
+  // 初次进入时：默认选中第一个“变化的叶子节点”（避免右侧空白）
   useEffect(() => {
-    const computeMarkdownDiffs = async () => {
-      const diffs = new Map<string, MarkdownDiffResult>();
+    if (selectedNodeId) return;
+    if (!hasAnyChanges) return;
+    setSelectedNodeId(changedLeafNodes[0].id);
+  }, [changedLeafNodes, hasAnyChanges, selectedNodeId]);
 
-      // 遍历所有节点，查找 Markdown 类型且状态为 MODIFIED 的节点
-      const traverse = async (modNode: ViewNode, origNode: ViewNode | undefined) => {
-        // 只对 Markdown 类型且修改的节点进行段落级 diff
-        if (
-          modNode.type === NodeType.MARKDOWN &&
-          modNode.diffStatus === DiffStatus.MODIFIED &&
-          origNode &&
-          typeof modNode.value === 'string' &&
-          typeof origNode.value === 'string'
-        ) {
-          try {
-            const result = await diffMarkdown(origNode.value, modNode.value, { showChangesOnly });
-            diffs.set(modNode.id, result);
-          } catch (error) {
-            console.error('Failed to compute paragraph diff:', error);
+  // 自定义 storage：与 FileBrowserView 共用同一个 localStorage key
+  const panelLayoutStorage = useMemo(() => {
+    return {
+      getItem: (key: string) => {
+        const normalizedKey = key.startsWith(RESIZABLE_PANELS_STORAGE_PREFIX)
+          ? key.slice(RESIZABLE_PANELS_STORAGE_PREFIX.length)
+          : key;
+        const value = globalThis.localStorage?.getItem(normalizedKey);
+        if (!value) return null;
+
+        // 防御：忽略无效/不匹配的 layout（避免 Group 初始化时被库直接丢弃）
+        try {
+          const parsed = JSON.parse(value);
+          if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            typeof parsed.tree === 'number' &&
+            typeof parsed.content === 'number'
+          ) {
+            return value;
           }
+        } catch (e) {
+          // ignore
         }
-
-        // 递归处理子节点
-        if (modNode.children) {
-          for (const child of modNode.children) {
-            const origChild = origNode?.children?.find(c => c.path === child.path);
-            await traverse(child, origChild);
-          }
-        }
-      };
-
-      await traverse(modifiedTree, originalTree);
-      setMarkdownDiffs(diffs);
+        return null;
+      },
+      setItem: (key: string, value: string) => {
+        const normalizedKey = key.startsWith(RESIZABLE_PANELS_STORAGE_PREFIX)
+          ? key.slice(RESIZABLE_PANELS_STORAGE_PREFIX.length)
+          : key;
+        globalThis.localStorage?.setItem(normalizedKey, value);
+      },
     };
+  }, []);
 
-    computeMarkdownDiffs();
-  }, [modifiedTree, originalTree, showChangesOnly]);
+  const { defaultLayout: persistedLayout, onLayoutChange: handleLayoutChange } = useDefaultLayout({
+    id: STORAGE_KEY_PANEL_SIZES,
+    storage: panelLayoutStorage,
+  });
+  const defaultLayout = persistedLayout ?? DEFAULT_LAYOUT;
 
-  const nextDiff = () => {
-    if (currentDiffIndex < diffNodes.length - 1) {
-      setCurrentDiffIndex(currentDiffIndex + 1);
+  const handleNodeSelect = useCallback((node: ViewNode) => {
+    setSelectedNodeId(node.id);
+  }, []);
+
+  const originalNode = useMemo(() => {
+    if (!selectedNodeId) return undefined;
+    return findNodeByPath(originalTree, selectedNodeId);
+  }, [originalTree, selectedNodeId]);
+
+  const modifiedNode = useMemo(() => {
+    if (!selectedNodeId) return undefined;
+    return findNodeByPath(modifiedTree, selectedNodeId);
+  }, [modifiedTree, selectedNodeId]);
+
+  const selectedNode = modifiedNode ?? originalNode ?? null;
+  const isLeaf = useMemo(() => (selectedNode ? !isFolderNode(selectedNode) : false), [selectedNode]);
+
+  const { rows, hunks } = useMemo(() => {
+    if (!selectedNode || !isLeaf) return { rows: [], hunks: [] };
+
+    const leftText = originalNode ? getNodeCopyContent(originalNode) : '';
+    const rightText = modifiedNode ? getNodeCopyContent(modifiedNode) : '';
+    const nextRows = diffLines(leftText, rightText);
+    return { rows: nextRows, hunks: buildHunks(nextRows) };
+  }, [isLeaf, modifiedNode, originalNode, selectedNode]);
+
+  // 选中文件变化时：重置差异块焦点
+  useEffect(() => {
+    if (hunks.length === 0) {
+      setActiveHunkIndex(null);
+      return;
     }
-  };
+    setActiveHunkIndex(0);
+  }, [selectedNodeId, hunks.length]);
 
-  const prevDiff = () => {
-    if (currentDiffIndex > 0) {
-      setCurrentDiffIndex(currentDiffIndex - 1);
-    }
-  };
+  const scrollToHunk = useCallback(
+    (index: number) => {
+      if (hunks.length === 0) return;
+      const nextIndex = Math.max(0, Math.min(index, hunks.length - 1));
+      setActiveHunkIndex(nextIndex);
+      listRef.current?.scrollToRow({ index: hunks[nextIndex].startRow, align: 'start' });
+    },
+    [hunks],
+  );
 
-  // 渲染差异状态指示器
-  const renderDiffIndicator = (status: DiffStatus) => {
-    switch (status) {
-      case DiffStatus.ADDED:
-        return (
-          <span className="px-2 py-1 bg-status-success/10 dark:bg-status-success/20 text-status-success dark:text-status-success/80 text-xs rounded">
-            🟢 新增
-          </span>
-        );
-      case DiffStatus.REMOVED:
-        return (
-          <span className="px-2 py-1 bg-status-error/10 dark:bg-status-error/20 text-status-error dark:text-status-error/80 text-xs rounded">
-            🔴 删除
-          </span>
-        );
-      case DiffStatus.MODIFIED:
-        return (
-          <span className="px-2 py-1 bg-status-warning/10 dark:bg-status-warning/20 text-status-warning dark:text-status-warning/80 text-xs rounded">
-            🟡 修改
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2 py-1 bg-canvas dark:bg-secondary text-tertiary text-xs rounded">
-            🟢 无变化
-          </span>
-        );
-    }
-  };
+  const handlePrevHunk = useCallback(() => {
+    if (activeHunkIndex === null) return;
+    scrollToHunk(activeHunkIndex - 1);
+  }, [activeHunkIndex, scrollToHunk]);
 
-  // 渲染段落级差异
-  const renderParagraphDiff = (nodeId: string, diffResult: MarkdownDiffResult): React.ReactNode => {
-    const { paragraphs, totalOriginal, totalModified, changedCount } = diffResult;
-
-    return (
-      <div className="space-y-xs">
-        {/* 差异统计 */}
-        <div className="text-xs text-secondary mb-2">
-          段落级对比: {changedCount}/{paragraphs.length} 个段落有变化 (原文 {totalOriginal} 段 →
-          修改后 {totalModified} 段)
-        </div>
-
-        {/* 段落列表 */}
-        {paragraphs.map(para => {
-          const colorClass = {
-            same: 'border-subtle bg-canvas dark:bg-secondary/30',
-            added: 'border-status-success bg-status-success/10 dark:bg-status-success/20',
-            removed: 'border-status-error bg-status-error/10 dark:bg-status-error/20',
-            modified: 'border-status-warning bg-status-warning/10 dark:bg-status-warning/20',
-            moved: 'border-brand-primary bg-brand-primary/10 dark:bg-brand-primary/20',
-          }[para.type];
-
-          const label = {
-            same: '无变化',
-            added: '新增',
-            removed: '删除',
-            modified: '修改',
-            moved: `移动 (来自段落 ${para.movedFrom})`,
-          }[para.type];
-
-          if (showChangesOnly && para.type === 'same') {
-            return null;
-          }
-
-          return (
-            <div key={para.id} className={`border-l-2 ${colorClass} pl-3 py-2 rounded`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-secondary">{label}</span>
-                <span className="text-xs text-tertiary">
-                  段落 {para.index + 1}
-                  {para.originalIndex !== undefined && ` (原: ${para.originalIndex + 1})`}
-                </span>
-              </div>
-              <div className="text-sm text-primary">
-                <code className="bg-canvas dark:bg-secondary px-2 py-1 rounded block overflow-x-auto">
-                  {para.content}
-                </code>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // 递归渲染节点
-  const renderNode = (
-    originalNode: ViewNode | undefined,
-    modifiedNode: ViewNode,
-    depth: number = 0,
-  ): React.ReactNode => {
-    // 如果只显示变化，且当前节点无变化，则不显示
-    if (showChangesOnly && modifiedNode.diffStatus === DiffStatus.SAME) {
-      // 显示折叠的无变化指示器
-      return (
-        <div key={modifiedNode.id} className="py-xs" style={{ marginLeft: `${depth * 16}px` }}>
-          <div className="flex justify-between items-center text-xs text-tertiary py-1 px-2 bg-canvas dark:bg-secondary/50 rounded">
-            <span>🟢 未变化 (已折叠)</span>
-            <span className="text-tertiary">{modifiedNode.label}</span>
-          </div>
-        </div>
-      );
-    }
-
-    const marginStyle = { marginLeft: `${depth * 16}px` };
-    const hasMarkdownDiff = markdownDiffs.has(modifiedNode.id);
-
-    return (
-      <div key={modifiedNode.id} className="py-xs">
-        <div className="grid grid-cols-2 gap-4" style={marginStyle}>
-          {/* 原始值 */}
-          <div className="border border-subtle rounded p-2">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-primary">{modifiedNode.label}</span>
-              {renderDiffIndicator(originalNode ? DiffStatus.SAME : DiffStatus.REMOVED)}
-            </div>
-            {originalNode ? (
-              <PrimitiveRenderer node={originalNode} />
-            ) : (
-              <span className="text-xs text-tertiary italic">无</span>
-            )}
-          </div>
-
-          {/* 修改后的值 */}
-          <div
-            className={`border rounded p-2 ${
-              modifiedNode.diffStatus === DiffStatus.ADDED
-                ? 'border-status-success bg-status-success/10 dark:bg-status-success/20'
-                : modifiedNode.diffStatus === DiffStatus.REMOVED
-                  ? 'border-status-error bg-status-error/10 dark:bg-status-error/20'
-                  : modifiedNode.diffStatus === DiffStatus.MODIFIED
-                    ? 'border-status-warning bg-status-warning/10 dark:bg-status-warning/20'
-                    : 'border-subtle'
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-primary">{modifiedNode.label}</span>
-              {renderDiffIndicator(modifiedNode.diffStatus)}
-              {hasMarkdownDiff && <span className="text-xs text-brand-primary">段落级对比</span>}
-            </div>
-
-            {/* 如果有段落级 diff，显示段落对比；否则显示原始内容 */}
-            {hasMarkdownDiff ? (
-              renderParagraphDiff(modifiedNode.id, markdownDiffs.get(modifiedNode.id)!)
-            ) : (
-              <PrimitiveRenderer node={modifiedNode} />
-            )}
-          </div>
-        </div>
-
-        {/* 子节点 */}
-        {modifiedNode.children && modifiedNode.children.length > 0 && (
-          <div className="mt-mt2">
-            {modifiedNode.children.map(child => {
-              const originalChild = originalNode?.children?.find(c => c.path === child.path);
-              return renderNode(originalChild, child, depth + 1);
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const handleNextHunk = useCallback(() => {
+    if (activeHunkIndex === null) return;
+    scrollToHunk(activeHunkIndex + 1);
+  }, [activeHunkIndex, scrollToHunk]);
 
   return (
-    <div className="bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 rounded-lg">
-      {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-brand-primary/30 dark:border-brand-primary/20">
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-primary">
-            <input
-              type="checkbox"
-              checked={showChangesOnly}
-              onChange={e => setShowChangesOnly(e.target.checked)}
-              className="rounded"
+    <div className="h-full min-h-0 flex flex-col bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 rounded-lg border border-subtle overflow-hidden">
+      <DiffToolbar
+        hunkCount={hunks.length}
+        activeHunkIndex={activeHunkIndex}
+        onPrevHunk={handlePrevHunk}
+        onNextHunk={handleNextHunk}
+      />
+
+      <Group
+        orientation="horizontal"
+        defaultLayout={defaultLayout}
+        onLayoutChange={handleLayoutChange}
+        className="flex-1 min-h-0 w-full"
+      >
+        {/* 左侧：目录树（modifiedTree） */}
+        <Panel id="tree" minSize="15%" maxSize="50%" className="bg-canvas dark:bg-secondary">
+          <div className="h-full pt-4 overflow-auto">
+            <FileTree
+              rootNode={modifiedTree}
+              onNodeSelect={handleNodeSelect}
+              selectedNodeId={selectedNodeId}
+              defaultExpandDepth={1}
+              selectFoldersOnClick={true}
             />
-            仅显示变化
-          </label>
-          <span className="text-xs text-secondary">{diffNodes.length} 个变化</span>
-          {markdownDiffs.size > 0 && (
-            <span className="text-xs text-brand-primary">
-              {markdownDiffs.size} 个 Markdown 段落级对比
-            </span>
-          )}
-        </div>
-
-        {diffNodes.length > 0 && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={prevDiff}
-              disabled={currentDiffIndex === 0}
-              className="px-3 py-1 text-sm bg-brand-primary/10 dark:bg-brand-primary/20 rounded hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ↑ 上一个
-            </button>
-            <span className="text-xs text-secondary">
-              {currentDiffIndex + 1} / {diffNodes.length}
-            </span>
-            <button
-              onClick={nextDiff}
-              disabled={currentDiffIndex >= diffNodes.length - 1}
-              className="px-3 py-1 text-sm bg-brand-primary/10 dark:bg-brand-primary/20 rounded hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              下一个 ↓
-            </button>
           </div>
-        )}
-      </div>
+        </Panel>
 
-      {/* 差异内容 */}
-      <div className="p-p4">{renderNode(undefined, modifiedTree)}</div>
+        {/* 分割条 */}
+        <Separator className="group relative w-4 bg-transparent cursor-col-resize select-none touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-secondary">
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-subtle group-data-[separator=hover]:bg-brand-primary group-data-[separator=active]:bg-brand-primary-hover transition-colors" />
+        </Separator>
+
+        {/* 右侧：内容面板 */}
+        <Panel id="content" minSize="50%">
+          <div className="h-full min-h-0 p-4">
+            <DiffContentPanel
+              hasAnyChanges={hasAnyChanges}
+              selectedNode={selectedNode}
+              isLeaf={isLeaf}
+              rows={rows}
+              hunks={hunks}
+              activeHunkIndex={activeHunkIndex}
+              onSelectHunk={scrollToHunk}
+              listRef={listRef}
+              rowHeightPx={rowHeightPx}
+            />
+          </div>
+        </Panel>
+      </Group>
     </div>
   );
 };

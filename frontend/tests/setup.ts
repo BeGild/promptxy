@@ -12,6 +12,20 @@ afterEach(() => {
   cleanup();
 });
 
+// 模拟 ResizeObserver（react-window / react-resizable-panels 等依赖）
+class ResizeObserverMock {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(_callback?: ResizeObserverCallback) {}
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+// @ts-expect-error - 测试环境注入
+global.ResizeObserver = ResizeObserverMock;
+// @ts-expect-error - 测试环境注入
+window.ResizeObserver = ResizeObserverMock;
+
 // 模拟全局对象
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

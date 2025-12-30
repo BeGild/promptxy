@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { NodeType, type ViewNode } from '../../types';
+import { DiffStatus, NodeType, type ViewNode } from '../../types';
 import FileTreeNode from './FileTreeNode';
 import { isNumericArray } from '../../utils/arrayHelper';
 
@@ -12,23 +12,32 @@ interface FileTreeProps {
   initialSelectedId?: string;
   /** 默认展开的层级深度 */
   defaultExpandDepth?: number;
+  /** 受控选中节点 ID（用于外部联动，如 Diff 导航条） */
+  selectedNodeId?: string | null;
+  /** 单击文件夹时也触发选中（默认 false，保持现有行为） */
+  selectFoldersOnClick?: boolean;
 }
 
 const STORAGE_KEY_EXPANDED = 'request-viewer:file-tree-expanded';
 const STORAGE_KEY_SELECTED = 'request-viewer:file-tree-selected';
 
 /**
- * 构建节点 ID 到节点的映射（用于键盘导航）
+ * 构建节点映射与 parent 映射（用于键盘导航、展开祖先、滚动定位）
  */
-function buildNodeMap(
+function buildNodeMaps(
   node: ViewNode,
-  map: Map<string, ViewNode> = new Map(),
-): Map<string, ViewNode> {
-  map.set(node.id, node);
+  maps: {
+    nodeMap: Map<string, ViewNode>;
+    parentMap: Map<string, string>;
+  } = { nodeMap: new Map(), parentMap: new Map() },
+  parentId?: string,
+): { nodeMap: Map<string, ViewNode>; parentMap: Map<string, string> } {
+  maps.nodeMap.set(node.id, node);
+  if (parentId) maps.parentMap.set(node.id, parentId);
   if (node.children) {
-    node.children.forEach(child => buildNodeMap(child, map));
+    node.children.forEach(child => buildNodeMaps(child, maps, node.id));
   }
-  return map;
+  return maps;
 }
 
 /**
@@ -47,6 +56,30 @@ function getVisibleNodes(
 }
 
 /**
+ * 计算每个节点“变化子孙节点数量”（不包含自身）
+ * - 用于 Diff 视图的树节点徽章展示（例如：📁 messages 🟡 2）
+ */
+function buildChangedDescendantCountMap(
+  node: ViewNode,
+  map: Map<string, number> = new Map(),
+): Map<string, number> {
+  let changedChildCount = 0;
+  if (node.children) {
+    for (const child of node.children) {
+      const childMap = buildChangedDescendantCountMap(child, map);
+      const childHasChangedDescendants = (childMap.get(child.id) ?? 0) > 0;
+      const childSelfChanged = child.diffStatus !== DiffStatus.SAME;
+      if (childSelfChanged || childHasChangedDescendants) {
+        changedChildCount += 1;
+      }
+    }
+  }
+
+  map.set(node.id, changedChildCount);
+  return map;
+}
+
+/**
  * 文件树组件
  * 管理展开/选中状态，支持 localStorage 持久化和键盘导航
  */
@@ -55,18 +88,23 @@ const FileTree: React.FC<FileTreeProps> = ({
   onNodeSelect,
   initialSelectedId,
   defaultExpandDepth = 1,
+  selectedNodeId: controlledSelectedNodeId,
+  selectFoldersOnClick = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 展开的节点集合
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   // 选中的节点 ID
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
+  const [internalSelectedNodeId, setInternalSelectedNodeId] = useState<string | null>(
     initialSelectedId ?? rootNode.id,
   );
 
-  // 构建节点映射（用于键盘导航）
-  const nodeMap = useMemo(() => buildNodeMap(rootNode), [rootNode]);
+  const selectedNodeId =
+    controlledSelectedNodeId !== undefined ? controlledSelectedNodeId : internalSelectedNodeId;
+
+  // 构建节点映射（用于键盘导航/展开/滚动）
+  const { nodeMap, parentMap } = useMemo(() => buildNodeMaps(rootNode), [rootNode]);
 
   // 获取可见节点列表（用于键盘导航）
   const visibleNodes = useMemo(
@@ -74,8 +112,16 @@ const FileTree: React.FC<FileTreeProps> = ({
     [rootNode, expandedNodes],
   );
 
+  // diff 子孙变化计数（非 diff 模式下通常全为 0，不影响现有视图）
+  const changedDescendantCountMap = useMemo(
+    () => buildChangedDescendantCountMap(rootNode),
+    [rootNode],
+  );
+
   // 初始化：从 localStorage 恢复状态
   useEffect(() => {
+    const defaultExpanded = expandToDepth(rootNode, defaultExpandDepth, new Set());
+
     // 恢复展开状态
     const storedExpanded = globalThis.localStorage?.getItem(STORAGE_KEY_EXPANDED);
     if (storedExpanded) {
@@ -84,18 +130,22 @@ const FileTree: React.FC<FileTreeProps> = ({
         setExpandedNodes(new Set(parsed));
       } catch (e) {
         // 忽略解析错误，使用默认状态
+        setExpandedNodes(defaultExpanded);
       }
+    } else {
+      setExpandedNodes(defaultExpanded);
     }
 
     // 恢复选中状态
-    const storedSelected = globalThis.localStorage?.getItem(STORAGE_KEY_SELECTED);
-    if (storedSelected) {
-      setSelectedNodeId(storedSelected);
+    if (controlledSelectedNodeId === undefined) {
+      const storedSelected = globalThis.localStorage?.getItem(STORAGE_KEY_SELECTED);
+      if (storedSelected) {
+        setInternalSelectedNodeId(storedSelected);
+      }
     }
 
-    // 默认展开第一层
-    expandToDepth(rootNode, defaultExpandDepth, new Set());
-  }, [rootNode, defaultExpandDepth]);
+    // 默认展开由 defaultExpanded 负责
+  }, [rootNode, defaultExpandDepth, controlledSelectedNodeId]);
 
   // 保存展开状态到 localStorage
   useEffect(() => {
@@ -114,6 +164,54 @@ const FileTree: React.FC<FileTreeProps> = ({
     }
   }, [selectedNodeId]);
 
+  // 外部受控选中变更时，同步内部状态（避免键盘导航/本地缓存状态失真）
+  useEffect(() => {
+    if (controlledSelectedNodeId === undefined) return;
+    setInternalSelectedNodeId(controlledSelectedNodeId);
+  }, [controlledSelectedNodeId]);
+
+  const expandAncestors = useCallback(
+    (nodeId: string) => {
+      setExpandedNodes(prev => {
+        const next = new Set(prev);
+        let current = parentMap.get(nodeId);
+        while (current) {
+          next.add(current);
+          current = parentMap.get(current);
+        }
+        return next;
+      });
+    },
+    [parentMap],
+  );
+
+  // 选中节点变化时：展开祖先 + 滚动到可见
+  useEffect(() => {
+    if (!selectedNodeId) return;
+
+    expandAncestors(selectedNodeId);
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const safeId = selectedNodeId.replace(/"/g, '\\"');
+    let tries = 0;
+
+    const tryScroll = () => {
+      tries += 1;
+      const el = container.querySelector(`[data-file-tree-node-id="${safeId}"]`);
+      if (el instanceof HTMLElement) {
+        el.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+      if (tries < 3) {
+        requestAnimationFrame(tryScroll);
+      }
+    };
+
+    requestAnimationFrame(tryScroll);
+  }, [expandAncestors, selectedNodeId]);
+
   // 键盘导航
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -128,7 +226,7 @@ const FileTree: React.FC<FileTreeProps> = ({
           // 选择下一个可见节点
           if (currentIndex < visibleNodes.length - 1) {
             const nextNode = visibleNodes[currentIndex + 1];
-            setSelectedNodeId(nextNode.id);
+            setInternalSelectedNodeId(nextNode.id);
             onNodeSelect(nextNode);
           }
           break;
@@ -138,7 +236,7 @@ const FileTree: React.FC<FileTreeProps> = ({
           // 选择上一个可见节点
           if (currentIndex > 0) {
             const prevNode = visibleNodes[currentIndex - 1];
-            setSelectedNodeId(prevNode.id);
+            setInternalSelectedNodeId(prevNode.id);
             onNodeSelect(prevNode);
           }
           break;
@@ -161,21 +259,12 @@ const FileTree: React.FC<FileTreeProps> = ({
             // 如果已展开，则折叠
             handleToggleExpand(current.id);
           } else {
-            // 否则选择父节点
-            const parentPath = current.path.split('.').slice(0, -1).join('.');
-            const parentNode = nodeMap.get(`${parentPath}.${current.label.split(' ')[0]}`);
-            if (parentNode) {
-              // 尝试通过路径查找父节点
-              const parentId = Object.keys(Object.fromEntries(nodeMap)).find(id => {
-                const n = nodeMap.get(id);
-                return n && n.children && n.children.some(c => c.id === current.id);
-              });
-              if (parentId) {
-                const p = nodeMap.get(parentId);
-                if (p) {
-                  setSelectedNodeId(p.id);
-                  onNodeSelect(p);
-                }
+            const parentId = parentMap.get(current.id);
+            if (parentId) {
+              const parentNode = nodeMap.get(parentId);
+              if (parentNode) {
+                setInternalSelectedNodeId(parentNode.id);
+                onNodeSelect(parentNode);
               }
             }
           }
@@ -188,7 +277,7 @@ const FileTree: React.FC<FileTreeProps> = ({
           const node = visibleNodes[currentIndex];
           if (isFolder(node)) {
             handleToggleExpand(node.id);
-            setSelectedNodeId(node.id);
+            setInternalSelectedNodeId(node.id);
             onNodeSelect(node);
           } else {
             onNodeSelect(node);
@@ -247,7 +336,7 @@ const FileTree: React.FC<FileTreeProps> = ({
    */
   const handleNodeSelect = useCallback(
     (nodeId: string, node: ViewNode) => {
-      setSelectedNodeId(nodeId);
+      setInternalSelectedNodeId(nodeId);
       onNodeSelect(node);
     },
     [onNodeSelect],
@@ -266,6 +355,8 @@ const FileTree: React.FC<FileTreeProps> = ({
         expandedNodes={expandedNodes}
         onNodeSelect={handleNodeSelect}
         onToggleExpand={handleToggleExpand}
+        changedDescendantCountMap={changedDescendantCountMap}
+        selectFoldersOnClick={selectFoldersOnClick}
       />
     </div>
   );
