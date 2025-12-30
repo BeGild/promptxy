@@ -6,11 +6,23 @@
 
 ## 📋 配置文件位置
 
-`promptxy` 按以下顺序查找配置文件：
+### 简化版（npm 包）
+
+按以下顺序查找配置文件：
 
 1. **环境变量指定**：`PROMPTXY_CONFIG=/path/to/config.json`
 2. **当前目录**：`./promptxy.config.json`
 3. **用户主目录**：`~/.promptxy/config.json`
+
+### 完整版（带 Web UI）
+
+支持项目配置和全局配置合并，查找顺序：
+
+1. **环境变量指定**：`PROMPTXY_CONFIG=/path/to/config.json`（指定全局配置路径）
+2. **项目配置**：从当前目录向上查找 `promptxy.config.json`（最多3级）
+3. **全局配置**：`~/.config/promptxy/config.json`
+
+配置优先级：**项目配置 < 全局配置**（同名配置项后者覆盖前者）
 
 ---
 
