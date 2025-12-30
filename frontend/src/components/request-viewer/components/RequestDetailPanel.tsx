@@ -16,19 +16,11 @@
  * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  RenderMode,
-  type RequestMetadata,
-  type ViewNode,
-  type ViewGroup,
-  type RequestAdapter,
-} from '../types';
+import React, { useState, useEffect } from 'react';
+import type { RequestMetadata, ViewNode, RequestAdapter } from '../types';
 import { AdapterRegistry } from '../adapters/Registry';
 import { ClaudeMessagesAdapter } from '../adapters/claude/ClaudeMessagesAdapter';
-import SummaryView from './views/SummaryView';
-import FileBrowserView from './views/FileBrowserView';
-import DiffView from './views/DiffView';
+import UnifiedContentView from './views/UnifiedContentView';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
 interface RequestDetailPanelProps {
@@ -56,7 +48,7 @@ interface RequestDetailPanelProps {
 
 /**
  * 请求详情面板主组件
- * 自动检测适配器，支持三种视图模式
+ * 自动检测适配器，展示统一内容视图（支持内容详情和差异对比）
  */
 const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
   request,
@@ -67,12 +59,10 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
   onSelectionBasedCreate,
   onBasedOnRequestCreate,
 }) => {
-  const [viewMode, setViewMode] = useState<RenderMode>(RenderMode.FULL);
   const [adapter, setAdapter] = useState<RequestAdapter | undefined>(providedAdapter);
   const [viewTree, setViewTree] = useState<ViewNode | undefined>();
   const [originalTree, setOriginalTree] = useState<ViewNode | undefined>();
   const [metadata, setMetadata] = useState<RequestMetadata | undefined>();
-  const [groups, setGroups] = useState<ViewGroup[]>([]);
 
   // 初始化适配器注册表
   useEffect(() => {
@@ -113,12 +103,6 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
         responseStatus,
         responseDuration,
       });
-
-      // 获取视图分组
-      if (adapter.getGroups) {
-        const grps = adapter.getGroups(tree);
-        setGroups(grps);
-      }
     } catch (error) {
       console.error('Failed to build view tree:', error);
     }
@@ -189,52 +173,13 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
         </div>
       )}
 
-      {/* 视图模式切换 */}
-      <div className="px-4 py-2 border-b border-brand-primary/30 dark:border-brand-primary/20 flex items-center gap-2">
-        {[
-          { mode: RenderMode.SUMMARY, label: '结构概览' },
-          { mode: RenderMode.FULL, label: '内容详情' },
-          { mode: RenderMode.DIFF, label: '差异对比' },
-        ].map(({ mode, label }) => (
-          <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
-              viewMode === mode
-                ? 'bg-brand-primary text-white'
-                : 'bg-brand-primary/10 dark:bg-brand-primary/20 text-primary hover:bg-brand-primary/20 dark:hover:bg-brand-primary/30'
-            }`}
-            disabled={mode === RenderMode.DIFF && !originalRequest}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* 视图内容 */}
-      <div className="flex-1 overflow-hidden">
-        {viewMode === RenderMode.SUMMARY && groups.length > 0 && (
-          <div className="h-full overflow-auto p-4">
-            <SummaryView viewTree={viewTree} groups={groups} />
-          </div>
-        )}
-        {viewMode === RenderMode.FULL && (
-          <FileBrowserView
-            viewTree={viewTree}
-            onSelectionBasedCreate={onSelectionBasedCreate}
-            onBasedOnRequestCreate={onBasedOnRequestCreate}
-          />
-        )}
-        {viewMode === RenderMode.DIFF && (
-          <div className="h-full overflow-hidden">
-            {originalTree ? (
-              <DiffView originalTree={originalTree} modifiedTree={viewTree} />
-            ) : (
-              <div className="text-center text-secondary py-8">无原始请求，无法显示差异对比</div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* 统一内容视图 */}
+      <UnifiedContentView
+        viewTree={viewTree}
+        originalTree={originalTree}
+        onSelectionBasedCreate={onSelectionBasedCreate}
+        onBasedOnRequestCreate={onBasedOnRequestCreate}
+      />
     </div>
   );
 };

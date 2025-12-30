@@ -140,6 +140,59 @@ describe('Rules Engine', () => {
       const result = applyPromptRules('Find target here', baseContext, rules);
       expect(result.text).toBe('Find target-AFTER here');
     });
+
+    // 测试用户报告的场景：XXX pattern + yyy text
+    it('should apply insert_before with XXX pattern correctly', () => {
+      const rules: PromptxyRule[] = [
+        {
+          uuid: 'test-xxx',
+          name: 'test-xxx',
+          when: { client: 'claude', field: 'system' },
+          ops: [{ type: 'insert_before', regex: 'XXX', text: 'yyy' }],
+        },
+      ];
+
+      // 用户场景：输入是 XXX，匹配 XXX，在前面插入 yyy
+      const result = applyPromptRules('XXX world', baseContext, rules);
+      // 预期：yyyXXX world（XXX 被保留，在前面插入 yyy）
+      expect(result.text).toBe('yyyXXX world');
+      // 确认 XXX 没有被删除
+      expect(result.text).toContain('XXX');
+    });
+
+    // 测试用户的具体规则场景：匹配 # Code References 前插内容
+    it('should apply insert_before for # Code References correctly', () => {
+      const rules: PromptxyRule[] = [
+        {
+          uuid: 'test-code-references',
+          name: 'test-code-references',
+          when: { client: 'claude', field: 'system' },
+          ops: [
+            {
+              type: 'insert_before',
+              regex: '^# Code References\\b',
+              flags: 'im',
+              text: '# Core Mandates\n\n1. Cross-Compilation\n2. Build-Driven Development\n',
+            },
+          ],
+        },
+      ];
+
+      const inputText = 'Some content\n# Code References\nSome more content';
+      const result = applyPromptRules(inputText, baseContext, rules);
+
+      // 验证插入的内容存在
+      expect(result.text).toContain('# Core Mandates');
+      // 验证原始的 # Code References 仍然存在（没有被替换）
+      expect(result.text).toContain('# Code References');
+      // 验证插入的内容在 # Code References 之前
+      const coreMandatesIndex = result.text.indexOf('# Core Mandates');
+      const codeReferencesIndex = result.text.indexOf('# Code References');
+      expect(coreMandatesIndex).toBeLessThan(codeReferencesIndex);
+      // 验证原始内容仍然存在
+      expect(result.text).toContain('Some content');
+      expect(result.text).toContain('Some more content');
+    });
   });
 
   describe('Multiple Operations', () => {
