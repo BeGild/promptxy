@@ -316,15 +316,19 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
     );
 
     // ESC 键退出全屏
+    // 使用 capture 阶段和 stopImmediatePropagation 阻止事件传播到 SideDrawer
+    // 实现逐级退出：先退出全屏，再按 ESC 才关闭面板
     useEffect(() => {
       if (isFullScreen) {
         const handleEscape = (e: KeyboardEvent) => {
           if (e.key === 'Escape') {
+            e.stopImmediatePropagation();
             setIsFullScreen(false);
           }
         };
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
+        // 使用 capture 阶段确保优先处理
+        document.addEventListener('keydown', handleEscape, { capture: true });
+        return () => document.removeEventListener('keydown', handleEscape, { capture: true });
       }
     }, [isFullScreen]);
 
