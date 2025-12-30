@@ -350,7 +350,15 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
               className="inline-flex items-center gap-1 text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="复制纯文本"
             >
-              {copied ? <><Check size={14} /> 已复制</> : <><Clipboard size={14} /> 复制文本</>}
+              {copied ? (
+                <>
+                  <Check size={14} /> 已复制
+                </>
+              ) : (
+                <>
+                  <Clipboard size={14} /> 复制文本
+                </>
+              )}
             </button>
             <button
               onClick={() => handleCopy(true)}
@@ -371,7 +379,15 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
                 onClick={toggleExpanded}
                 className="inline-flex items-center gap-1 text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               >
-                {isExpanded ? <><ChevronDown size={14} /> 折叠</> : <><ChevronRight size={14} /> 展开</>}
+                {isExpanded ? (
+                  <>
+                    <ChevronDown size={14} /> 折叠
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight size={14} /> 展开
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -395,7 +411,15 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
                 onClick={() => handleCopy(false)}
                 className="inline-flex items-center gap-1 text-sm text-tertiary hover:text-primary px-3 py-1.5 rounded hover:bg-secondary transition-colors"
               >
-                {copied ? <><Check size={16} /> 已复制</> : <><Clipboard size={16} /> 复制</>}
+                {copied ? (
+                  <>
+                    <Check size={16} /> 已复制
+                  </>
+                ) : (
+                  <>
+                    <Clipboard size={16} /> 复制
+                  </>
+                )}
               </button>
               <button
                 onClick={() => setIsFullScreen(false)}

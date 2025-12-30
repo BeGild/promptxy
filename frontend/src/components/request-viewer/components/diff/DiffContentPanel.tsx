@@ -117,7 +117,10 @@ const DiffContentPanel: React.FC<DiffContentPanelProps> = React.memo(
     if (!selectedNode) {
       return (
         <div className="h-full min-h-0 bg-elevated dark:bg-secondary border border-subtle rounded">
-          <PanelEmptyState title="请选择一个节点进行对比" description="请从左侧目录树选择一个叶子节点。" />
+          <PanelEmptyState
+            title="请选择一个节点进行对比"
+            description="请从左侧目录树选择一个叶子节点。"
+          />
         </div>
       );
     }
@@ -125,7 +128,10 @@ const DiffContentPanel: React.FC<DiffContentPanelProps> = React.memo(
     if (!isLeaf) {
       return (
         <div className="h-full min-h-0 bg-elevated dark:bg-secondary border border-subtle rounded">
-          <PanelEmptyState title="请选择叶子节点查看内容差异" description="当前节点为文件夹/集合节点，无法作为虚拟文件进行对比。" />
+          <PanelEmptyState
+            title="请选择叶子节点查看内容差异"
+            description="当前节点为文件夹/集合节点，无法作为虚拟文件进行对比。"
+          />
         </div>
       );
     }

@@ -24,4 +24,3 @@ describe('DiffHunkNavigator', () => {
     expect(onSelect).toHaveBeenCalledWith(1);
   });
 });
-

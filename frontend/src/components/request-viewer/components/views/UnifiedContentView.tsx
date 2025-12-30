@@ -229,15 +229,18 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
     }, [isDiffMode, changedLeafNodes, hasAnyChanges, selectedNodeId, hunks.length]);
 
     // 处理节点选中（内容详情模式）
-    const handleNodeSelect = useCallback((node: ViewNode) => {
-      if (isDiffMode) {
-        setSelectedNodeId(node.id);
-      } else {
-        setSelectedNode(node);
-      }
-      // 切换节点时重置为纯文本模式
-      setIsMarkdownPreview(false);
-    }, [isDiffMode]);
+    const handleNodeSelect = useCallback(
+      (node: ViewNode) => {
+        if (isDiffMode) {
+          setSelectedNodeId(node.id);
+        } else {
+          setSelectedNode(node);
+        }
+        // 切换节点时重置为纯文本模式
+        setIsMarkdownPreview(false);
+      },
+      [isDiffMode],
+    );
 
     // 切换差异对比模式
     const handleToggleDiffMode = useCallback(() => {
@@ -296,9 +299,7 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
     const supportsQuickCreate = useMemo(() => {
       const node = isDiffMode ? diffSelectedNode : selectedNode;
       return (
-        !isMarkdownPreview &&
-        node &&
-        [NodeType.STRING_LONG, NodeType.MARKDOWN].includes(node.type)
+        !isMarkdownPreview && node && [NodeType.STRING_LONG, NodeType.MARKDOWN].includes(node.type)
       );
     }, [isDiffMode, diffSelectedNode, selectedNode, isMarkdownPreview]);
 
@@ -333,9 +334,7 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
     }, [isFullScreen]);
 
     // 当前显示的面包屑路径
-    const currentPath = isDiffMode
-      ? (diffSelectedNode?.path ?? '')
-      : selectedNode.path;
+    const currentPath = isDiffMode ? (diffSelectedNode?.path ?? '') : selectedNode.path;
 
     const content = (
       <div className="h-full flex flex-col">
@@ -417,7 +416,8 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
             {/* 视图切换按钮组 - 固定位置 */}
             <div className="flex items-center gap-1">
               {/* 文本/预览按钮 */}
-              {((isDiffMode && diffSelectedNode &&
+              {((isDiffMode &&
+                diffSelectedNode &&
                 [NodeType.MARKDOWN, NodeType.STRING_LONG].includes(diffSelectedNode.type)) ||
                 (!isDiffMode &&
                   [NodeType.MARKDOWN, NodeType.STRING_LONG].includes(selectedNode.type))) && (
@@ -566,9 +566,7 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
         document.body,
       )
     ) : (
-      <div className="h-full min-h-0 bg-canvas dark:bg-secondary">
-        {content}
-      </div>
+      <div className="h-full min-h-0 bg-canvas dark:bg-secondary">{content}</div>
     );
   },
 );

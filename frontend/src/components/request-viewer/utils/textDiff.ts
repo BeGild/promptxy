@@ -76,10 +76,7 @@ function myersDiffLines(a: string[], b: string[]): MyersOp[] {
           const curKIndex = curK + offset;
 
           let prevK: number;
-          if (
-            curK === -backD ||
-            (curK !== backD && backV[curKIndex - 1] < backV[curKIndex + 1])
-          ) {
+          if (curK === -backD || (curK !== backD && backV[curKIndex - 1] < backV[curKIndex + 1])) {
             prevK = curK + 1;
           } else {
             prevK = curK - 1;

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { diffLines, buildHunks, type TextDiffRow } from '@/components/request-viewer/utils/textDiff';
+import {
+  diffLines,
+  buildHunks,
+  type TextDiffRow,
+} from '@/components/request-viewer/utils/textDiff';
 
 describe('textDiff', () => {
   describe('diffLines', () => {
@@ -45,4 +49,3 @@ describe('textDiff', () => {
     });
   });
 });
-

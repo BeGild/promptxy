@@ -432,7 +432,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                   </span>
                 </TableCell>
                 <TableCell className="w-56 max-w-72">
-                  <span className="font-mono text-xs text-primary dark:text-primary truncate block" title={item.path}>
+                  <span
+                    className="font-mono text-xs text-primary dark:text-primary truncate block"
+                    title={item.path}
+                  >
                     {item.path}
                   </span>
                 </TableCell>

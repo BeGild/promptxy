@@ -29,7 +29,9 @@ vi.mock('@/components/request-viewer/components/file-tree/FileTree', () => {
           </button>
           <button
             type="button"
-            onClick={() => props.onNodeSelect((props.rootNode.children?.[0] as ViewNode) ?? props.rootNode)}
+            onClick={() =>
+              props.onNodeSelect((props.rootNode.children?.[0] as ViewNode) ?? props.rootNode)
+            }
           >
             选中叶子节点
           </button>

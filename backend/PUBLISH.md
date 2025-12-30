@@ -49,6 +49,7 @@ npm version patch  # 或 minor, major
 ### 3. 更新 README.md
 
 确保 README 包含：
+
 - 包的简介
 - 安装说明
 - 基本用法示例
@@ -173,7 +174,7 @@ const rules: PromptxyRule[] = [
 const result = applyPromptRules(
   '你是一个助手',
   { client: 'claude', field: 'system', method: 'POST', path: '/v1/messages' },
-  rules
+  rules,
 );
 
 console.log(result.text); // "你是一个助手\n请用中文回答。"
@@ -192,6 +193,7 @@ console.log(result.matches); // [{ ruleId: 'rule-1', opType: 'append' }]
 ### 发布失败
 
 如果发布失败，检查：
+
 1. 是否已登录 npm
 2. 包名是否已被占用
 3. `package.json` 中的 `private` 字段是否已移除
@@ -200,6 +202,7 @@ console.log(result.matches); // [{ ruleId: 'rule-1', opType: 'append' }]
 ### 版本冲突
 
 如果遇到版本冲突：
+
 ```bash
 npm view promptxy versions
 ```

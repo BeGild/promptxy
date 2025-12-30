@@ -73,29 +73,13 @@ export const LogoIcon: React.FC<LogoIconProps> = ({ size = 32, className = '' })
         strokeLinecap="round"
       />
       {/* Y 的中心推进：液滴穿梭而出 */}
-      <path
-        d="M110 100 H 160"
-        stroke="currentColor"
-        strokeWidth="27"
-        strokeLinecap="round"
-      />
+      <path d="M110 100 H 160" stroke="currentColor" strokeWidth="27" strokeLinecap="round" />
 
       {/* 核心奇点：向心力的视觉锚点 */}
       {/* 外部晕染效果（深色） */}
-      <circle
-        cx="100"
-        cy="100"
-        r="22.5"
-        fill="var(--color-bg-elevated)"
-        fillOpacity="0.3"
-      />
+      <circle cx="100" cy="100" r="22.5" fill="var(--color-bg-elevated)" fillOpacity="0.3" />
       {/* 核心纯白圆球 */}
-      <circle
-        cx="100"
-        cy="100"
-        r="14"
-        fill="currentColor"
-      />
+      <circle cx="100" cy="100" r="14" fill="currentColor" />
     </svg>
   );
 };

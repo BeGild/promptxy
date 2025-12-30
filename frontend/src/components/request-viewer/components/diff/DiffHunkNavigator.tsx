@@ -86,4 +86,3 @@ const DiffHunkNavigator: React.FC<DiffHunkNavigatorProps> = React.memo(
 DiffHunkNavigator.displayName = 'DiffHunkNavigator';
 
 export default DiffHunkNavigator;
-

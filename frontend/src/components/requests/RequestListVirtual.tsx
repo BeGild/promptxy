@@ -148,13 +148,19 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 时间 */}
-            <td className="text-xs font-mono text-primary text-left">{formatTimeWithMs(item.timestamp)}</td>
+            <td className="text-xs font-mono text-primary text-left">
+              {formatTimeWithMs(item.timestamp)}
+            </td>
 
             {/* 客户端 */}
-            <td className="text-xs font-medium text-primary text-left truncate">{formatClient(item.client)}</td>
+            <td className="text-xs font-medium text-primary text-left truncate">
+              {formatClient(item.client)}
+            </td>
 
             {/* 路径 */}
-            <td className="font-mono text-xs text-primary text-left truncate" title={item.path}>{item.path}</td>
+            <td className="font-mono text-xs text-primary text-left truncate" title={item.path}>
+              {item.path}
+            </td>
 
             {/* 规则检测 */}
             <td className="overflow-hidden text-left">
@@ -188,11 +194,15 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
               {item.requestSize || item.responseSize ? (
                 <span>
                   {item.requestSize && (
-                    <span className="text-brand-primary">↑{(item.requestSize / 1024).toFixed(2)}KB</span>
+                    <span className="text-brand-primary">
+                      ↑{(item.requestSize / 1024).toFixed(2)}KB
+                    </span>
                   )}
                   {item.requestSize && item.responseSize && ' '}
                   {item.responseSize && (
-                    <span className="text-status-success">↓{(item.responseSize / 1024).toFixed(2)}KB</span>
+                    <span className="text-status-success">
+                      ↓{(item.responseSize / 1024).toFixed(2)}KB
+                    </span>
                   )}
                 </span>
               ) : (
@@ -276,7 +286,8 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     const statsHeight = 40;
     const paginationHeight = Math.ceil(total / 50) > 1 ? 80 : 20;
     const padding = 48;
-    const maxHeight = viewportHeight - headerHeight - toolbarHeight - statsHeight - paginationHeight - padding;
+    const maxHeight =
+      viewportHeight - headerHeight - toolbarHeight - statsHeight - paginationHeight - padding;
     return Math.max(400, Math.floor(maxHeight * 0.9));
   });
 
@@ -294,7 +305,8 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
       const statsHeight = 40;
       const paginationHeight = totalPages > 1 ? 80 : 20;
       const padding = 48;
-      const maxHeight = viewportHeight - headerHeight - toolbarHeight - statsHeight - paginationHeight - padding;
+      const maxHeight =
+        viewportHeight - headerHeight - toolbarHeight - statsHeight - paginationHeight - padding;
 
       setContainerHeight(Math.max(400, Math.floor(maxHeight * 0.9)));
     };
@@ -567,8 +579,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
           classNames={{
             wrapper: 'gap-xs',
             // 未选中页：添加边框和阴影增强视觉区分
-            item:
-              'min-w-9 h-9 text-small border border-subtle shadow-sm hover:shadow-md hover:border-brand-primary/50',
+            item: 'min-w-9 h-9 text-small border border-subtle shadow-sm hover:shadow-md hover:border-brand-primary/50',
             // 修复选中页颜色对比度：使用纯色背景+白色文字
             cursor:
               'bg-brand-primary text-white dark:bg-brand-primary dark:text-white font-bold shadow-lg border-2 border-brand-primary',

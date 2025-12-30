@@ -51,151 +51,151 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   immer(
     devtools((set, get) => ({
-    // 初始状态
-    rules: [],
-    requests: [],
-    stats: null,
-
-    loading: {
-      rules: false,
-      requests: false,
-      stats: false,
-      saving: false,
-    },
-
-    errors: {
-      rules: null,
-      requests: null,
+      // 初始状态
+      rules: [],
+      requests: [],
       stats: null,
-      save: null,
-    },
 
-    sseStatus: { connected: false, lastEvent: null, error: null },
-    apiConnected: false,
+      loading: {
+        rules: false,
+        requests: false,
+        stats: false,
+        saving: false,
+      },
 
-    requestPage: 1,
-    requestTotal: 0,
-
-    // 加载规则
-    loadRules: async () => {
-      set(state => ({ loading: { ...state.loading, rules: true } }));
-      try {
-        const rules = await getRules();
-        set({ rules, errors: { ...get().errors, rules: null } });
-      } catch (error: any) {
-        set({ errors: { ...get().errors, rules: error.message } });
-      } finally {
-        set(state => ({ loading: { ...state.loading, rules: false } }));
-      }
-    },
-
-    // 保存规则
-    saveRules: async (rules: PromptxyRule[]) => {
-      set(state => ({ loading: { ...state.loading, saving: true } }));
-      try {
-        await syncRules(rules);
-        set({
-          rules,
-          errors: { ...get().errors, save: null },
-        });
-      } catch (error: any) {
-        set({ errors: { ...get().errors, save: error.message } });
-        throw error;
-      } finally {
-        set(state => ({ loading: { ...state.loading, saving: false } }));
-      }
-    },
-
-    // 加载请求列表
-    loadRequests: async (page = 1) => {
-      set(state => ({ loading: { ...state.loading, requests: true } }));
-      try {
-        const result = await getRequests({}, page, 50);
-        set({
-          requests: result.items,
-          requestPage: page,
-          requestTotal: result.total,
-          errors: { ...get().errors, requests: null },
-        });
-      } catch (error: any) {
-        set({ errors: { ...get().errors, requests: error.message } });
-      } finally {
-        set(state => ({ loading: { ...state.loading, requests: false } }));
-      }
-    },
-
-    // 加载统计
-    loadStats: async () => {
-      set(state => ({ loading: { ...state.loading, stats: true } }));
-      try {
-        const stats = await getStats();
-        set({ stats, errors: { ...get().errors, stats: null } });
-      } catch (error: any) {
-        set({ errors: { ...get().errors, stats: error.message } });
-      } finally {
-        set(state => ({ loading: { ...state.loading, stats: false } }));
-      }
-    },
-
-    // 检查连接
-    checkConnection: async () => {
-      const connected = await checkHealth();
-      set({ apiConnected: connected });
-    },
-
-    // 设置 SSE 状态
-    setSSEStatus: (status: SSEConnectionStatus) => {
-      set({ sseStatus: status });
-    },
-
-    // 添加新请求（来自 SSE）- 使用 immer 优化，避免创建新数组
-    addNewRequest: (request: RequestListItem) => {
-      set((state: AppState) => {
-        // 使用 immer 的 draft 模式，直接修改状态
-        state.requests.unshift(request);
-        // 保持最多 50 条记录
-        if (state.requests.length > 50) {
-          state.requests.length = 50;
-        }
-        state.requestTotal += 1;
-      });
-    },
-
-    // 清除错误
-    clearErrors: () => {
-      set({
-        errors: {
-          rules: null,
-          requests: null,
-          stats: null,
-          save: null,
-        },
-      });
-    },
-
-    // 重置
-    reset: () => {
-      set({
-        rules: [],
-        requests: [],
+      errors: {
+        rules: null,
+        requests: null,
         stats: null,
-        loading: {
-          rules: false,
-          requests: false,
-          stats: false,
-          saving: false,
-        },
-        errors: {
-          rules: null,
-          requests: null,
+        save: null,
+      },
+
+      sseStatus: { connected: false, lastEvent: null, error: null },
+      apiConnected: false,
+
+      requestPage: 1,
+      requestTotal: 0,
+
+      // 加载规则
+      loadRules: async () => {
+        set(state => ({ loading: { ...state.loading, rules: true } }));
+        try {
+          const rules = await getRules();
+          set({ rules, errors: { ...get().errors, rules: null } });
+        } catch (error: any) {
+          set({ errors: { ...get().errors, rules: error.message } });
+        } finally {
+          set(state => ({ loading: { ...state.loading, rules: false } }));
+        }
+      },
+
+      // 保存规则
+      saveRules: async (rules: PromptxyRule[]) => {
+        set(state => ({ loading: { ...state.loading, saving: true } }));
+        try {
+          await syncRules(rules);
+          set({
+            rules,
+            errors: { ...get().errors, save: null },
+          });
+        } catch (error: any) {
+          set({ errors: { ...get().errors, save: error.message } });
+          throw error;
+        } finally {
+          set(state => ({ loading: { ...state.loading, saving: false } }));
+        }
+      },
+
+      // 加载请求列表
+      loadRequests: async (page = 1) => {
+        set(state => ({ loading: { ...state.loading, requests: true } }));
+        try {
+          const result = await getRequests({}, page, 50);
+          set({
+            requests: result.items,
+            requestPage: page,
+            requestTotal: result.total,
+            errors: { ...get().errors, requests: null },
+          });
+        } catch (error: any) {
+          set({ errors: { ...get().errors, requests: error.message } });
+        } finally {
+          set(state => ({ loading: { ...state.loading, requests: false } }));
+        }
+      },
+
+      // 加载统计
+      loadStats: async () => {
+        set(state => ({ loading: { ...state.loading, stats: true } }));
+        try {
+          const stats = await getStats();
+          set({ stats, errors: { ...get().errors, stats: null } });
+        } catch (error: any) {
+          set({ errors: { ...get().errors, stats: error.message } });
+        } finally {
+          set(state => ({ loading: { ...state.loading, stats: false } }));
+        }
+      },
+
+      // 检查连接
+      checkConnection: async () => {
+        const connected = await checkHealth();
+        set({ apiConnected: connected });
+      },
+
+      // 设置 SSE 状态
+      setSSEStatus: (status: SSEConnectionStatus) => {
+        set({ sseStatus: status });
+      },
+
+      // 添加新请求（来自 SSE）- 使用 immer 优化，避免创建新数组
+      addNewRequest: (request: RequestListItem) => {
+        set((state: AppState) => {
+          // 使用 immer 的 draft 模式，直接修改状态
+          state.requests.unshift(request);
+          // 保持最多 50 条记录
+          if (state.requests.length > 50) {
+            state.requests.length = 50;
+          }
+          state.requestTotal += 1;
+        });
+      },
+
+      // 清除错误
+      clearErrors: () => {
+        set({
+          errors: {
+            rules: null,
+            requests: null,
+            stats: null,
+            save: null,
+          },
+        });
+      },
+
+      // 重置
+      reset: () => {
+        set({
+          rules: [],
+          requests: [],
           stats: null,
-          save: null,
-        },
-        requestPage: 1,
-        requestTotal: 0,
-      });
-    },
-  })),
+          loading: {
+            rules: false,
+            requests: false,
+            stats: false,
+            saving: false,
+          },
+          errors: {
+            rules: null,
+            requests: null,
+            stats: null,
+            save: null,
+          },
+          requestPage: 1,
+          requestTotal: 0,
+        });
+      },
+    })),
   ),
 );
 

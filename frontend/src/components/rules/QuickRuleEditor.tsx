@@ -286,7 +286,9 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
         if (Array.isArray(value)) {
           // 处理 Claude API 格式: [{type: 'text', text: '...'}, ...]
           return value
-            .filter(item => item?.type === 'text' && item?.text !== undefined && item?.text !== null)
+            .filter(
+              item => item?.type === 'text' && item?.text !== undefined && item?.text !== null,
+            )
             .map(item => {
               if (typeof item?.text === 'string') return item.text;
               if (Array.isArray(item?.text) && item.text.every((t: any) => typeof t === 'string')) {
@@ -316,7 +318,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
 
       // 获取修改后的文本 - 使用同样的 extractText 函数
       const modifiedText = extractText(
-        field === 'system' ? result.modified?.system : result.modified?.instructions
+        field === 'system' ? result.modified?.system : result.modified?.instructions,
       );
 
       // 检查是否有匹配（matches 数组不为空）
@@ -626,19 +628,33 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
 
                 {/* 大小变化 */}
                 <div className="text-xs text-secondary">
-                  原始: {testResult.previewData.originalText.length} 字符 →
-                  修改后: {testResult.previewData.modifiedText.length} 字符
-                  {testResult.previewData.modifiedText.length > testResult.previewData.originalText.length ? (
-                    <span className="text-status-success"> (+{testResult.previewData.modifiedText.length - testResult.previewData.originalText.length})</span>
-                  ) : testResult.previewData.modifiedText.length < testResult.previewData.originalText.length ? (
-                    <span className="text-status-error"> ({testResult.previewData.modifiedText.length - testResult.previewData.originalText.length})</span>
+                  原始: {testResult.previewData.originalText.length} 字符 → 修改后:{' '}
+                  {testResult.previewData.modifiedText.length} 字符
+                  {testResult.previewData.modifiedText.length >
+                  testResult.previewData.originalText.length ? (
+                    <span className="text-status-success">
+                      {' '}
+                      (+
+                      {testResult.previewData.modifiedText.length -
+                        testResult.previewData.originalText.length}
+                      )
+                    </span>
+                  ) : testResult.previewData.modifiedText.length <
+                    testResult.previewData.originalText.length ? (
+                    <span className="text-status-error">
+                      {' '}
+                      (
+                      {testResult.previewData.modifiedText.length -
+                        testResult.previewData.originalText.length}
+                      )
+                    </span>
                   ) : (
                     <span> (无变化)</span>
                   )}
                 </div>
 
                 {/* 内容差异预览 - 只显示前 100 字符 */}
-                {(testResult.previewData.originalText !== testResult.previewData.modifiedText) && (
+                {testResult.previewData.originalText !== testResult.previewData.modifiedText && (
                   <div className="mt-2 p-2 bg-canvas dark:bg-secondary/30 rounded border border-subtle">
                     <div className="text-xs font-medium mb-1">内容变化:</div>
                     <div className="text-xs font-mono space-y-1 max-h-32 overflow-auto">

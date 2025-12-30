@@ -68,9 +68,7 @@ describe('End-to-End Flow Integration Tests', () => {
         },
       ],
       rules: [
-        createTestRule('e2e-rule-1', 'claude', 'system', [
-          { type: 'append', text: ' [E2E]' },
-        ]),
+        createTestRule('e2e-rule-1', 'claude', 'system', [{ type: 'append', text: ' [E2E]' }]),
       ],
       storage: {
         maxHistory: 100,
@@ -318,7 +316,9 @@ describe('End-to-End Flow Integration Tests', () => {
         // 先发成功请求（确保在修改上游前完成）
         const successPromises = [];
         for (let i = 0; i < 3; i++) {
-          successPromises.push(gatewayClient.post('/claude/v1/messages', { system: `Success ${i}` }));
+          successPromises.push(
+            gatewayClient.post('/claude/v1/messages', { system: `Success ${i}` }),
+          );
         }
         const successResults = await Promise.all(successPromises);
         successResults.forEach(r => expect(r.status).toBe(200));
@@ -382,9 +382,7 @@ describe('End-to-End Flow Integration Tests', () => {
           createTestRule('e2e-rule-1', 'claude', 'system', [
             { type: 'append', text: ' [UPDATED]' },
           ]),
-          createTestRule('e2e-rule-2', 'claude', 'system', [
-            { type: 'prepend', text: 'START: ' },
-          ]),
+          createTestRule('e2e-rule-2', 'claude', 'system', [{ type: 'prepend', text: 'START: ' }]),
         ];
 
         const syncResponse = await apiClient.post('/_promptxy/config/sync', { rules: newRules });
@@ -571,15 +569,11 @@ describe('End-to-End Flow Integration Tests', () => {
     it('应该正确处理不同客户端的完整流程', async () => {
       // 1. 为不同客户端添加规则
       const multiRules = [
-        createTestRule('claude-rule', 'claude', 'system', [
-          { type: 'append', text: ' [CLAUDE]' },
-        ]),
+        createTestRule('claude-rule', 'claude', 'system', [{ type: 'append', text: ' [CLAUDE]' }]),
         createTestRule('codex-rule', 'codex', 'instructions', [
           { type: 'append', text: ' [CODEX]' },
         ]),
-        createTestRule('gemini-rule', 'gemini', 'system', [
-          { type: 'append', text: ' [GEMINI]' },
-        ]),
+        createTestRule('gemini-rule', 'gemini', 'system', [{ type: 'append', text: ' [GEMINI]' }]),
       ];
 
       // 更新配置
