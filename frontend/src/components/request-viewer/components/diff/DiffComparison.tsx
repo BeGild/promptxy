@@ -17,6 +17,7 @@
  */
 
 import React, { useMemo } from 'react';
+import { Plus, Minus, AlertTriangle, CheckCircle, Inbox } from 'lucide-react';
 import { DiffStatus, NodeType, type ViewNode } from '../../types';
 import NodeRenderer from '../renderers/NodeRenderer';
 import type { MarkdownDiffResult } from '../../utils/diff';
@@ -38,26 +39,30 @@ function renderStatusBadge(status: DiffStatus): React.ReactNode {
   switch (status) {
     case DiffStatus.ADDED:
       return (
-        <span className="px-2 py-1 bg-status-success/10 dark:bg-status-success/20 text-status-success text-xs rounded">
-          🟢 新增
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-status-success/10 dark:bg-status-success/20 text-status-success text-xs rounded">
+          <Plus size={14} />
+          新增
         </span>
       );
     case DiffStatus.REMOVED:
       return (
-        <span className="px-2 py-1 bg-status-error/10 dark:bg-status-error/20 text-status-error text-xs rounded">
-          🔴 删除
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-status-error/10 dark:bg-status-error/20 text-status-error text-xs rounded">
+          <Minus size={14} />
+          删除
         </span>
       );
     case DiffStatus.MODIFIED:
       return (
-        <span className="px-2 py-1 bg-status-warning/10 dark:bg-status-warning/20 text-status-warning text-xs rounded">
-          🟡 修改
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-status-warning/10 dark:bg-status-warning/20 text-status-warning text-xs rounded">
+          <AlertTriangle size={14} />
+          修改
         </span>
       );
     default:
       return (
-        <span className="px-2 py-1 bg-canvas dark:bg-secondary text-tertiary text-xs rounded">
-          🟢 无变化
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-canvas dark:bg-secondary text-tertiary text-xs rounded">
+          <CheckCircle size={14} />
+          无变化
         </span>
       );
   }
@@ -85,10 +90,10 @@ function getOriginalPanelClass(status: DiffStatus): string {
   }
 }
 
-function SmallEmptyState({ icon, text }: { icon: string; text: string }) {
+function SmallEmptyState({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string; size?: number }>; text: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
-      <div className="text-3xl">{icon}</div>
+      <Icon size={32} className="text-tertiary" />
       <div className="mt-2 text-sm text-secondary">{text}</div>
     </div>
   );
@@ -188,7 +193,7 @@ const DiffComparison: React.FC<DiffComparisonProps> = React.memo(
             {originalNode ? (
               <NodeRenderer node={originalNode} />
             ) : (
-              <SmallEmptyState icon="📭" text="无内容（该节点为新增）" />
+              <SmallEmptyState icon={Inbox} text="无内容（该节点为新增）" />
             )}
           </div>
         </div>
@@ -216,7 +221,7 @@ const DiffComparison: React.FC<DiffComparisonProps> = React.memo(
                 <NodeRenderer node={modifiedNode} />
               )
             ) : (
-              <SmallEmptyState icon="📭" text="无内容（该节点已被删除）" />
+              <SmallEmptyState icon={Inbox} text="无内容（该节点已被删除）" />
             )}
           </div>
         </div>

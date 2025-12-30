@@ -17,6 +17,7 @@
 
 import React from 'react';
 import { Chip } from '@heroui/react';
+import { Circle, XCircle, AlertCircle } from 'lucide-react';
 
 interface StatusIndicatorProps {
   connected: boolean;
@@ -31,19 +32,35 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
 }) => {
   const getStatus = () => {
     if (error) {
-      return { color: 'danger' as const, label: '错误', dot: '🔴' };
+      return {
+        color: 'danger' as const,
+        label: '错误',
+        icon: XCircle,
+        iconColor: 'text-status-error',
+      };
     }
     if (connected) {
-      return { color: 'success' as const, label: '已连接', dot: '🟢' };
+      return {
+        color: 'success' as const,
+        label: '已连接',
+        icon: Circle,
+        iconColor: 'text-status-success',
+      };
     }
-    return { color: 'warning' as const, label: '未连接', dot: '🟡' };
+    return {
+      color: 'warning' as const,
+      label: '未连接',
+      icon: AlertCircle,
+      iconColor: 'text-status-warning',
+    };
   };
 
   const status = getStatus();
+  const StatusIcon = status.icon;
 
   return (
     <div className="flex items-center gap-sm">
-      <span className="text-sm">{status.dot}</span>
+      <StatusIcon size={16} className={status.iconColor} fill="currentColor" />
       {showText && (
         <Chip color={status.color} size="sm" variant="flat">
           {status.label}

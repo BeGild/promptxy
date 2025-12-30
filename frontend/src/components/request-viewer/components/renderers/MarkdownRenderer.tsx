@@ -23,6 +23,7 @@ import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize from 'rehype-sanitize';
+import { Clipboard, FileText, Expand, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { rehypeXmlHighlight } from '@/utils/rehype-xml-highlight';
 import { DiffStatus, type ViewNode } from '../../types';
 
@@ -346,31 +347,31 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleCopy(false)}
-              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="复制纯文本"
             >
-              {copied ? '✓ 已复制' : '📋 复制文本'}
+              {copied ? <><Check size={14} /> 已复制</> : <><Clipboard size={14} /> 复制文本</>}
             </button>
             <button
               onClick={() => handleCopy(true)}
-              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="复制 Markdown 源码"
             >
-              📄 复制 MD
+              <FileText size={14} /> 复制 MD
             </button>
             <button
               onClick={() => setIsFullScreen(true)}
-              className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               title="全屏阅读"
             >
-              ↗ 全屏
+              <Expand size={14} /> 全屏
             </button>
             {node.collapsible && (
               <button
                 onClick={toggleExpanded}
-                className="text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
+                className="inline-flex items-center gap-1 text-xs text-tertiary hover:text-primary px-2 py-1 rounded hover:bg-secondary transition-colors"
               >
-                {isExpanded ? '▼ 折叠' : '▶ 展开'}
+                {isExpanded ? <><ChevronDown size={14} /> 折叠</> : <><ChevronRight size={14} /> 展开</>}
               </button>
             )}
           </div>
@@ -392,9 +393,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ node }) => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => handleCopy(false)}
-                className="text-sm text-tertiary hover:text-primary px-3 py-1.5 rounded hover:bg-secondary transition-colors"
+                className="inline-flex items-center gap-1 text-sm text-tertiary hover:text-primary px-3 py-1.5 rounded hover:bg-secondary transition-colors"
               >
-                {copied ? '✓ 已复制' : '📋 复制'}
+                {copied ? <><Check size={16} /> 已复制</> : <><Clipboard size={16} /> 复制</>}
               </button>
               <button
                 onClick={() => setIsFullScreen(false)}

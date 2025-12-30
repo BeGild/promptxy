@@ -309,7 +309,7 @@ const FileBrowserView: React.FC<FileBrowserViewProps> = React.memo(
 
     return isFullScreen ? (
       createPortal(
-        <div className="fixed inset-0 z-[9999] bg-canvas dark:bg-secondary pt-14">{content}</div>,
+        <div className="fixed inset-0 z-[9999] bg-canvas dark:bg-secondary">{content}</div>,
         document.body,
       )
     ) : (

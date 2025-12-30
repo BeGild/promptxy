@@ -27,6 +27,9 @@ import {
   List,
   Folder,
   FolderOpen,
+  Plus,
+  Minus,
+  AlertTriangle,
 } from 'lucide-react';
 import { DiffStatus, NodeType, type ViewNode } from '../../types';
 import { isNumericArray } from '../../utils/arrayHelper';
@@ -135,32 +138,36 @@ function getDiffBorderClass(status: DiffStatus, changedDescendantCount: number):
 function getDiffBadge(status: DiffStatus, changedDescendantCount: number): React.ReactNode {
   if (status === DiffStatus.ADDED) {
     return (
-      <span className="px-2 py-0.5 rounded text-xs bg-status-success/10 dark:bg-status-success/20 text-status-success">
-        🟢 新增
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-status-success/10 dark:bg-status-success/20 text-status-success">
+        <Plus size={12} />
+        新增
       </span>
     );
   }
 
   if (status === DiffStatus.REMOVED) {
     return (
-      <span className="px-2 py-0.5 rounded text-xs bg-status-error/10 dark:bg-status-error/20 text-status-error">
-        🔴 删除
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-status-error/10 dark:bg-status-error/20 text-status-error">
+        <Minus size={12} />
+        删除
       </span>
     );
   }
 
   if (changedDescendantCount > 0) {
     return (
-      <span className="px-2 py-0.5 rounded text-xs bg-status-warning/10 dark:bg-status-warning/20 text-status-warning">
-        🟡 {changedDescendantCount}
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-status-warning/10 dark:bg-status-warning/20 text-status-warning">
+        <AlertTriangle size={12} />
+        {changedDescendantCount}
       </span>
     );
   }
 
   if (status === DiffStatus.MODIFIED) {
     return (
-      <span className="px-2 py-0.5 rounded text-xs bg-status-warning/10 dark:bg-status-warning/20 text-status-warning">
-        🟡 修改
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-status-warning/10 dark:bg-status-warning/20 text-status-warning">
+        <AlertTriangle size={12} />
+        修改
       </span>
     );
   }
