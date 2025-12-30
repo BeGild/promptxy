@@ -216,6 +216,13 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
 
 > 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/openai`、`/gemini`）。
 
+## 📚 文档
+
+- **[配置参考](docs/configuration.md)** - 完整的配置文件说明，包括所有配置项和环境变量
+- **[使用指南](docs/usage.md)** - CLI 配置详解、规则引擎语法和常见用例
+- **[架构设计](docs/architecture.md)** - 项目架构、技术栈和数据流设计
+- **[项目背景](docs/origin_and_requirements.md)** - 项目初衷、需求溯源和设计决策
+
 ## 📝 配置文件
 
 配置文件位置: `~/.promptxy/config.json` 或项目根目录 `promptxy.config.json`
@@ -407,12 +414,6 @@ promptxy/
 - **前端**: 虚拟滚动支持长列表
 - **实时**: SSE轻量级推送
 - **内存**: 自动清理限制在100条记录
-
-## 🤝 兼容性
-
-- **向后兼容**: 支持旧版配置自动迁移
-- **无破坏性**: 现有配置平滑升级
-- **渐进式**: 可选功能，不影响CLI使用
 
 ## 📄 许可
 
