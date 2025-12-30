@@ -1,0 +1,39 @@
+# 开发相关
+.git/
+.github/
+.vscode/
+.claude/
+.gemini/
+
+# 源码
+src/
+tests/
+docs/
+benchmark/
+refence/
+scripts/
+openspec/
+
+# 子项目源码
+backend/
+frontend/
+
+# 配置文件
+tsconfig.json
+eslint.config.js
+.prettierrc
+.prettierignore
+*.config.example.json
+*.config.prod.json
+promptxy.config.json.example
+
+# 其他
+.gitignore
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+index.html
+UI.jpg
+node_modules/
+*.log
+.DS_Store

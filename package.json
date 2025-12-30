@@ -1,12 +1,42 @@
 {
   "name": "promptxy",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.0.0",
   "type": "module",
+  "description": "PromptXY - HTTP 请求代理网关，支持 AI 服务提供商的请求拦截和修改",
+  "author": "ekko.bao",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/promptxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/promptxy/issues"
+  },
+  "homepage": "https://github.com/yourusername/promptxy#readme",
+  "keywords": [
+    "http-proxy",
+    "ai-gateway",
+    "claude",
+    "openai",
+    "request-interception",
+    "llm-proxy"
+  ],
+  "bin": {
+    "promptxy": "./dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsx src/main.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "tsc -p tsconfig.json",
+    "build:frontend": "cd frontend && npm run build && cd ..",
+    "postbuild:frontend": "mkdir -p dist/frontend && cp -r frontend/dist/* dist/frontend/",
     "start": "node dist/main.js",
+    "prepublishOnly": "npm run build",
     "test": "tsx --test tests/*.test.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -17,6 +47,10 @@
     "lint:frontend": "cd frontend && npm run lint",
     "lint:frontend:fix": "cd frontend && npm run lint:fix",
     "format:frontend": "cd frontend && npm run format"
+  },
+  "dependencies": {
+    "sqlite": "^4.2.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -31,5 +65,8 @@
     "prettier": "^3.7.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

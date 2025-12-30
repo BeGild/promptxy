@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { loadConfig } from './promptxy/config.js';
 import { createGateway } from './promptxy/gateway.js';
 
