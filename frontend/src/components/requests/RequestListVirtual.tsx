@@ -26,6 +26,7 @@ import React, {
   ReactElement,
 } from 'react';
 import { Chip, Button, Spinner, Pagination, Select, SelectItem } from '@heroui/react';
+import { Eye, Trash2 } from 'lucide-react';
 import { List, ListImperativeAPI } from 'react-window';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
@@ -110,14 +111,14 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
       <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
         <colgroup>
           <col style={{ width: '42px' }} /> {/* 已查看 */}
-          <col style={{ width: '140px' }} /> {/* 时间 - 增加宽度显示完整时间 */}
+          <col style={{ width: '176px' }} /> {/* 时间 - 增加宽度 */}
           <col style={{ width: '64px' }} /> {/* 客户端 */}
-          <col style={{ width: 'auto' }} /> {/* 路径 - 自适应 */}
-          <col style={{ width: '96px' }} /> {/* 匹配规则 */}
+          <col style={{ width: '224px' }} /> {/* 路径 - 固定宽度 */}
+          <col style={{ width: '96px' }} /> {/* 规则检测 */}
           <col style={{ width: '64px' }} /> {/* 状态 */}
-          <col style={{ width: '96px' }} /> {/* 大小 */}
-          <col style={{ width: '64px' }} /> {/* 耗时 */}
-          <col style={{ width: 'auto' }} /> {/* 操作 */}
+          <col style={{ width: '192px' }} /> {/* 大小 - 增加宽度 */}
+          <col style={{ width: '96px' }} /> {/* 耗时 - 增加宽度 */}
+          <col style={{ width: '80px' }} /> {/* 操作 - 缩小 */}
         </colgroup>
         <tbody>
           <tr>
@@ -153,31 +154,20 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             <td className="text-xs font-medium text-primary text-left truncate">{formatClient(item.client)}</td>
 
             {/* 路径 */}
-            <td className="font-mono text-xs text-primary text-left truncate">{item.path}</td>
+            <td className="font-mono text-xs text-primary text-left truncate" title={item.path}>{item.path}</td>
 
-            {/* 匹配规则 */}
+            {/* 规则检测 */}
             <td className="overflow-hidden text-left">
               {item.matchedRules && item.matchedRules.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {item.matchedRules.slice(0, 2).map((ruleId: string) => (
-                    <Chip
-                      key={ruleId}
-                      size="sm"
-                      color="success"
-                      variant="flat"
-                      className="text-[10px] font-mono"
-                    >
-                      {ruleId}
-                    </Chip>
-                  ))}
-                  {item.matchedRules.length > 2 && (
-                    <Chip size="sm" color="default" variant="flat" className="text-[10px]">
-                      +{item.matchedRules.length - 2}
-                    </Chip>
-                  )}
+                <div className="flex items-center gap-1 text-status-success dark:text-status-success/80">
+                  <span className="text-xs">√</span>
+                  <span className="text-[10px]">存在</span>
                 </div>
               ) : (
-                <span className="text-tertiary text-xs">-</span>
+                <div className="flex items-center gap-1 text-tertiary">
+                  <span className="text-xs">-</span>
+                  <span className="text-[10px]">不存在</span>
+                </div>
               )}
             </td>
 
@@ -194,15 +184,15 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 大小 */}
-            <td className="text-xs text-primary text-left truncate">
+            <td className="text-xs text-primary text-left truncate font-mono">
               {item.requestSize || item.responseSize ? (
                 <span>
                   {item.requestSize && (
-                    <span className="text-brand-primary">↑{formatBytes(item.requestSize)}</span>
+                    <span className="text-brand-primary">↑{(item.requestSize / 1024).toFixed(2)}KB</span>
                   )}
                   {item.requestSize && item.responseSize && ' '}
                   {item.responseSize && (
-                    <span className="text-status-success">↓{formatBytes(item.responseSize)}</span>
+                    <span className="text-status-success">↓{(item.responseSize / 1024).toFixed(2)}KB</span>
                   )}
                 </span>
               ) : (
@@ -211,13 +201,13 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 耗时 */}
-            <td className="text-xs text-primary text-left truncate">
-              {item.durationMs ? formatDuration(item.durationMs) : '-'}
+            <td className="text-xs text-primary text-left truncate font-mono">
+              {item.durationMs ? `${item.durationMs}ms` : '-'}
             </td>
 
             {/* 操作 */}
             <td className="text-left">
-              <div className="flex gap-1 items-center justify-start">
+              <div className="flex gap-0.5 items-center justify-start">
                 <Button
                   size="sm"
                   variant="light"
@@ -225,9 +215,10 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
                     e.stopPropagation();
                     onRowClick(item.id);
                   }}
-                  className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 text-xs px-2 h-7"
+                  className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/20 min-w-8 h-8"
+                  isIconOnly
                 >
-                  查看
+                  <Eye size={16} />
                 </Button>
                 <Button
                   size="sm"
@@ -237,9 +228,10 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
                     e.stopPropagation();
                     onDelete(item.id);
                   }}
-                  className="hover:bg-status-error/10 dark:hover:bg-status-error/20 text-xs px-2 h-7"
+                  className="text-error hover:bg-secondary dark:hover:bg-secondary min-w-8 h-8"
+                  isIconOnly
                 >
-                  删除
+                  <Trash2 size={16} />
                 </Button>
               </div>
             </td>
@@ -474,14 +466,14 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '42px' }} /> {/* 已查看 */}
-            <col style={{ width: '140px' }} /> {/* 时间 - 增加宽度显示完整时间 */}
+            <col style={{ width: '176px' }} /> {/* 时间 - 增加宽度 */}
             <col style={{ width: '64px' }} /> {/* 客户端 */}
-            <col style={{ width: 'auto' }} /> {/* 路径 - 自适应 */}
-            <col style={{ width: '96px' }} /> {/* 匹配规则 */}
+            <col style={{ width: '224px' }} /> {/* 路径 - 固定宽度 */}
+            <col style={{ width: '96px' }} /> {/* 规则检测 */}
             <col style={{ width: '64px' }} /> {/* 状态 */}
-            <col style={{ width: '96px' }} /> {/* 大小 */}
-            <col style={{ width: '64px' }} /> {/* 耗时 */}
-            <col style={{ width: 'auto' }} /> {/* 操作 */}
+            <col style={{ width: '192px' }} /> {/* 大小 - 增加宽度 */}
+            <col style={{ width: '96px' }} /> {/* 耗时 - 增加宽度 */}
+            <col style={{ width: '80px' }} /> {/* 操作 - 缩小 */}
           </colgroup>
           <tbody>
             <tr>
@@ -489,10 +481,10 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
               <th className="text-left">时间</th>
               <th className="text-left">客户端</th>
               <th className="text-left">路径</th>
-              <th className="text-left">匹配规则</th>
+              <th className="text-left">规则检测</th>
               <th className="text-left">状态</th>
               <th className="text-left">大小</th>
-              <th className="text-center">耗时</th>
+              <th className="text-left">耗时</th>
               <th className="text-left">操作</th>
             </tr>
           </tbody>

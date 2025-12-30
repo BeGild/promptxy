@@ -353,14 +353,14 @@ const RequestListComponent: React.FC<RequestListProps> = ({
           <TableColumn className="w-w1" aria-label="指示条">
             {' '}
           </TableColumn>
-          <TableColumn>时间</TableColumn>
+          <TableColumn className="w-44">时间</TableColumn>
           <TableColumn>客户端</TableColumn>
-          <TableColumn>路径</TableColumn>
-          <TableColumn>匹配规则</TableColumn>
+          <TableColumn className="w-56 max-w-72">路径</TableColumn>
+          <TableColumn className="w-24">规则检测</TableColumn>
           <TableColumn>状态</TableColumn>
-          <TableColumn>大小</TableColumn>
-          <TableColumn>耗时</TableColumn>
-          <TableColumn>操作</TableColumn>
+          <TableColumn className="w-48">大小</TableColumn>
+          <TableColumn className="w-24 text-left">耗时</TableColumn>
+          <TableColumn className="w-20">操作</TableColumn>
         </TableHeader>
         <TableBody
           items={tableItems}
@@ -423,7 +423,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                   {(isSelected || isViewed) && <div className="h-full w-1 bg-accent rounded-r" />}
                 </TableCell>
 
-                <TableCell className="text-sm font-mono text-xs text-primary dark:text-primary">
+                <TableCell className="w-44 text-sm font-mono text-xs text-primary dark:text-primary">
                   {formatTimeWithMs(item.timestamp)}
                 </TableCell>
                 <TableCell>
@@ -431,33 +431,22 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     {formatClient(item.client)}
                   </span>
                 </TableCell>
-                <TableCell>
-                  <span className="font-mono text-xs text-primary dark:text-primary truncate max-w-[200px] block">
+                <TableCell className="w-56 max-w-72">
+                  <span className="font-mono text-xs text-primary dark:text-primary truncate block" title={item.path}>
                     {item.path}
                   </span>
                 </TableCell>
                 <TableCell>
                   {item.matchedRules && item.matchedRules.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {item.matchedRules.slice(0, 3).map(ruleId => (
-                        <Chip
-                          key={ruleId}
-                          size="sm"
-                          color="success"
-                          variant="flat"
-                          className="text-xs font-mono"
-                        >
-                          {ruleId}
-                        </Chip>
-                      ))}
-                      {item.matchedRules.length > 3 && (
-                        <Chip size="sm" color="default" variant="flat" className="text-xs">
-                          +{item.matchedRules.length - 3}
-                        </Chip>
-                      )}
+                    <div className="flex items-center gap-1 text-status-success dark:text-status-success/80">
+                      <span className="text-sm">√</span>
+                      <span className="text-xs">存在</span>
                     </div>
                   ) : (
-                    <span className="text-tertiary text-sm">-</span>
+                    <div className="flex items-center gap-1 text-tertiary">
+                      <span className="text-sm">-</span>
+                      <span className="text-xs">不存在</span>
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>
@@ -470,18 +459,18 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     {item.responseStatus || 'N/A'}
                   </Chip>
                 </TableCell>
-                <TableCell className="text-sm text-primary dark:text-primary">
+                <TableCell className="w-48 text-sm text-primary dark:text-primary">
                   {item.requestSize || item.responseSize ? (
-                    <span className="text-xs">
+                    <span className="text-xs font-mono">
                       {item.requestSize && (
                         <span className="text-brand-primary dark:text-brand-primary">
-                          ↑{formatBytes(item.requestSize)}
+                          ↑{(item.requestSize / 1024).toFixed(2)}KB
                         </span>
                       )}
                       {item.requestSize && item.responseSize && ' '}
                       {item.responseSize && (
-                        <span className="text-success dark:text-success">
-                          ↓{formatBytes(item.responseSize)}
+                        <span className="text-status-success dark:text-status-success">
+                          ↓{(item.responseSize / 1024).toFixed(2)}KB
                         </span>
                       )}
                     </span>
@@ -489,29 +478,29 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     '-'
                   )}
                 </TableCell>
-                <TableCell className="text-sm text-primary dark:text-primary">
-                  {item.durationMs ? formatDuration(item.durationMs) : '-'}
+                <TableCell className="w-24 text-sm text-primary dark:text-primary font-mono text-xs">
+                  {item.durationMs ? `${item.durationMs}ms` : '-'}
                 </TableCell>
-                <TableCell>
-                  <div className="flex gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                <TableCell className="w-20">
+                  <div className="flex gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity justify-start">
                     <Button
                       size="sm"
                       variant="light"
                       onPress={() => handleRowClick(item.id)}
-                      className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/10"
+                      className="text-brand-primary hover:bg-brand-primary/10 dark:hover:bg-brand-primary/10 min-w-8 h-8"
                       isIconOnly
                     >
-                      <Eye size={18} />
+                      <Eye size={16} />
                     </Button>
                     <Button
                       size="sm"
                       color="danger"
                       variant="light"
                       onPress={() => handleDelete(item.id)}
-                      className="text-error hover:bg-secondary dark:hover:bg-secondary"
+                      className="text-error hover:bg-secondary dark:hover:bg-secondary min-w-8 h-8"
                       isIconOnly
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </Button>
                   </div>
                 </TableCell>
