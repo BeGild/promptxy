@@ -566,7 +566,7 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
         document.body,
       )
     ) : (
-      <div className="h-full min-h-0 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+      <div className="h-full min-h-0 bg-canvas dark:bg-secondary">
         {content}
       </div>
     );

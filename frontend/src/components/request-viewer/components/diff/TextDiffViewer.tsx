@@ -72,7 +72,7 @@ const TextDiffViewer: React.FC<TextDiffViewerProps> = React.memo(
         <div className="grid h-full grid-cols-2 divide-x divide-subtle">
           <div className={['h-full px-3 py-1 overflow-hidden', highlight].join(' ')}>
             <div
-              className="font-mono text-xs text-primary whitespace-pre"
+              className="font-mono text-xs text-text-primary whitespace-pre"
               // 用 left 而不是 transform：避免部分平台在滚动/复用时切换文本抗锯齿策略导致“看起来变色”
               style={{ position: 'relative', left: `${-scrollLeft}px` }}
             >
@@ -81,7 +81,7 @@ const TextDiffViewer: React.FC<TextDiffViewerProps> = React.memo(
           </div>
           <div className={['h-full px-3 py-1 overflow-hidden', highlight].join(' ')}>
             <div
-              className="font-mono text-xs text-primary whitespace-pre"
+              className="font-mono text-xs text-text-primary whitespace-pre"
               style={{ position: 'relative', left: `${-scrollLeft}px` }}
             >
               {displayLine(row.right)}

@@ -49,7 +49,7 @@ function PanelEmptyState({ title, description }: { title: string; description: s
     <div className="h-full min-h-0 flex items-center justify-center p-6">
       <div className="max-w-lg text-center">
         <div className="text-4xl">📎</div>
-        <div className="mt-3 text-lg font-semibold text-primary">{title}</div>
+        <div className="mt-3 text-lg font-semibold text-text-primary">{title}</div>
         <div className="mt-1 text-sm text-secondary">{description}</div>
       </div>
     </div>
