@@ -14,7 +14,10 @@ type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
   api?: Partial<PromptxyConfig['api']>;
   suppliers?: Supplier[];
-  storage?: Partial<PromptxyConfig['storage']>;
+  storage?: {
+    maxHistory?: number;
+    // autoCleanup 和 cleanupInterval 已废弃，清理现在在 insertRequestRecord 中自动触发
+  };
   rules?: PromptxyRule[];
 };
 
@@ -56,8 +59,6 @@ const DEFAULT_CONFIG: PromptxyConfig = {
   rules: [],
   storage: {
     maxHistory: 1000,
-    autoCleanup: true,
-    cleanupInterval: 1, // hours
   },
   debug: false,
 };
@@ -302,18 +303,6 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     throw new Error(`config.storage.maxHistory must be a positive integer`);
   }
 
-  if (typeof config.storage.autoCleanup !== 'boolean') {
-    throw new Error(`config.storage.autoCleanup must be a boolean`);
-  }
-
-  if (
-    typeof config.storage.cleanupInterval !== 'number' ||
-    !Number.isFinite(config.storage.cleanupInterval) ||
-    config.storage.cleanupInterval <= 0
-  ) {
-    throw new Error(`config.storage.cleanupInterval must be a positive number`);
-  }
-
   return config;
 }
 
@@ -331,8 +320,6 @@ function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyCon
     rules: incoming.rules ?? base.rules,
     storage: {
       maxHistory: incoming.storage?.maxHistory ?? base.storage.maxHistory,
-      autoCleanup: incoming.storage?.autoCleanup ?? base.storage.autoCleanup,
-      cleanupInterval: incoming.storage?.cleanupInterval ?? base.storage.cleanupInterval,
     },
     debug: incoming.debug ?? base.debug,
   };
@@ -347,8 +334,7 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
   const apiPort = parsePort(process.env.PROMPTXY_API_PORT);
 
   const maxHistory = parsePort(process.env.PROMPTXY_MAX_HISTORY);
-  const autoCleanup = parseBoolean(process.env.PROMPTXY_AUTO_CLEANUP);
-  const cleanupInterval = parsePort(process.env.PROMPTXY_CLEANUP_INTERVAL);
+  // PROMPTXY_AUTO_CLEANUP 和 PROMPTXY_CLEANUP_INTERVAL 已废弃
 
   return {
     ...config,
@@ -363,8 +349,6 @@ function applyEnvOverrides(config: PromptxyConfig): PromptxyConfig {
     suppliers: config.suppliers, // 供应商不支持环境变量覆盖
     storage: {
       maxHistory: maxHistory ?? config.storage.maxHistory,
-      autoCleanup: autoCleanup ?? config.storage.autoCleanup,
-      cleanupInterval: cleanupInterval ?? config.storage.cleanupInterval,
     },
     debug: debug ?? config.debug,
   };

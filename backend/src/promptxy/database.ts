@@ -134,6 +134,7 @@ export function getDatabase(): Database {
 
 /**
  * 插入请求记录
+ * 插入后会自动检查数量是否超过 maxHistory，超过则清理旧记录
  */
 export async function insertRequestRecord(record: RequestRecord): Promise<void> {
   const db = getDatabase();
@@ -162,6 +163,25 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
       record.error ?? null,
     ],
   );
+
+  // 检查是否需要清理旧记录
+  const maxHistory = await getSetting('max_history');
+  const keep = maxHistory ? Number(maxHistory) : 1000;
+  const countResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
+  const total = countResult?.count ?? 0;
+
+  if (total > keep) {
+    // 删除旧数据，保留最新的 keep 条
+    await db.run(
+      `DELETE FROM requests
+       WHERE id NOT IN (
+         SELECT id FROM requests
+         ORDER BY timestamp DESC
+         LIMIT ?
+       )`,
+      [keep],
+    );
+  }
 }
 
 /**

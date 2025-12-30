@@ -322,7 +322,7 @@ export const SettingsPanel: React.FC = () => {
                 </Button>
               </div>
               <div className="text-xs text-secondary bg-canvas dark:bg-secondary/50 p-3 rounded-lg leading-relaxed">
-                自动清理: 每小时清理一次，保留最近 {keepCount} 条记录。
+                💡 自动清理机制: 每次记录请求时自动检查，超过上限时保留最近 {keepCount} 条。
               </div>
             </CardBody>
           </Card>

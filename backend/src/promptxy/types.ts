@@ -114,8 +114,7 @@ export type PromptxyConfig = {
   rules: PromptxyRule[];
   storage: {
     maxHistory: number;
-    autoCleanup: boolean;
-    cleanupInterval: number; // hours
+    // autoCleanup 和 cleanupInterval 已废弃，清理现在在 insertRequestRecord 中自动触发
   };
   debug: boolean;
 };

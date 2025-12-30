@@ -3,38 +3,7 @@ import { createGateway } from './promptxy/gateway.js';
 import { initializeDatabase } from './promptxy/database.js';
 import { createApiServer } from './promptxy/api-server.js';
 import { createLogger } from './promptxy/logger.js';
-import { setInterval } from 'node:timers';
 import { mkdir } from 'node:fs/promises';
-
-async function startAutoCleanup(intervalHours: number, maxHistory: number): Promise<void> {
-  const { cleanupOldRequests } = await import('./promptxy/database.js');
-  const logger = createLogger({ debug: true });
-
-  // 立即执行一次清理
-  try {
-    const deleted = await cleanupOldRequests(maxHistory);
-    if (deleted > 0) {
-      logger.info(`[Cleanup] 初始清理: 删除 ${deleted} 条旧记录，保留 ${maxHistory} 条`);
-    }
-  } catch (error: any) {
-    logger.info(`[Cleanup] 初始清理失败: ${error?.message}`);
-  }
-
-  // 定时执行
-  setInterval(
-    async () => {
-      try {
-        const deleted = await cleanupOldRequests(maxHistory);
-        if (deleted > 0) {
-          logger.info(`[Cleanup] 自动清理: 删除 ${deleted} 条旧记录，保留 ${maxHistory} 条`);
-        }
-      } catch (error: any) {
-        logger.info(`[Cleanup] 自动清理失败: ${error?.message}`);
-      }
-    },
-    intervalHours * 60 * 60 * 1000,
-  );
-}
 
 async function main() {
   const config = await loadConfig();
@@ -54,11 +23,6 @@ async function main() {
   // 创建 API 服务器（端口 7071）
   // 注意：需要传递 config.rules 的引用，以便 API 可以更新它
   const apiServer = createApiServer(db, config, config.rules);
-
-  // 启动自动清理任务
-  if (config.storage.autoCleanup) {
-    startAutoCleanup(config.storage.cleanupInterval, config.storage.maxHistory);
-  }
 
   // 启动网关服务器
   gatewayServer.listen(config.listen.port, config.listen.host, () => {
