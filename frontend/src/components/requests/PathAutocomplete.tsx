@@ -80,7 +80,7 @@ export const PathAutocomplete: React.FC<PathAutocompleteProps> = ({
 
   return (
     <Autocomplete
-      labelPlacement="outside"
+      aria-label="搜索路径或输入ID"
       placeholder="🔍 搜索路径或 ID..."
       value={value}
       onInputChange={(value: string) => onChange(value)}

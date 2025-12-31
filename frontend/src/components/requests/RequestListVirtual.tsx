@@ -109,17 +109,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
     >
       {/* 使用 table 布局确保列宽与表头完全一致 */}
       <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: '42px' }} /> {/* 已查看 */}
-          <col style={{ width: '176px' }} /> {/* 时间 - 增加宽度 */}
-          <col style={{ width: '64px' }} /> {/* 客户端 */}
-          <col style={{ width: '224px' }} /> {/* 路径 - 固定宽度 */}
-          <col style={{ width: '96px' }} /> {/* 规则检测 */}
-          <col style={{ width: '64px' }} /> {/* 状态 */}
-          <col style={{ width: '192px' }} /> {/* 大小 - 增加宽度 */}
-          <col style={{ width: '96px' }} /> {/* 耗时 - 增加宽度 */}
-          <col style={{ width: '80px' }} /> {/* 操作 - 缩小 */}
-        </colgroup>
+        <colgroup><col style={{ width: '42px' }} /><col style={{ width: '176px' }} /><col style={{ width: '64px' }} /><col style={{ width: '224px' }} /><col style={{ width: '96px' }} /><col style={{ width: '64px' }} /><col style={{ width: '192px' }} /><col style={{ width: '96px' }} /><col style={{ width: '80px' }} /></colgroup>
         <tbody>
           <tr>
             {/* 已查看按钮 */}
@@ -411,10 +401,12 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
         />
 
         <Select
+          aria-label="按客户端筛选请求"
           selectedKeys={[filters.client || 'all']}
           onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
+          placeholder="所有客户端"
           classNames={{
             trigger: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
           }}
@@ -476,17 +468,7 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     const tableHeader = (
       <div className="bg-canvas dark:bg-secondary border-b border-subtle px-4 py-2 text-xs font-semibold text-secondary overflow-y-scroll">
         <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '42px' }} /> {/* 已查看 */}
-            <col style={{ width: '176px' }} /> {/* 时间 - 增加宽度 */}
-            <col style={{ width: '64px' }} /> {/* 客户端 */}
-            <col style={{ width: '224px' }} /> {/* 路径 - 固定宽度 */}
-            <col style={{ width: '96px' }} /> {/* 规则检测 */}
-            <col style={{ width: '64px' }} /> {/* 状态 */}
-            <col style={{ width: '192px' }} /> {/* 大小 - 增加宽度 */}
-            <col style={{ width: '96px' }} /> {/* 耗时 - 增加宽度 */}
-            <col style={{ width: '80px' }} /> {/* 操作 - 缩小 */}
-          </colgroup>
+          <colgroup><col style={{ width: '42px' }} /><col style={{ width: '176px' }} /><col style={{ width: '64px' }} /><col style={{ width: '224px' }} /><col style={{ width: '96px' }} /><col style={{ width: '64px' }} /><col style={{ width: '192px' }} /><col style={{ width: '96px' }} /><col style={{ width: '80px' }} /></colgroup>
           <tbody>
             <tr>
               <th className="text-center">已查看</th>

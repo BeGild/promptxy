@@ -187,11 +187,12 @@ const RuleListComponent: React.FC<RuleListProps> = ({
         />
 
         <Select
+          aria-label="按客户端筛选规则"
           selectedKeys={[filterClient]}
           onChange={e => handleClientChange(e.target.value)}
           className="w-full md:w-48"
           radius="lg"
-          startContent={<Filter size={18} className="text-tertiary" />}
+          placeholder="所有客户端"
           classNames={{
             trigger:
               'shadow-sm bg-elevated dark:bg-elevated border border-subtle hover:border-border-default transition-colors',
