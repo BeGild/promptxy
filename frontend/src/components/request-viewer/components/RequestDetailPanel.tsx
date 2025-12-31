@@ -20,6 +20,8 @@ import React, { useState, useEffect } from 'react';
 import type { RequestMetadata, ViewNode, RequestAdapter } from '../types';
 import { AdapterRegistry } from '../adapters/Registry';
 import { ClaudeMessagesAdapter } from '../adapters/claude/ClaudeMessagesAdapter';
+import { CodexAdapter } from '../adapters/codex/CodexAdapter';
+import { GeminiAdapter } from '../adapters/gemini/GeminiAdapter';
 import UnifiedContentView from './views/UnifiedContentView';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 
@@ -73,6 +75,8 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
 
     // 注册默认适配器
     AdapterRegistry.register(new ClaudeMessagesAdapter());
+    AdapterRegistry.register(new CodexAdapter());
+    AdapterRegistry.register(new GeminiAdapter());
 
     // 自动检测适配器
     const detected = AdapterRegistry.findAdapter(request);

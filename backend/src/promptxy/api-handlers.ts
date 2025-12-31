@@ -60,6 +60,13 @@ export function setSSEConnections(connections: SSEConnections): void {
 }
 
 /**
+ * 获取 SSE 连接集合
+ */
+export function getSSEConnections(): SSEConnections {
+  return sseConnections;
+}
+
+/**
  * SSE 连接处理
  */
 export function handleSSE(req: http.IncomingMessage, res: http.ServerResponse): void {

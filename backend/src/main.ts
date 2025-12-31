@@ -40,9 +40,34 @@ async function main() {
   });
 
   // 优雅关闭处理
-  const shutdown = () => {
+  const shutdown = async () => {
     logger.info(`[PromptXY] 正在关闭服务器...`);
+
+    // 关闭所有 SSE 连接
+    const { getSSEConnections } = await import('./promptxy/api-handlers.js');
+    const sseConnections = getSSEConnections();
+
+    if (sseConnections.size > 0) {
+      logger.info(`[PromptXY] 正在关闭 ${sseConnections.size} 个 SSE 连接...`);
+      for (const res of sseConnections) {
+        try {
+          res.end();
+        } catch {
+          // 忽略已关闭的连接错误
+        }
+      }
+      sseConnections.clear();
+    }
+
+    // 设置关闭超时（5秒）
+    const timeout = setTimeout(() => {
+      console.warn(`[PromptXY] 关闭超时，强制退出`);
+      process.exit(1);
+    }, 5000);
+
+    // 关闭服务器
     server.close(() => {
+      clearTimeout(timeout);
       logger.info(`[PromptXY] 服务器已关闭`);
       process.exit(0);
     });
