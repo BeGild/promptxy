@@ -42,6 +42,7 @@ import {
   formatDuration,
   getStatusColor,
   formatClient,
+  getClientColorClass,
 } from '@/utils';
 import { RequestListVirtual } from './RequestListVirtual';
 import { PathAutocomplete } from './PathAutocomplete';
@@ -427,9 +428,13 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                   {formatTimeWithMs(item.timestamp)}
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm font-medium text-primary dark:text-primary">
+                  <Chip
+                    size="sm"
+                    variant="flat"
+                    className={`font-medium ${getClientColorClass(item.client)}`}
+                  >
                     {formatClient(item.client)}
-                  </span>
+                  </Chip>
                 </TableCell>
                 <TableCell className="w-56 max-w-72">
                   <span

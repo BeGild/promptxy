@@ -142,6 +142,18 @@ export function getStatusColor(status?: number): 'success' | 'warning' | 'danger
 }
 
 /**
+ * 获取客户端对应的颜色类名
+ */
+export function getClientColorClass(client: string): string {
+  const colorMap: Record<string, string> = {
+    claude: 'text-tertiary dark:text-tertiary', // Claude - 灰色
+    codex: 'text-status-warning dark:text-status-warning', // Codex - 橙色
+    gemini: 'text-status-success dark:text-status-success', // Gemini - 绿色
+  };
+  return colorMap[client] || 'text-primary dark:text-primary';
+}
+
+/**
  * 生成 UUID
  */
 export function generateUUID(): string {

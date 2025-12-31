@@ -36,6 +36,7 @@ import {
   formatDuration,
   getStatusColor,
   formatClient,
+  getClientColorClass,
 } from '@/utils';
 import { PathAutocomplete } from './PathAutocomplete';
 
@@ -143,8 +144,14 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 客户端 */}
-            <td className="text-xs font-medium text-primary text-left truncate">
-              {formatClient(item.client)}
+            <td className="text-left">
+              <Chip
+                size="sm"
+                variant="flat"
+                className={`font-medium text-xs ${getClientColorClass(item.client)}`}
+              >
+                {formatClient(item.client)}
+              </Chip>
             </td>
 
             {/* 路径 */}
