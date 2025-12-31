@@ -160,17 +160,20 @@ promptxy/
 GET /_promptxy/health
 ```
 
-#### 2. 规则管理
+#### 2. 配置管理
 
 ```
-GET    /_promptxy/rules              # 获取所有规则
-POST   /_promptxy/rules              # 创建规则
-GET    /_promptxy/rules/:id          # 获取单个规则
-PUT    /_promptxy/rules/:id          # 更新规则
-DELETE /_promptxy/rules/:id          # 删除规则
+GET    /_promptxy/config             # 获取配置
+POST   /_promptxy/config/sync        # 同步配置（立即生效）
 ```
 
-#### 3. 请求历史
+#### 3. 规则测试
+
+```
+POST /_promptxy/preview              # 预览规则效果
+```
+
+#### 4. 请求历史
 
 ```
 GET    /_promptxy/requests           # 获取请求列表（分页、筛选）
@@ -179,26 +182,13 @@ POST   /_promptxy/requests/cleanup   # 清理旧数据
 DELETE /_promptxy/requests/:id       # 删除单个请求
 ```
 
-#### 4. 实时推送
+#### 5. 实时推送
 
 ```
 GET /_promptxy/events                # SSE 连接（新请求推送）
 ```
 
-#### 5. 配置管理
-
-```
-GET    /_promptxy/config             # 获取配置
-POST   /_promptxy/config/sync        # 同步配置（立即生效）
-```
-
-#### 6. 预览测试
-
-```
-POST /_promptxy/preview              # 预览规则效果
-```
-
-#### 7. 供应商管理
+#### 6. 供应商管理
 
 ```
 GET    /_promptxy/suppliers          # 获取供应商列表
@@ -208,9 +198,10 @@ DELETE /_promptxy/suppliers/:id      # 删除供应商
 POST   /_promptxy/suppliers/:id/toggle  # 切换供应商状态
 ```
 
-#### 8. 其他
+#### 7. 其他
 
 ```
+GET    /_promptxy/paths              # 获取唯一路径列表
 GET    /_promptxy/settings           # 获取设置
 POST   /_promptxy/settings           # 更新设置
 GET    /_promptxy/stats              # 统计信息
@@ -246,19 +237,16 @@ data: {
 
 ```json
 {
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
-    "express": "^4.18.2", // Web框架
-    "sqlite3": "^5.1.6", // SQLite数据库
-    "sqlite": "^4.1.2", // SQLite TypeScript封装
-    "cors": "^2.8.5" // 跨域支持
+    "sqlite": "^4.2.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/express": "^4.17.21",
-    "@types/cors": "^2.8.17",
-    "typescript": "^5.3.2",
-    "ts-node": "^10.9.1",
-    "nodemon": "^3.0.2"
+    "@types/node": "^24.10.4",
+    "typescript": "^5.9.2"
   }
 }
 ```
@@ -268,24 +256,22 @@ data: {
 ```json
 {
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@heroui/react": "^2.2.0", // HeroUI组件库
-    "@heroui/system": "^2.2.0",
-    "framer-motion": "^10.16.0", // 动画库
-    "zustand": "^4.4.0", // 状态管理
-    "@tanstack/react-query": "^5.0.0", // 数据获取
-    "axios": "^1.6.0" // HTTP客户端
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@heroui/react": "^2.8.6",
+    "@heroui/system": "^2.2.6",
+    "framer-motion": "^11.15.0",
+    "axios": "^1.7.7",
+    "@tanstack/react-query": "^5.56.2"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "typescript": "^5.3.2",
-    "vite": "^5.0.0",
-    "tailwindcss": "^3.3.0",
-    "postcss": "^8.4.31",
-    "autoprefixer": "^10.4.16"
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.9.2",
+    "vite": "^6.0.7",
+    "tailwindcss": "^3.4.14",
+    "postcss": "^8.4.47"
   }
 }
 ```
@@ -298,7 +284,8 @@ data: {
 
 ```typescript
 interface Rule {
-  id: string; // 唯一标识
+  uuid: string; // 规则唯一标识符（自动生成）
+  name: string; // 规则名称
   description?: string; // 描述
 
   when: {
@@ -320,9 +307,9 @@ interface Rule {
   >;
 
   stop?: boolean; // 是否在此后停止
-  enabled: boolean; // 是否启用
-  createdAt: number; // 创建时间
-  updatedAt: number; // 更新时间
+  enabled?: boolean; // 是否启用
+  createdAt?: number; // 创建时间
+  updatedAt?: number; // 更新时间
 }
 ```
 

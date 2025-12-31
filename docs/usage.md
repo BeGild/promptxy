@@ -56,7 +56,11 @@
 
 #### 方式 2：Web UI
 
-访问 `http://127.0.0.1:7070/_promptxy/`，进入设置页面：
+**生产环境**：访问 `http://127.0.0.1:7070/_promptxy/`
+
+**开发环境**：访问 `http://localhost:5173`（前端开发服务器）
+
+在设置页面可以：
 
 1. 查看当前供应商列表
 2. 点击开关快速启用/禁用供应商
@@ -669,5 +673,6 @@ curl http://127.0.0.1:7070/_promptxy/health
 
 ## 下一步
 
-- 查看 [配置参考](configuration.md) 了解所有配置选项
-- 阅读 [origin-and-requirements.md](origin-and-requirements.md) 了解设计背景
+- 查看 [配置参考](configuration.md) 了解所有配置选项和规则引擎详解
+- 阅读 [origin_and_requirements.md](origin_and_requirements.md) 了解设计背景
+- 查看 [架构设计](architecture.md) 了解项目架构

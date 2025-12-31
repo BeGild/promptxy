@@ -161,29 +161,12 @@ refence/
 
 ---
 
-## 7. 本项目在 OpenSpec 中的溯源位置
+## 7. 后续演进（Roadmap 参考）
 
-本项目采用 OpenSpec 记录需求与实施任务，关键变更为：
-
-- change id：`add-promptxy-local-gateway`
-- 提案与任务：`openspec/changes/add-promptxy-local-gateway/`
-  - `proposal.md`：为什么做、做什么、影响面
-  - `design.md`：关键架构决策与取舍
-  - `tasks.md`：实施任务清单与验证项
-
-建议在后续新增能力时，优先新增 OpenSpec change，并明确是否属于：
-
-- 新 capability（ADDED）
-- 修改既有行为（MODIFIED）
-
----
-
-## 8. 后续演进（Roadmap 参考）
-
-以下是“可能会需要，但不属于 MVP”的方向，供后续规划：
+以下是"可能会需要，但不属于 v2.0"的方向，供后续规划：
 
 - Gemini Code Assist/GCA 模式适配（与 API Key 模式请求结构不同）
-- 对缺失字段的“创建/补位”策略（例如 Codex 请求没有 `instructions` 时自动创建）
+- 对缺失字段的"创建/补位"策略（例如 Codex 请求没有 `instructions` 时自动创建）
 - 更丰富的匹配条件（按 path/method/model/session/project 等）
 - 提供请求/响应的可选审计日志（需严格脱敏与本地存储策略）
 - 多用户共享部署（需要鉴权、隔离、限额、可观测）

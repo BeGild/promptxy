@@ -234,41 +234,64 @@
 **默认值**：`[]`
 **说明**：规则数组，按顺序执行
 
-#### 规则对象结构
+#### 完整版规则对象结构
 
 ```typescript
 {
-  id: string;              // 必需：规则唯一标识
-  when: {                  // 必需：匹配条件
-    client: string;        // 必需：claude | codex | gemini
-    field: string;         // 必需：system | instructions
-    method?: string;       // 可选：HTTP 方法
-    pathRegex?: string;    // 可选：路径正则
-    modelRegex?: string;   // 可选：模型正则
+  uuid: string;              // 必需：规则唯一标识符（自动生成）
+  name: string;              // 必需：规则名称
+  description?: string;      // 可选：规则描述
+  when: {                    // 必需：匹配条件
+    client: string;          // 必需：claude | codex | gemini
+    field: string;           // 必需：system | instructions
+    method?: string;         // 可选：HTTP 方法
+    pathRegex?: string;      // 可选：路径正则
+    modelRegex?: string;     // 可选：模型正则
   };
-  ops: Array<Operation>;   // 必需：操作数组
-  stop?: boolean;          // 可选：是否停止后续规则
+  ops: Array<Operation>;     // 必需：操作数组
+  stop?: boolean;            // 可选：是否停止后续规则
+  enabled?: boolean;         // 可选：是否启用
 }
 ```
 
-#### 规则示例
+#### 简化版规则对象结构
+
+```typescript
+{
+  id: string;                // 必需：规则唯一标识
+  when: {                    // 必需：匹配条件
+    client: string;          // 必需：claude | codex | gemini
+    field: string;           // 必需：system | instructions
+    method?: string;         // 可选：HTTP 方法
+    pathRegex?: string;      // 可选：路径正则
+    modelRegex?: string;     // 可选：模型正则
+  };
+  ops: Array<Operation>;     // 必需：操作数组
+  stop?: boolean;            // 可选：是否停止后续规则
+}
+```
+
+#### 规则示例（完整版）
 
 ```json
 {
   "rules": [
     {
-      "id": "rule-1",
+      "uuid": "rule-001",
+      "name": "强制中文响应",
       "when": { "client": "claude", "field": "system" },
-      "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
+      "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }],
+      "enabled": true
     },
     {
-      "id": "rule-2",
+      "uuid": "rule-002",
+      "name": "移除简洁限制",
       "when": { "client": "codex", "field": "instructions" },
       "ops": [
         { "type": "delete", "regex": "be concise", "flags": "i" },
         { "type": "append", "text": "\nBe thorough." }
       ],
-      "stop": false
+      "enabled": true
     }
   ]
 }
