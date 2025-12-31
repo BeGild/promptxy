@@ -1,6 +1,6 @@
 {
   "name": "promptxy-frontend",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "description": "PromptXY v2.0 Frontend - React + HeroUI Web Interface",
