@@ -1,5 +1,8 @@
 import * as http from 'node:http';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Readable } from 'node:stream';
+import { fileURLToPath } from 'node:url';
 import { mutateClaudeBody } from './adapters/claude.js';
 import { mutateCodexBody } from './adapters/codex.js';
 import { mutateGeminiBody } from './adapters/gemini.js';
@@ -157,6 +160,94 @@ function summarizeMatches(matches: PromptxyRuleMatch[]): string {
 
 function generateRequestId(): string {
   return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * 获取前端静态文件目录路径
+ */
+function getFrontendDir(): string | null {
+  try {
+    // 尝试从 dist 目录查找
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const distDir = path.resolve(currentDir, '..', '..', 'dist', 'frontend');
+
+    // 检查目录是否存在
+    if (fs.existsSync(distDir)) {
+      return distDir;
+    }
+
+    // 尝试从项目根目录查找（开发环境）
+    const projectRoot = path.resolve(currentDir, '..', '..', '..');
+    const devFrontendDir = path.join(projectRoot, 'frontend', 'dist');
+
+    if (fs.existsSync(devFrontendDir)) {
+      return devFrontendDir;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 处理前端静态文件服务
+ */
+function handleFrontendStatic(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
+  const frontendDir = getFrontendDir();
+  if (!frontendDir) {
+    return false;
+  }
+
+  // 处理根路径 - 返回 index.html
+  if (url.pathname === '/' || url.pathname === '') {
+    const indexPath = path.join(frontendDir, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      const content = fs.readFileSync(indexPath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(content);
+      return true;
+    }
+  }
+
+  // 处理静态文件请求
+  const filePath = path.join(frontendDir, url.pathname);
+
+  // 安全检查：确保文件在 frontendDir 内
+  if (!filePath.startsWith(frontendDir)) {
+    return false;
+  }
+
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    const ext = path.extname(filePath);
+    const mimeTypes: Record<string, string> = {
+      '.html': 'text/html; charset=utf-8',
+      '.css': 'text/css',
+      '.js': 'application/javascript',
+      '.json': 'application/json',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+      '.otf': 'font/otf',
+    };
+
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    const content = fs.readFileSync(filePath);
+
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=3600'
+    });
+    res.end(content);
+    return true;
+  }
+
+  return false;
 }
 
 export function createGateway(
@@ -327,6 +418,14 @@ export function createGateway(
         // 404
         jsonError(res, 404, { error: 'API endpoint not found', path: url.pathname });
         return;
+      }
+
+      // ========== 前端静态文件服务 ==========
+      if (method === 'GET') {
+        const served = handleFrontendStatic(req, res, url);
+        if (served) {
+          return;
+        }
       }
 
       // ========== Gateway代理路由 ==========
@@ -530,7 +629,7 @@ export function createGateway(
         // 保存到数据库
         try {
           await insertRequestRecord(record);
-        } catch (err) {
+        } catch (err: any) {
           logger.debug(`[promptxy] Failed to save request record: ${err?.message}`);
         }
       });
@@ -580,7 +679,7 @@ export function createGateway(
 
           try {
             await insertRequestRecord(record);
-          } catch (err) {
+          } catch (err: any) {
             logger.debug(`[promptxy] Failed to save error request record: ${err?.message}`);
           }
         }

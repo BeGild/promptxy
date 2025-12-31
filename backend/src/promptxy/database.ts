@@ -31,7 +31,7 @@ function getSqlJs(): Promise<any> {
   if (!sqlJsReady) {
     sqlJsReady = initSqlJs();
   }
-  return sqlJsReady;
+  return sqlJsReady!; // 非空断言，因为上面已经赋值
 }
 
 /**
@@ -114,7 +114,8 @@ export async function initializeDatabase(): Promise<Database> {
 
   // 数据库迁移：为已有数据库添加新列
   try {
-    const tableInfo = db.exec(`PRAGMA table_info(requests)`).values;
+    const result = db.exec(`PRAGMA table_info(requests)`);
+    const tableInfo = result.length > 0 ? result[0].values : [];
 
     // 迁移 response_body 列
     const hasResponseBody = tableInfo.some((col: any[]) => col[1] === 'response_body');
@@ -240,15 +241,15 @@ export async function getUniquePaths(prefix?: string): Promise<PathsResponse> {
 
   const stmt = db.prepare(sql);
   stmt.bind(params);
-  const rows: any[][] = [];
+  const rows: { path: string }[] = [];
 
   while (stmt.step()) {
-    rows.push(stmt.getAsObject());
+    rows.push(stmt.getAsObject() as { path: string });
   }
   stmt.free();
 
   return {
-    paths: rows.map(r => (r as any).path),
+    paths: rows.map(r => r.path),
     count: rows.length,
   };
 }

@@ -1,18 +1,18 @@
 {
   "name": "promptxy",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "PromptXY - HTTP 请求代理网关，支持 AI 服务提供商的请求拦截和修改",
   "author": "ekko.bao <your.email@example.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/promptxy.git"
+    "url": "https://github.com/BeGild/promptxy.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/promptxy/issues"
+    "url": "https://github.com/BeGild/promptxy/issues"
   },
-  "homepage": "https://github.com/yourusername/promptxy#readme",
+  "homepage": "https://github.com/BeGild/promptxy#readme",
   "keywords": [
     "http-proxy",
     "ai-gateway",
@@ -21,6 +21,7 @@
     "request-interception",
     "llm-proxy"
   ],
+  "bin": "./dist/cli-entry.js",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

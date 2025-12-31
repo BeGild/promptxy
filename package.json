@@ -21,9 +21,7 @@
     "request-interception",
     "llm-proxy"
   ],
-  "bin": {
-    "promptxy": "dist/main.js"
-  },
+  "bin": "./dist/cli-entry.js",
   "files": [
     "dist",
     "README.md",
@@ -32,11 +30,12 @@
   "scripts": {
     "dev": "tsx backend/src/main.ts",
     "dev:all": "concurrently \"npm run dev\" \"cd frontend && npm run dev\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "tsc -p tsconfig.json",
+    "build": "npm run build:backend && npm run build:frontend && npm run postbuild:copy && npm run postbuild:shebang",
+    "build:backend": "tsc -p backend/tsconfig.json",
     "build:frontend": "cd frontend && npm run build && cd ..",
-    "postbuild:frontend": "mkdir -p dist/frontend && cp -r frontend/dist/* dist/frontend/",
-    "start": "node dist/main.js",
+    "postbuild:copy": "mkdir -p dist/frontend && cp -r frontend/dist/* dist/frontend/ && cp -r backend/dist/* dist/",
+    "postbuild:shebang": "sed -i '1s/.*/#!\\/usr\\/bin\\/env node/' dist/cli-entry.js && chmod +x dist/cli-entry.js",
+    "start": "node dist/cli-entry.js",
     "prepublishOnly": "npm run build",
     "test": "cd backend && npm run test",
     "lint": "eslint .",
