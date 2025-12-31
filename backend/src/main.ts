@@ -3,13 +3,18 @@ import { createGateway } from './promptxy/gateway.js';
 import { initializeDatabase } from './promptxy/database.js';
 import { createLogger } from './promptxy/logger.js';
 import { mkdir } from 'node:fs/promises';
-import { parseCliArgs, printHelp } from './promptxy/cli.js';
+import { parseCliArgs, printHelp, printVersion } from './promptxy/cli.js';
 
 async function main() {
   const cliOptions = parseCliArgs();
 
   if (cliOptions.help) {
     printHelp();
+    process.exit(0);
+  }
+
+  if (cliOptions.version) {
+    printVersion();
     process.exit(0);
   }
 

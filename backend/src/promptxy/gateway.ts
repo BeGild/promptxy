@@ -23,7 +23,7 @@ import {
 } from './types.js';
 import { insertRequestRecord, getFilteredPaths, shouldFilterPath } from './database.js';
 import { broadcastRequest, setSSEConnections } from './api-handlers.js';
-import { Database } from 'sqlite';
+import type { Database } from 'sql.js';
 import {
   handleSSE,
   handleGetRequests,
@@ -527,10 +527,12 @@ export function createGateway(
           error: undefined,
         };
 
-        // 异步保存到数据库
-        insertRequestRecord(record).catch(err => {
+        // 保存到数据库
+        try {
+          await insertRequestRecord(record);
+        } catch (err) {
           logger.debug(`[promptxy] Failed to save request record: ${err?.message}`);
-        });
+        }
       });
 
       // SSE 广播
@@ -576,9 +578,11 @@ export function createGateway(
             error: error,
           };
 
-          insertRequestRecord(record).catch(err => {
+          try {
+            await insertRequestRecord(record);
+          } catch (err) {
             logger.debug(`[promptxy] Failed to save error request record: ${err?.message}`);
-          });
+          }
         }
 
         const sseData: SSERequestEvent = {

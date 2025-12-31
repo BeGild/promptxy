@@ -1,11 +1,11 @@
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import initSqlJs, { Database } from 'sql.js';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { mkdir } from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { RequestRecord, RequestListResponse, PathsResponse } from './types.js';
 
 let dbInstance: Database | null = null;
+let sqlJsReady: Promise<any> | null = null;
 
 /**
  * 获取数据库文件路径
@@ -25,6 +25,16 @@ function getDataDir(): string {
 }
 
 /**
+ * 初始化 SQL.js
+ */
+function getSqlJs(): Promise<any> {
+  if (!sqlJsReady) {
+    sqlJsReady = initSqlJs();
+  }
+  return sqlJsReady;
+}
+
+/**
  * 初始化数据库
  */
 export async function initializeDatabase(): Promise<Database> {
@@ -36,16 +46,25 @@ export async function initializeDatabase(): Promise<Database> {
   const dbPath = getDbPath();
 
   // 确保目录存在
-  await mkdir(dataDir, { recursive: true });
+  await fs.mkdir(dataDir, { recursive: true });
 
-  // 打开数据库
-  dbInstance = await open({
-    filename: dbPath,
-    driver: sqlite3.Database,
-  });
+  // 初始化 SQL.js
+  const SQL = await getSqlJs();
+
+  // 尝试读取现有数据库，或创建新数据库
+  let db: Database;
+  try {
+    const buffer = await fs.readFile(dbPath);
+    db = new SQL.Database(buffer);
+  } catch {
+    // 文件不存在，创建新数据库
+    db = new SQL.Database();
+  }
+
+  dbInstance = db;
 
   // 初始化表结构
-  await dbInstance.exec(`
+  db.exec(`
     -- 请求历史表
     CREATE TABLE IF NOT EXISTS requests (
       id TEXT PRIMARY KEY,
@@ -95,31 +114,44 @@ export async function initializeDatabase(): Promise<Database> {
 
   // 数据库迁移：为已有数据库添加新列
   try {
-    // 检查列是否存在
-    const tableInfo = await dbInstance.all(`PRAGMA table_info(requests)`);
+    const tableInfo = db.exec(`PRAGMA table_info(requests)`).values;
 
     // 迁移 response_body 列
-    const hasResponseBody = tableInfo.some((col: any) => col.name === 'response_body');
+    const hasResponseBody = tableInfo.some((col: any[]) => col[1] === 'response_body');
     if (!hasResponseBody) {
-      await dbInstance.exec(`ALTER TABLE requests ADD COLUMN response_body TEXT`);
+      db.exec(`ALTER TABLE requests ADD COLUMN response_body TEXT`);
     }
 
     // 迁移 request_size 列
-    const hasRequestSize = tableInfo.some((col: any) => col.name === 'request_size');
+    const hasRequestSize = tableInfo.some((col: any[]) => col[1] === 'request_size');
     if (!hasRequestSize) {
-      await dbInstance.exec(`ALTER TABLE requests ADD COLUMN request_size INTEGER`);
+      db.exec(`ALTER TABLE requests ADD COLUMN request_size INTEGER`);
     }
 
     // 迁移 response_size 列
-    const hasResponseSize = tableInfo.some((col: any) => col.name === 'response_size');
+    const hasResponseSize = tableInfo.some((col: any[]) => col[1] === 'response_size');
     if (!hasResponseSize) {
-      await dbInstance.exec(`ALTER TABLE requests ADD COLUMN response_size INTEGER`);
+      db.exec(`ALTER TABLE requests ADD COLUMN response_size INTEGER`);
     }
   } catch {
     // 忽略迁移错误，可能是新数据库
   }
 
   return dbInstance;
+}
+
+/**
+ * 保存数据库到文件
+ */
+export async function saveDatabase(): Promise<void> {
+  if (!dbInstance) {
+    return;
+  }
+
+  const dbPath = getDbPath();
+  const data = dbInstance.export();
+  const buffer = Buffer.from(data);
+  await fs.writeFile(dbPath, buffer);
 }
 
 /**
@@ -139,7 +171,7 @@ export function getDatabase(): Database {
 export async function insertRequestRecord(record: RequestRecord): Promise<void> {
   const db = getDatabase();
 
-  await db.run(
+  db.run(
     `INSERT INTO requests (
       id, timestamp, client, path, method,
       original_body, modified_body, request_size, response_size, matched_rules,
@@ -165,14 +197,17 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
   );
 
   // 检查是否需要清理旧记录
-  const maxHistory = await getSetting('max_history');
+  const maxHistory = getSetting('max_history');
   const keep = maxHistory ? Number(maxHistory) : 1000;
-  const countResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
-  const total = countResult?.count ?? 0;
+  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
+  countStmt.step();
+  const countResult = countStmt.getAsObject();
+  countStmt.free();
+  const total = (countResult as any).count ?? 0;
 
   if (total > keep) {
     // 删除旧数据，保留最新的 keep 条
-    await db.run(
+    db.run(
       `DELETE FROM requests
        WHERE id NOT IN (
          SELECT id FROM requests
@@ -182,6 +217,9 @@ export async function insertRequestRecord(record: RequestRecord): Promise<void> 
       [keep],
     );
   }
+
+  // 保存到文件
+  await saveDatabase();
 }
 
 /**
@@ -191,7 +229,7 @@ export async function getUniquePaths(prefix?: string): Promise<PathsResponse> {
   const db = getDatabase();
 
   let sql = 'SELECT DISTINCT path FROM requests';
-  const params: any[] = [];
+  const params: (string | number)[] = [];
 
   if (prefix) {
     sql += ' WHERE path LIKE ?';
@@ -200,10 +238,17 @@ export async function getUniquePaths(prefix?: string): Promise<PathsResponse> {
 
   sql += ' ORDER BY path ASC';
 
-  const rows = await db.all<Array<{ path: string }>>(sql, params);
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const rows: any[][] = [];
+
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject());
+  }
+  stmt.free();
 
   return {
-    paths: rows.map(r => r.path),
+    paths: rows.map(r => (r as any).path),
     count: rows.length,
   };
 }
@@ -246,28 +291,33 @@ export async function getRequestList(options: {
     ];
   }
 
+  // 构建完整查询
+  const baseParams = [
+    options.client ?? null,
+    options.client ?? null,
+    options.startTime ?? null,
+    options.startTime ?? null,
+    options.endTime ?? null,
+    options.endTime ?? null,
+    ...searchParams,
+  ];
+
   // 计算总数
-  const countResult = await db.get<{ count: number }>(
+  const countStmt = db.prepare(
     `SELECT COUNT(*) as count FROM requests
      WHERE (? IS NULL OR client = ?)
        AND (? IS NULL OR timestamp >= ?)
        AND (? IS NULL OR timestamp <= ?)
        AND ${searchCondition}`,
-    [
-      options.client ?? null,
-      options.client ?? null,
-      options.startTime ?? null,
-      options.startTime ?? null,
-      options.endTime ?? null,
-      options.endTime ?? null,
-      ...searchParams,
-    ],
   );
-  const total = countResult?.count ?? 0;
+  countStmt.bind(baseParams);
+  countStmt.step();
+  const countResult = countStmt.getAsObject();
+  countStmt.free();
+  const total = (countResult as any).count ?? 0;
 
   // 获取分页数据
-  const rows = await db.all<any[]>(
-    `
+  const selectStmt = db.prepare(`
      SELECT
        id, timestamp, client, path, method,
        request_size, response_size, matched_rules, response_status, duration_ms, error
@@ -277,22 +327,18 @@ export async function getRequestList(options: {
        AND (? IS NULL OR timestamp <= ?)
        AND ${searchCondition}
      ORDER BY timestamp DESC
-     LIMIT ? OFFSET ?`,
-    [
-      options.client ?? null,
-      options.client ?? null,
-      options.startTime ?? null,
-      options.startTime ?? null,
-      options.endTime ?? null,
-      options.endTime ?? null,
-      ...searchParams,
-      limit,
-      offset,
-    ],
+     LIMIT ? OFFSET ?`
   );
 
+  selectStmt.bind([...baseParams, limit, offset]);
+  const rows: any[] = [];
+  while (selectStmt.step()) {
+    rows.push(selectStmt.getAsObject());
+  }
+  selectStmt.free();
+
   // 解析 matched_rules 为数组
-  const items = rows.map(row => ({
+  const items = rows.map((row: any) => ({
     id: row.id,
     timestamp: row.timestamp,
     client: row.client,
@@ -320,28 +366,33 @@ export async function getRequestList(options: {
 export async function getRequestDetail(id: string): Promise<RequestRecord | null> {
   const db = getDatabase();
 
-  const row = await db.get<any>(`SELECT * FROM requests WHERE id = ?`, [id]);
-
-  if (!row) {
+  const stmt = db.prepare(`SELECT * FROM requests WHERE id = ?`);
+  stmt.bind([id]);
+  const hasRow = stmt.step();
+  if (!hasRow) {
+    stmt.free();
     return null;
   }
 
+  const row = stmt.getAsObject();
+  stmt.free();
+
   return {
-    id: row.id,
-    timestamp: row.timestamp,
-    client: row.client,
-    path: row.path,
-    method: row.method,
-    originalBody: row.original_body,
-    modifiedBody: row.modified_body,
-    requestSize: row.request_size ?? undefined,
-    responseSize: row.response_size ?? undefined,
-    matchedRules: row.matched_rules,
-    responseStatus: row.response_status ?? undefined,
-    durationMs: row.duration_ms ?? undefined,
-    responseHeaders: row.response_headers ?? undefined,
-    responseBody: row.response_body ?? undefined,
-    error: row.error ?? undefined,
+    id: (row as any).id,
+    timestamp: (row as any).timestamp,
+    client: (row as any).client,
+    path: (row as any).path,
+    method: (row as any).method,
+    originalBody: (row as any).original_body,
+    modifiedBody: (row as any).modified_body,
+    requestSize: (row as any).request_size ?? undefined,
+    responseSize: (row as any).response_size ?? undefined,
+    matchedRules: (row as any).matched_rules,
+    responseStatus: (row as any).response_status ?? undefined,
+    durationMs: (row as any).duration_ms ?? undefined,
+    responseHeaders: (row as any).response_headers ?? undefined,
+    responseBody: (row as any).response_body ?? undefined,
+    error: (row as any).error ?? undefined,
   };
 }
 
@@ -351,16 +402,20 @@ export async function getRequestDetail(id: string): Promise<RequestRecord | null
 export async function cleanupOldRequests(keep: number = 100): Promise<number> {
   const db = getDatabase();
 
-  // 获取要删除的记录数
-  const countResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
-  const total = countResult?.count ?? 0;
+  // 获取要删除的记录数 - 使用 prepare 而不是 exec
+  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
+  countStmt.step();
+  const countResult = countStmt.getAsObject();
+  countStmt.free();
+  const total = (countResult as any).count ?? 0;
 
   if (total <= keep) {
+    await saveDatabase();
     return 0;
   }
 
   // 删除旧数据
-  const result = await db.run(
+  db.run(
     `DELETE FROM requests
      WHERE id NOT IN (
        SELECT id FROM requests
@@ -370,7 +425,9 @@ export async function cleanupOldRequests(keep: number = 100): Promise<number> {
     [keep],
   );
 
-  return result.changes ?? 0;
+  await saveDatabase();
+
+  return total - keep;
 }
 
 /**
@@ -383,25 +440,31 @@ export async function getRequestStats(): Promise<{
 }> {
   const db = getDatabase();
 
-  // 总数
-  const totalResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
-  const total = totalResult?.count ?? 0;
+  // 总数 - 使用 prepare 而不是 exec
+  const totalStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
+  totalStmt.step();
+  const totalResult = totalStmt.getAsObject();
+  totalStmt.free();
+  const total = (totalResult as any).count ?? 0;
 
   // 按客户端分组
-  const clientRows = await db.all<Array<{ client: string; count: number }>>(
-    `SELECT client, COUNT(*) as count FROM requests GROUP BY client`,
-  );
+  const clientStmt = db.prepare(`SELECT client, COUNT(*) as count FROM requests GROUP BY client`);
   const byClient: Record<string, number> = {};
-  for (const row of clientRows) {
+  while (clientStmt.step()) {
+    const row = clientStmt.getAsObject() as any;
     byClient[row.client] = row.count;
   }
+  clientStmt.free();
 
   // 最近24小时
-  const recentResult = await db.get<{ count: number }>(
-    `SELECT COUNT(*) as count FROM requests WHERE timestamp > ?`,
-    [Date.now() - 24 * 60 * 60 * 1000],
+  const recentStmt = db.prepare(
+    `SELECT COUNT(*) as count FROM requests WHERE timestamp > ?`
   );
-  const recent = recentResult?.count ?? 0;
+  recentStmt.bind([Date.now() - 24 * 60 * 60 * 1000]);
+  recentStmt.step();
+  const recentResult = recentStmt.getAsObject() as any;
+  recentStmt.free();
+  const recent = recentResult.count ?? 0;
 
   return { total, byClient, recent };
 }
@@ -412,9 +475,15 @@ export async function getRequestStats(): Promise<{
 export async function deleteRequest(id: string): Promise<boolean> {
   const db = getDatabase();
 
-  const result = await db.run(`DELETE FROM requests WHERE id = ?`, [id]);
+  const stmt = db.prepare(`DELETE FROM requests WHERE id = ?`);
+  stmt.bind([id]);
+  stmt.step();
+  const changes = db.getRowsModified();
+  stmt.free();
 
-  return (result.changes ?? 0) > 0;
+  await saveDatabase();
+
+  return changes > 0;
 }
 
 /**
@@ -428,13 +497,17 @@ export async function getDatabaseInfo(): Promise<{
   const dbPath = getDbPath();
   const db = getDatabase();
 
-  const countResult = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM requests`);
+  // 使用 prepare 而不是 exec
+  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
+  countStmt.step();
+  const countResult = countStmt.getAsObject();
+  countStmt.free();
+  const recordCount = (countResult as any).count ?? 0;
 
   // 尝试获取文件大小
   let size = 0;
   try {
-    const { stat } = await import('node:fs/promises');
-    const stats = await stat(dbPath);
+    const stats = await fs.stat(dbPath);
     size = stats.size;
   } catch {
     // 如果文件不存在或无法访问，返回 0
@@ -443,31 +516,38 @@ export async function getDatabaseInfo(): Promise<{
   return {
     path: dbPath,
     size,
-    recordCount: countResult?.count ?? 0,
+    recordCount,
   };
 }
 
 /**
  * 获取单个设置值
  */
-export async function getSetting(key: string): Promise<string | null> {
+export function getSetting(key: string): string | null {
   const db = getDatabase();
-  const result = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [key]);
-  return result?.value ?? null;
+  const stmt = db.prepare(`SELECT value FROM settings WHERE key = ?`);
+  stmt.bind([key]);
+  if (stmt.step()) {
+    const result = stmt.getAsObject() as any;
+    stmt.free();
+    return result.value ?? null;
+  }
+  stmt.free();
+  return null;
 }
 
 /**
  * 获取所有设置
  */
-export async function getAllSettings(): Promise<Record<string, string>> {
+export function getAllSettings(): Record<string, string> {
   const db = getDatabase();
-  const rows = await db.all<Array<{ key: string; value: string }>>(
-    `SELECT key, value FROM settings`,
-  );
+  const stmt = db.prepare(`SELECT key, value FROM settings`);
   const settings: Record<string, string> = {};
-  for (const row of rows) {
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as any;
     settings[row.key] = row.value;
   }
+  stmt.free();
   return settings;
 }
 
@@ -476,27 +556,33 @@ export async function getAllSettings(): Promise<Record<string, string>> {
  */
 export async function updateSetting(key: string, value: string): Promise<void> {
   const db = getDatabase();
-  await db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
+  db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
+  await saveDatabase();
 }
 
 /**
  * 获取过滤路径列表
  * 返回需要被过滤掉的路径数组（不记录到数据库）
  */
-export async function getFilteredPaths(): Promise<string[]> {
+export function getFilteredPaths(): string[] {
   const db = getDatabase();
-  const result = await db.get<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, [
-    'filtered_paths',
-  ]);
-  if (!result?.value) {
-    return [];
+  const stmt = db.prepare(`SELECT value FROM settings WHERE key = ?`);
+  stmt.bind(['filtered_paths']);
+  if (stmt.step()) {
+    const result = stmt.getAsObject() as any;
+    stmt.free();
+    if (!result?.value) {
+      return [];
+    }
+    try {
+      const paths = JSON.parse(result.value);
+      return Array.isArray(paths) ? paths : [];
+    } catch {
+      return [];
+    }
   }
-  try {
-    const paths = JSON.parse(result.value);
-    return Array.isArray(paths) ? paths : [];
-  } catch {
-    return [];
-  }
+  stmt.free();
+  return [];
 }
 
 /**
@@ -528,10 +614,18 @@ export function shouldFilterPath(path: string, filteredPaths: string[]): boolean
 export async function resetDatabaseForTest(): Promise<void> {
   if (dbInstance) {
     try {
-      await dbInstance.close();
+      dbInstance.close();
     } catch {
       // 忽略关闭错误
     }
     dbInstance = null;
+  }
+
+  // 删除数据库文件以确保完全干净的状态
+  const dbPath = getDbPath();
+  try {
+    await fs.unlink(dbPath);
+  } catch {
+    // 文件不存在，忽略
   }
 }

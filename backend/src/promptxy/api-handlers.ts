@@ -1,7 +1,7 @@
 import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Database } from 'sqlite';
+import type { Database } from 'sql.js';
 import {
   PromptxyConfig,
   PromptxyRule,
@@ -455,7 +455,7 @@ export async function handleCleanup(
     if (keepParam) {
       keep = Number(keepParam) || 100;
     } else {
-      const maxHistory = await getSetting('max_history');
+      const maxHistory = getSetting('max_history');
       keep = maxHistory ? Number(maxHistory) : 100;
     }
 
@@ -482,7 +482,7 @@ export async function handleGetSettings(
   db: Database,
 ): Promise<void> {
   try {
-    const settings = await getAllSettings();
+    const settings = getAllSettings();
     sendJson(res, 200, { success: true, settings });
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get settings', message: error?.message });

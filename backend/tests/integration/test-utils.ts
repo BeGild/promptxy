@@ -4,9 +4,8 @@
  */
 
 import * as http from 'node:http';
-import { Database } from 'sqlite';
+import type { Database } from 'sql.js';
 import { createGateway } from '../../src/promptxy/gateway.js';
-import { createApiServer } from '../../src/promptxy/api-server.js';
 import {
   initializeDatabase,
   resetDatabaseForTest,
@@ -32,10 +31,8 @@ const TEST_CONFIG_PATH = path.join(TEST_CONFIG_DIR, 'config-test.json');
  * 测试服务器容器
  */
 export interface TestServerContainer {
-  gatewayServer: http.Server;
-  apiServer: http.Server;
-  gatewayPort: number;
-  apiPort: number;
+  server: http.Server;
+  port: number;
   shutdown: () => Promise<void>;
 }
 
@@ -47,10 +44,6 @@ export async function createTestConfig(
 ): Promise<PromptxyConfig> {
   const defaultConfig: PromptxyConfig = {
     listen: {
-      host: '127.0.0.1',
-      port: 0, // 使用随机端口
-    },
-    api: {
       host: '127.0.0.1',
       port: 0, // 使用随机端口
     },
@@ -144,17 +137,14 @@ export async function startTestServers(
   config: PromptxyConfig,
   db: Database,
 ): Promise<TestServerContainer> {
-  // 创建网关服务器
-  const gatewayServer = createGateway(config);
-
-  // 创建 API 服务器
-  const apiServer = createApiServer(db, config, config.rules);
+  // 创建统一服务器（Gateway + API）
+  const server = createGateway(config, db, config.rules);
 
   // 启动服务器并获取实际端口
-  const gatewayPort = await new Promise<number>((resolve, reject) => {
+  const port = await new Promise<number>((resolve, reject) => {
     try {
-      const server = gatewayServer.listen(0, config.listen.host, () => {
-        const addr = server.address();
+      const s = server.listen(0, config.listen.host, () => {
+        const addr = s.address();
         if (typeof addr === 'object' && addr !== null) {
           resolve(addr.port);
         } else {
@@ -162,60 +152,23 @@ export async function startTestServers(
         }
       });
       // Add error handling
-      gatewayServer.on('error', reject);
-    } catch (error) {
-      reject(error);
-    }
-  });
-
-  const apiPort = await new Promise<number>((resolve, reject) => {
-    try {
-      const server = apiServer.listen(0, config.api.host, () => {
-        const addr = server.address();
-        if (typeof addr === 'object' && addr !== null) {
-          resolve(addr.port);
-        } else {
-          resolve(config.api.port);
-        }
-      });
-      // Add error handling
-      apiServer.on('error', reject);
+      server.on('error', reject);
     } catch (error) {
       reject(error);
     }
   });
 
   // 更新配置中的实际端口
-  config.listen.port = gatewayPort;
-  config.api.port = apiPort;
+  config.listen.port = port;
 
   return {
-    gatewayServer,
-    apiServer,
-    gatewayPort,
-    apiPort,
+    server,
+    port,
     shutdown: async () => {
-      // 关闭 SSE 连接（如果存在）
-      try {
-        const { sseConnections } = await import('../../src/promptxy/api-server.js');
-        // Note: sseConnections is not exported, so we can't access it directly
-        // This is handled by the server itself
-      } catch {
-        // Ignore
-      }
-
       // 优雅关闭服务器
       await new Promise<void>(resolve => {
-        if (gatewayServer.listening) {
-          gatewayServer.close(() => resolve());
-        } else {
-          resolve();
-        }
-      });
-
-      await new Promise<void>(resolve => {
-        if (apiServer.listening) {
-          apiServer.close(() => resolve());
+        if (server.listening) {
+          server.close(() => resolve());
         } else {
           resolve();
         }
