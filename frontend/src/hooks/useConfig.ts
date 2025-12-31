@@ -4,10 +4,7 @@ import {
   importConfig,
   downloadConfig,
   uploadConfig,
-  fetchUpstreams,
-  updateUpstreams,
 } from '@/api/config';
-import type { UpstreamsUpdateRequest } from '@/types/api';
 
 /**
  * 导出配置的 Hook
@@ -80,33 +77,3 @@ export function useConfig() {
   };
 }
 
-/**
- * 获取上游配置的 Hook
- */
-export function useUpstreams() {
-  return useQuery({
-    queryKey: ['upstreams'],
-    queryFn: async () => {
-      return await fetchUpstreams();
-    },
-    staleTime: 1000 * 60 * 5, // 5分钟
-    refetchOnWindowFocus: false,
-  });
-}
-
-/**
- * 更新上游配置的 Hook
- */
-export function useUpdateUpstreams() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (config: UpstreamsUpdateRequest) => {
-      return await updateUpstreams(config);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['upstreams'] });
-      queryClient.invalidateQueries({ queryKey: ['config'] });
-    },
-  });
-}

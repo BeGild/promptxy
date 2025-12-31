@@ -230,54 +230,6 @@ data: {
 ```
 
 ---
-
-## 🔧 技术栈详解
-
-### 后端技术栈
-
-```json
-{
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "sqlite": "^4.2.1",
-    "sqlite3": "^5.1.7"
-  },
-  "devDependencies": {
-    "@types/node": "^24.10.4",
-    "typescript": "^5.9.2"
-  }
-}
-```
-
-### 前端技术栈
-
-```json
-{
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@heroui/react": "^2.8.6",
-    "@heroui/system": "^2.2.6",
-    "framer-motion": "^11.15.0",
-    "axios": "^1.7.7",
-    "@tanstack/react-query": "^5.56.2"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.3",
-    "typescript": "^5.9.2",
-    "vite": "^6.0.7",
-    "tailwindcss": "^3.4.14",
-    "postcss": "^8.4.47"
-  }
-}
-```
-
----
-
 ## 📊 数据模型
 
 ### 1. 规则 (Rule)

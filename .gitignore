@@ -11,3 +11,5 @@ refence/
 
 # Local config
 promptxy.config.json
+
+package-lock.json

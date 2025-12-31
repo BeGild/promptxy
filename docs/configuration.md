@@ -6,16 +6,6 @@
 
 ## 📋 配置文件位置
 
-### 简化版（npm 包）
-
-按以下顺序查找配置文件：
-
-1. **环境变量指定**：`PROMPTXY_CONFIG=/path/to/config.json`
-2. **当前目录**：`./promptxy.config.json`
-3. **用户主目录**：`~/.promptxy/config.json`
-
-### 完整版（带 Web UI）
-
 支持项目配置和全局配置合并，查找顺序：
 
 1. **环境变量指定**：`PROMPTXY_CONFIG=/path/to/config.json`（指定全局配置路径）
@@ -27,8 +17,6 @@
 ---
 
 ## 📝 配置文件结构
-
-### 完整版配置（带 Web UI）
 
 ```json
 {
@@ -58,30 +46,6 @@
   "storage": {
     "maxHistory": 1000
   },
-  "debug": false
-}
-```
-
-### 简化版配置（npm 包）
-
-```json
-{
-  "listen": {
-    "host": "127.0.0.1",
-    "port": 7070
-  },
-  "upstreams": {
-    "anthropic": "https://api.anthropic.com",
-    "openai": "https://api.openai.com",
-    "gemini": "https://generativelanguage.googleapis.com"
-  },
-  "rules": [
-    {
-      "id": "example-rule",
-      "when": { "client": "claude", "field": "system" },
-      "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
-    }
-  ],
   "debug": false
 }
 ```
@@ -121,7 +85,7 @@
 
 ---
 
-### suppliers（完整版专用）
+### suppliers
 
 **类型**：`array<Supplier>`
 **必需**：是
