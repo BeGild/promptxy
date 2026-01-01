@@ -221,6 +221,7 @@ export class ClaudeMessagesAdapter implements RequestAdapter<ClaudeMessagesReque
       model: request.model,
       messageCount: request.messages?.length ?? 0,
       toolCount: request.tools?.length ?? 0,
+      client: 'claude',
     };
 
     // 计算 system prompt 长度

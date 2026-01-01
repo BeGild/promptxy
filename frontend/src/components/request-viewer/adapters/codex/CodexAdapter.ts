@@ -241,6 +241,7 @@ export class CodexAdapter implements RequestAdapter<CodexRequest> {
     const metadata: RequestMetadata = {
       model: request.model,
       toolCount: Array.isArray(request.tools) ? request.tools.length : 0,
+      client: 'codex',
     };
 
     // 计算 instructions 长度

@@ -181,6 +181,7 @@ const RequestDetailPanel: React.FC<RequestDetailPanelProps> = ({
       <UnifiedContentView
         viewTree={viewTree}
         originalTree={originalTree}
+        client={metadata?.client}
         onSelectionBasedCreate={onSelectionBasedCreate}
         onBasedOnRequestCreate={onBasedOnRequestCreate}
       />

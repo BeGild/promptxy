@@ -42,12 +42,15 @@ import { isNumericArray } from '../../utils/arrayHelper';
 import { MatchModeSelector } from '@/components/rules/MatchModeSelector';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 import type { ListImperativeAPI } from 'react-window';
+import type { PromptxyClient } from '@/types';
 
 interface UnifiedContentViewProps {
   /** 视图树根节点（修改后请求） */
   viewTree: ViewNode;
   /** 原始请求的视图树（用于差异对比，可选） */
   originalTree?: ViewNode;
+  /** 客户端类型（用于 token 计算） */
+  client?: string;
   /** 基于选中内容创建规则的回调 */
   onSelectionBasedCreate?: (
     selectedText: string,
@@ -113,7 +116,7 @@ function getRowHeightPx(): number {
  * - 支持差异对比模式切换
  */
 const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
-  ({ viewTree, originalTree, onSelectionBasedCreate, onBasedOnRequestCreate }) => {
+  ({ viewTree, originalTree, client, onSelectionBasedCreate, onBasedOnRequestCreate }) => {
     // 状态：内容详情模式
     const [selectedNode, setSelectedNode] = useState<ViewNode>(viewTree);
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -342,7 +345,11 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
         <div className="flex items-center justify-between border-b border-brand-primary/30 dark:border-brand-primary/20 bg-brand-primary/10 dark:bg-brand-primary/20 px-4 py-1.5 shrink-0">
           {/* 左侧：面包屑路径 */}
           <div className="flex-1 overflow-hidden min-w-0">
-            <PathBreadcrumb path={currentPath} />
+            <PathBreadcrumb
+              path={currentPath}
+              node={(isDiffMode ? diffSelectedNode : selectedNode) ?? undefined}
+              client={client as PromptxyClient}
+            />
           </div>
 
           {/* 右侧：按钮组 */}

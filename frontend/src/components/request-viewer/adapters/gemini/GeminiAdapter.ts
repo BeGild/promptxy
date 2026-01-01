@@ -345,6 +345,7 @@ export class GeminiAdapter implements RequestAdapter<GeminiRequest> {
       model: request.model,
       messageCount: request.contents?.length ?? 0,
       toolCount: 0,
+      client: 'gemini',
     };
 
     // 计算 system instruction 长度
