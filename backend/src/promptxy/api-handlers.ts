@@ -1,7 +1,7 @@
 import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { Database } from 'sql.js';
+import type { FileSystemStorage } from './database.js';
 import {
   PromptxyConfig,
   PromptxyRule,
@@ -119,7 +119,7 @@ export async function handleGetRequests(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   url: URL,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const limit = Number(url.searchParams.get('limit')) || 50;
@@ -151,7 +151,7 @@ export async function handleGetPaths(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   url: URL,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const prefix = url.searchParams.get('prefix') || undefined;
@@ -169,7 +169,7 @@ export async function handleGetRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   id: string,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const record = await getRequestDetail(id);
@@ -453,7 +453,7 @@ export async function handleCleanup(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   url: URL,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     // 优先使用传入的 keep 参数，否则使用数据库中的 max_history 设置
@@ -486,7 +486,7 @@ export async function handleCleanup(
 export async function handleGetSettings(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const settings = getAllSettings();
@@ -502,7 +502,7 @@ export async function handleGetSettings(
 export async function handleUpdateSettings(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
@@ -531,7 +531,7 @@ export async function handleDeleteRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   id: string,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const success = await deleteRequest(id);
@@ -564,7 +564,7 @@ export function handleHealth(req: http.IncomingMessage, res: http.ServerResponse
 export async function handleStats(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const stats = await getRequestStats();
@@ -585,7 +585,7 @@ export async function handleStats(
 export async function handleDatabaseInfo(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  db: Database,
+  db: FileSystemStorage,
 ): Promise<void> {
   try {
     const info = await getDatabaseInfo();

@@ -26,7 +26,7 @@ import {
 } from './types.js';
 import { insertRequestRecord, getFilteredPaths, shouldFilterPath } from './database.js';
 import { broadcastRequest, setSSEConnections } from './api-handlers.js';
-import type { Database } from 'sql.js';
+import type { FileSystemStorage } from './database.js';
 import {
   handleSSE,
   handleGetRequests,
@@ -252,7 +252,7 @@ function handleFrontendStatic(req: http.IncomingMessage, res: http.ServerRespons
 
 export function createGateway(
   config: PromptxyConfig,
-  db: Database,
+  db: FileSystemStorage,
   currentRules: PromptxyRule[],
 ): http.Server {
   const logger = createLogger({ debug: config.debug });

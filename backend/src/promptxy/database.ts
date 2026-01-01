@@ -1,261 +1,989 @@
-import initSqlJs, { Database } from 'sql.js';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
+import * as yaml from 'js-yaml';
 import { RequestRecord, RequestListResponse, PathsResponse } from './types.js';
 
-let dbInstance: Database | null = null;
-let sqlJsReady: Promise<any> | null = null;
+// ============================================================
+// 类型定义
+// ============================================================
 
 /**
- * 获取数据库文件路径
+ * 请求索引结构（内存中的轻量级记录）
  */
-function getDbPath(): string {
-  const homeDir = os.homedir();
-  const dataDir = path.join(homeDir, '.local', 'promptxy');
-  return path.join(dataDir, 'promptxy.db');
+interface RequestIndex {
+  id: string;
+  timestamp: number;
+  client: string;
+  path: string;
+  method: string;
+  requestSize?: number;
+  responseSize?: number;
+  responseStatus?: number;
+  durationMs?: number;
+  error?: string;
+  matchedRulesBrief: string[];
 }
 
 /**
- * 获取数据目录路径
+ * 请求文件内容（完整数据）
  */
-function getDataDir(): string {
-  const homeDir = os.homedir();
-  return path.join(homeDir, '.local', 'promptxy');
+interface RequestFile {
+  id: string;
+  timestamp: number;
+  client: string;
+  path: string;
+  method: string;
+  requestSize?: number;
+  responseSize?: number;
+  responseStatus?: number;
+  durationMs?: number;
+  responseHeaders?: string;
+  originalBody: string;
+  modifiedBody: string;
+  responseBody?: string;
+  matchedRules: string;
+  error?: string;
 }
 
 /**
- * 初始化 SQL.js
+ * 统计缓存结构
  */
-function getSqlJs(): Promise<any> {
-  if (!sqlJsReady) {
-    sqlJsReady = initSqlJs();
-  }
-  return sqlJsReady!; // 非空断言，因为上面已经赋值
+interface StatsCache {
+  byClient: Record<string, number>;
+  lastCleanup: number;
 }
 
+// ============================================================
+// LRU 缓存实现
+// ============================================================
+
 /**
- * 初始化数据库
+ * LRU (Least Recently Used) 缓存
+ * 用于缓存最近访问的请求详情文件
  */
-export async function initializeDatabase(): Promise<Database> {
-  if (dbInstance) {
-    return dbInstance;
+class LRUCache<K, V> {
+  private cache: Map<K, V>;
+  private maxSize: number;
+
+  constructor(maxSize: number = 50) {
+    this.cache = new Map();
+    this.maxSize = maxSize;
   }
 
-  const dataDir = getDataDir();
-  const dbPath = getDbPath();
-
-  // 确保目录存在
-  await fs.mkdir(dataDir, { recursive: true });
-
-  // 初始化 SQL.js
-  const SQL = await getSqlJs();
-
-  // 尝试读取现有数据库，或创建新数据库
-  let db: Database;
-  try {
-    const buffer = await fs.readFile(dbPath);
-    db = new SQL.Database(buffer);
-  } catch {
-    // 文件不存在，创建新数据库
-    db = new SQL.Database();
+  /**
+   * 获取缓存值
+   */
+  get(key: K): V | undefined {
+    if (!this.cache.has(key)) {
+      return undefined;
+    }
+    // 重新插入以更新访问顺序
+    const value = this.cache.get(key)!;
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
   }
 
-  dbInstance = db;
+  /**
+   * 设置缓存值
+   */
+  set(key: K, value: V): void {
+    // 删除旧值（如果存在）
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+    // 添加新值
+    this.cache.set(key, value);
+    // 如果超过最大大小，删除最旧的条目
+    if (this.cache.size > this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+  }
 
-  // 初始化表结构
-  db.exec(`
-    -- 请求历史表
-    CREATE TABLE IF NOT EXISTS requests (
-      id TEXT PRIMARY KEY,
-      timestamp INTEGER NOT NULL,
-      client TEXT NOT NULL,
-      path TEXT NOT NULL,
-      method TEXT NOT NULL,
+  /**
+   * 删除缓存值
+   */
+  delete(key: K): boolean {
+    return this.cache.delete(key);
+  }
 
-      -- 请求体（JSON字符串）
-      original_body TEXT NOT NULL,
-      modified_body TEXT NOT NULL,
+  /**
+   * 清空缓存
+   */
+  clear(): void {
+    this.cache.clear();
+  }
 
-      -- 请求/响应大小（字节）
-      request_size INTEGER,
-      response_size INTEGER,
+  /**
+   * 获取缓存大小
+   */
+  get size(): number {
+    return this.cache.size;
+  }
+}
 
-      -- 匹配规则（JSON数组字符串）
-      matched_rules TEXT NOT NULL,
+// ============================================================
+// 文件系统存储实现
+// ============================================================
 
-      -- 响应信息
-      response_status INTEGER,
-      duration_ms INTEGER,
-      response_headers TEXT,
-      response_body TEXT,
-      error TEXT
+class FileSystemStorage {
+  // 数据目录
+  private dataDir: string;
+  private requestsDir: string;
+  private indexesDir: string;
+  private settingsPath: string;
+  private timestampIndexPath: string;
+  private pathsIndexPath: string;
+  private statsCachePath: string;
+
+  // 内存索引
+  private timeIndex: RequestIndex[] = []; // 按时间戳倒序排列
+  private pathCache: Set<string> = new Set(); // 唯一路径缓存
+
+  // LRU 缓存
+  private detailCache: LRUCache<string, RequestRecord>;
+
+  // 统计缓存
+  private statsCache: StatsCache = {
+    byClient: {},
+    lastCleanup: 0,
+  };
+
+  // 默认设置
+  private defaultSettings: Record<string, string> = {
+    max_history: '1000',
+    auto_cleanup: 'true',
+    cleanup_interval_hours: '1',
+    filtered_paths: '[]',
+  };
+
+  // 设置缓存
+  private settingsCache: Record<string, string> = { ...this.defaultSettings };
+
+  constructor() {
+    const homeDir = os.homedir();
+    this.dataDir = path.join(homeDir, '.local', 'promptxy');
+    this.requestsDir = path.join(this.dataDir, 'requests');
+    this.indexesDir = path.join(this.dataDir, 'indexes');
+    this.settingsPath = path.join(this.dataDir, 'settings.json');
+    this.timestampIndexPath = path.join(this.indexesDir, 'timestamp.idx');
+    this.pathsIndexPath = path.join(this.indexesDir, 'paths.idx');
+    this.statsCachePath = path.join(this.indexesDir, 'stats.json');
+    this.detailCache = new LRUCache<string, RequestRecord>(50);
+  }
+
+  // ============================================================
+  // 初始化
+  // ============================================================
+
+  /**
+   * 初始化存储系统
+   */
+  async initialize(): Promise<void> {
+    // 创建目录结构
+    await fs.mkdir(this.requestsDir, { recursive: true });
+    await fs.mkdir(this.indexesDir, { recursive: true });
+
+    // 加载设置
+    await this.loadSettings();
+
+    // 加载索引
+    await this.loadIndex();
+
+    // 加载路径索引
+    await this.loadPathIndex();
+
+    // 加载统计缓存
+    await this.loadStatsCache();
+  }
+
+  // ============================================================
+  // ID 生成和解析
+  // ============================================================
+
+  /**
+   * 生成新的请求 ID
+   * 格式: YYYY-MM-DD_HH-mm-ss-SSS_random
+   * 示例: 2025-01-15_14-30-25-123_a1b2c3
+   */
+  static generateRequestId(): string {
+    const now = new Date();
+
+    // 格式化日期部分
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+
+    // 格式化时间部分（使用 - 分隔避免 Windows 文件系统问题）
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const ms = String(now.getMilliseconds()).padStart(3, '0');
+
+    // 生成 6 位随机字符串
+    const random = Math.random().toString(36).substring(2, 8).padEnd(6, '0');
+
+    return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}-${ms}_${random}`;
+  }
+
+  /**
+   * 从请求 ID 解析时间戳
+   */
+  static parseTimestampFromId(id: string): number {
+    // 解析格式: YYYY-MM-DD_HH-mm-ss-SSS_random
+    const match = id.match(/^(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})-(\d{3})_/);
+    if (!match) {
+      return Date.now();
+    }
+
+    const [, year, month, day, hours, minutes, seconds, ms] = match;
+    const date = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds),
+      Number(ms)
     );
 
-    -- 索引
-    CREATE INDEX IF NOT EXISTS idx_timestamp ON requests(timestamp DESC);
-    CREATE INDEX IF NOT EXISTS idx_client ON requests(client);
-    CREATE INDEX IF NOT EXISTS idx_client_timestamp ON requests(client, timestamp DESC);
-    CREATE INDEX IF NOT EXISTS idx_path ON requests(path);
-
-    -- 设置表
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-
-    -- 插入默认设置
-    INSERT OR IGNORE INTO settings (key, value) VALUES
-      ('max_history', '1000'),
-      ('auto_cleanup', 'true'),
-      ('cleanup_interval_hours', '1'),
-      ('filtered_paths', '[]');
-  `);
-
-  // 数据库迁移：为已有数据库添加新列
-  try {
-    const result = db.exec(`PRAGMA table_info(requests)`);
-    const tableInfo = result.length > 0 ? result[0].values : [];
-
-    // 迁移 response_body 列
-    const hasResponseBody = tableInfo.some((col: any[]) => col[1] === 'response_body');
-    if (!hasResponseBody) {
-      db.exec(`ALTER TABLE requests ADD COLUMN response_body TEXT`);
-    }
-
-    // 迁移 request_size 列
-    const hasRequestSize = tableInfo.some((col: any[]) => col[1] === 'request_size');
-    if (!hasRequestSize) {
-      db.exec(`ALTER TABLE requests ADD COLUMN request_size INTEGER`);
-    }
-
-    // 迁移 response_size 列
-    const hasResponseSize = tableInfo.some((col: any[]) => col[1] === 'response_size');
-    if (!hasResponseSize) {
-      db.exec(`ALTER TABLE requests ADD COLUMN response_size INTEGER`);
-    }
-  } catch {
-    // 忽略迁移错误，可能是新数据库
+    return date.getTime();
   }
 
-  return dbInstance;
+  // ============================================================
+  // 原子写入
+  // ============================================================
+
+  /**
+   * 原子写入文件
+   * 先写入临时文件，然后使用 rename() 原子性地替换目标文件
+   */
+  private async atomicWrite(filePath: string, content: string): Promise<void> {
+    const tempPath = `${filePath}.tmp`;
+
+    try {
+      // 写入临时文件
+      await fs.writeFile(tempPath, content, 'utf-8');
+
+      // 原子性重命名
+      await fs.rename(tempPath, filePath);
+    } catch (error) {
+      // 清理临时文件
+      try {
+        await fs.unlink(tempPath);
+      } catch {
+        // 忽略清理错误
+      }
+      throw error;
+    }
+  }
+
+  // ============================================================
+  // YAML 序列化
+  // ============================================================
+
+  /**
+   * 将请求记录写入 YAML 文件
+   */
+  private async writeRequestFile(record: RequestRecord): Promise<void> {
+    const filePath = path.join(this.requestsDir, `${record.id}.yaml`);
+
+    const fileContent: RequestFile = {
+      id: record.id,
+      timestamp: record.timestamp,
+      client: record.client,
+      path: record.path,
+      method: record.method,
+      requestSize: record.requestSize,
+      responseSize: record.responseSize,
+      responseStatus: record.responseStatus,
+      durationMs: record.durationMs,
+      responseHeaders: record.responseHeaders,
+      originalBody: record.originalBody,
+      modifiedBody: record.modifiedBody,
+      responseBody: record.responseBody,
+      matchedRules: record.matchedRules,
+      error: record.error,
+    };
+
+    // 使用 YAML dump，大字段使用多行字符串语法
+    const yamlContent = yaml.dump(fileContent, {
+      lineWidth: -1, // 禁用行宽限制
+      noRefs: true, // 禁用引用
+      sortKeys: false, // 保持原始顺序
+    });
+
+    await this.atomicWrite(filePath, yamlContent);
+  }
+
+  /**
+   * 从 YAML 文件加载请求记录
+   */
+  private async loadRequestFile(id: string): Promise<RequestRecord | null> {
+    const filePath = path.join(this.requestsDir, `${id}.yaml`);
+
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const fileContent = yaml.load(content) as RequestFile;
+
+      return {
+        id: fileContent.id,
+        timestamp: fileContent.timestamp,
+        client: fileContent.client,
+        path: fileContent.path,
+        method: fileContent.method,
+        requestSize: fileContent.requestSize,
+        responseSize: fileContent.responseSize,
+        responseStatus: fileContent.responseStatus,
+        durationMs: fileContent.durationMs,
+        responseHeaders: fileContent.responseHeaders,
+        originalBody: fileContent.originalBody,
+        modifiedBody: fileContent.modifiedBody,
+        responseBody: fileContent.responseBody,
+        matchedRules: fileContent.matchedRules,
+        error: fileContent.error,
+      };
+    } catch (error) {
+      console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);
+      return null;
+    }
+  }
+
+  // ============================================================
+  // 索引管理
+  // ============================================================
+
+  /**
+   * 加载时间索引
+   */
+  private async loadIndex(): Promise<void> {
+    try {
+      const content = await fs.readFile(this.timestampIndexPath, 'utf-8');
+      const lines = content.trim().split('\n');
+
+      this.timeIndex = lines
+        .filter(line => line.trim())
+        .map(line => this.parseIndexLine(line))
+        .filter((item): item is RequestIndex => item !== null);
+
+      // 按时间戳倒序排列
+      this.timeIndex.sort((a, b) => b.timestamp - a.timestamp);
+    } catch (error) {
+      // 文件不存在或读取失败，尝试重建索引
+      await this.rebuildIndex();
+    }
+  }
+
+  /**
+   * 解析索引行
+   * 格式: timestamp|id|client|path|method|reqSize|respSize|status|duration|error|rules
+   */
+  private parseIndexLine(line: string): RequestIndex | null {
+    const parts = line.split('|');
+    if (parts.length < 11) {
+      return null;
+    }
+
+    const [
+      timestampStr,
+      id,
+      client,
+      path,
+      method,
+      reqSizeStr,
+      respSizeStr,
+      statusStr,
+      durationStr,
+      error,
+      rulesStr,
+    ] = parts;
+
+    return {
+      id,
+      timestamp: Number(timestampStr),
+      client,
+      path,
+      method,
+      requestSize: reqSizeStr ? Number(reqSizeStr) : undefined,
+      responseSize: respSizeStr ? Number(respSizeStr) : undefined,
+      responseStatus: statusStr ? Number(statusStr) : undefined,
+      durationMs: durationStr ? Number(durationStr) : undefined,
+      error: error || undefined,
+      matchedRulesBrief: rulesStr ? JSON.parse(rulesStr) : [],
+    };
+  }
+
+  /**
+   * 格式化索引行
+   */
+  private formatIndexLine(index: RequestIndex): string {
+    return [
+      index.timestamp,
+      index.id,
+      index.client,
+      index.path,
+      index.method,
+      index.requestSize ?? '',
+      index.responseSize ?? '',
+      index.responseStatus ?? '',
+      index.durationMs ?? '',
+      index.error ?? '',
+      JSON.stringify(index.matchedRulesBrief),
+    ].join('|');
+  }
+
+  /**
+   * 加载路径索引
+   */
+  private async loadPathIndex(): Promise<void> {
+    try {
+      const content = await fs.readFile(this.pathsIndexPath, 'utf-8');
+      const lines = content.trim().split('\n');
+      this.pathCache = new Set(lines.filter(line => line.trim()));
+    } catch (error) {
+      // 文件不存在，初始化为空集合
+      this.pathCache = new Set();
+    }
+  }
+
+  /**
+   * 重建索引（从 requests/ 目录）
+   */
+  private async rebuildIndex(): Promise<void> {
+    try {
+      const files = await fs.readdir(this.requestsDir);
+      const yamlFiles = files.filter(f => f.endsWith('.yaml'));
+
+      const newTimeIndex: RequestIndex[] = [];
+
+      for (const file of yamlFiles) {
+        const id = file.replace('.yaml', '');
+        const record = await this.loadRequestFile(id);
+        if (record) {
+          newTimeIndex.push({
+            id: record.id,
+            timestamp: record.timestamp,
+            client: record.client,
+            path: record.path,
+            method: record.method,
+            requestSize: record.requestSize,
+            responseSize: record.responseSize,
+            responseStatus: record.responseStatus,
+            durationMs: record.durationMs,
+            error: record.error,
+            matchedRulesBrief: record.matchedRules
+              ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
+              : [],
+          });
+          this.pathCache.add(record.path);
+        }
+      }
+
+      // 按时间戳倒序排列
+      newTimeIndex.sort((a, b) => b.timestamp - a.timestamp);
+      this.timeIndex = newTimeIndex;
+
+      // 持久化索引
+      await this.flushIndex();
+    } catch (error) {
+      console.error('[PromptXY] 重建索引失败', error);
+    }
+  }
+
+  /**
+   * 更新索引（添加新条目）
+   */
+  private updateIndex(index: RequestIndex): void {
+    // 插入到正确位置（保持时间戳倒序）
+    let insertPos = 0;
+    for (let i = 0; i < this.timeIndex.length; i++) {
+      if (this.timeIndex[i].timestamp < index.timestamp) {
+        insertPos = i;
+        break;
+      }
+      insertPos = i + 1;
+    }
+
+    this.timeIndex.splice(insertPos, 0, index);
+
+    // 更新路径缓存
+    this.pathCache.add(index.path);
+
+    // 更新统计缓存
+    if (!this.statsCache.byClient[index.client]) {
+      this.statsCache.byClient[index.client] = 0;
+    }
+    this.statsCache.byClient[index.client]++;
+  }
+
+  /**
+   * 持久化索引文件
+   */
+  private async flushIndex(): Promise<void> {
+    try {
+      // 写入时间索引
+      const timestampContent = this.timeIndex
+        .map(idx => this.formatIndexLine(idx))
+        .join('\n');
+      await this.atomicWrite(this.timestampIndexPath, timestampContent);
+
+      // 写入路径索引
+      const pathsContent = Array.from(this.pathCache)
+        .sort()
+        .join('\n');
+      await this.atomicWrite(this.pathsIndexPath, pathsContent);
+
+      // 写入统计缓存
+      await this.saveStatsCache();
+    } catch (error) {
+      console.error('[PromptXY] 持久化索引失败', error);
+    }
+  }
+
+  // ============================================================
+  // 统计缓存
+  // ============================================================
+
+  /**
+   * 加载统计缓存
+   */
+  private async loadStatsCache(): Promise<void> {
+    try {
+      const content = await fs.readFile(this.statsCachePath, 'utf-8');
+      this.statsCache = JSON.parse(content);
+    } catch (error) {
+      // 文件不存在或解析失败，使用默认值
+      this.statsCache = {
+        byClient: {},
+        lastCleanup: 0,
+      };
+    }
+  }
+
+  /**
+   * 保存统计缓存
+   */
+  private async saveStatsCache(): Promise<void> {
+    try {
+      const content = JSON.stringify(this.statsCache, null, 2);
+      await this.atomicWrite(this.statsCachePath, content);
+    } catch (error) {
+      console.error('[PromptXY] 保存统计缓存失败', error);
+    }
+  }
+
+  // ============================================================
+  // 设置管理
+  // ============================================================
+
+  /**
+   * 加载设置
+   */
+  private async loadSettings(): Promise<void> {
+    try {
+      const content = await fs.readFile(this.settingsPath, 'utf-8');
+      const loaded = JSON.parse(content);
+      this.settingsCache = { ...this.defaultSettings, ...loaded };
+    } catch (error) {
+      // 文件不存在或解析失败，使用默认设置
+      this.settingsCache = { ...this.defaultSettings };
+    }
+  }
+
+  /**
+   * 保存设置
+   */
+  private async saveSettings(): Promise<void> {
+    try {
+      const content = JSON.stringify(this.settingsCache, null, 2);
+      await this.atomicWrite(this.settingsPath, content);
+    } catch (error) {
+      console.error('[PromptXY] 保存设置失败', error);
+    }
+  }
+
+  /**
+   * 获取设置值
+   */
+  getSetting(key: string): string | null {
+    return this.settingsCache[key] ?? null;
+  }
+
+  /**
+   * 获取所有设置
+   */
+  getAllSettings(): Record<string, string> {
+    return { ...this.settingsCache };
+  }
+
+  /**
+   * 更新设置值
+   */
+  async updateSetting(key: string, value: string): Promise<void> {
+    this.settingsCache[key] = value;
+    await this.saveSettings();
+  }
+
+  // ============================================================
+  // 请求操作
+  // ============================================================
+
+  /**
+   * 插入请求记录
+   */
+  async insert(record: RequestRecord): Promise<void> {
+    // 1. 写入请求文件
+    await this.writeRequestFile(record);
+
+    // 2. 创建索引条目
+    const index: RequestIndex = {
+      id: record.id,
+      timestamp: record.timestamp,
+      client: record.client,
+      path: record.path,
+      method: record.method,
+      requestSize: record.requestSize,
+      responseSize: record.responseSize,
+      responseStatus: record.responseStatus,
+      durationMs: record.durationMs,
+      error: record.error,
+      matchedRulesBrief: record.matchedRules
+        ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
+        : [],
+    };
+
+    // 3. 更新内存索引
+    this.updateIndex(index);
+
+    // 4. 异步持久化索引
+    this.flushIndex().catch(err =>
+      console.error('[PromptXY] 异步持久化索引失败', err)
+    );
+
+    // 5. 自动清理旧记录
+    const maxHistory = this.getSetting('max_history');
+    const keep = maxHistory ? Number(maxHistory) : 1000;
+
+    if (this.timeIndex.length > keep) {
+      await this.cleanupOld(keep);
+    }
+  }
+
+  /**
+   * 查询请求列表
+   */
+  query(options: {
+    limit?: number;
+    offset?: number;
+    client?: string;
+    startTime?: number;
+    endTime?: number;
+    search?: string;
+  }): RequestListResponse {
+    const limit = Math.min(options.limit ?? 50, 100);
+    const offset = options.offset ?? 0;
+    const search = options.search ?? null;
+
+    // 内存过滤
+    let filtered = this.timeIndex;
+
+    // 客户端过滤
+    if (options.client) {
+      filtered = filtered.filter(idx => idx.client === options.client);
+    }
+
+    // 时间范围过滤
+    if (options.startTime !== undefined) {
+      filtered = filtered.filter(idx => idx.timestamp >= options.startTime!);
+    }
+
+    if (options.endTime !== undefined) {
+      filtered = filtered.filter(idx => idx.timestamp <= options.endTime!);
+    }
+
+    // 搜索过滤
+    if (search) {
+      const isPathSearch = search.startsWith('/');
+
+      if (isPathSearch) {
+        // 路径前缀匹配
+        filtered = filtered.filter(idx => idx.path.startsWith(search));
+      } else {
+        // ID/路径模糊匹配
+        const searchLower = search.toLowerCase();
+        filtered = filtered.filter(
+          idx =>
+            idx.id.toLowerCase().includes(searchLower) ||
+            idx.path.toLowerCase().includes(searchLower)
+        );
+      }
+    }
+
+    const total = filtered.length;
+
+    // 分页
+    const paginated = filtered.slice(offset, offset + limit);
+
+    const items = paginated.map(idx => ({
+      id: idx.id,
+      timestamp: idx.timestamp,
+      client: idx.client,
+      path: idx.path,
+      method: idx.method,
+      requestSize: idx.requestSize,
+      responseSize: idx.responseSize,
+      matchedRules: idx.matchedRulesBrief,
+      responseStatus: idx.responseStatus,
+      durationMs: idx.durationMs,
+      error: idx.error,
+    }));
+
+    return {
+      total,
+      limit,
+      offset,
+      items,
+    };
+  }
+
+  /**
+   * 获取请求详情（带 LRU 缓存）
+   */
+  async getDetail(id: string): Promise<RequestRecord | null> {
+    // 首先检查缓存
+    const cached = this.detailCache.get(id);
+    if (cached) {
+      return cached;
+    }
+
+    // 从文件加载
+    const record = await this.loadRequestFile(id);
+    if (record) {
+      // 更新缓存
+      this.detailCache.set(id, record);
+    }
+
+    return record;
+  }
+
+  /**
+   * 获取唯一路径列表
+   */
+  getUniquePaths(prefix?: string): PathsResponse {
+    let paths = Array.from(this.pathCache);
+
+    if (prefix) {
+      paths = paths.filter(p => p.startsWith(prefix));
+    }
+
+    paths.sort();
+
+    return {
+      paths,
+      count: paths.length,
+    };
+  }
+
+  /**
+   * 获取请求统计信息
+   */
+  getStats(): {
+    total: number;
+    byClient: Record<string, number>;
+    recent: number;
+  } {
+    const now = Date.now();
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+
+    // 计算最近 24 小时的请求数
+    const recent = this.timeIndex.filter(idx => idx.timestamp > oneDayAgo).length;
+
+    return {
+      total: this.timeIndex.length,
+      byClient: this.statsCache.byClient,
+      recent,
+    };
+  }
+
+  /**
+   * 清理旧记录
+   */
+  async cleanupOld(keep: number): Promise<number> {
+    if (this.timeIndex.length <= keep) {
+      return 0;
+    }
+
+    const toDelete = this.timeIndex.slice(keep);
+    const deletedCount = toDelete.length;
+
+    // 删除请求文件
+    for (const idx of toDelete) {
+      const filePath = path.join(this.requestsDir, `${idx.id}.yaml`);
+
+      try {
+        await fs.unlink(filePath);
+      } catch (error) {
+        // 忽略删除失败的文件
+      }
+
+      // 从缓存中移除
+      this.detailCache.delete(idx.id);
+
+      // 更新统计缓存
+      if (this.statsCache.byClient[idx.client]) {
+        this.statsCache.byClient[idx.client]--;
+      }
+    }
+
+    // 更新内存索引
+    this.timeIndex = this.timeIndex.slice(0, keep);
+
+    // 重新构建路径缓存
+    this.pathCache = new Set(this.timeIndex.map(idx => idx.path));
+
+    // 持久化索引
+    await this.flushIndex();
+
+    return deletedCount;
+  }
+
+  /**
+   * 删除单个请求
+   */
+  async delete(id: string): Promise<boolean> {
+    const indexPos = this.timeIndex.findIndex(idx => idx.id === id);
+    if (indexPos === -1) {
+      return false;
+    }
+
+    const index = this.timeIndex[indexPos];
+
+    // 删除请求文件
+    const filePath = path.join(this.requestsDir, `${id}.yaml`);
+    try {
+      await fs.unlink(filePath);
+    } catch {
+      // 忽略删除失败
+    }
+
+    // 从索引中移除
+    this.timeIndex.splice(indexPos, 1);
+
+    // 从路径缓存中移除（检查是否还有其他请求使用相同路径）
+    const hasOtherWithPath = this.timeIndex.some(idx => idx.path === index.path);
+    if (!hasOtherWithPath) {
+      this.pathCache.delete(index.path);
+    }
+
+    // 从缓存中移除
+    this.detailCache.delete(id);
+
+    // 更新统计缓存
+    if (this.statsCache.byClient[index.client]) {
+      this.statsCache.byClient[index.client]--;
+    }
+
+    // 持久化索引
+    await this.flushIndex();
+
+    return true;
+  }
+
+  /**
+   * 获取过滤路径列表
+   */
+  getFilteredPaths(): string[] {
+    const filteredPathsStr = this.getSetting('filtered_paths');
+    if (!filteredPathsStr) {
+      return [];
+    }
+
+    try {
+      const paths = JSON.parse(filteredPathsStr);
+      return Array.isArray(paths) ? paths : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 检查路径是否应该被过滤
+   */
+  shouldFilterPath(path: string, filteredPaths: string[]): boolean {
+    for (const filteredPath of filteredPaths) {
+      // 精确匹配
+      if (path === filteredPath) {
+        return true;
+      }
+      // 前缀匹配
+      if (filteredPath.endsWith('/') && path.startsWith(filteredPath)) {
+        return true;
+      }
+      if (path.startsWith(filteredPath + '/')) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+// ============================================================
+// 全局存储实例
+// ============================================================
+
+let storageInstance: FileSystemStorage | null = null;
+
+// ============================================================
+// API 兼容层 - 导出函数
+// ============================================================
+
+/**
+ * 初始化数据库（兼容旧 API）
+ */
+export async function initializeDatabase(): Promise<FileSystemStorage> {
+  if (storageInstance) {
+    return storageInstance;
+  }
+
+  const storage = new FileSystemStorage();
+  await storage.initialize();
+
+  storageInstance = storage;
+  return storageInstance;
 }
 
 /**
- * 保存数据库到文件
+ * 保存数据库（空操作，文件系统自动持久化）
  */
 export async function saveDatabase(): Promise<void> {
-  if (!dbInstance) {
-    return;
-  }
-
-  const dbPath = getDbPath();
-  const data = dbInstance.export();
-  const buffer = Buffer.from(data);
-  await fs.writeFile(dbPath, buffer);
+  // 文件系统存储自动持久化，无需手动保存
 }
 
 /**
- * 获取数据库实例
+ * 获取数据库实例（兼容旧 API）
  */
-export function getDatabase(): Database {
-  if (!dbInstance) {
-    throw new Error('Database not initialized. Call initializeDatabase() first.');
+export function getDatabase(): FileSystemStorage {
+  if (!storageInstance) {
+    throw new Error('Storage not initialized. Call initializeDatabase() first.');
   }
-  return dbInstance;
+  return storageInstance;
 }
 
 /**
  * 插入请求记录
- * 插入后会自动检查数量是否超过 maxHistory，超过则清理旧记录
  */
 export async function insertRequestRecord(record: RequestRecord): Promise<void> {
-  const db = getDatabase();
-
-  db.run(
-    `INSERT INTO requests (
-      id, timestamp, client, path, method,
-      original_body, modified_body, request_size, response_size, matched_rules,
-      response_status, duration_ms, response_headers, response_body, error
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      record.id,
-      record.timestamp,
-      record.client,
-      record.path,
-      record.method,
-      record.originalBody,
-      record.modifiedBody,
-      record.requestSize ?? null,
-      record.responseSize ?? null,
-      record.matchedRules,
-      record.responseStatus ?? null,
-      record.durationMs ?? null,
-      record.responseHeaders ?? null,
-      record.responseBody ?? null,
-      record.error ?? null,
-    ],
-  );
-
-  // 检查是否需要清理旧记录
-  const maxHistory = getSetting('max_history');
-  const keep = maxHistory ? Number(maxHistory) : 1000;
-  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
-  countStmt.step();
-  const countResult = countStmt.getAsObject();
-  countStmt.free();
-  const total = (countResult as any).count ?? 0;
-
-  if (total > keep) {
-    // 删除旧数据，保留最新的 keep 条
-    db.run(
-      `DELETE FROM requests
-       WHERE id NOT IN (
-         SELECT id FROM requests
-         ORDER BY timestamp DESC
-         LIMIT ?
-       )`,
-      [keep],
-    );
-  }
-
-  // 保存到文件
-  await saveDatabase();
+  const storage = getDatabase();
+  await storage.insert(record);
 }
 
 /**
- * 获取唯一路径列表
- */
-export async function getUniquePaths(prefix?: string): Promise<PathsResponse> {
-  const db = getDatabase();
-
-  let sql = 'SELECT DISTINCT path FROM requests';
-  const params: (string | number)[] = [];
-
-  if (prefix) {
-    sql += ' WHERE path LIKE ?';
-    params.push(`${prefix}%`);
-  }
-
-  sql += ' ORDER BY path ASC';
-
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  const rows: { path: string }[] = [];
-
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject() as { path: string });
-  }
-  stmt.free();
-
-  return {
-    paths: rows.map(r => r.path),
-    count: rows.length,
-  };
-}
-
-/**
- * 获取请求列表（带分页和筛选）
+ * 获取请求列表
  */
 export async function getRequestList(options: {
   limit?: number;
@@ -265,170 +993,24 @@ export async function getRequestList(options: {
   endTime?: number;
   search?: string;
 }): Promise<RequestListResponse> {
-  const db = getDatabase();
-  const limit = Math.min(options.limit ?? 50, 100);
-  const offset = options.offset ?? 0;
-  const search = options.search ?? null;
-
-  // 判断是否为路径搜索（以 / 开头）
-  const isPathSearch = search && search.startsWith('/');
-
-  // 构建搜索条件
-  let searchCondition: string;
-  let searchParams: (string | null)[];
-
-  if (isPathSearch) {
-    // 路径前缀匹配
-    searchCondition = '(? IS NULL OR path LIKE ?)';
-    searchParams = [search, `${search}%`];
-  } else {
-    // ID/路径/请求体模糊匹配
-    searchCondition = '(? IS NULL OR id LIKE ? OR path LIKE ? OR original_body LIKE ?)';
-    searchParams = [
-      search,
-      search ? `%${search}%` : null,
-      search ? `%${search}%` : null,
-      search ? `%${search}%` : null,
-    ];
-  }
-
-  // 构建完整查询
-  const baseParams = [
-    options.client ?? null,
-    options.client ?? null,
-    options.startTime ?? null,
-    options.startTime ?? null,
-    options.endTime ?? null,
-    options.endTime ?? null,
-    ...searchParams,
-  ];
-
-  // 计算总数
-  const countStmt = db.prepare(
-    `SELECT COUNT(*) as count FROM requests
-     WHERE (? IS NULL OR client = ?)
-       AND (? IS NULL OR timestamp >= ?)
-       AND (? IS NULL OR timestamp <= ?)
-       AND ${searchCondition}`,
-  );
-  countStmt.bind(baseParams);
-  countStmt.step();
-  const countResult = countStmt.getAsObject();
-  countStmt.free();
-  const total = (countResult as any).count ?? 0;
-
-  // 获取分页数据
-  const selectStmt = db.prepare(`
-     SELECT
-       id, timestamp, client, path, method,
-       request_size, response_size, matched_rules, response_status, duration_ms, error
-     FROM requests
-     WHERE (? IS NULL OR client = ?)
-       AND (? IS NULL OR timestamp >= ?)
-       AND (? IS NULL OR timestamp <= ?)
-       AND ${searchCondition}
-     ORDER BY timestamp DESC
-     LIMIT ? OFFSET ?`
-  );
-
-  selectStmt.bind([...baseParams, limit, offset]);
-  const rows: any[] = [];
-  while (selectStmt.step()) {
-    rows.push(selectStmt.getAsObject());
-  }
-  selectStmt.free();
-
-  // 解析 matched_rules 为数组
-  const items = rows.map((row: any) => ({
-    id: row.id,
-    timestamp: row.timestamp,
-    client: row.client,
-    path: row.path,
-    method: row.method,
-    requestSize: row.request_size ?? undefined,
-    responseSize: row.response_size ?? undefined,
-    matchedRules: row.matched_rules ? JSON.parse(row.matched_rules).map((m: any) => m.ruleId) : [],
-    responseStatus: row.response_status ?? undefined,
-    durationMs: row.duration_ms ?? undefined,
-    error: row.error ?? undefined,
-  }));
-
-  return {
-    total,
-    limit,
-    offset,
-    items,
-  };
+  const storage = getDatabase();
+  return storage.query(options);
 }
 
 /**
- * 获取单个请求详情
+ * 获取请求详情
  */
 export async function getRequestDetail(id: string): Promise<RequestRecord | null> {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`SELECT * FROM requests WHERE id = ?`);
-  stmt.bind([id]);
-  const hasRow = stmt.step();
-  if (!hasRow) {
-    stmt.free();
-    return null;
-  }
-
-  const row = stmt.getAsObject();
-  stmt.free();
-
-  return {
-    id: (row as any).id,
-    timestamp: (row as any).timestamp,
-    client: (row as any).client,
-    path: (row as any).path,
-    method: (row as any).method,
-    originalBody: (row as any).original_body,
-    modifiedBody: (row as any).modified_body,
-    requestSize: (row as any).request_size ?? undefined,
-    responseSize: (row as any).response_size ?? undefined,
-    matchedRules: (row as any).matched_rules,
-    responseStatus: (row as any).response_status ?? undefined,
-    durationMs: (row as any).duration_ms ?? undefined,
-    responseHeaders: (row as any).response_headers ?? undefined,
-    responseBody: (row as any).response_body ?? undefined,
-    error: (row as any).error ?? undefined,
-  };
+  const storage = getDatabase();
+  return storage.getDetail(id);
 }
 
 /**
- * 清理旧数据
+ * 获取唯一路径列表
  */
-export async function cleanupOldRequests(keep: number = 100): Promise<number> {
-  const db = getDatabase();
-
-  // 获取要删除的记录数 - 使用 prepare 而不是 exec
-  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
-  countStmt.step();
-  const countResult = countStmt.getAsObject();
-  countStmt.free();
-  const total = (countResult as any).count ?? 0;
-
-  if (total <= keep) {
-    await saveDatabase();
-    return 0;
-  }
-
-  // 删除旧数据
-  db.run(
-    `DELETE FROM requests
-     WHERE id NOT IN (
-       SELECT id FROM requests
-       ORDER BY timestamp DESC
-       LIMIT ?
-     )`,
-    [keep],
-  );
-
-  await saveDatabase();
-
-  return total - keep;
+export async function getUniquePaths(prefix?: string): Promise<PathsResponse> {
+  const storage = getDatabase();
+  return storage.getUniquePaths(prefix);
 }
 
 /**
@@ -439,194 +1021,130 @@ export async function getRequestStats(): Promise<{
   byClient: Record<string, number>;
   recent: number;
 }> {
-  const db = getDatabase();
+  const storage = getDatabase();
+  return storage.getStats();
+}
 
-  // 总数 - 使用 prepare 而不是 exec
-  const totalStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
-  totalStmt.step();
-  const totalResult = totalStmt.getAsObject();
-  totalStmt.free();
-  const total = (totalResult as any).count ?? 0;
-
-  // 按客户端分组
-  const clientStmt = db.prepare(`SELECT client, COUNT(*) as count FROM requests GROUP BY client`);
-  const byClient: Record<string, number> = {};
-  while (clientStmt.step()) {
-    const row = clientStmt.getAsObject() as any;
-    byClient[row.client] = row.count;
-  }
-  clientStmt.free();
-
-  // 最近24小时
-  const recentStmt = db.prepare(
-    `SELECT COUNT(*) as count FROM requests WHERE timestamp > ?`
-  );
-  recentStmt.bind([Date.now() - 24 * 60 * 60 * 1000]);
-  recentStmt.step();
-  const recentResult = recentStmt.getAsObject() as any;
-  recentStmt.free();
-  const recent = recentResult.count ?? 0;
-
-  return { total, byClient, recent };
+/**
+ * 清理旧请求
+ */
+export async function cleanupOldRequests(keep: number = 100): Promise<number> {
+  const storage = getDatabase();
+  return storage.cleanupOld(keep);
 }
 
 /**
  * 删除单个请求
  */
 export async function deleteRequest(id: string): Promise<boolean> {
-  const db = getDatabase();
-
-  const stmt = db.prepare(`DELETE FROM requests WHERE id = ?`);
-  stmt.bind([id]);
-  stmt.step();
-  const changes = db.getRowsModified();
-  stmt.free();
-
-  await saveDatabase();
-
-  return changes > 0;
+  const storage = getDatabase();
+  return storage.delete(id);
 }
 
 /**
- * 获取数据库大小信息
- */
-export async function getDatabaseInfo(): Promise<{
-  path: string;
-  size: number;
-  recordCount: number;
-}> {
-  const dbPath = getDbPath();
-  const db = getDatabase();
-
-  // 使用 prepare 而不是 exec
-  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM requests`);
-  countStmt.step();
-  const countResult = countStmt.getAsObject();
-  countStmt.free();
-  const recordCount = (countResult as any).count ?? 0;
-
-  // 尝试获取文件大小
-  let size = 0;
-  try {
-    const stats = await fs.stat(dbPath);
-    size = stats.size;
-  } catch {
-    // 如果文件不存在或无法访问，返回 0
-  }
-
-  return {
-    path: dbPath,
-    size,
-    recordCount,
-  };
-}
-
-/**
- * 获取单个设置值
+ * 获取设置值
  */
 export function getSetting(key: string): string | null {
-  const db = getDatabase();
-  const stmt = db.prepare(`SELECT value FROM settings WHERE key = ?`);
-  stmt.bind([key]);
-  if (stmt.step()) {
-    const result = stmt.getAsObject() as any;
-    stmt.free();
-    return result.value ?? null;
-  }
-  stmt.free();
-  return null;
+  const storage = getDatabase();
+  return storage.getSetting(key);
 }
 
 /**
  * 获取所有设置
  */
 export function getAllSettings(): Record<string, string> {
-  const db = getDatabase();
-  const stmt = db.prepare(`SELECT key, value FROM settings`);
-  const settings: Record<string, string> = {};
-  while (stmt.step()) {
-    const row = stmt.getAsObject() as any;
-    settings[row.key] = row.value;
-  }
-  stmt.free();
-  return settings;
+  const storage = getDatabase();
+  return storage.getAllSettings();
 }
 
 /**
  * 更新设置值
  */
 export async function updateSetting(key: string, value: string): Promise<void> {
-  const db = getDatabase();
-  db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
-  await saveDatabase();
+  const storage = getDatabase();
+  await storage.updateSetting(key, value);
 }
 
 /**
  * 获取过滤路径列表
- * 返回需要被过滤掉的路径数组（不记录到数据库）
  */
 export function getFilteredPaths(): string[] {
-  const db = getDatabase();
-  const stmt = db.prepare(`SELECT value FROM settings WHERE key = ?`);
-  stmt.bind(['filtered_paths']);
-  if (stmt.step()) {
-    const result = stmt.getAsObject() as any;
-    stmt.free();
-    if (!result?.value) {
-      return [];
-    }
-    try {
-      const paths = JSON.parse(result.value);
-      return Array.isArray(paths) ? paths : [];
-    } catch {
-      return [];
-    }
-  }
-  stmt.free();
-  return [];
+  const storage = getDatabase();
+  return storage.getFilteredPaths();
 }
 
 /**
- * 检查路径是否应该被过滤（不记录）
- * 支持精确匹配和前缀匹配
+ * 检查路径是否应该被过滤
  */
 export function shouldFilterPath(path: string, filteredPaths: string[]): boolean {
-  for (const filteredPath of filteredPaths) {
-    // 精确匹配
-    if (path === filteredPath) {
-      return true;
+  const storage = getDatabase();
+  return storage.shouldFilterPath(path, filteredPaths);
+}
+
+/**
+ * 获取数据库信息（兼容旧 API）
+ */
+export async function getDatabaseInfo(): Promise<{
+  path: string;
+  size: number;
+  recordCount: number;
+}> {
+  const storage = getDatabase();
+
+  // 计算总大小（请求文件 + 索引文件）
+  const homeDir = os.homedir();
+  const dataDir = path.join(homeDir, '.local', 'promptxy');
+
+  let totalSize = 0;
+
+  try {
+    const requestsDir = path.join(dataDir, 'requests');
+    const files = await fs.readdir(requestsDir);
+
+    for (const file of files) {
+      const filePath = path.join(requestsDir, file);
+      try {
+        const stats = await fs.stat(filePath);
+        totalSize += stats.size;
+      } catch {
+        // 忽略无法访问的文件
+      }
     }
-    // 前缀匹配（如果过滤路径以 / 结尾，则表示前缀匹配）
-    if (filteredPath.endsWith('/') && path.startsWith(filteredPath)) {
-      return true;
+
+    // 添加索引文件大小
+    const indexPaths = [
+      path.join(dataDir, 'indexes', 'timestamp.idx'),
+      path.join(dataDir, 'indexes', 'paths.idx'),
+      path.join(dataDir, 'indexes', 'stats.json'),
+    ];
+
+    for (const indexPath of indexPaths) {
+      try {
+        const stats = await fs.stat(indexPath);
+        totalSize += stats.size;
+      } catch {
+        // 文件可能不存在
+      }
     }
-    // 前缀匹配（路径以过滤路径 + / 开头）
-    if (path.startsWith(filteredPath + '/')) {
-      return true;
-    }
+  } catch {
+    // 目录可能不存在
   }
-  return false;
+
+  return {
+    path: dataDir,
+    size: totalSize,
+    recordCount: storage.getStats().total,
+  };
 }
 
 /**
  * 重置数据库实例（仅用于测试）
- * 关闭当前连接并清除实例，允许重新初始化
  */
 export async function resetDatabaseForTest(): Promise<void> {
-  if (dbInstance) {
-    try {
-      dbInstance.close();
-    } catch {
-      // 忽略关闭错误
-    }
-    dbInstance = null;
-  }
-
-  // 删除数据库文件以确保完全干净的状态
-  const dbPath = getDbPath();
-  try {
-    await fs.unlink(dbPath);
-  } catch {
-    // 文件不存在，忽略
-  }
+  storageInstance = null;
 }
+
+/**
+ * 导出 FileSystemStorage 类型（用于类型检查）
+ */
+export type { FileSystemStorage };
