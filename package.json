@@ -1,6 +1,6 @@
 {
   "name": "promptxy",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "type": "module",
   "description": "PromptXY - HTTP 请求代理网关，支持 AI 服务提供商的请求拦截和修改",
   "author": "ekko.bao",
