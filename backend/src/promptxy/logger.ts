@@ -3,6 +3,7 @@ type LogLevel = 'silent' | 'info' | 'debug';
 export type PromptxyLogger = {
   info: (message: string) => void;
   debug: (message: string) => void;
+  debugEnabled: boolean;
 };
 
 function levelFromConfig(debug: boolean): LogLevel {
@@ -25,5 +26,5 @@ export function createLogger(options: { debug: boolean }): PromptxyLogger {
     console.log(message);
   };
 
-  return { info, debug };
+  return { info, debug, debugEnabled: level === 'debug' };
 }

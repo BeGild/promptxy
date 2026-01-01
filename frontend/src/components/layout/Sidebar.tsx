@@ -28,6 +28,7 @@ export const Sidebar: React.FC = () => {
     { key: 'rules', label: '规则管理', icon: '📋', desc: '创建和管理修改规则' },
     { key: 'requests', label: '请求监控', icon: '📡', desc: '查看实时请求历史' },
     { key: 'preview', label: '预览测试', icon: '🧪', desc: '测试规则效果' },
+    { key: 'protocol-lab', label: '协议转换实验室', icon: '🔄', desc: '预览和验证协议转换' },
     { key: 'settings', label: '设置', icon: '⚙️', desc: '配置和数据管理' },
   ];
 

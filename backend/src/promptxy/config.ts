@@ -10,6 +10,11 @@ import {
 } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { calculateDefaultPort, findAvailablePort } from './port-utils.js';
+import {
+  validateTransformerConfig,
+  validateSupplierAuth,
+  validateGatewayAuth,
+} from './transformers/index.js';
 
 type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
@@ -175,6 +180,30 @@ export function assertSupplier(label: string, supplier: Supplier): void {
   }
 
   assertPathMappings(label, supplier.pathMappings);
+
+  // 验证 auth 配置
+  if (supplier.auth) {
+    const authResult = validateSupplierAuth(supplier.auth);
+    if (!authResult.valid) {
+      throw new Error(
+        `${label}.auth: ${authResult.errors.join(', ')}`,
+      );
+    }
+  }
+
+  // 验证 transformer 配置
+  if (supplier.transformer) {
+    const transformerResult = validateTransformerConfig(supplier.transformer);
+    if (!transformerResult.valid) {
+      throw new Error(
+        `${label}.transformer: ${transformerResult.errors.join(', ')}`,
+      );
+    }
+    // 输出警告
+    for (const warning of transformerResult.warnings) {
+      console.warn(`[Config] ${label}.transformer: ${warning}`);
+    }
+  }
 }
 
 /**
@@ -279,6 +308,20 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     config.storage.maxHistory < 1
   ) {
     throw new Error(`config.storage.maxHistory must be a positive integer`);
+  }
+
+  // 验证 gatewayAuth 配置（如果存在）
+  if (config.gatewayAuth) {
+    const gatewayAuthResult = validateGatewayAuth(config.gatewayAuth);
+    if (!gatewayAuthResult.valid) {
+      throw new Error(
+        `config.gatewayAuth: ${gatewayAuthResult.errors.join(', ')}`,
+      );
+    }
+    // 输出警告
+    for (const warning of gatewayAuthResult.warnings) {
+      console.warn(`[Config] config.gatewayAuth: ${warning}`);
+    }
   }
 
   return config;

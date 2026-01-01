@@ -89,6 +89,54 @@ export interface PathMapping {
   type?: 'exact' | 'prefix' | 'regex';
 }
 
+// ============================================================================
+// 协议转换类型
+// ============================================================================
+
+/**
+ * 转换器步骤定义
+ */
+export type TransformerStep =
+  | string // 转换器名称
+  | {
+      name: string;
+      options?: Record<string, unknown>;
+    };
+
+/**
+ * 转换链定义
+ */
+export type TransformerChain = TransformerStep[];
+
+/**
+ * Transformer 配置（v1 精确匹配）
+ */
+export interface TransformerConfig {
+  /** 默认转换链 */
+  default: TransformerChain;
+  /** 模型精确匹配覆盖链 */
+  models?: Record<string, TransformerChain>;
+}
+
+/**
+ * Supplier 认证配置
+ */
+export interface SupplierAuth {
+  type: 'bearer' | 'header';
+  token?: string;
+  headerName?: string;
+  headerValue?: string;
+}
+
+/**
+ * 网关入站鉴权配置
+ */
+export interface GatewayAuth {
+  enabled: boolean;
+  token?: string;
+  acceptedHeaders?: string[];
+}
+
 /**
  * 供应商配置
  */
@@ -99,6 +147,8 @@ export interface Supplier {
   localPrefix: string; // 本地路径前缀（如 /claude）
   pathMappings?: PathMapping[]; // 路径映射规则
   enabled: boolean; // 是否启用
+  auth?: SupplierAuth; // 上游认证配置
+  transformer?: TransformerConfig; // 协议转换配置
 }
 
 export type PromptxyConfig = {
@@ -106,6 +156,7 @@ export type PromptxyConfig = {
     host: string;
     port: number;
   };
+  gatewayAuth?: GatewayAuth; // 网关入站鉴权配置
   suppliers: Supplier[];
   rules: PromptxyRule[];
   storage: {

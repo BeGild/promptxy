@@ -103,7 +103,7 @@ export function broadcastRequest(data: SSERequestEvent): void {
 /**
  * 发送 JSON 响应
  */
-export function sendJson(res: http.ServerResponse, status: number, data: any): void {
+export function sendJson<T = any>(res: http.ServerResponse, status: number, data: T): void {
   const body = JSON.stringify(data);
   res.writeHead(status, {
     'Content-Type': 'application/json',
@@ -923,5 +923,131 @@ export async function handleDeleteRule(
     });
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to delete rule', message: error?.message });
+  }
+}
+
+// ============================================================================
+// 协议转换预览 API（新增）
+// ============================================================================
+
+import { createProtocolTransformer } from './transformers/llms-compat.js';
+import type { TransformPreview } from './transformers/types.js';
+
+/**
+ * 处理协议转换预览请求
+ */
+export async function handleTransformPreview(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+): Promise<void> {
+  try {
+    const body = await readRequestBody(req, { maxBytes: 1024 * 1024 });
+    const request = JSON.parse(body.toString('utf-8'));
+
+    // 验证请求格式
+    if (!request.supplierId || !request.request) {
+      sendJson(res, 400, {
+        error: 'Invalid request',
+        message: 'Missing supplierId or request field',
+      });
+      return;
+    }
+
+    // 查找 supplier
+    const supplier = config.suppliers.find(s => s.id === request.supplierId);
+    if (!supplier) {
+      sendJson(res, 404, {
+        error: 'Supplier not found',
+        message: `No supplier found with id: ${request.supplierId}`,
+      });
+      return;
+    }
+
+    // 执行转换预览
+    const transformer = createProtocolTransformer();
+    const preview = await transformer.preview({
+      supplier: {
+        id: supplier.id,
+        name: supplier.name,
+        baseUrl: supplier.baseUrl,
+        auth: supplier.auth,
+        transformer: supplier.transformer,
+      },
+      request: {
+        method: request.request.method || 'POST',
+        path: request.request.path || '/v1/messages',
+        headers: request.request.headers || {},
+        body: request.request.body,
+      },
+      stream: request.stream || false,
+    });
+
+    sendJson<TransformPreview>(res, 200, preview);
+  } catch (error: any) {
+    sendJson(res, 500, {
+      error: 'Transform preview failed',
+      message: error?.message || String(error),
+    });
+  }
+}
+
+/**
+ * 获取可用转换器列表
+ */
+export async function handleGetTransformers(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const { getGlobalRegistry } = await import('./transformers/registry.js');
+    const registry = getGlobalRegistry();
+    const transformers = registry.getAllMetadata();
+
+    sendJson(res, 200, {
+      transformers: Object.entries(transformers).map(([key, meta]) => ({
+        name: meta.name,
+        description: meta.description,
+        supportedSuppliers: meta.supportedSuppliers,
+        supportsStreaming: meta.supportsStreaming,
+        supportsTools: meta.supportsTools,
+      })),
+    });
+  } catch (error: any) {
+    sendJson(res, 500, {
+      error: 'Failed to get transformers',
+      message: error?.message || String(error),
+    });
+  }
+}
+
+/**
+ * 验证转换器配置
+ */
+export async function handleValidateTransformer(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const body = await readRequestBody(req, { maxBytes: 1024 * 1024 });
+    const { transformer } = JSON.parse(body.toString('utf-8'));
+
+    if (!transformer) {
+      sendJson(res, 400, {
+        error: 'Invalid request',
+        message: 'Missing transformer field',
+      });
+      return;
+    }
+
+    const { validateTransformerConfig } = await import('./transformers/index.js');
+    const result = validateTransformerConfig(transformer);
+
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, {
+      error: 'Validation failed',
+      message: error?.message || String(error),
+    });
   }
 }

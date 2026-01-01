@@ -50,15 +50,21 @@ import {
   handleCreateRule,
   handleUpdateRule,
   handleDeleteRule,
+  handleTransformPreview,
+  handleGetTransformers,
+  handleValidateTransformer,
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
+import { createProtocolTransformer } from './transformers/llms-compat.js';
+import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
 
 type RouteInfo = {
   client: PromptxyClient;
   localPrefix: string;
   upstreamBaseUrl: string;
   pathMappings?: PathMapping[];
+  supplier: Supplier; // 完整的 supplier 配置（包含 auth 和 transformer）
 };
 
 /**
@@ -130,6 +136,7 @@ function findSupplierByPath(pathname: string, suppliers: Supplier[]): RouteInfo 
         localPrefix: prefix,
         upstreamBaseUrl: supplier.baseUrl,
         pathMappings: supplier.pathMappings,
+        supplier, // 完整的 supplier 配置
       };
     }
   }
@@ -411,6 +418,24 @@ export function createGateway(
           return;
         }
 
+        // 协议转换预览（新增）
+        if (method === 'POST' && url.pathname === '/_promptxy/transform/preview') {
+          await handleTransformPreview(req, res, config);
+          return;
+        }
+
+        // 获取可用转换器列表（新增）
+        if (method === 'GET' && url.pathname === '/_promptxy/transformers') {
+          await handleGetTransformers(req, res);
+          return;
+        }
+
+        // 验证转换器配置（新增）
+        if (method === 'POST' && url.pathname === '/_promptxy/transformers/validate') {
+          await handleValidateTransformer(req, res);
+          return;
+        }
+
         // 404
         jsonError(res, 404, { error: 'API endpoint not found', path: url.pathname });
         return;
@@ -446,9 +471,30 @@ export function createGateway(
       // 应用路径映射
       upstreamPath = applyPathMappings(upstreamPath, matchedRoute.pathMappings);
 
-      const upstreamUrl = joinUrl(matchedRoute.upstreamBaseUrl, upstreamPath, url.search);
+      // ========== 网关入站鉴权（新增）==========
+      if (config.gatewayAuth && config.gatewayAuth.enabled) {
+        const authResult = authenticateRequest(req.headers, config.gatewayAuth);
+        if (!authResult.authenticated) {
+          jsonError(res, 401, {
+            error: 'Unauthorized',
+            message: authResult.error || 'Invalid or missing authentication token',
+          });
+          return;
+        }
+        if (config.debug && authResult.authHeaderUsed) {
+          logger.debug(
+            `[GatewayAuth] 鉴权通过，使用 header: ${authResult.authHeaderUsed}`,
+          );
+        }
+      }
 
-      const headers = cloneAndFilterRequestHeaders(req.headers);
+      // ========== 清理入站鉴权头（避免误传到上游）==========
+      let headers = cloneAndFilterRequestHeaders(req.headers);
+      if (config.gatewayAuth && config.gatewayAuth.enabled) {
+        headers = clearAuthHeaders(headers);
+      }
+
+      const upstreamUrl = joinUrl(matchedRoute.upstreamBaseUrl, upstreamPath, url.search);
 
       let bodyBuffer: Buffer | undefined;
       const expectsBody = method !== 'GET' && method !== 'HEAD';
@@ -497,6 +543,75 @@ export function createGateway(
           });
           jsonBody = result.body;
           matches = result.matches;
+        }
+      }
+
+      // ========== 协议转换（新增）==========
+      if (jsonBody && matchedRoute.supplier.transformer) {
+        try {
+          const transformer = createProtocolTransformer();
+          const transformResult = await transformer.transform({
+            supplier: matchedRoute.supplier,
+            request: {
+              method: method,
+              path: upstreamPath,
+              headers,
+              body: jsonBody,
+            },
+            stream: false, // v1 暂不支持流式转换
+          });
+
+          // 更新请求体
+          jsonBody = transformResult.request.body;
+          // 更新请求头（协议转换可能修改 headers）
+          headers = { ...headers, ...transformResult.request.headers };
+
+          // 记录转换 trace
+          if (config.debug) {
+            logger.debug(
+              `[ProtocolTransform] 转换完成: 链=${transformResult.trace.chainType}, 耗时=${transformResult.trace.totalDuration}ms, 步骤=${transformResult.trace.steps.length}`,
+            );
+            for (const step of transformResult.trace.steps) {
+              logger.debug(
+                `[ProtocolTransform]   - ${step.name}: ${step.success ? 'OK' : 'FAIL'} (${step.duration}ms)`,
+              );
+            }
+            if (transformResult.trace.warnings.length > 0) {
+              for (const w of transformResult.trace.warnings) {
+                logger.debug(`[ProtocolTransform] 警告: ${w}`);
+              }
+            }
+          }
+
+          if (transformResult.trace.errors.length > 0) {
+            warnings.push(...transformResult.trace.errors);
+          }
+        } catch (transformError: any) {
+          const errorMsg = transformError?.message || String(transformError);
+          logger.debug(`[ProtocolTransform] 转换失败: ${errorMsg}`);
+          warnings.push(`协议转换失败: ${errorMsg}`);
+        }
+      }
+
+      // ========== 注入上游认证（新增）==========
+      if (matchedRoute.supplier.auth) {
+        if (matchedRoute.supplier.auth.type === 'bearer' && matchedRoute.supplier.auth.token) {
+          headers['authorization'] = `Bearer ${matchedRoute.supplier.auth.token}`;
+          if (config.debug) {
+            logger.debug(`[UpstreamAuth] 注入 Bearer token (***REDACTED***)`);
+          }
+        } else if (
+          matchedRoute.supplier.auth.type === 'header' &&
+          matchedRoute.supplier.auth.headerName &&
+          matchedRoute.supplier.auth.headerValue
+        ) {
+          headers[matchedRoute.supplier.auth.headerName] =
+            matchedRoute.supplier.auth.headerValue;
+          if (config.debug) {
+            logger.debug(
+              `[UpstreamAuth] 注入 header: ${matchedRoute.supplier.auth.headerName} (***REDACTED***)`,
+            );
+          }
         }
       }
 

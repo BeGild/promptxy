@@ -51,6 +51,7 @@
     "format:frontend": "cd frontend && npm run format"
   },
   "dependencies": {
+    "@musistudio/llms": "^1.0.51",
     "js-yaml": "^4.1.1"
   },
   "devDependencies": {
