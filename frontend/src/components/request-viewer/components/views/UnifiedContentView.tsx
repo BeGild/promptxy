@@ -246,11 +246,11 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
     const handleToggleDiffMode = useCallback(() => {
       const newMode = !isDiffMode;
       setIsDiffMode(newMode);
-      // 切换到差异模式时，如果没有选中节点且有变化节点，选中第一个
-      if (newMode && !selectedNodeId && hasAnyChanges) {
-        setSelectedNodeId(changedLeafNodes[0].id);
+      // 切换到差异模式时，使用当前选中的节点
+      if (newMode) {
+        setSelectedNodeId(selectedNode.id);
       }
-    }, [isDiffMode, selectedNodeId, hasAnyChanges, changedLeafNodes]);
+    }, [isDiffMode, selectedNode.id]);
 
     // 差异导航
     const scrollToHunk = useCallback(
@@ -453,8 +453,8 @@ const UnifiedContentView: React.FC<UnifiedContentViewProps> = React.memo(
                 </>
               )}
 
-              {/* 差异按钮 */}
-              {originalTree && (
+              {/* 差异按钮 - 只有选中节点有差异时才显示 */}
+              {originalTree && selectedNode.diffStatus !== DiffStatus.SAME && (
                 <button
                   onClick={handleToggleDiffMode}
                   className={`px-2 py-1 text-xs font-medium rounded transition-colors flex items-center gap-1 ${
