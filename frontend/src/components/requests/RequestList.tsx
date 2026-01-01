@@ -350,18 +350,18 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         }}
       >
         <TableHeader>
-          <TableColumn className="w-w12">已查看</TableColumn>
-          <TableColumn className="w-w1" aria-label="指示条">
+          <TableColumn className="w-w12 text-center">已查看</TableColumn>
+          <TableColumn className="w-w1 text-center" aria-label="指示条">
             {' '}
           </TableColumn>
-          <TableColumn className="w-44">时间</TableColumn>
-          <TableColumn>客户端</TableColumn>
-          <TableColumn className="w-56 max-w-72">路径</TableColumn>
-          <TableColumn className="w-24">规则检测</TableColumn>
-          <TableColumn>状态</TableColumn>
-          <TableColumn className="w-48">大小</TableColumn>
-          <TableColumn className="w-24 text-left">耗时</TableColumn>
-          <TableColumn className="w-20">操作</TableColumn>
+          <TableColumn className="w-44 text-center">时间</TableColumn>
+          <TableColumn className="w-28 text-center">客户端</TableColumn>
+          <TableColumn className="w-56 max-w-72 text-left">路径</TableColumn>
+          <TableColumn className="w-16 text-center">规则</TableColumn>
+          <TableColumn className="text-center">状态</TableColumn>
+          <TableColumn className="w-32 text-left">大小</TableColumn>
+          <TableColumn className="w-24 text-center">耗时</TableColumn>
+          <TableColumn className="w-20 text-center">操作</TableColumn>
         </TableHeader>
         <TableBody
           items={tableItems}
@@ -381,7 +381,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                 ].join(' ')}
               >
                 {/* 已查看指示器 - 仅视觉显示 */}
-                <TableCell className="w-12">
+                <TableCell className="w-12 text-center">
                   {onViewedToggle ? (
                     <button
                       type="button"
@@ -420,14 +420,14 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                 </TableCell>
 
                 {/* 强调色指示条 */}
-                <TableCell className="w-1 p-0">
+                <TableCell className="w-1 p-0 text-center">
                   {(isSelected || isViewed) && <div className="h-full w-1 bg-accent rounded-r" />}
                 </TableCell>
 
-                <TableCell className="w-44 text-sm font-mono text-xs text-primary dark:text-primary">
+                <TableCell className="w-44 text-sm font-mono text-xs text-primary dark:text-primary text-center">
                   {formatTimeWithMs(item.timestamp)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Chip
                     size="sm"
                     variant="flat"
@@ -445,20 +445,18 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     {item.path}
                   </span>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   {item.matchedRules && item.matchedRules.length > 0 ? (
-                    <div className="flex items-center gap-1 text-status-success dark:text-status-success/80">
-                      <span className="text-sm">√</span>
-                      <span className="text-xs">存在</span>
+                    <div className="flex items-center justify-center gap-1 text-status-success dark:text-status-success/80">
+                      <span className="text-sm font-semibold">{item.matchedRules.length}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 text-tertiary">
+                    <div className="flex items-center justify-center gap-1 text-tertiary">
                       <span className="text-sm">-</span>
-                      <span className="text-xs">不存在</span>
                     </div>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Chip
                     size="sm"
                     color={getStatusColor(item.responseStatus)}
@@ -487,10 +485,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     '-'
                   )}
                 </TableCell>
-                <TableCell className="w-24 text-sm text-primary dark:text-primary font-mono text-xs">
+                <TableCell className="w-24 text-sm text-primary dark:text-primary font-mono text-xs text-center">
                   {item.durationMs ? `${item.durationMs}ms` : '-'}
                 </TableCell>
-                <TableCell className="w-20">
+                <TableCell className="w-20 text-center">
                   <div className="flex gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity justify-start">
                     <Button
                       size="sm"

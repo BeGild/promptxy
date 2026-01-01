@@ -110,7 +110,7 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
     >
       {/* 使用 table 布局确保列宽与表头完全一致 */}
       <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-        <colgroup><col style={{ width: '42px' }} /><col style={{ width: '176px' }} /><col style={{ width: '64px' }} /><col style={{ width: '224px' }} /><col style={{ width: '96px' }} /><col style={{ width: '64px' }} /><col style={{ width: '192px' }} /><col style={{ width: '96px' }} /><col style={{ width: '80px' }} /></colgroup>
+        <colgroup><col style={{ width: '42px' }} /><col style={{ width: '176px' }} /><col style={{ width: '84px' }} /><col style={{ width: '224px' }} /><col style={{ width: '48px' }} /><col style={{ width: '64px' }} /><col style={{ width: '128px' }} /><col style={{ width: '96px' }} /><col style={{ width: '80px' }} /></colgroup>
         <tbody>
           <tr>
             {/* 已查看按钮 */}
@@ -139,12 +139,12 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 时间 */}
-            <td className="text-xs font-mono text-primary text-left">
+            <td className="text-xs font-mono text-primary text-center">
               {formatTimeWithMs(item.timestamp)}
             </td>
 
             {/* 客户端 */}
-            <td className="text-left">
+            <td className="text-center">
               <Chip
                 size="sm"
                 variant="flat"
@@ -160,23 +160,21 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
               {item.path}
             </td>
 
-            {/* 规则检测 */}
-            <td className="overflow-hidden text-left">
+            {/* 规则 */}
+            <td className="overflow-hidden text-center">
               {item.matchedRules && item.matchedRules.length > 0 ? (
-                <div className="flex items-center gap-1 text-status-success dark:text-status-success/80">
-                  <span className="text-xs">√</span>
-                  <span className="text-[10px]">存在</span>
+                <div className="flex items-center justify-center gap-1 text-status-success dark:text-status-success/80">
+                  <span className="text-xs font-semibold">{item.matchedRules.length}</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-tertiary">
+                <div className="flex items-center justify-center gap-1 text-tertiary">
                   <span className="text-xs">-</span>
-                  <span className="text-[10px]">不存在</span>
                 </div>
               )}
             </td>
 
             {/* 状态 */}
-            <td className="overflow-hidden text-left">
+            <td className="overflow-hidden text-center">
               <Chip
                 size="sm"
                 color={getStatusColor(item.responseStatus)}
@@ -209,12 +207,12 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </td>
 
             {/* 耗时 */}
-            <td className="text-xs text-primary text-left truncate font-mono">
+            <td className="text-xs text-primary text-center truncate font-mono">
               {item.durationMs ? `${item.durationMs}ms` : '-'}
             </td>
 
             {/* 操作 */}
-            <td className="text-left">
+            <td className="text-center">
               <div className="flex gap-0.5 items-center justify-start">
                 <Button
                   size="sm"
@@ -476,18 +474,18 @@ const RequestListVirtualComponent: React.FC<RequestListVirtualProps> = ({
     const tableHeader = (
       <div className="bg-canvas dark:bg-secondary border-b border-subtle px-4 py-2 text-xs font-semibold text-secondary overflow-y-scroll">
         <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup><col style={{ width: '42px' }} /><col style={{ width: '176px' }} /><col style={{ width: '64px' }} /><col style={{ width: '224px' }} /><col style={{ width: '96px' }} /><col style={{ width: '64px' }} /><col style={{ width: '192px' }} /><col style={{ width: '96px' }} /><col style={{ width: '80px' }} /></colgroup>
+          <colgroup><col style={{ width: '42px' }} /><col style={{ width: '176px' }} /><col style={{ width: '84px' }} /><col style={{ width: '224px' }} /><col style={{ width: '48px' }} /><col style={{ width: '64px' }} /><col style={{ width: '128px' }} /><col style={{ width: '96px' }} /><col style={{ width: '80px' }} /></colgroup>
           <tbody>
             <tr>
               <th className="text-center">已查看</th>
-              <th className="text-left">时间</th>
-              <th className="text-left">客户端</th>
+              <th className="text-center">时间</th>
+              <th className="text-center">客户端</th>
               <th className="text-left">路径</th>
-              <th className="text-left">规则检测</th>
-              <th className="text-left">状态</th>
+              <th className="text-center">规则</th>
+              <th className="text-center">状态</th>
               <th className="text-left">大小</th>
-              <th className="text-left">耗时</th>
-              <th className="text-left">操作</th>
+              <th className="text-center">耗时</th>
+              <th className="text-center">操作</th>
             </tr>
           </tbody>
         </table>
