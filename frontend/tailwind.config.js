@@ -54,6 +54,15 @@ export default {
         warning: 'var(--color-status-warning)',
         error: 'var(--color-status-error)',
         info: 'var(--color-status-info)',
+        /* 客户端品牌色 */
+        client: {
+          claude: 'var(--color-client-claude)',
+          codex: 'var(--color-client-codex)',
+          gemini: 'var(--color-client-gemini)',
+        },
+        'client-claude': 'var(--color-client-claude)',
+        'client-codex': 'var(--color-client-codex)',
+        'client-gemini': 'var(--color-client-gemini)',
         /* 边框色 */
         border: {
           default: 'var(--color-border-default)',

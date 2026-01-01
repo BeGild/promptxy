@@ -39,7 +39,7 @@ import {
 } from '@/hooks';
 import { useCleanupRequests, useStats } from '@/hooks/useRequests';
 import { SupplierManagement } from './SupplierManagement';
-import { formatBytes } from '@/utils';
+import { formatBytes, getClientColorStyle } from '@/utils';
 import { fetchSettings, updateSettings } from '@/api/config';
 
 export const SettingsPanel: React.FC = () => {
@@ -229,10 +229,10 @@ export const SettingsPanel: React.FC = () => {
                       Object.entries(stats.byClient).map(([client, count]) => (
                         <Chip
                           key={client}
-                          color="secondary"
                           variant="flat"
                           size="md"
                           className="font-medium"
+                          style={getClientColorStyle(client)}
                         >
                           {formatClient(client)}: {count}
                         </Chip>

@@ -42,7 +42,7 @@ import {
   formatDuration,
   getStatusColor,
   formatClient,
-  getClientColorClass,
+  getClientColorStyle,
 } from '@/utils';
 import { RequestListVirtual } from './RequestListVirtual';
 import { PathAutocomplete } from './PathAutocomplete';
@@ -431,7 +431,8 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                   <Chip
                     size="sm"
                     variant="flat"
-                    className={`font-medium ${getClientColorClass(item.client)}`}
+                    className="font-medium"
+                    style={getClientColorStyle(item.client)}
                   >
                     {formatClient(item.client)}
                   </Chip>

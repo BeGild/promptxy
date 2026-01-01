@@ -16,23 +16,23 @@ import type {
 } from '@/types/api';
 
 /**
- * 前缀颜色映射
+ * 前缀颜色映射（使用客户端品牌色）
  */
 const PREFIX_COLORS: Record<string, string> = {
-  '/claude': '🟧',
-  '/openai': '🟩',
-  '/gemini': '🟨',
+  '/claude': '🟧', // Claude (Anthropic) - 橙色 #D97757
+  '/openai': '🟩', // Codex (OpenAI) - 绿色 #10A37F
+  '/gemini': '🟦', // Gemini (Google) - 蓝色 #4285F4
   '/test': '🟫',
   '/custom': '🟥',
 };
 
 /**
- * 常用前缀选项
+ * 常用前缀选项（使用客户端品牌色）
  */
 export const COMMON_PREFIX_OPTIONS: CommonPrefixOption[] = [
   { prefix: '/claude', label: '/claude', description: 'Claude API', color: '🟧' },
   { prefix: '/openai', label: '/openai', description: 'OpenAI API', color: '🟩' },
-  { prefix: '/gemini', label: '/gemini', description: 'Gemini API', color: '🟨' },
+  { prefix: '/gemini', label: '/gemini', description: 'Gemini API', color: '🟦' },
   { prefix: '/test', label: '/test', description: '测试用', color: '🟫' },
 ];
 
