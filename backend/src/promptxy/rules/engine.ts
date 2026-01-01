@@ -103,16 +103,38 @@ export function applyPromptRules(
           throw new Error(`rule(${rule.name}).op(delete): must provide match or regex`);
         }
         case 'insert_before': {
-          const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(insert_before).regex`);
-          text = text.replace(re, match => `${op.text}${match}`);
-          matches.push({ ruleId: rule.uuid, opType: op.type });
-          break;
+          if (op.match !== undefined) {
+            if (op.match === '') {
+              throw new Error(`rule(${rule.name}).op(insert_before): match must not be empty`);
+            }
+            text = text.split(op.match).map(s => `${op.text}${s}`).join(op.match);
+            matches.push({ ruleId: rule.uuid, opType: op.type });
+            break;
+          }
+          if (op.regex !== undefined) {
+            const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(insert_before).regex`);
+            text = text.replace(re, match => `${op.text}${match}`);
+            matches.push({ ruleId: rule.uuid, opType: op.type });
+            break;
+          }
+          throw new Error(`rule(${rule.name}).op(insert_before): must provide match or regex`);
         }
         case 'insert_after': {
-          const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(insert_after).regex`);
-          text = text.replace(re, match => `${match}${op.text}`);
-          matches.push({ ruleId: rule.uuid, opType: op.type });
-          break;
+          if (op.match !== undefined) {
+            if (op.match === '') {
+              throw new Error(`rule(${rule.name}).op(insert_after): match must not be empty`);
+            }
+            text = text.split(op.match).map(s => `${s}${op.text}`).join(op.match);
+            matches.push({ ruleId: rule.uuid, opType: op.type });
+            break;
+          }
+          if (op.regex !== undefined) {
+            const re = compileRegex(op.regex, op.flags, `rule(${rule.name}).op(insert_after).regex`);
+            text = text.replace(re, match => `${match}${op.text}`);
+            matches.push({ ruleId: rule.uuid, opType: op.type });
+            break;
+          }
+          throw new Error(`rule(${rule.name}).op(insert_after): must provide match or regex`);
         }
         default: {
           const exhaustive: never = op;

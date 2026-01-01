@@ -41,8 +41,8 @@ export type PromptxyOp =
       replacement: string;
     }
   | { type: 'delete'; match?: string; regex?: string; flags?: string }
-  | { type: 'insert_before'; regex: string; flags?: string; text: string }
-  | { type: 'insert_after'; regex: string; flags?: string; text: string };
+  | { type: 'insert_before'; match?: string; regex?: string; flags?: string; text: string }
+  | { type: 'insert_after'; match?: string; regex?: string; flags?: string; text: string };
 
 export type PromptxyRuleWhen = {
   client: PromptxyClient;

@@ -102,11 +102,59 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
     }));
   };
 
+  // 智能迁移操作字段：切换操作类型时保留已有内容
+  const migrateOpFields = (oldOp: PromptxyOp, newType: PromptxyOpType): PromptxyOp => {
+    const baseOp: any = { type: newType };
+
+    // 保留所有可能共通的字段
+    const fieldsToMigrate: Array<'match' | 'regex' | 'flags' | 'text' | 'replacement'> = [
+      'match', 'regex', 'flags', 'text', 'replacement'
+    ];
+
+    for (const field of fieldsToMigrate) {
+      if (field in oldOp) {
+        const value = (oldOp as any)[field];
+        if (value !== undefined && value !== '') {
+          // text <-> replacement 字段互迁
+          if (field === 'text' && newType === 'replace') {
+            baseOp.replacement = value;
+          } else if (field === 'replacement' && (newType === 'set' || newType === 'append' || newType === 'prepend' || newType === 'insert_before' || newType === 'insert_after')) {
+            baseOp.text = value;
+          } else {
+            baseOp[field] = value;
+          }
+        }
+      }
+    }
+
+    // 确保新操作类型有默认值
+    if (newType === 'set' || newType === 'append' || newType === 'prepend' || newType === 'insert_before' || newType === 'insert_after') {
+      if (baseOp.text === undefined) baseOp.text = '';
+    }
+    if (newType === 'replace') {
+      if (baseOp.replacement === undefined) baseOp.replacement = '';
+    }
+
+    return baseOp as PromptxyOp;
+  };
+
   const updateOp = (index: number, updates: any) => {
-    setFormData(prev => ({
-      ...prev,
-      ops: prev.ops.map((op, i) => (i === index ? ({ ...op, ...updates } as PromptxyOp) : op)),
-    }));
+    setFormData(prev => {
+      const newOps = prev.ops.map((op, i) => {
+        if (i !== index) return op;
+
+        // 如果正在切换操作类型，进行智能迁移
+        if ('type' in updates && updates.type !== op.type) {
+          return migrateOpFields(op, updates.type as PromptxyOpType);
+        }
+
+        return { ...op, ...updates } as PromptxyOp;
+      });
+      return {
+        ...prev,
+        ops: newOps,
+      };
+    });
   };
 
   const removeOp = (index: number) => {
@@ -327,7 +375,7 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                       </div>
                     )}
 
-                    {(op.type === 'replace' || op.type === 'delete') && (
+                    {(op.type === 'replace' || op.type === 'delete' || op.type === 'insert_before' || op.type === 'insert_after') && (
                       <>
                         <div>
                           <Input
@@ -368,61 +416,30 @@ export const RuleEditor: React.FC<RuleEditorProps> = ({ rule, onSave, onCancel, 
                         </div>
                         {op.type === 'replace' && (
                           <div className="md:col-span-3">
-                            <Input
+                            <Textarea
                               label="替换为"
                               placeholder="替换后的文本"
                               value={op.replacement || ''}
                               onChange={e => updateOp(index, { replacement: e.target.value })}
                               radius="lg"
+                              minRows={1}
                               isRequired
                             />
                           </div>
                         )}
-                      </>
-                    )}
-
-                    {(op.type === 'insert_before' || op.type === 'insert_after') && (
-                      <>
-                        <div className="md:col-span-2">
-                          <Input
-                            label={
-                              <div className="flex items-center gap-1">
-                                <span>正则表达式</span>
-                                <HelpTooltip type="regex" />
-                              </div>
-                            }
-                            placeholder="pattern"
-                            value={op.regex || ''}
-                            onChange={e => updateOp(index, { regex: e.target.value })}
-                            radius="lg"
-                            isRequired
-                          />
-                        </div>
-                        <div>
-                          <Input
-                            label={
-                              <div className="flex items-center gap-1">
-                                <span>正则标志 (可选)</span>
-                                <HelpTooltip type="flags" />
-                              </div>
-                            }
-                            placeholder="gi"
-                            value={op.flags || ''}
-                            onChange={e => updateOp(index, { flags: e.target.value || undefined })}
-                            radius="lg"
-                          />
-                        </div>
-                        <div className="md:col-span-3">
-                          <Textarea
-                            label="插入文本"
-                            placeholder="要插入的文本"
-                            value={op.text || ''}
-                            onChange={e => updateOp(index, { text: e.target.value })}
-                            radius="lg"
-                            minRows={1}
-                            isRequired
-                          />
-                        </div>
+                        {(op.type === 'insert_before' || op.type === 'insert_after') && (
+                          <div className="md:col-span-3">
+                            <Textarea
+                              label="插入文本"
+                              placeholder="要插入的文本"
+                              value={op.text || ''}
+                              onChange={e => updateOp(index, { text: e.target.value })}
+                              radius="lg"
+                              minRows={1}
+                              isRequired
+                            />
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

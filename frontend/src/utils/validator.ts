@@ -103,10 +103,8 @@ function validateOp(op: PromptxyOp): string[] {
 
     case 'insert_before':
     case 'insert_after':
-      if (!('regex' in op) || typeof (op as any).regex !== 'string') {
-        errors.push('需要 regex');
-      } else if (!(op as any).regex.trim()) {
-        errors.push('regex 不能为空');
+      if (!('match' in op || 'regex' in op)) {
+        errors.push('需要 match 或 regex');
       }
       if (!('text' in op) || typeof (op as any).text !== 'string') {
         errors.push('需要 text');

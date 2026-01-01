@@ -219,12 +219,60 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
     });
   }, []);
 
-  const updateOp = useCallback((index: number, updates: any) => {
-    setFormData(prev => ({
-      ...prev,
-      ops: prev.ops.map((op, i) => (i === index ? ({ ...op, ...updates } as PromptxyOp) : op)),
-    }));
+  // 智能迁移操作字段：切换操作类型时保留已有内容
+  const migrateOpFields = useCallback((oldOp: PromptxyOp, newType: PromptxyOpType): PromptxyOp => {
+    const baseOp: any = { type: newType };
+
+    // 保留所有可能共通的字段
+    const fieldsToMigrate: Array<'match' | 'regex' | 'flags' | 'text' | 'replacement'> = [
+      'match', 'regex', 'flags', 'text', 'replacement'
+    ];
+
+    for (const field of fieldsToMigrate) {
+      if (field in oldOp) {
+        const value = (oldOp as any)[field];
+        if (value !== undefined && value !== '') {
+          // text <-> replacement 字段互迁
+          if (field === 'text' && newType === 'replace') {
+            baseOp.replacement = value;
+          } else if (field === 'replacement' && (newType === 'set' || newType === 'append' || newType === 'prepend' || newType === 'insert_before' || newType === 'insert_after')) {
+            baseOp.text = value;
+          } else {
+            baseOp[field] = value;
+          }
+        }
+      }
+    }
+
+    // 确保新操作类型有默认值
+    if (newType === 'set' || newType === 'append' || newType === 'prepend' || newType === 'insert_before' || newType === 'insert_after') {
+      if (baseOp.text === undefined) baseOp.text = '';
+    }
+    if (newType === 'replace') {
+      if (baseOp.replacement === undefined) baseOp.replacement = '';
+    }
+
+    return baseOp as PromptxyOp;
   }, []);
+
+  const updateOp = useCallback((index: number, updates: any) => {
+    setFormData(prev => {
+      const newOps = prev.ops.map((op, i) => {
+        if (i !== index) return op;
+
+        // 如果正在切换操作类型，进行智能迁移
+        if ('type' in updates && updates.type !== op.type) {
+          return migrateOpFields(op, updates.type as PromptxyOpType);
+        }
+
+        return { ...op, ...updates } as PromptxyOp;
+      });
+      return {
+        ...prev,
+        ops: newOps,
+      };
+    });
+  }, [migrateOpFields]);
 
   const removeOp = useCallback((index: number) => {
     setFormData(prev => ({
@@ -513,8 +561,8 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
                       />
                     )}
 
-                    {/* replace/delete 操作 */}
-                    {(op.type === 'replace' || op.type === 'delete') && (
+                    {/* replace/delete/insert_before/insert_after 操作 */}
+                    {(op.type === 'replace' || op.type === 'delete' || op.type === 'insert_before' || op.type === 'insert_after') && (
                       <>
                         <Input
                           label="匹配文本 (可选)"
@@ -525,7 +573,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
                           radius="lg"
                         />
                         <Input
-                          label="正则表达式"
+                          label="正则表达式 (可选)"
                           placeholder="pattern"
                           value={op.regex || ''}
                           onChange={e => updateOp(index, { regex: e.target.value || undefined })}
@@ -541,49 +589,29 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
                           radius="lg"
                         />
                         {op.type === 'replace' && (
-                          <Input
+                          <Textarea
                             label="替换为"
                             placeholder="替换后的文本"
                             value={op.replacement || ''}
                             onChange={e => updateOp(index, { replacement: e.target.value })}
                             size="sm"
                             radius="lg"
+                            minRows={2}
                             isRequired
                           />
                         )}
-                      </>
-                    )}
-
-                    {/* insert 操作 */}
-                    {(op.type === 'insert_before' || op.type === 'insert_after') && (
-                      <>
-                        <Input
-                          label="正则表达式"
-                          placeholder="pattern"
-                          value={op.regex || ''}
-                          onChange={e => updateOp(index, { regex: e.target.value || undefined })}
-                          size="sm"
-                          radius="lg"
-                          isRequired
-                        />
-                        <Input
-                          label="正则标志 (可选)"
-                          placeholder="gi"
-                          value={op.flags || ''}
-                          onChange={e => updateOp(index, { flags: e.target.value || undefined })}
-                          size="sm"
-                          radius="lg"
-                        />
-                        <Textarea
-                          label="插入文本"
-                          placeholder="要插入的文本"
-                          value={op.text || ''}
-                          onChange={e => updateOp(index, { text: e.target.value })}
-                          size="sm"
-                          radius="lg"
-                          minRows={2}
-                          isRequired
-                        />
+                        {(op.type === 'insert_before' || op.type === 'insert_after') && (
+                          <Textarea
+                            label="插入文本"
+                            placeholder="要插入的文本"
+                            value={op.text || ''}
+                            onChange={e => updateOp(index, { text: e.target.value })}
+                            size="sm"
+                            radius="lg"
+                            minRows={2}
+                            isRequired
+                          />
+                        )}
                       </>
                     )}
                   </div>
