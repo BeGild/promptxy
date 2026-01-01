@@ -27,7 +27,7 @@ async function main() {
 
   // 初始化数据库
   logger.info(`[PromptXY] 初始化数据库...`);
-  const db = await initializeDatabase();
+  const db = await initializeDatabase(config.debug);
 
   // 创建统一服务器（Gateway + API）
   const server = createGateway(config, db, config.rules);

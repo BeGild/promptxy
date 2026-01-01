@@ -128,6 +128,16 @@ class LRUCache<K, V> {
 }
 
 // ============================================================
+// 进程锁
+// ============================================================
+
+interface ProcessLockInfo {
+  pid: number;
+  startTime: number;
+  createdAt: string;
+}
+
+// ============================================================
 // 文件系统存储实现
 // ============================================================
 
@@ -140,6 +150,10 @@ class FileSystemStorage {
   private timestampIndexPath: string;
   private pathsIndexPath: string;
   private statsCachePath: string;
+
+  // 进程锁
+  private lockFilePath: string;
+  private lockFileHandle: fs.FileHandle | null = null;
 
   // 内存索引
   private timeIndex: RequestIndex[] = []; // 按时间戳倒序排列
@@ -174,6 +188,7 @@ class FileSystemStorage {
     this.timestampIndexPath = path.join(this.indexesDir, 'timestamp.idx');
     this.pathsIndexPath = path.join(this.indexesDir, 'paths.idx');
     this.statsCachePath = path.join(this.indexesDir, 'stats.json');
+    this.lockFilePath = path.join(this.dataDir, '.lock');
     this.detailCache = new LRUCache<string, RequestRecord>(50);
   }
 
@@ -182,9 +197,105 @@ class FileSystemStorage {
   // ============================================================
 
   /**
-   * 初始化存储系统
+   * 检查进程是否存活
    */
-  async initialize(): Promise<void> {
+  private async isProcessAlive(pid: number): Promise<boolean> {
+    try {
+      // 方法1: 尝试发送信号 0（不终止进程，只检查存在性）
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      // 方法2: 检查 /proc/<pid> 目录（仅 Linux）
+      try {
+        await fs.access(`/proc/${pid}`);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  /**
+   * 获取进程锁（生产环境）
+   */
+  private async acquireLock(debugMode: boolean): Promise<void> {
+    // 开发环境（debug 模式）跳过文件锁检查
+    if (debugMode) {
+      console.log('[PromptXY] 开发模式：跳过进程互斥锁检查');
+      return;
+    }
+
+    try {
+      // 检查锁文件是否已存在
+      try {
+        const lockContent = await fs.readFile(this.lockFilePath, 'utf-8');
+        const lockInfo: ProcessLockInfo = JSON.parse(lockContent);
+
+        // 检查锁文件中的进程是否仍在运行
+        const isAlive = await this.isProcessAlive(lockInfo.pid);
+        if (isAlive) {
+          throw new Error(
+            `PromptXY 已在运行 (PID: ${lockInfo.pid}, 启动时间: ${lockInfo.createdAt})\n` +
+              `如需重新启动，请先执行: kill ${lockInfo.pid}`
+          );
+        }
+
+        // 进程已不存在，清理旧锁文件
+        console.log(`[PromptXY] 检测到过期锁文件 (PID ${lockInfo.pid} 已不存在)，自动清理`);
+        await fs.unlink(this.lockFilePath);
+      } catch (error: any) {
+        if (error.code !== 'ENOENT') {
+          // ENOENT 表示锁文件不存在，这是正常情况
+          // 其他错误需要抛出
+          throw error;
+        }
+      }
+
+      // 创建新锁文件（使用独占创建模式）
+      const lockInfo: ProcessLockInfo = {
+        pid: process.pid,
+        startTime: Date.now(),
+        createdAt: new Date().toISOString(),
+      };
+
+      // 打开锁文件并获取文件句柄（用于后续释放）
+      this.lockFileHandle = await fs.open(this.lockFilePath, 'wx');
+      await this.lockFileHandle.writeFile(JSON.stringify(lockInfo, null, 2));
+
+      console.log(`[PromptXY] 获取进程锁成功 (PID: ${process.pid})`);
+    } catch (error: any) {
+      if (error.code === 'EEXIST') {
+        throw new Error('PromptXY 已有实例在运行，请勿重复启动');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 释放进程锁
+   */
+  private async releaseLock(): Promise<void> {
+    if (this.lockFileHandle) {
+      try {
+        await this.lockFileHandle.close();
+        await fs.unlink(this.lockFilePath);
+        console.log(`[PromptXY] 释放进程锁成功 (PID: ${process.pid})`);
+      } catch (error) {
+        console.warn('[PromptXY] 释放进程锁失败:', error);
+      } finally {
+        this.lockFileHandle = null;
+      }
+    }
+  }
+
+  /**
+   * 初始化存储系统
+   * @param debugMode 是否为开发模式（true=跳过进程锁）
+   */
+  async initialize(debugMode = false): Promise<void> {
+    // 获取进程锁（生产环境）
+    await this.acquireLock(debugMode);
+
     // 创建目录结构
     await fs.mkdir(this.requestsDir, { recursive: true });
     await fs.mkdir(this.indexesDir, { recursive: true });
@@ -262,11 +373,16 @@ class FileSystemStorage {
   /**
    * 原子写入文件
    * 先写入临时文件，然后使用 rename() 原子性地替换目标文件
+   * 确保父目录存在，防止目录被意外删除导致写入失败
    */
   private async atomicWrite(filePath: string, content: string): Promise<void> {
     const tempPath = `${filePath}.tmp`;
+    const dir = path.dirname(filePath);
 
     try {
+      // 确保父目录存在（防止目录被意外删除）
+      await fs.mkdir(dir, { recursive: true });
+
       // 写入临时文件
       await fs.writeFile(tempPath, content, 'utf-8');
 
@@ -944,14 +1060,15 @@ let storageInstance: FileSystemStorage | null = null;
 
 /**
  * 初始化数据库（兼容旧 API）
+ * @param debugMode 是否为开发模式（true=跳过进程锁）
  */
-export async function initializeDatabase(): Promise<FileSystemStorage> {
+export async function initializeDatabase(debugMode = false): Promise<FileSystemStorage> {
   if (storageInstance) {
     return storageInstance;
   }
 
   const storage = new FileSystemStorage();
-  await storage.initialize();
+  await storage.initialize(debugMode);
 
   storageInstance = storage;
   return storageInstance;
