@@ -151,6 +151,10 @@ class FileSystemStorage {
   private pathsIndexPath: string;
   private statsCachePath: string;
 
+  // 索引落盘串行化（避免并发 flush 造成 tmp 文件竞态）
+  private flushPromise: Promise<void> | null = null;
+  private flushDirty = false;
+
   // 进程锁
   private lockFilePath: string;
   private lockFileHandle: fs.FileHandle | null = null;
@@ -376,8 +380,13 @@ class FileSystemStorage {
    * 确保父目录存在，防止目录被意外删除导致写入失败
    */
   private async atomicWrite(filePath: string, content: string): Promise<void> {
-    const tempPath = `${filePath}.tmp`;
     const dir = path.dirname(filePath);
+    const tempPath = path.join(
+      dir,
+      `${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
+        .toString(16)
+        .slice(2)}.tmp`
+    );
 
     try {
       // 确保父目录存在（防止目录被意外删除）
@@ -641,24 +650,41 @@ class FileSystemStorage {
    * 持久化索引文件
    */
   private async flushIndex(): Promise<void> {
-    try {
-      // 写入时间索引
-      const timestampContent = this.timeIndex
-        .map(idx => this.formatIndexLine(idx))
-        .join('\n');
-      await this.atomicWrite(this.timestampIndexPath, timestampContent);
-
-      // 写入路径索引
-      const pathsContent = Array.from(this.pathCache)
-        .sort()
-        .join('\n');
-      await this.atomicWrite(this.pathsIndexPath, pathsContent);
-
-      // 写入统计缓存
-      await this.saveStatsCache();
-    } catch (error) {
-      console.error('[PromptXY] 持久化索引失败', error);
+    // 串行化：同一时刻只允许一个 flush 跑；期间有更新则在结束后再补刷一次
+    if (this.flushPromise) {
+      this.flushDirty = true;
+      return this.flushPromise;
     }
+
+    const run = async (): Promise<void> => {
+      try {
+        do {
+          this.flushDirty = false;
+
+          // 写入时间索引
+          const timestampContent = this.timeIndex
+            .map(idx => this.formatIndexLine(idx))
+            .join('\n');
+          await this.atomicWrite(this.timestampIndexPath, timestampContent);
+
+          // 写入路径索引
+          const pathsContent = Array.from(this.pathCache)
+            .sort()
+            .join('\n');
+          await this.atomicWrite(this.pathsIndexPath, pathsContent);
+
+          // 写入统计缓存
+          await this.saveStatsCache();
+        } while (this.flushDirty);
+      } catch (error) {
+        console.error('[PromptXY] 持久化索引失败', error);
+      }
+    };
+
+    this.flushPromise = run().finally(() => {
+      this.flushPromise = null;
+    });
+    return this.flushPromise;
   }
 
   // ============================================================
