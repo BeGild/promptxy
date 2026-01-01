@@ -44,7 +44,6 @@ import {
   formatClient,
   getClientColorStyle,
 } from '@/utils';
-import { RequestListVirtual } from './RequestListVirtual';
 import { PathAutocomplete } from './PathAutocomplete';
 
 interface RequestListProps {
@@ -58,18 +57,6 @@ interface RequestListProps {
   onRowClick: (id: string) => void;
   onRefresh: () => void;
   onDelete: (id: string) => void;
-  /**
-   * enableVirtualScroll: 是否强制启用虚拟滚动
-   * - undefined: 自动判断（超过30条时启用）
-   * - true: 强制启用
-   * - false: 强制禁用
-   */
-  enableVirtualScroll?: boolean;
-  /**
-   * virtualScrollThreshold: 自动启用虚拟滚动的阈值
-   * 默认为 30 条
-   */
-  virtualScrollThreshold?: number;
   selectedId?: string | null;
   viewedIds?: Set<string>;
   onViewedToggle?: (id: string) => void;
@@ -91,8 +78,6 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   onRowClick,
   onRefresh,
   onDelete,
-  enableVirtualScroll,
-  virtualScrollThreshold = 30,
   selectedId = null,
   viewedIds = new Set(),
   onViewedToggle,
@@ -108,17 +93,6 @@ const RequestListComponent: React.FC<RequestListProps> = ({
   const totalPages = useMemo(() => {
     return Math.ceil(total / 50);
   }, [total]);
-
-  // 自动判断是否启用虚拟滚动
-  // 1. 如果强制指定了 enableVirtualScroll，则使用该值
-  // 2. 否则，根据请求数量自动判断（超过阈值时启用）
-  const shouldUseVirtualScroll = useMemo(() => {
-    if (enableVirtualScroll !== undefined) {
-      return enableVirtualScroll;
-    }
-    // 当请求数量超过阈值时，自动启用虚拟滚动
-    return requests.length >= virtualScrollThreshold;
-  }, [enableVirtualScroll, requests.length, virtualScrollThreshold]);
 
   // 本地搜索状态（用于防抖）
   const [localSearch, setLocalSearch] = useState(filters.search || '');
@@ -220,33 +194,11 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 
   type RequestTableItem = RequestListItem & { _isViewed: boolean };
   const tableItems = useMemo<RequestTableItem[]>(() => {
-    if (shouldUseVirtualScroll) return [];
     return requests.map(request => ({
       ...request,
       _isViewed: viewedIds.has(request.id),
     }));
-  }, [shouldUseVirtualScroll, requests, viewedIds]);
-
-  // 如果启用虚拟滚动，使用虚拟滚动组件
-  if (shouldUseVirtualScroll) {
-    return (
-      <RequestListVirtual
-        requests={requests}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-        isLoading={isLoading}
-        total={total}
-        page={page}
-        onPageChange={onPageChange}
-        onRowClick={onRowClick}
-        onRefresh={onRefresh}
-        onDelete={onDelete}
-        selectedId={selectedId}
-        viewedIds={viewedIds}
-        onViewedToggle={onViewedToggle}
-      />
-    );
-  }
+  }, [requests, viewedIds]);
 
   if (isLoading && requests.length === 0) {
     return (
