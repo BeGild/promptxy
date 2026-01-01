@@ -27,13 +27,12 @@ import {
   Chip,
   Button,
   Input,
-  Pagination,
   Spinner,
   Badge,
   Select,
   SelectItem,
 } from '@heroui/react';
-import { Filter, RefreshCw, X, Eye, Trash2 } from 'lucide-react';
+import { Filter, RefreshCw, X, Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
 import {
@@ -45,6 +44,93 @@ import {
   getClientColorStyle,
 } from '@/utils';
 import { PathAutocomplete } from './PathAutocomplete';
+
+interface CustomPaginationProps {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+/**
+ * 自定义分页组件
+ * 显示格式: [上一页] [1] [2] [3] ... [END-2] [END-1] [END] [下一页]
+ */
+const CustomPagination: React.FC<CustomPaginationProps> = ({ page, totalPages, onPageChange }) => {
+  // 生成页码数组
+  const getPages = () => {
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      // 如果总页数小于等于7，显示所有页码
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // 总页数大于7，使用省略号策略
+      if (page <= 4) {
+        // 当前页在开头附近
+        pages.push(1, 2, 3, 4, 5, '...', totalPages);
+      } else if (page >= totalPages - 3) {
+        // 当前页在结尾附近
+        pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        // 当前页在中间
+        pages.push(1, '...', page - 1, page, page + 1, '...', totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  const pages = getPages();
+
+  return (
+    <div className="flex items-center gap-1 text-sm h-6">
+      {/* 上一页 */}
+      <Button
+        size="sm"
+        variant="light"
+        onPress={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        className="min-w-6 h-6 px-1"
+        isIconOnly
+      >
+        <ChevronLeft size={14} />
+      </Button>
+
+      {/* 页码 */}
+      {pages.map((pageNum, index) => (
+        <React.Fragment key={index}>
+          {pageNum === '...' ? (
+            <span className="px-1 text-tertiary">...</span>
+          ) : (
+            <Button
+              size="sm"
+              variant={pageNum === page ? 'flat' : 'light'}
+              color={pageNum === page ? 'primary' : 'default'}
+              onPress={() => onPageChange(pageNum as number)}
+              className={`min-w-6 h-6 px-2 ${pageNum === page ? 'font-bold' : ''}`}
+            >
+              {pageNum}
+            </Button>
+          )}
+        </React.Fragment>
+      ))}
+
+      {/* 下一页 */}
+      <Button
+        size="sm"
+        variant="light"
+        onPress={() => onPageChange(page + 1)}
+        disabled={page >= totalPages}
+        className="min-w-6 h-6 px-1"
+        isIconOnly
+      >
+        <ChevronRight size={14} />
+      </Button>
+    </div>
+  );
+};
 
 interface RequestListProps {
   requests: RequestListItem[];
@@ -270,23 +356,29 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         </Button>
       </div>
 
-      {/* 统计信息 */}
-      <div className="flex items-center gap-2 text-sm text-tertiary px-1">
-        <span>显示结果:</span>
-        <Chip color="secondary" variant="flat" size="sm" className="h-5 text-xs">
-          {statsDisplay.showing} / {statsDisplay.total} 条
-        </Chip>
-        {localSearch && (
-          <Button
-            size="sm"
-            variant="light"
-            onPress={clearSearch}
-            className="h-6 px-2 text-tertiary hover:text-primary dark:hover:text-primary"
-            startContent={<X size={14} />}
-          >
-            清除搜索
-          </Button>
-        )}
+      {/* 统计信息和分页 */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 px-1">
+        {/* 统计信息 */}
+        <div className="flex items-center gap-2 text-sm text-tertiary h-6">
+          <span>显示结果:</span>
+          <Chip color="secondary" variant="flat" size="sm" className="h-5 text-xs flex items-center">
+            {statsDisplay.showing} / {statsDisplay.total} 条
+          </Chip>
+          {localSearch && (
+            <Button
+              size="sm"
+              variant="light"
+              onPress={clearSearch}
+              className="h-6 px-2 text-tertiary hover:text-primary dark:hover:text-primary"
+              startContent={<X size={14} />}
+            >
+              清除搜索
+            </Button>
+          )}
+        </div>
+
+        {/* 完整分页 - 统计信息旁边 */}
+        {totalPages > 1 && <CustomPagination page={page} totalPages={totalPages} onPageChange={onPageChange} />}
       </div>
 
       {/* 请求表格 */}
@@ -469,21 +561,10 @@ const RequestListComponent: React.FC<RequestListProps> = ({
         </TableBody>
       </Table>
 
-      {/* 分页 */}
+      {/* 下方分页 - 当页数较少时显示，或当页数较多时显示在下方 */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <Pagination
-            total={totalPages}
-            page={page}
-            onChange={onPageChange}
-            color="primary"
-            showShadow
-            classNames={{
-              wrapper: 'gap-sm',
-              item: 'w-9 h-9 rounded-lg bg-elevated dark:bg-elevated shadow-sm border border-subtle',
-              cursor: 'bg-primary text-white font-bold shadow-lg shadow-primary/30',
-            }}
-          />
+        <div className="flex justify-center mt-4">
+          <CustomPagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
         </div>
       )}
     </div>
