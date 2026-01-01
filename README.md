@@ -2,7 +2,9 @@
 
 <div align="center">
 
-![PromptXY Logo](https://img.shields.io/badge/PromptXY-v2.0.0-brightgreen)
+<img src="https://raw.githubusercontent.com/BeGild/promptxy/master/frontend/public/favicon.svg" alt="PromptXY Logo" width="128" height="128">
+
+![PromptXY Logo](https://img.shields.io/badge/PromptXY-v2.1.3-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)
 
