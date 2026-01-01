@@ -361,9 +361,9 @@ export const SupplierManagement: React.FC = () => {
         classNames={{
           base: 'border border-brand-primary/30 dark:border-brand-primary/20 bg-canvas dark:bg-secondary',
           backdrop: 'bg-overlay',
-          header: 'bg-canvas dark:bg-secondary border-b border-subtle',
+          header: 'bg-canvas dark:bg-secondary border-b border-subtle rounded-t-large',
           body: 'bg-canvas dark:bg-secondary',
-          footer: 'bg-canvas dark:bg-secondary border-t border-subtle',
+          footer: 'bg-canvas dark:bg-secondary border-t border-subtle rounded-b-large',
         }}
       >
         <ModalContent>
@@ -484,9 +484,9 @@ export const SupplierManagement: React.FC = () => {
         classNames={{
           base: 'border border-brand-primary/30 dark:border-brand-primary/20 bg-canvas dark:bg-secondary',
           backdrop: 'bg-overlay',
-          header: 'bg-canvas dark:bg-secondary border-b border-subtle',
+          header: 'bg-canvas dark:bg-secondary border-b border-subtle rounded-t-large',
           body: 'bg-canvas dark:bg-secondary',
-          footer: 'bg-canvas dark:bg-secondary border-t border-subtle',
+          footer: 'bg-canvas dark:bg-secondary border-t border-subtle rounded-b-large',
         }}
       >
         <ModalContent>
