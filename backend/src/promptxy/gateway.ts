@@ -24,7 +24,7 @@ import {
   Supplier,
   PathMapping,
 } from './types.js';
-import { insertRequestRecord, getFilteredPaths, shouldFilterPath } from './database.js';
+import { insertRequestRecord, getFilteredPaths, shouldFilterPath, generateRequestId } from './database.js';
 import { broadcastRequest, setSSEConnections } from './api-handlers.js';
 import type { FileSystemStorage } from './database.js';
 import {
@@ -156,10 +156,6 @@ function summarizeMatches(matches: PromptxyRuleMatch[]): string {
   if (matches.length === 0) return 'no rules';
   const ids = Array.from(new Set(matches.map(m => m.ruleId)));
   return `rules=${ids.join(',')} ops=${matches.length}`;
-}
-
-function generateRequestId(): string {
-  return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 /**

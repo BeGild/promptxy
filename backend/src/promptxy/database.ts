@@ -1145,6 +1145,11 @@ export async function resetDatabaseForTest(): Promise<void> {
 }
 
 /**
- * 导出 FileSystemStorage 类型（用于类型检查）
+ * 导出请求 ID 生成函数
  */
-export type { FileSystemStorage };
+export const generateRequestId = () => FileSystemStorage.generateRequestId();
+
+/**
+ * 导出 FileSystemStorage 类和类型
+ */
+export { FileSystemStorage };
