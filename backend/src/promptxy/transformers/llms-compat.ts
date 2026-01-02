@@ -271,9 +271,15 @@ export class ProtocolTransformer {
         } catch (error: any) {
           stepResult.success = false;
           stepResult.duration = Date.now() - stepStartTime;
-          stepResult.error = error?.message || String(error);
+
+          // 构建详细错误信息
+          const errorMessage = error?.message || String(error);
+          const errorDetails = this.buildErrorDetails(stepName, errorMessage, currentBody);
+
+          stepResult.error = errorDetails.message;
           trace.steps.push(stepResult);
-          trace.errors.push(`转换器 "${stepName}" 失败: ${stepResult.error}`);
+          trace.errors.push(errorDetails.message);
+          trace.warnings.push(...errorDetails.suggestions);
           break;
         }
       }
@@ -282,6 +288,7 @@ export class ProtocolTransformer {
       const transformedPath = this.transformPath(
         req.path,
         chain[chain.length - 1],
+        currentBody,
       );
 
       // 5. 注入上游认证
@@ -410,7 +417,9 @@ export class ProtocolTransformer {
     // 根据转换器类型进行响应转换
     switch (lastTransformerName) {
       case 'deepseek':
-      case 'openai': {
+      case 'openai':
+      case 'codex': {
+        // Codex 使用 OpenAI Responses API 格式，复用 OpenAI 转换
         return this.transformFromOpenAI(response);
       }
       case 'gemini': {
@@ -603,10 +612,14 @@ export class ProtocolTransformer {
    * 转换请求路径
    *
    * 根据目标转换器将 Anthropic 路径转换为对应供应商的路径
+   * @param path 原始路径
+   * @param lastTransformer 最后一个转换器步骤
+   * @param requestBody 请求体（用于提取模型名）
    */
   private transformPath(
     path: string,
     lastTransformer: TransformerStep,
+    requestBody?: unknown,
   ): string {
     const transformerName =
       typeof lastTransformer === 'string'
@@ -623,11 +636,17 @@ export class ProtocolTransformer {
         '/v1/messages': '/chat/completions',
         '/v1/messages/batches': '/chat/completions',
       },
-      gemini: {
-        '/v1/messages':
-          '/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent',
+      codex: {
+        '/v1/messages': '/responses',
       },
+      // Gemini 路径需要动态提取模型名，单独处理
     };
+
+    // Gemini 特殊处理：动态提取模型名
+    if (transformerName === 'gemini' && path === '/v1/messages') {
+      const model = this.extractModel(requestBody) || 'gemini-2.0-flash-exp';
+      return `/v1beta/models/${model}:streamGenerateContent`;
+    }
 
     // 获取转换器的路径映射
     const mappings = pathMappings[transformerName];
@@ -689,6 +708,10 @@ export class ProtocolTransformer {
           // 清除 cache_control 字段
           return this.cleanCacheControl(request);
         }
+        case 'codex': {
+          // Anthropic Claude → Codex 格式转换
+          return this.transformToCodex(request);
+        }
         default:
           // 未知转换器，直接透传
           if (logger.debugEnabled) {
@@ -736,7 +759,7 @@ export class ProtocolTransformer {
 
     // messages 转换
     if (request.messages && Array.isArray(request.messages)) {
-      transformed.messages = request.messages.map((msg: any) => {
+      transformed.messages = request.messages.flatMap((msg: any) => {
         // 处理 tool_use 消息（assistant 发起工具调用）
         if (
           Array.isArray(msg.content) &&
@@ -771,21 +794,12 @@ export class ProtocolTransformer {
         ) {
           const toolResults = msg.content.filter((b: any) => b.type === 'tool_result');
 
-          // 如果只有一个 tool_result，直接返回
-          if (toolResults.length === 1) {
-            return {
-              role: 'tool',
-              tool_call_id: toolResults[0].tool_use_id,
-              content: toolResults[0].content,
-            };
-          }
-
-          // 多个 tool_result，需要拆分为多个消息（这里简化处理，只返回第一个）
-          return {
+          // 多个 tool_result 需要拆分为多个消息
+          return toolResults.map((result: any) => ({
             role: 'tool',
-            tool_call_id: toolResults[0].tool_use_id,
-            content: toolResults[0].content,
-          };
+            tool_call_id: result.tool_use_id,
+            content: result.content,
+          }));
         }
 
         // 处理普通文本消息
@@ -793,7 +807,7 @@ export class ProtocolTransformer {
           return msg;
         }
 
-        // 处理 content 数组（只有 text 和 image 的情况）
+        // 处理 content 数组（text、image 等混合情况）
         if (Array.isArray(msg.content)) {
           const openAIContent: any[] = [];
           for (const block of msg.content) {
@@ -974,6 +988,259 @@ export class ProtocolTransformer {
     };
 
     return { body: cleanObject(cleaned), headers: {} };
+  }
+
+  /**
+   * Anthropic Claude → Codex 格式转换
+   *
+   * Codex 使用 OpenAI Responses API 格式：
+   * - /v1/messages → /responses
+   * - system → instructions
+   * - messages[] → input[]
+   * - tools (Anthropic) → tools (OpenAI function format)
+   */
+  private transformToCodex(
+    request: Record<string, unknown>,
+  ): { body: unknown; headers: Record<string, string> } {
+    const transformed: Record<string, unknown> = {};
+
+    // 基础字段映射
+    if (request.model) {
+      transformed.model = request.model;
+    }
+
+    if (request.max_tokens) {
+      transformed.max_tokens = request.max_tokens;
+    }
+
+    if (request.temperature !== undefined) {
+      transformed.temperature = request.temperature;
+    }
+
+    if (request.top_p !== undefined) {
+      transformed.top_p = request.top_p;
+    }
+
+    // stream 字段
+    if ('stream' in request) {
+      transformed.stream = request.stream;
+    }
+
+    // system → instructions
+    if (request.system) {
+      const instructions =
+        typeof request.system === 'string'
+          ? request.system
+          : JSON.stringify(request.system);
+      transformed.instructions = instructions;
+    }
+
+    // messages[] → input[]
+    if (request.messages && Array.isArray(request.messages)) {
+      transformed.input = request.messages.map((msg: any) => {
+        // 转换为 Codex input 格式
+        const codexMessage: any = {
+          type: 'message',
+          role: msg.role || 'user',
+        };
+
+        // 处理 content
+        if (typeof msg.content === 'string') {
+          // 简单文本
+          codexMessage.content = [{
+            type: 'input_text',
+            text: msg.content,
+          }];
+        } else if (Array.isArray(msg.content)) {
+          // 复杂 content（可能包含 tool_use, tool_result, image 等）
+          codexMessage.content = msg.content.map((block: any) => {
+            if (block.type === 'text') {
+              return {
+                type: 'input_text',
+                text: block.text,
+              };
+            } else if (block.type === 'image') {
+              return {
+                type: 'image_url',
+                image_url: {
+                  url: block.source?.data || block.source,
+                },
+              };
+            } else if (block.type === 'tool_use') {
+              // tool_use 保持原样或转换为特定格式
+              return block;
+            } else if (block.type === 'tool_result') {
+              // tool_result 保持原样
+              return block;
+            }
+            return block;
+          });
+        } else {
+          // 其他情况直接使用
+          codexMessage.content = msg.content;
+        }
+
+        // 处理 tool_calls（OpenAI 格式）
+        if (msg.tool_calls && Array.isArray(msg.tool_calls)) {
+          codexMessage.tool_calls = msg.tool_calls;
+        }
+
+        // 处理 tool_call_id（tool 消息）
+        if (msg.tool_call_id) {
+          codexMessage.tool_call_id = msg.tool_call_id;
+        }
+
+        return codexMessage;
+      });
+    }
+
+    // tools 转换：Anthropic → OpenAI function format
+    if (request.tools && Array.isArray(request.tools)) {
+      transformed.tools = request.tools.map((tool: any) => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.input_schema || tool.parameters || {},
+        },
+      }));
+    }
+
+    // tool_choice 转换
+    if (request.tool_choice) {
+      if (typeof request.tool_choice === 'object') {
+        const tc = request.tool_choice as any;
+        transformed.tool_choice = {
+          type: 'function',
+          function: { name: tc.name },
+        };
+      } else {
+        transformed.tool_choice = request.tool_choice;
+      }
+    }
+
+    return { body: transformed, headers: {} };
+  }
+
+  /**
+   * 转换 Codex content 格式（用于反向转换或兼容性处理）
+   * Codex 的 content 可能是：[ { type: 'input_text', text: '...' } ]
+   */
+  private convertCodexContent(content: any): any {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (Array.isArray(content)) {
+      // 如果只有一个 text block，简化为字符串
+      if (content.length === 1 && content[0]?.type === 'text') {
+        return content[0].text;
+      }
+      // 否则保持数组格式
+      return content;
+    }
+
+    return content;
+  }
+
+  /**
+   * 构建详细的错误信息
+   */
+  private buildErrorDetails(
+    transformerName: string,
+    errorMessage: string,
+    requestBody: any,
+  ): { message: string; suggestions: string[] } {
+    const suggestions: string[] = [];
+
+    // 根据转换器类型和错误信息提供建议
+    switch (transformerName) {
+      case 'openai':
+      case 'deepseek':
+        if (errorMessage.includes('tools') || errorMessage.includes('function')) {
+          suggestions.push('提示: 检查 tools 定义是否符合 OpenAI function 格式');
+          suggestions.push('提示: tools 应包含 name、description 和 input_schema 字段');
+        }
+        if (errorMessage.includes('messages') || errorMessage.includes('content')) {
+          suggestions.push('提示: 检查 messages 数组中的 content 字段格式');
+          suggestions.push('提示: content 可以是字符串或对象数组');
+        }
+        break;
+
+      case 'gemini':
+        if (errorMessage.includes('contents') || errorMessage.includes('parts')) {
+          suggestions.push('提示: Gemini 使用 contents 而不是 messages');
+          suggestions.push('提示: 每个 content 应包含 parts 数组');
+        }
+        if (errorMessage.includes('tools') || errorMessage.includes('functionDeclarations')) {
+          suggestions.push('提示: Gemini 工具应使用 functionDeclarations 格式');
+        }
+        break;
+
+      case 'codex':
+        if (errorMessage.includes('input') || errorMessage.includes('instructions')) {
+          suggestions.push('提示: Claude → Codex 转换需要 messages[] → input[]');
+          suggestions.push('提示: Claude → Codex 转换需要 system → instructions');
+        }
+        break;
+    }
+
+    // 如果无法解析请求体
+    if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
+      suggestions.push('提示: 确保请求体是有效的 JSON 格式');
+    }
+
+    // 请求体摘要
+    const bodySummary = this.summarizeRequestBody(requestBody);
+
+    const message = `[${transformerName}] 转换失败: ${errorMessage}${bodySummary ? ` | 请求: ${bodySummary}` : ''}`;
+
+    return {
+      message,
+      suggestions,
+    };
+  }
+
+  /**
+   * 生成请求体摘要（用于错误信息）
+   */
+  private summarizeRequestBody(body: any): string {
+    if (!body || typeof body !== 'object') {
+      return '';
+    }
+
+    const parts: string[] = [];
+
+    if (body.model) {
+      parts.push(`model=${body.model}`);
+    }
+
+    // Claude 格式
+    if (body.messages && Array.isArray(body.messages)) {
+      parts.push(`messages=${body.messages.length}条`);
+    }
+
+    // Codex 格式
+    if (body.input && Array.isArray(body.input)) {
+      parts.push(`input=${body.input.length}项`);
+    }
+
+    if (body.instructions) {
+      const preview = String(body.instructions).substring(0, 30);
+      parts.push(`instructions="${preview}..."`);
+    }
+
+    // Claude system 字段
+    if (body.system) {
+      const preview = String(body.system).substring(0, 30);
+      parts.push(`system="${preview}..."`);
+    }
+
+    if (body.tools && Array.isArray(body.tools)) {
+      parts.push(`tools=${body.tools.length}个`);
+    }
+
+    return parts.join(', ') || '(空请求体)';
   }
 }
 

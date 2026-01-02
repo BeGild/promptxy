@@ -465,4 +465,430 @@ describe('Protocol Transformation - 集成测试', () => {
       expect(result.needsResponseTransform).toBe(false);
     });
   });
+
+  describe('Claude → Codex 格式转换', () => {
+    const transformer = createProtocolTransformer();
+
+    const createClaudeToCodexRequest = (): TransformRequest => ({
+      supplier: {
+        id: 'codex-test',
+        name: 'Codex Test',
+        baseUrl: 'https://api.openai.com',
+        auth: {
+          type: 'bearer',
+          token: 'sk-test-token',
+        },
+        transformer: {
+          default: ['codex'],
+        },
+      },
+      request: {
+        method: 'POST',
+        path: '/v1/messages',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: {
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1024,
+          system: 'You are a helpful assistant.',
+          messages: [
+            {
+              role: 'user',
+              content: 'Hello, how are you?',
+            },
+          ],
+        },
+      },
+      stream: false,
+    });
+
+    it('应转换 Claude /v1/messages 路径到 Codex /responses', async () => {
+      const request = createClaudeToCodexRequest();
+      const result = await transformer.transform(request);
+
+      expect(result.trace.success).toBe(true);
+      expect(result.request.path).toBe('/responses');
+    });
+
+    it('应转换 system 为 instructions', async () => {
+      const request = createClaudeToCodexRequest();
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      expect(body.instructions).toBe('You are a helpful assistant.');
+    });
+
+    it('应转换 messages[] 为 input[]', async () => {
+      const request = createClaudeToCodexRequest();
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      expect(body.input).toBeDefined();
+      expect(body.input).toHaveLength(1);
+      expect(body.input[0].type).toBe('message');
+      expect(body.input[0].role).toBe('user');
+      expect(body.input[0].content).toEqual([
+        { type: 'input_text', text: 'Hello, how are you?' },
+      ]);
+    });
+
+    it('应转换 Anthropic tools 为 OpenAI function 格式', async () => {
+      const request = createClaudeToCodexRequest();
+      (request.request.body as any).tools = [
+        {
+          name: 'get_weather',
+          description: 'Get weather',
+          input_schema: {
+            type: 'object',
+            properties: {
+              location: { type: 'string' },
+            },
+            required: ['location'],
+          },
+        },
+      ];
+
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      expect(body.tools).toBeDefined();
+      expect(body.tools[0].type).toBe('function');
+      expect(body.tools[0].function.name).toBe('get_weather');
+      expect(body.tools[0].function.description).toBe('Get weather');
+      expect(body.tools[0].function.parameters).toBeDefined();
+    });
+
+    it('应处理复杂 content（text + tool_use 混合）', async () => {
+      const request = createClaudeToCodexRequest();
+      (request.request.body as any).messages = [
+        {
+          role: 'user',
+          content: 'What is the weather?',
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'I will check the weather.' },
+            {
+              type: 'tool_use',
+              id: 'toolu_abc123',
+              name: 'get_weather',
+              input: { location: 'Tokyo' },
+            },
+          ],
+        },
+      ];
+
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      expect(body.input).toHaveLength(2);
+      expect(body.input[1].content).toEqual([
+        { type: 'input_text', text: 'I will check the weather.' },
+        {
+          type: 'tool_use',
+          id: 'toolu_abc123',
+          name: 'get_weather',
+          input: { location: 'Tokyo' },
+        },
+      ]);
+    });
+
+    it('应处理 tool_result 消息', async () => {
+      const request = createClaudeToCodexRequest();
+      (request.request.body as any).messages = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu_abc123',
+              content: '22°C',
+            },
+          ],
+        },
+      ];
+
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      expect(body.input[0].content).toEqual([
+        {
+          type: 'tool_result',
+          tool_use_id: 'toolu_abc123',
+          content: '22°C',
+        },
+      ]);
+    });
+  });
+
+  describe('Codex → Claude 响应转换', () => {
+    const transformer = createProtocolTransformer();
+
+    it('应转换 Codex 响应到 Claude 格式', async () => {
+      // Codex 使用 OpenAI Responses API 格式
+      const codexResponse = {
+        id: 'chatcmpl-abc123',
+        object: 'chat.completion',
+        created: 1234567890,
+        model: 'claude-3-5-sonnet-20241022',
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: 'Hello! I am doing well, thank you.',
+            },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: {
+          prompt_tokens: 10,
+          completion_tokens: 20,
+          total_tokens: 30,
+        },
+      };
+
+      const result = await transformer.transformResponse(
+        {
+          id: 'codex-test',
+          name: 'Codex Test',
+          baseUrl: 'https://api.openai.com',
+          transformer: {
+            default: ['codex'],
+          },
+        },
+        codexResponse,
+        'application/json'
+      );
+
+      const response = result as any;
+      expect(response.type).toBe('message');
+      expect(response.role).toBe('assistant');
+
+      // content 可能是字符串或数组
+      if (typeof response.content === 'string') {
+        expect(response.content).toBe('Hello! I am doing well, thank you.');
+      } else if (Array.isArray(response.content)) {
+        expect(response.content).toHaveLength(1);
+        expect(response.content[0].type).toBe('text');
+        expect(response.content[0].text).toBe('Hello! I am doing well, thank you.');
+      }
+
+      expect(response.stop_reason).toBe('stop');
+    });
+
+    it('应转换包含 tool_calls 的 Codex 响应', async () => {
+      const codexResponse = {
+        id: 'chatcmpl-xyz789',
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_abc123',
+                  type: 'function',
+                  function: {
+                    name: 'get_weather',
+                    arguments: '{"location":"Tokyo"}',
+                  },
+                },
+              ],
+            },
+            finish_reason: 'tool_calls',
+          },
+        ],
+      };
+
+      const result = await transformer.transformResponse(
+        {
+          id: 'codex-test',
+          name: 'Codex Test',
+          baseUrl: 'https://api.openai.com',
+          transformer: {
+            default: ['codex'],
+          },
+        },
+        codexResponse,
+        'application/json'
+      );
+
+      const response = result as any;
+      expect(response.content).toBeDefined();
+      expect(response.content).toHaveLength(1);
+      expect(response.content[0].type).toBe('tool_use');
+      expect(response.content[0].id).toBe('call_abc123');
+      expect(response.content[0].name).toBe('get_weather');
+      expect(response.content[0].input).toEqual({ location: 'Tokyo' });
+      expect(response.stop_reason).toBe('tool_calls');
+    });
+  });
+
+  describe('Gemini 动态模型名路径转换', () => {
+    const transformer = createProtocolTransformer();
+
+    it('应使用请求体中的模型名构建 Gemini 路径', async () => {
+      const request: TransformRequest = {
+        supplier: {
+          id: 'gemini-test',
+          name: 'Gemini Test',
+          baseUrl: 'https://generativelanguage.googleapis.com',
+          transformer: {
+            default: ['gemini'],
+          },
+        },
+        request: {
+          method: 'POST',
+          path: '/v1/messages',
+          headers: {},
+          body: {
+            model: 'gemini-1.5-pro',
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: 'Test' }],
+          },
+        },
+      };
+
+      const result = await transformer.transform(request);
+
+      // 路径应包含请求中的模型名
+      expect(result.request.path).toBe('/v1beta/models/gemini-1.5-pro:streamGenerateContent');
+    });
+
+    it('应使用默认模型名当请求体中没有模型时', async () => {
+      const request: TransformRequest = {
+        supplier: {
+          id: 'gemini-test',
+          name: 'Gemini Test',
+          baseUrl: 'https://generativelanguage.googleapis.com',
+          transformer: {
+            default: ['gemini'],
+          },
+        },
+        request: {
+          method: 'POST',
+          path: '/v1/messages',
+          headers: {},
+          body: {
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: 'Test' }],
+          },
+        },
+      };
+
+      const result = await transformer.transform(request);
+
+      // 路径应包含默认模型名
+      expect(result.request.path).toBe('/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent');
+    });
+  });
+
+  describe('复杂 content 数组处理', () => {
+    const transformer = createProtocolTransformer();
+
+    it('应正确处理 tool_use + text 混合消息', async () => {
+      const request: TransformRequest = {
+        supplier: {
+          id: 'deepseek-test',
+          name: 'DeepSeek Test',
+          baseUrl: 'https://api.deepseek.com',
+          transformer: {
+            default: ['deepseek'],
+          },
+        },
+        request: {
+          method: 'POST',
+          path: '/v1/messages',
+          headers: {},
+          body: {
+            model: 'claude-sonnet-4',
+            max_tokens: 1024,
+            messages: [
+              {
+                role: 'user',
+                content: 'What is the weather?',
+              },
+              {
+                role: 'assistant',
+                content: [
+                  { type: 'text', text: 'I will check the weather for you.' },
+                  {
+                    type: 'tool_use',
+                    id: 'toolu_abc123',
+                    name: 'get_weather',
+                    input: { location: 'Tokyo' },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      };
+
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      // assistant 消息应包含 content 和 tool_calls
+      expect(body.messages[1].role).toBe('assistant');
+      expect(body.messages[1].content).toBe('I will check the weather for you.');
+      expect(body.messages[1].tool_calls).toBeDefined();
+      expect(body.messages[1].tool_calls).toHaveLength(1);
+      expect(body.messages[1].tool_calls[0].id).toBe('toolu_abc123');
+    });
+
+    it('应正确拆分多个 tool_result', async () => {
+      const request: TransformRequest = {
+        supplier: {
+          id: 'deepseek-test',
+          name: 'DeepSeek Test',
+          baseUrl: 'https://api.deepseek.com',
+          transformer: {
+            default: ['deepseek'],
+          },
+        },
+        request: {
+          method: 'POST',
+          path: '/v1/messages',
+          headers: {},
+          body: {
+            model: 'claude-sonnet-4',
+            max_tokens: 1024,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'tool_result',
+                    tool_use_id: 'toolu_abc123',
+                    content: '22°C',
+                  },
+                  {
+                    type: 'tool_result',
+                    tool_use_id: 'toolu_def456',
+                    content: '18°C',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      };
+
+      const result = await transformer.transform(request);
+
+      const body = result.request.body as any;
+      // 应拆分为两个独立的 tool 消息
+      expect(body.messages).toHaveLength(2);
+      expect(body.messages[0].role).toBe('tool');
+      expect(body.messages[0].tool_call_id).toBe('toolu_abc123');
+      expect(body.messages[0].content).toBe('22°C');
+      expect(body.messages[1].role).toBe('tool');
+      expect(body.messages[1].tool_call_id).toBe('toolu_def456');
+      expect(body.messages[1].content).toBe('18°C');
+    });
+  });
 });

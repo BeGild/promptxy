@@ -564,7 +564,7 @@ export function createGateway(
               headers,
               body: jsonBody,
             },
-            stream: false, // v1 暂不支持流式转换
+            stream: true, // 启用流式转换支持
           });
 
           // 更新请求体

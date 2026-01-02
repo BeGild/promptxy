@@ -305,7 +305,8 @@ export function createSSETransformStream(
   if (supplier.transformer && supplier.transformer.default) {
     const lastTransformer = supplier.transformer.default[supplier.transformer.default.length - 1];
     if (typeof lastTransformer === 'string') {
-      if (lastTransformer === 'openai' || lastTransformer === 'deepseek') {
+      if (lastTransformer === 'openai' || lastTransformer === 'deepseek' || lastTransformer === 'codex') {
+        // Codex 使用 OpenAI Responses API 格式，复用 OpenAI 转换
         transformType = 'openai';
       } else if (lastTransformer === 'gemini') {
         transformType = 'gemini';
