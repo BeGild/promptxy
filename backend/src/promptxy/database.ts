@@ -45,6 +45,8 @@ interface RequestFile {
   responseBody?: string;
   matchedRules: string;
   error?: string;
+  requestHeaders?: string;      // 协议转换后的请求头
+  originalRequestHeaders?: string; // 原始请求头
 }
 
 /**
@@ -434,6 +436,8 @@ class FileSystemStorage {
       responseBody: record.responseBody,
       matchedRules: record.matchedRules,
       error: record.error,
+      requestHeaders: record.requestHeaders,
+      originalRequestHeaders: record.originalRequestHeaders,
     };
 
     // 使用 YAML dump，大字段使用多行字符串语法
@@ -472,6 +476,8 @@ class FileSystemStorage {
         responseBody: fileContent.responseBody,
         matchedRules: fileContent.matchedRules,
         error: fileContent.error,
+        requestHeaders: fileContent.requestHeaders,
+        originalRequestHeaders: fileContent.originalRequestHeaders,
       };
     } catch (error) {
       console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);

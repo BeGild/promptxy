@@ -73,6 +73,8 @@ export function sanitizeHeaders(
     'x-goog-api-key',
     'cookie',
     'set-cookie',
+    'x-custom-auth',
+    'x-custom-authorization',
   ];
 
   for (const [key, value] of Object.entries(headers)) {

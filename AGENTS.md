@@ -30,3 +30,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 1. 必须使用中文commit message
 2. 禁止使用简单的一行命令，必须详细描述 改动
 3. 鼓励使用图表来描述架构改动
+
+# 2. 开发调试
+
+1. 使用 `./scripts/dev.sh &` 来一键启动开发服务器，注意后台运行避免阻塞工具，验证完毕后及时关闭

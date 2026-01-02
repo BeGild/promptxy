@@ -56,7 +56,7 @@ import {
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
-import { createProtocolTransformer } from './transformers/llms-compat.js';
+import { createProtocolTransformer, sanitizeHeaders } from './transformers/llms-compat.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
 import { isSSEResponse, createSSETransformStream } from './transformers/sse.js';
 
@@ -497,6 +497,9 @@ export function createGateway(
         headers = clearAuthHeaders(headers);
       }
 
+      // 保存原始请求头（清理后、转换前）
+      const originalRequestHeaders = { ...headers };
+
       const upstreamUrl = joinUrl(matchedRoute.upstreamBaseUrl, upstreamPath, url.search);
 
       let bodyBuffer: Buffer | undefined;
@@ -617,6 +620,9 @@ export function createGateway(
           }
         }
       }
+
+      // 保存最终请求头（协议转换后、认证注入后）
+      const finalRequestHeaders = { ...headers };
 
       if (config.debug) {
         logger.debug(
@@ -750,6 +756,8 @@ export function createGateway(
           modifiedBody: savedJsonBody
             ? JSON.stringify(savedJsonBody)
             : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+          requestHeaders: JSON.stringify(sanitizeHeaders(finalRequestHeaders)),
+          originalRequestHeaders: JSON.stringify(sanitizeHeaders(originalRequestHeaders)),
           requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
           responseSize: responseBodyBuffer.length,
           matchedRules: JSON.stringify(matches),
@@ -793,6 +801,8 @@ export function createGateway(
         // 检查路径是否需要过滤
         const filteredPaths = await getFilteredPaths();
         if (!shouldFilterPath(upstreamPath, filteredPaths)) {
+          // 在错误情况下，从原始请求重新获取 headers
+          const errorRequestHeaders = cloneAndFilterRequestHeaders(req.headers);
           const record: RequestRecord = {
             id: requestId,
             timestamp: Date.now(),
@@ -803,6 +813,8 @@ export function createGateway(
             modifiedBody: jsonBody
               ? JSON.stringify(jsonBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+            requestHeaders: JSON.stringify(sanitizeHeaders(errorRequestHeaders)),
+            originalRequestHeaders: JSON.stringify(sanitizeHeaders(errorRequestHeaders)),
             requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
             matchedRules: JSON.stringify(matches),
             responseStatus: undefined,

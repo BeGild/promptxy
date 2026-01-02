@@ -183,6 +183,10 @@ export interface RequestRecord {
   originalBody: string;
   modifiedBody: string;
 
+  // 请求头（JSON 字符串，包含原始请求头和协议转换后的请求头）
+  requestHeaders?: string; // JSON 字符串
+  originalRequestHeaders?: string; // JSON 字符串（原始请求头）
+
   // 请求/响应大小（字节）
   requestSize?: number;
   responseSize?: number;
@@ -207,6 +211,8 @@ export interface RequestRecordResponse {
   method: string;
   originalBody: any;
   modifiedBody: any;
+  requestHeaders?: Record<string, string>; // 协议转换后的请求头
+  originalRequestHeaders?: Record<string, string>; // 原始请求头
   requestSize?: number;
   responseSize?: number;
   matchedRules: Array<{ ruleId: string; opType: PromptxyOpType }>;

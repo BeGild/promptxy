@@ -188,6 +188,8 @@ export async function handleGetRequest(
       method: record.method,
       originalBody: JSON.parse(record.originalBody),
       modifiedBody: JSON.parse(record.modifiedBody),
+      requestHeaders: record.requestHeaders ? JSON.parse(record.requestHeaders) : undefined,
+      originalRequestHeaders: record.originalRequestHeaders ? JSON.parse(record.originalRequestHeaders) : undefined,
       requestSize: record.requestSize,
       responseSize: record.responseSize,
       matchedRules: JSON.parse(record.matchedRules),
