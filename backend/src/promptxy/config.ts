@@ -34,27 +34,30 @@ const DEFAULT_CONFIG: PromptxyConfig = {
   suppliers: [
     {
       id: 'claude-anthropic',
-      name: 'Claude (Anthropic)',
+      name: 'claude-anthropic',
+      displayName: 'Claude (Anthropic)',
       baseUrl: 'https://api.anthropic.com',
-      localPrefix: '/claude',
-      pathMappings: [],
+      protocol: 'anthropic',
       enabled: true,
+      auth: { type: 'none' },
     },
     {
       id: 'openai-official',
-      name: 'OpenAI Official',
+      name: 'openai-official',
+      displayName: 'OpenAI Official',
       baseUrl: 'https://api.openai.com',
-      localPrefix: '/openai',
-      pathMappings: [],
+      protocol: 'openai',
       enabled: true,
+      auth: { type: 'none' },
     },
     {
       id: 'gemini-google',
-      name: 'Gemini (Google)',
+      name: 'gemini-google',
+      displayName: 'Gemini (Google)',
       baseUrl: 'https://generativelanguage.googleapis.com',
-      localPrefix: '/gemini',
-      pathMappings: [],
+      protocol: 'gemini',
       enabled: true,
+      auth: { type: 'none' },
     },
   ],
   rules: [],
@@ -165,70 +168,55 @@ export function assertSupplier(label: string, supplier: Supplier): void {
     throw new Error(`${label}.name must be a non-empty string`);
   }
 
-  assertUrl(`${label}.baseUrl`, supplier.baseUrl);
-
-  if (!supplier.localPrefix || typeof supplier.localPrefix !== 'string') {
-    throw new Error(`${label}.localPrefix must be a non-empty string`);
+  if (!supplier.displayName || typeof supplier.displayName !== 'string') {
+    throw new Error(`${label}.displayName must be a non-empty string`);
   }
 
-  if (!supplier.localPrefix.startsWith('/')) {
-    throw new Error(`${label}.localPrefix must start with '/'`);
+  assertUrl(`${label}.baseUrl`, supplier.baseUrl);
+
+  if (!supplier.protocol || typeof supplier.protocol !== 'string') {
+    throw new Error(`${label}.protocol must be a non-empty string`);
+  }
+
+  const validProtocols = ['anthropic', 'openai', 'gemini'];
+  if (!validProtocols.includes(supplier.protocol)) {
+    throw new Error(`${label}.protocol must be one of: ${validProtocols.join(', ')}`);
   }
 
   if (typeof supplier.enabled !== 'boolean') {
     throw new Error(`${label}.enabled must be a boolean`);
   }
 
-  assertPathMappings(label, supplier.pathMappings);
-
   // 验证 auth 配置
   if (supplier.auth) {
-    const authResult = validateSupplierAuth(supplier.auth);
-    if (!authResult.valid) {
-      throw new Error(
-        `${label}.auth: ${authResult.errors.join(', ')}`,
-      );
+    const authTypes = ['none', 'bearer', 'header'];
+    if (!supplier.auth.type || !authTypes.includes(supplier.auth.type)) {
+      throw new Error(`${label}.auth.type must be one of: ${authTypes.join(', ')}`);
     }
-  }
 
-  // 验证 transformer 配置
-  if (supplier.transformer) {
-    const transformerResult = validateTransformerConfig(supplier.transformer);
-    if (!transformerResult.valid) {
-      throw new Error(
-        `${label}.transformer: ${transformerResult.errors.join(', ')}`,
-      );
+    if (supplier.auth.type === 'bearer' && !supplier.auth.token) {
+      throw new Error(`${label}.auth.token is required when auth.type is 'bearer'`);
     }
-    // 输出警告
-    for (const warning of transformerResult.warnings) {
-      console.warn(`[Config] ${label}.transformer: ${warning}`);
+
+    if (supplier.auth.type === 'header') {
+      if (!supplier.auth.headerName) {
+        throw new Error(`${label}.auth.headerName is required when auth.type is 'header'`);
+      }
+      if (!supplier.auth.headerValue) {
+        throw new Error(`${label}.auth.headerValue is required when auth.type is 'header'`);
+      }
     }
   }
 }
 
 /**
- * 验证供应商路径冲突
+ * 验证供应商配置冲突
+ * 新架构中，供应商不再绑定到本地路径，只检查 name 唯一性
  */
 export function assertSupplierPathConflicts(suppliers: Supplier[]): void {
-  const enabledByPrefix = new Map<string, Supplier[]>();
-
-  for (const supplier of suppliers) {
-    if (supplier.enabled) {
-      if (!enabledByPrefix.has(supplier.localPrefix)) {
-        enabledByPrefix.set(supplier.localPrefix, []);
-      }
-      enabledByPrefix.get(supplier.localPrefix)!.push(supplier);
-    }
-  }
-
-  for (const [prefix, suppliersForPrefix] of enabledByPrefix) {
-    if (suppliersForPrefix.length > 1) {
-      throw new Error(
-        `Local prefix '${prefix}' is used by multiple enabled suppliers: ` +
-          suppliersForPrefix.map(s => s.name).join(', '),
-      );
-    }
-  }
+  // 新架构中供应商不再需要路径冲突检查
+  // name 字段由前端保证唯一性，后端不做强制限制
+  return;
 }
 
 function assertConfig(config: PromptxyConfig): PromptxyConfig {

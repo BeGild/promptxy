@@ -7,9 +7,8 @@
  * - SSE 重新序列化
  */
 
-import { Readable, Transform } from 'node:stream';
+import { Transform } from 'node:stream';
 import { createLogger } from '../logger.js';
-import type { Supplier } from '../types.js';
 
 const logger = createLogger({ debug: false });
 
@@ -295,27 +294,24 @@ function convertGeminiStreamChunk(data: any): any | null {
  * 创建 SSE 转换流
  *
  * 这是一个 Transform 流，用于在管道中转换 SSE 响应
+ *
+ * @param transformType - 转换类型：'openai' 或 'gemini'，其他值表示透传
  */
 export function createSSETransformStream(
-  supplier: Supplier,
+  transformType?: 'openai' | 'gemini' | string,
 ): Transform {
   // 确定转换类型
-  let transformType: 'openai' | 'gemini' | 'passthrough' = 'passthrough';
+  let actualTransformType: 'openai' | 'gemini' | 'passthrough' = 'passthrough';
 
-  if (supplier.transformer && supplier.transformer.default) {
-    const lastTransformer = supplier.transformer.default[supplier.transformer.default.length - 1];
-    if (typeof lastTransformer === 'string') {
-      if (lastTransformer === 'openai' || lastTransformer === 'deepseek' || lastTransformer === 'codex') {
-        // Codex 使用 OpenAI Responses API 格式，复用 OpenAI 转换
-        transformType = 'openai';
-      } else if (lastTransformer === 'gemini') {
-        transformType = 'gemini';
-      }
-    }
+  if (transformType === 'openai' || transformType === 'deepseek' || transformType === 'codex') {
+    // Codex 使用 OpenAI Responses API 格式，复用 OpenAI 转换
+    actualTransformType = 'openai';
+  } else if (transformType === 'gemini') {
+    actualTransformType = 'gemini';
   }
 
   if (logger.debugEnabled) {
-    logger.debug(`[SSETransform] 转换类型: ${transformType}`);
+    logger.debug(`[SSETransform] 转换类型: ${actualTransformType}`);
   }
 
   // 创建转换流
@@ -326,10 +322,10 @@ export function createSSETransformStream(
         let transformed = chunkStr;
 
         // 根据转换类型应用转换
-        if (transformType === 'openai') {
+        if (actualTransformType === 'openai') {
           const result = transformOpenAIChunkToAnthropic(chunkStr);
           transformed = result ?? chunkStr;
-        } else if (transformType === 'gemini') {
+        } else if (actualTransformType === 'gemini') {
           const result = transformGeminiChunkToAnthropic(chunkStr);
           transformed = result ?? chunkStr;
         }

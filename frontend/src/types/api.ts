@@ -137,10 +137,7 @@ export interface SupplierCreateResponse {
 }
 
 export interface SupplierUpdateRequest {
-  supplierId: string;
-  request: {
-    supplier: Partial<Supplier>;
-  };
+  supplier: Supplier;
 }
 
 export interface SupplierUpdateResponse {

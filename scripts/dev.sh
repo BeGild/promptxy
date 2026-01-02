@@ -13,27 +13,29 @@ echo ""
 # 检查是否在正确的目录
 # 后端依赖在根目录 package.json，前端依赖在 frontend/package.json
 if [ ! -f "package.json" ] || [ ! -f "frontend/package.json" ]; then
-    echo "错误: 请在项目根目录运行此脚本"
-    exit 1
+	echo "错误: 请在项目根目录运行此脚本"
+	exit 1
 fi
 
 # 检查 Node.js
-if ! command -v node &> /dev/null; then
-    echo "错误: Node.js 未安装"
-    exit 1
+if ! command -v node &>/dev/null; then
+	echo "错误: Node.js 未安装"
+	exit 1
 fi
 
 # 检查依赖
 echo "检查依赖..."
 if [ ! -d "node_modules" ]; then
-    echo "安装后端依赖..."
-    npm install
+	echo "安装后端依赖..."
+	npm install
 fi
 
 if [ ! -d "frontend/node_modules" ]; then
-    echo "安装前端依赖..."
-    cd frontend && npm install && cd ..
+	echo "安装前端依赖..."
+	cd frontend && npm install && cd ..
 fi
+
+npm run build
 
 echo ""
 echo "========================================="
@@ -53,15 +55,15 @@ sleep 3
 # 检测后端端口（尝试常见范围）
 BACKEND_PORT=""
 for port in {7070..7100} {8000..8100}; do
-    if curl -s -m 1 "http://127.0.0.1:${port}/_promptxy/health" > /dev/null 2>&1; then
-        BACKEND_PORT=$port
-        break
-    fi
+	if curl -s -m 1 "http://127.0.0.1:${port}/_promptxy/health" >/dev/null 2>&1; then
+		BACKEND_PORT=$port
+		break
+	fi
 done
 
 if [ -z "$BACKEND_PORT" ]; then
-    echo "警告: 无法检测到后端端口，使用默认端口 7070"
-    BACKEND_PORT=7070
+	echo "警告: 无法检测到后端端口，使用默认端口 7070"
+	BACKEND_PORT=7070
 fi
 
 echo "检测到后端端口: $BACKEND_PORT"

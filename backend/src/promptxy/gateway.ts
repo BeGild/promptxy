@@ -22,7 +22,6 @@ import {
   RequestRecord,
   SSERequestEvent,
   Supplier,
-  PathMapping,
 } from './types.js';
 import { insertRequestRecord, getFilteredPaths, shouldFilterPath, generateRequestId } from './database.js';
 import { broadcastRequest, setSSEConnections } from './api-handlers.js';
@@ -56,93 +55,83 @@ import {
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
-import { createProtocolTransformer, sanitizeHeaders } from './transformers/llms-compat.js';
+import { sanitizeHeaders } from './transformers/llms-compat.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
-import { isSSEResponse, createSSETransformStream } from './transformers/sse.js';
+import { isSSEResponse } from './transformers/sse.js';
 
 type RouteInfo = {
   client: PromptxyClient;
-  localPrefix: string;
+  pathPrefix: string; // 请求路径前缀（用于 stripPrefix）
   upstreamBaseUrl: string;
-  pathMappings?: PathMapping[];
-  supplier: Supplier; // 完整的 supplier 配置（包含 auth 和 transformer）
+  supplier: Supplier; // 完整的 supplier 配置（包含 auth）
 };
 
 /**
- * 应用路径映射规则
- */
-function applyPathMappings(path: string, mappings?: PathMapping[]): string {
-  if (!mappings || mappings.length === 0) {
-    return path;
-  }
-
-  let result = path;
-
-  for (const mapping of mappings) {
-    const type = mapping.type || 'prefix';
-
-    if (type === 'exact') {
-      if (path === mapping.from) {
-        return mapping.to;
-      }
-    } else if (type === 'prefix') {
-      if (path.startsWith(mapping.from)) {
-        result = path.replace(mapping.from, mapping.to);
-        break; // 找到匹配的前缀映射后立即返回
-      }
-    } else if (type === 'regex') {
-      try {
-        const regex = new RegExp(mapping.from);
-        if (regex.test(path)) {
-          result = path.replace(regex, mapping.to);
-          break; // 找到匹配的正则映射后立即返回
-        }
-      } catch {
-        // 正则无效，跳过此映射
-        continue;
-      }
-    }
-  }
-
-  return result;
-}
-
-/**
- * 根据 localPrefix 查找供应商
- * 按 localPrefix 长度降序排序，优先匹配更长的前缀
+ * 根据请求路径查找供应商
+ * 新架构：供应商不再绑定 localPrefix，而是根据路径前缀推断协议类型，
+ * 然后查找该协议类型的第一个启用供应商
+ *
+ * 路径前缀映射：
+ * - /claude* -> anthropic 协议 -> claude 客户端
+ * - /openai* -> openai 协议 -> codex 客户端
+ * - /gemini* -> gemini 协议 -> gemini 客户端
  */
 function findSupplierByPath(pathname: string, suppliers: Supplier[]): RouteInfo | null {
-  // 获取已启用的供应商，按 localPrefix 长度降序排序
-  const enabledSuppliers = suppliers
-    .filter(s => s.enabled)
-    .sort((a, b) => b.localPrefix.length - a.localPrefix.length);
+  // 获取已启用的供应商
+  const enabledSuppliers = suppliers.filter(s => s.enabled);
 
-  for (const supplier of enabledSuppliers) {
-    const prefix = supplier.localPrefix;
-
-    // 精确匹配或前缀匹配
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      // 根据 localPrefix 推断 client 类型
-      let client: PromptxyClient;
-      if (prefix === '/openai' || prefix.startsWith('/openai')) {
-        client = 'codex';
-      } else if (prefix === '/gemini' || prefix.startsWith('/gemini')) {
-        client = 'gemini';
-      } else {
-        client = 'claude';
-      }
-
-      return {
-        client,
-        localPrefix: prefix,
-        upstreamBaseUrl: supplier.baseUrl,
-        pathMappings: supplier.pathMappings,
-        supplier, // 完整的 supplier 配置
-      };
-    }
+  if (enabledSuppliers.length === 0) {
+    return null;
   }
 
-  return null;
+  // 根据路径前缀推断协议类型和客户端类型
+  let protocol: 'anthropic' | 'openai' | 'gemini' | null = null;
+  let client: PromptxyClient | null = null;
+  let pathPrefix: string | null = null;
+
+  // 检查路径前缀，优先匹配更长的前缀
+  if (pathname.startsWith('/openai/')) {
+    protocol = 'openai';
+    client = 'codex';
+    pathPrefix = '/openai';
+  } else if (pathname === '/openai') {
+    protocol = 'openai';
+    client = 'codex';
+    pathPrefix = '/openai';
+  } else if (pathname.startsWith('/gemini/')) {
+    protocol = 'gemini';
+    client = 'gemini';
+    pathPrefix = '/gemini';
+  } else if (pathname === '/gemini') {
+    protocol = 'gemini';
+    client = 'gemini';
+    pathPrefix = '/gemini';
+  } else if (pathname.startsWith('/claude/')) {
+    protocol = 'anthropic';
+    client = 'claude';
+    pathPrefix = '/claude';
+  } else if (pathname === '/claude') {
+    protocol = 'anthropic';
+    client = 'claude';
+    pathPrefix = '/claude';
+  }
+
+  if (!protocol || !client || !pathPrefix) {
+    return null;
+  }
+
+  // 查找第一个匹配协议类型的启用供应商
+  const supplier = enabledSuppliers.find(s => s.protocol === protocol);
+  if (!supplier) {
+    return null;
+  }
+
+  return {
+    client,
+    pathPrefix,
+    upstreamBaseUrl: supplier.baseUrl,
+    supplier,
+  };
 }
 
 function stripPrefix(pathname: string, prefix: string): string {
@@ -467,10 +456,7 @@ export function createGateway(
       // TypeScript 类型守卫：从这里开始 route 一定不是 null
       const matchedRoute: RouteInfo = route;
 
-      upstreamPath = stripPrefix(url.pathname, matchedRoute.localPrefix);
-
-      // 应用路径映射
-      upstreamPath = applyPathMappings(upstreamPath, matchedRoute.pathMappings);
+      upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
 
       // ========== 网关入站鉴权（新增）==========
       let authHeaderUsed: string | undefined;
@@ -552,53 +538,6 @@ export function createGateway(
         }
       }
 
-      // ========== 协议转换（新增）==========
-      if (jsonBody && matchedRoute.supplier.transformer) {
-        try {
-          const transformer = createProtocolTransformer();
-          const transformResult = await transformer.transform({
-            supplier: matchedRoute.supplier,
-            request: {
-              method: method,
-              path: upstreamPath,
-              headers,
-              body: jsonBody,
-            },
-            stream: true, // 启用流式转换支持
-          });
-
-          // 更新请求体
-          jsonBody = transformResult.request.body;
-          // 更新请求头（协议转换可能修改 headers）
-          headers = { ...headers, ...transformResult.request.headers };
-
-          // 记录转换 trace
-          if (config.debug) {
-            logger.debug(
-              `[ProtocolTransform] 转换完成: 链=${transformResult.trace.chainType}, 耗时=${transformResult.trace.totalDuration}ms, 步骤=${transformResult.trace.steps.length}`,
-            );
-            for (const step of transformResult.trace.steps) {
-              logger.debug(
-                `[ProtocolTransform]   - ${step.name}: ${step.success ? 'OK' : 'FAIL'} (${step.duration}ms)`,
-              );
-            }
-            if (transformResult.trace.warnings.length > 0) {
-              for (const w of transformResult.trace.warnings) {
-                logger.debug(`[ProtocolTransform] 警告: ${w}`);
-              }
-            }
-          }
-
-          if (transformResult.trace.errors.length > 0) {
-            warnings.push(...transformResult.trace.errors);
-          }
-        } catch (transformError: any) {
-          const errorMsg = transformError?.message || String(transformError);
-          logger.debug(`[ProtocolTransform] 转换失败: ${errorMsg}`);
-          warnings.push(`协议转换失败: ${errorMsg}`);
-        }
-      }
-
       // ========== 注入上游认证（新增）==========
       if (matchedRoute.supplier.auth) {
         if (matchedRoute.supplier.auth.type === 'bearer' && matchedRoute.supplier.auth.token) {
@@ -665,7 +604,6 @@ export function createGateway(
       // 检查是否为 SSE 响应
       const contentType = upstreamResponse.headers.get('content-type');
       const isSSE = isSSEResponse(contentType);
-      const needsTransform = matchedRoute.supplier.transformer && matchedRoute.supplier.transformer.default;
 
       // 收集响应体用于记录（同时流式传递给客户端）
       const responseBodyChunks: Buffer[] = [];
@@ -675,22 +613,8 @@ export function createGateway(
         responseBodyChunks.push(chunk);
       });
 
-      // 根据是否需要转换来决定流处理方式
-      if (isSSE && needsTransform) {
-        // SSE 响应需要转换：使用转换流
-        if (config.debug) {
-          logger.debug(`[promptxy] SSE 响应转换已启用，supplier: ${matchedRoute.supplier.name}`);
-        }
-
-        const transformStream = createSSETransformStream(matchedRoute.supplier);
-
-        upstreamStream
-          .pipe(transformStream)
-          .pipe(res);
-      } else {
-        // 非 SSE 或不需要转换：直接透传
-        upstreamStream.pipe(res);
-      }
+      // 直接透传响应流
+      upstreamStream.pipe(res);
 
       // 记录请求到数据库（在响应流结束后）
       const duration = Date.now() - startTime;
@@ -766,12 +690,9 @@ export function createGateway(
           responseHeaders: responseHeadersStr,
           responseBody: responseBodyStr,
           error: undefined,
-          // 供应商和转换信息
+          // 供应商信息
           supplierId: route?.supplier?.id,
           supplierName: route?.supplier?.name,
-          transformerChain: route?.supplier?.transformer?.default
-            ? JSON.stringify(route.supplier.transformer.default)
-            : undefined,
         };
 
         // 保存到数据库
@@ -827,12 +748,9 @@ export function createGateway(
             durationMs: duration,
             responseHeaders: undefined,
             error: error,
-            // 供应商和转换信息
+            // 供应商信息
             supplierId: route?.supplier?.id,
             supplierName: route?.supplier?.name,
-            transformerChain: route?.supplier?.transformer?.default
-              ? JSON.stringify(route.supplier.transformer.default)
-              : undefined,
           };
 
           try {

@@ -122,7 +122,7 @@ export interface TransformerConfig {
  * Supplier 认证配置
  */
 export interface SupplierAuth {
-  type: 'bearer' | 'header';
+  type: 'none' | 'bearer' | 'header';
   token?: string;
   headerName?: string;
   headerValue?: string;
@@ -139,16 +139,17 @@ export interface GatewayAuth {
 
 /**
  * 供应商配置
+ * 只管理上游 API 信息，不绑定本地路径
  */
 export interface Supplier {
   id: string; // 唯一标识
-  name: string; // 显示名称
+  name: string; // 唯一名称标识符（用于内部引用）
+  displayName: string; // 显示名称
   baseUrl: string; // 上游地址
-  localPrefix: string; // 本地路径前缀（如 /claude）
-  pathMappings?: PathMapping[]; // 路径映射规则
+  protocol: 'anthropic' | 'openai' | 'gemini'; // 上游协议类型
   enabled: boolean; // 是否启用
-  auth?: SupplierAuth; // 上游认证配置
-  transformer?: TransformerConfig; // 协议转换配置
+  auth?: SupplierAuth; // 上游认证配置（支持 none/bearer/header）
+  description?: string; // 供应商描述
 }
 
 export type PromptxyConfig = {

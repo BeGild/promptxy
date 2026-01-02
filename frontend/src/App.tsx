@@ -20,7 +20,6 @@ import { Header } from '@/components/layout';
 import { RulesPage } from '@/pages/RulesPage';
 import { RequestsPage } from '@/pages/RequestsPage';
 import { PreviewPage } from '@/pages/PreviewPage';
-import { SupplierManagementPage } from '@/pages/SupplierManagementPage';
 import { RouteConfigPage } from '@/pages/RouteConfigPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { useUIStore, useAppStore } from '@/store';
@@ -69,8 +68,6 @@ function AppContent() {
         return <RequestsPage />;
       case 'preview':
         return <PreviewPage />;
-      case 'supplier-management':
-        return <SupplierManagementPage />;
       case 'route-config':
         return <RouteConfigPage />;
       case 'settings':

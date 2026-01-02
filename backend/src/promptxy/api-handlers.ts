@@ -974,7 +974,6 @@ export async function handleTransformPreview(
         name: supplier.name,
         baseUrl: supplier.baseUrl,
         auth: supplier.auth,
-        transformer: supplier.transformer,
       },
       request: {
         method: request.request.method || 'POST',

@@ -94,7 +94,10 @@ export async function fetchSuppliers(): Promise<SuppliersFetchResponse> {
 export async function createSupplier(
   request: SupplierCreateRequest,
 ): Promise<SupplierCreateResponse> {
-  const response = await apiClient.post('/_promptxy/suppliers', request);
+  // 后端期望 { supplier: Supplier } 格式
+  const response = await apiClient.post('/_promptxy/suppliers', {
+    supplier: request.supplier,
+  });
   return response.data;
 }
 
@@ -104,9 +107,10 @@ export async function createSupplier(
 export async function updateSupplier(
   params: { supplierId: string; supplier: Supplier },
 ): Promise<SupplierUpdateResponse> {
+  // 后端期望 { supplier: Supplier } 格式
   const response = await apiClient.put(
     `/_promptxy/suppliers/${params.supplierId}`,
-    params.supplier,
+    { supplier: params.supplier },
   );
   return response.data;
 }

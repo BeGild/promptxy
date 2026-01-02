@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip } from '@heroui/react';
+import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip, Switch, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Select, SelectItem } from '@heroui/react';
 import {
   BarChart3,
   Database,
@@ -28,6 +28,9 @@ import {
   Filter,
   Plus,
   Info,
+  Edit2,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -40,6 +43,52 @@ import {
 import { useCleanupRequests, useStats } from '@/hooks/useRequests';
 import { formatBytes, getClientColorStyle } from '@/utils';
 import { fetchSettings, updateSettings } from '@/api/config';
+import {
+  useSuppliers,
+  useCreateSupplier,
+  useUpdateSupplier,
+  useDeleteSupplier,
+  useToggleSupplier,
+} from '@/hooks/useSuppliers';
+import type { Supplier, SupplierProtocol } from '@/types/api';
+
+// 供应商协议选项
+const SUPPLIER_PROTOCOLS: Array<{
+  key: SupplierProtocol;
+  label: string;
+  description: string;
+  color: string;
+  icon: string;
+}> = [
+  {
+    key: 'anthropic',
+    label: 'Anthropic',
+    description: 'Claude API 协议',
+    color: '🟣',
+    icon: '🤖',
+  },
+  {
+    key: 'openai',
+    label: 'OpenAI',
+    description: 'OpenAI API 协议',
+    color: '🟢',
+    icon: '🧠',
+  },
+  {
+    key: 'gemini',
+    label: 'Gemini',
+    description: 'Google Gemini API 协议',
+    color: '🔵',
+    icon: '💎',
+  },
+];
+
+// 认证类型选项
+const AUTH_TYPES = [
+  { key: 'none', label: '无认证' },
+  { key: 'bearer', label: 'Bearer Token' },
+  { key: 'header', label: '自定义 Header' },
+];
 
 export const SettingsPanel: React.FC = () => {
   const { isLoading: configLoading } = useConfig();
@@ -50,10 +99,32 @@ export const SettingsPanel: React.FC = () => {
   const { upload } = useUploadConfig();
   const cleanupMutation = useCleanupRequests();
 
+  // 供应商管理
+  const { data: suppliersData, isLoading: suppliersLoading, refetch: refetchSuppliers } = useSuppliers();
+  const createSupplierMutation = useCreateSupplier();
+  const updateSupplierMutation = useUpdateSupplier();
+  const deleteSupplierMutation = useDeleteSupplier();
+  const toggleSupplierMutation = useToggleSupplier();
+
   const [keepCount, setKeepCount] = useState('100');
   const [filteredPaths, setFilteredPaths] = useState<string[]>([]);
   const [newPath, setNewPath] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(true);
+
+  // 供应商编辑弹窗状态
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [supplierFormData, setSupplierFormData] = useState<Partial<Supplier>>({
+    name: '',
+    displayName: '',
+    baseUrl: '',
+    protocol: 'anthropic',
+    enabled: true,
+    auth: { type: 'none' },
+    description: '',
+  });
+
+  const suppliers = suppliersData?.suppliers || [];
 
   // 初始化：从后端读取设置
   useEffect(() => {
@@ -168,6 +239,78 @@ export const SettingsPanel: React.FC = () => {
     }
   };
 
+  // 供应商管理 - 打开添加供应商弹窗
+  const handleOpenAddSupplierModal = () => {
+    setEditingSupplier(null);
+    setSupplierFormData({
+      name: '',
+      displayName: '',
+      baseUrl: '',
+      protocol: 'anthropic',
+      enabled: true,
+      auth: { type: 'none' },
+      description: '',
+    });
+    setIsSupplierModalOpen(true);
+  };
+
+  // 供应商管理 - 打开编辑供应商弹窗
+  const handleOpenEditSupplierModal = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setSupplierFormData({ ...supplier });
+    setIsSupplierModalOpen(true);
+  };
+
+  // 供应商管理 - 保存供应商
+  const handleSaveSupplier = async () => {
+    if (!supplierFormData.name || !supplierFormData.baseUrl || !supplierFormData.protocol) {
+      toast.error('请填写必填字段');
+      return;
+    }
+
+    try {
+      if (editingSupplier) {
+        await updateSupplierMutation.mutateAsync({
+          supplierId: editingSupplier.id,
+          supplier: supplierFormData as Supplier,
+        });
+      } else {
+        await createSupplierMutation.mutateAsync({
+          supplier: supplierFormData as Omit<Supplier, 'id'>,
+        });
+      }
+
+      setIsSupplierModalOpen(false);
+      await refetchSuppliers();
+      toast.success(`${editingSupplier ? '更新' : '添加'}供应商成功！`);
+    } catch (error: any) {
+      toast.error(`${editingSupplier ? '更新' : '添加'}失败: ${error?.message || '未知错误'}`);
+    }
+  };
+
+  // 供应商管理 - 删除供应商
+  const handleDeleteSupplier = async (supplier: Supplier) => {
+    toast.promise(deleteSupplierMutation.mutateAsync(supplier.id), {
+      loading: '正在删除供应商...',
+      success: '供应商已删除！',
+      error: err => `删除失败: ${err?.message || '未知错误'}`,
+    });
+  };
+
+  // 供应商管理 - 切换供应商状态
+  const handleToggleSupplier = async (supplier: Supplier) => {
+    try {
+      await toggleSupplierMutation.mutateAsync({
+        supplierId: supplier.id,
+        request: { enabled: !supplier.enabled },
+      });
+      await refetchSuppliers();
+      toast.success('供应商状态已更新！');
+    } catch (error: any) {
+      toast.error(`更新失败: ${error?.message || '未知错误'}`);
+    }
+  };
+
   const isLoading = configLoading || statsLoading || settingsLoading;
 
   return (
@@ -177,6 +320,7 @@ export const SettingsPanel: React.FC = () => {
           <Spinner color="primary">加载配置中...</Spinner>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 统计信息 - 占据全宽或 2/3 */}
           <Card className="lg:col-span-3 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
@@ -419,7 +563,339 @@ export const SettingsPanel: React.FC = () => {
               </div>
             </CardBody>
           </Card>
+
+          {/* 供应商管理 - 占据全宽 */}
+          <Card className="lg:col-span-3 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings size={24} className="text-brand-primary" />
+                  <h4 className="text-lg font-bold text-primary">供应商管理</h4>
+                </div>
+                <Button
+                  color="primary"
+                  onPress={handleOpenAddSupplierModal}
+                  startContent={<Plus size={18} />}
+                  size="sm"
+                  radius="lg"
+                >
+                  添加供应商
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {suppliers.map(supplier => {
+                  const protocol = SUPPLIER_PROTOCOLS.find(p => p.key === supplier.protocol);
+
+                  return (
+                    <Card
+                      key={supplier.id}
+                      className={`border transition-all ${
+                        supplier.enabled
+                          ? 'border-brand-primary/30 dark:border-brand-primary/20 bg-elevated'
+                          : 'border-subtle opacity-60'
+                      }`}
+                    >
+                      <CardBody className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="text-2xl">{protocol?.icon}</div>
+                            <div>
+                              <h5 className="font-bold text-primary text-sm">
+                                {supplier.displayName || supplier.name}
+                              </h5>
+                              <p className="text-xs text-secondary">{supplier.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={supplier.enabled}
+                                onChange={() => handleToggleSupplier(supplier)}
+                                className="w-4 h-4 rounded"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="mb-2">
+                          <Chip size="sm" variant="flat">
+                            {protocol?.color} {protocol?.label}
+                          </Chip>
+                        </div>
+
+                        <div className="mb-2">
+                          <div className="flex items-center gap-1 text-xs text-secondary">
+                            <Globe size={12} />
+                            <span className="truncate">{supplier.baseUrl}</span>
+                          </div>
+                        </div>
+
+                        {supplier.auth && supplier.auth.type !== 'none' && (
+                          <div className="mb-2">
+                            <div className="flex items-center gap-1 text-xs text-secondary">
+                              <Lock size={12} />
+                              <span>
+                                {supplier.auth.type === 'bearer' && 'Bearer Token 认证'}
+                                {supplier.auth.type === 'header' && '自定义 Header 认证'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Divider className="my-2" />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleOpenEditSupplierModal(supplier)}
+                            startContent={<Edit2 size={12} />}
+                            className="flex-1"
+                          >
+                            编辑
+                          </Button>
+                          <Button
+                            size="sm"
+                            color="danger"
+                            variant="light"
+                            onPress={() => handleDeleteSupplier(supplier)}
+                            isIconOnly
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  );
+                })}
+
+                {suppliers.length === 0 && !suppliersLoading && (
+                  <Card className="col-span-full border border-dashed border-subtle">
+                    <CardBody className="py-8 text-center">
+                      <p className="text-secondary font-medium">暂无供应商</p>
+                      <p className="text-sm text-tertiary mt-1">
+                        点击上方按钮添加新的上游供应商
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
+              </div>
+            </CardBody>
+          </Card>
         </div>
+
+        {/* 供应商编辑弹窗 */}
+        <Modal
+          isOpen={isSupplierModalOpen}
+          onClose={() => setIsSupplierModalOpen(false)}
+          size="2xl"
+          backdrop="blur"
+          placement="center"
+        >
+          <ModalContent>
+            <ModalHeader>
+              {editingSupplier ? '编辑供应商' : '添加供应商'}
+            </ModalHeader>
+            <ModalBody className="space-y-4">
+              <div className="p-4 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
+                  <p className="text-xs text-secondary">
+                    供应商代表上游 API 服务，配置其协议类型和认证信息。添加后可在路由配置中选择使用。
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-primary mb-2 block">
+                    供应商名称 *
+                  </label>
+                  <Input
+                    value={supplierFormData.name || ''}
+                    onValueChange={value =>
+                      setSupplierFormData(prev => ({ ...prev, name: value }))
+                    }
+                    placeholder="例如: anthropic-official"
+                    radius="lg"
+                    variant="bordered"
+                    description="唯一标识符，用于内部引用"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-primary mb-2 block">
+                    显示名称 *
+                  </label>
+                  <Input
+                    value={supplierFormData.displayName || ''}
+                    onValueChange={value =>
+                      setSupplierFormData(prev => ({ ...prev, displayName: value }))
+                    }
+                    placeholder="例如: Anthropic Official"
+                    radius="lg"
+                    variant="bordered"
+                    description="在界面上显示的名称"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-primary mb-2 block">
+                  API 地址 *
+                </label>
+                <Input
+                  value={supplierFormData.baseUrl || ''}
+                  onValueChange={value =>
+                    setSupplierFormData(prev => ({ ...prev, baseUrl: value }))
+                  }
+                  placeholder="https://api.anthropic.com"
+                  radius="lg"
+                  variant="bordered"
+                  description="上游 API 的完整 URL"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-primary mb-2 block">
+                  协议类型 *
+                </label>
+                <Select
+                  selectedKeys={[supplierFormData.protocol || '']}
+                  onSelectionChange={keys => {
+                    const key = Array.from(keys)[0] as SupplierProtocol;
+                    setSupplierFormData(prev => ({ ...prev, protocol: key }));
+                  }}
+                  radius="lg"
+                  variant="bordered"
+                >
+                  {SUPPLIER_PROTOCOLS.map(protocol => (
+                    <SelectItem
+                      key={protocol.key}
+                      textValue={protocol.label}
+                      description={protocol.description}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{protocol.icon}</span>
+                        <span>{protocol.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-primary mb-2 block">
+                  认证方式
+                </label>
+                <Select
+                  selectedKeys={[supplierFormData.auth?.type || 'none']}
+                  onSelectionChange={keys => {
+                    const type = Array.from(keys)[0] as any;
+                    setSupplierFormData(prev => ({
+                      ...prev,
+                      auth: { ...prev.auth, type },
+                    }));
+                  }}
+                  radius="lg"
+                  variant="bordered"
+                >
+                  {AUTH_TYPES.map(auth => (
+                    <SelectItem key={auth.key} textValue={auth.label}>
+                      {auth.label}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+
+              {supplierFormData.auth?.type === 'bearer' && (
+                <div>
+                  <label className="text-sm font-medium text-primary mb-2 block">
+                    Bearer Token
+                  </label>
+                  <Input
+                    value={supplierFormData.auth?.token || ''}
+                    onValueChange={value =>
+                      setSupplierFormData(prev => ({
+                        ...prev,
+                        auth: { ...prev.auth, token: value, type: 'bearer' },
+                      }))
+                    }
+                    placeholder="sk-ant-..."
+                    radius="lg"
+                    variant="bordered"
+                    type="password"
+                    description="API 认证令牌"
+                  />
+                </div>
+              )}
+
+              {supplierFormData.auth?.type === 'header' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">
+                      Header 名称
+                    </label>
+                    <Input
+                      value={supplierFormData.auth?.headerName || ''}
+                      onValueChange={value =>
+                        setSupplierFormData(prev => ({
+                          ...prev,
+                          auth: { ...prev.auth, headerName: value, type: 'header' },
+                        }))
+                      }
+                      placeholder="Authorization"
+                      radius="lg"
+                      variant="bordered"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">
+                      Header 值
+                    </label>
+                    <Input
+                      value={supplierFormData.auth?.headerValue || ''}
+                      onValueChange={value =>
+                        setSupplierFormData(prev => ({
+                          ...prev,
+                          auth: { ...prev.auth, headerValue: value, type: 'header' },
+                        }))
+                      }
+                      placeholder="Bearer xxx"
+                      radius="lg"
+                      variant="bordered"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-primary mb-2 block">
+                  描述
+                </label>
+                <Input
+                  value={supplierFormData.description || ''}
+                  onValueChange={value =>
+                    setSupplierFormData(prev => ({ ...prev, description: value }))
+                  }
+                  placeholder="供应商的简要说明"
+                  radius="lg"
+                  variant="bordered"
+                />
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="light" onPress={() => setIsSupplierModalOpen(false)}>
+                取消
+              </Button>
+              <Button color="primary" onPress={handleSaveSupplier}>
+                {editingSupplier ? '更新' : '添加'}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+        </>
       )}
     </div>
   );

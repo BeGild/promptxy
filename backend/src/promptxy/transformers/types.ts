@@ -48,7 +48,7 @@ export interface TransformerConfig {
  */
 export interface SupplierAuth {
   /** 认证类型 */
-  type: 'bearer' | 'header';
+  type: 'none' | 'bearer' | 'header';
   /** Bearer token（当 type=bearer 时必填） */
   token?: string;
   /** 自定义 header 名称（当 type=header 时必填） */
