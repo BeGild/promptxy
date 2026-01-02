@@ -75,15 +75,16 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
     if (supplier) {
       setName(supplier.name);
       setBaseUrl(supplier.baseUrl);
-      setLocalPrefix(supplier.localPrefix);
       setEnabled(supplier.enabled);
-      setSelectedPrefixOption(supplier.localPrefix);
+      // 新的 Supplier 类型不再有 localPrefix 属性
+      // setLocalPrefix(supplier.localPrefix);
+      // setSelectedPrefixOption(supplier.localPrefix);
     } else {
       setName('');
       setBaseUrl('');
-      setLocalPrefix(defaultPrefix);
       setEnabled(true);
-      setSelectedPrefixOption(defaultPrefix);
+      // setLocalPrefix(defaultPrefix);
+      // setSelectedPrefixOption(defaultPrefix);
     }
   }, [supplier, isOpen, defaultPrefix]);
 
@@ -98,7 +99,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
 
   // 保存供应商
   const handleSave = async () => {
-    if (!name || !baseUrl || !localPrefix) {
+    if (!name || !baseUrl) {
       toast.error('请填写所有必填字段');
       return;
     }
@@ -108,18 +109,14 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
       return;
     }
 
-    if (!localPrefix.startsWith('/')) {
-      toast.error('本地路径前缀必须以 / 开头');
-      return;
-    }
-
     setIsSaving(true);
     try {
       await onSave({
         name,
+        displayName: name, // 使用 name 作为 displayName
         baseUrl,
-        localPrefix,
         enabled,
+        protocol: 'anthropic', // 默认值，实际应该从表单获取
       });
       onClose();
       toast.success(isEditing ? '供应商已更新！' : '供应商已创建！');

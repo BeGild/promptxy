@@ -30,7 +30,7 @@ export const ConfigStatusIndicator: React.FC = () => {
   ];
 
   const handleClick = () => {
-    setActiveTab('protocol-config');
+    setActiveTab('route-config');
   };
 
   return (

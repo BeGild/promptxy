@@ -46,9 +46,9 @@ export const SupplierList: React.FC<SupplierListProps> = ({
   onToggleSupplier,
 }) => {
   // 过滤出当前工具前缀对应的供应商
-  const filteredSuppliers = suppliers.filter(
-    s => s.localPrefix === selectedToolPrefix,
-  );
+  // 注意：新的 Supplier 类型不再有 localPrefix 属性
+  // 这里暂时返回所有供应商，实际应该根据路由配置过滤
+  const filteredSuppliers = suppliers;
 
   if (isLoading) {
     return (
@@ -84,7 +84,7 @@ export const SupplierList: React.FC<SupplierListProps> = ({
       {filteredSuppliers.length === 0 ? (
         <div className="text-center py-12 bg-canvas dark:bg-secondary/30 rounded-xl border border-dashed border-subtle">
           <Server size={48} className="mx-auto text-tertiary mb-3" />
-          <p className="text-secondary font-medium">暂无 {selectedToolPrefix} 前缀的供应商配置</p>
+          <p className="text-secondary font-medium">暂无供应商配置</p>
           <Button
             color="primary"
             onPress={onAddSupplier}
@@ -127,7 +127,7 @@ export const SupplierList: React.FC<SupplierListProps> = ({
                     <div className="text-xs space-y-1">
                       <div className="flex items-center gap-1.5 text-secondary">
                         <span className="font-mono bg-canvas dark:bg-secondary/50 px-1.5 py-0.5 rounded text-primary">
-                          {supplier.localPrefix}
+                          {supplier.protocol}
                         </span>
                         <span className="text-tertiary">→</span>
                         <span

@@ -181,7 +181,7 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
                 size="sm"
                 variant="flat"
                 color="primary"
-                onPress={() => setActiveTab('protocol-config')}
+                onPress={() => setActiveTab('route-config')}
                 className="text-xs h-6"
               >
                 跳转到配置

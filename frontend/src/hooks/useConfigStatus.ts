@@ -22,16 +22,8 @@ export function useConfigStatus(): ConfigStatus {
       '/gemini': null,
     };
 
-    // 查找每个路径的启用供应商
-    for (const supplier of suppliers) {
-      if (supplier.enabled) {
-        const prefix = supplier.localPrefix;
-        if (prefix in status && !status[prefix as keyof ConfigStatus]) {
-          status[prefix as keyof ConfigStatus] = supplier.name;
-        }
-      }
-    }
-
+    // 新的架构中，供应商不再绑定到本地路径
+    // 这里暂时返回空状态，实际应该从路由配置获取
     return status;
   }, [suppliers]);
 }

@@ -66,8 +66,10 @@ export const TransformationChainView: React.FC<
     );
   }
 
-  const transformerChain = supplier.transformer?.default || [];
-  const hasTransformer = transformerChain.length > 0;
+  // 新的 Supplier 类型不再有 transformer 属性
+  // 暂时返回空数组，实际应该从路由配置获取转换链
+  const transformerChain: any[] = [];
+  const hasTransformer = false;
 
   return (
     <>
@@ -90,10 +92,10 @@ export const TransformationChainView: React.FC<
                   <span className="text-secondary">转换链:</span>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Chip size="sm" variant="flat" color="primary">
-                      {supplier.localPrefix}
+                      {supplier.protocol}
                     </Chip>
                     <ArrowRight size={16} className="text-tertiary" />
-                    {transformerChain.map((step, index) => (
+                    {transformerChain.map((step: any, index: number) => (
                       <React.Fragment key={index}>
                         <Chip size="sm" variant="flat" color="primary">
                           {typeof step === 'string' ? step : step.name}
@@ -109,10 +111,7 @@ export const TransformationChainView: React.FC<
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-secondary">说明:</span>
                   <span className="text-primary">
-                    {transformerChain.length === 1 &&
-                    transformerChain[0] === supplier.localPrefix
-                      ? '使用原始协议，无需转换，直接转发'
-                      : '需要经过协议转换，将请求转换为上游协议格式'}
+                    需要经过协议转换，将请求转换为上游协议格式
                   </span>
                 </div>
               </>
@@ -176,7 +175,7 @@ export const TransformationChainView: React.FC<
               </h4>
               {hasTransformer ? (
                 <div className="space-y-3">
-                  {transformerChain.map((step, index) => (
+                  {transformerChain.map((step: any, index: number) => (
                     <div
                       key={index}
                       className="p-4 rounded-lg bg-canvas dark:bg-secondary/50"

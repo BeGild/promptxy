@@ -102,10 +102,12 @@ export async function createSupplier(
  * 更新供应商
  */
 export async function updateSupplier(
-  supplierId: string,
-  request: SupplierUpdateRequest,
+  params: { supplierId: string; supplier: Supplier },
 ): Promise<SupplierUpdateResponse> {
-  const response = await apiClient.put(`/_promptxy/suppliers/${supplierId}`, request);
+  const response = await apiClient.put(
+    `/_promptxy/suppliers/${params.supplierId}`,
+    params.supplier,
+  );
   return response.data;
 }
 

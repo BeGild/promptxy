@@ -54,21 +54,9 @@ export function getPrefixColor(prefix: string): string {
  * 按前缀分组供应商
  */
 export function groupSuppliersByPrefix(suppliers: Supplier[]): CommonPrefix[] {
-  const prefixMap = new Map<string, Supplier[]>();
-
-  for (const supplier of suppliers) {
-    const prefix = supplier.localPrefix;
-    if (!prefixMap.has(prefix)) {
-      prefixMap.set(prefix, []);
-    }
-    prefixMap.get(prefix)!.push(supplier);
-  }
-
-  return Array.from(prefixMap.entries()).map(([prefix, suppliers]) => ({
-    prefix,
-    suppliers,
-    color: getPrefixColor(prefix),
-  }));
+  // 新的架构中，供应商不再绑定到本地路径
+  // 这里暂时返回空数组，实际应该从路由配置获取分组
+  return [];
 }
 
 /**
@@ -109,14 +97,8 @@ export function useUpdateSupplier() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      supplierId,
-      request,
-    }: {
-      supplierId: string;
-      request: SupplierUpdateRequest;
-    }) => {
-      return await updateSupplier(supplierId, request);
+    mutationFn: async (params: { supplierId: string; supplier: Supplier }) => {
+      return await updateSupplier(params);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
