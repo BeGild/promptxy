@@ -128,13 +128,31 @@ export const ProtocolLabPage: React.FC = () => {
   const suppliers = suppliersData?.suppliers || [];
   const selectedSupplier = suppliers.find(s => s.id === selectedSupplierId);
 
-  // 初始化：选择第一个启用的供应商
+  // 初始化：选择第一个启用的供应商或从 sessionStorage 读取
   useEffect(() => {
-    if (!selectedSupplierId && suppliers.length > 0) {
-      const firstEnabled = suppliers.find(s => s.enabled);
-      if (firstEnabled) {
-        setSelectedSupplierId(firstEnabled.id);
+    if (selectedSupplierId) {
+      // 已有选中供应商，清除 sessionStorage
+      sessionStorage.removeItem('protocolLabSupplierId');
+      return;
+    }
+
+    if (suppliers.length === 0) return;
+
+    // 先尝试从 sessionStorage 读取预选的供应商 ID
+    const preselectedId = sessionStorage.getItem('protocolLabSupplierId');
+    if (preselectedId) {
+      const supplier = suppliers.find(s => s.id === preselectedId);
+      if (supplier) {
+        setSelectedSupplierId(preselectedId);
+        sessionStorage.removeItem('protocolLabSupplierId');
+        return;
       }
+    }
+
+    // 否则选择第一个启用的供应商
+    const firstEnabled = suppliers.find(s => s.enabled);
+    if (firstEnabled) {
+      setSelectedSupplierId(firstEnabled.id);
     }
   }, [suppliers, selectedSupplierId]);
 

@@ -34,7 +34,7 @@ import {
   Select,
   SelectItem,
 } from '@heroui/react';
-import { Network, Plus, Edit2, Trash2, Info } from 'lucide-react';
+import { Network, Plus, Edit2, Trash2, Info, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useSuppliers,
@@ -46,6 +46,7 @@ import {
   getPrefixColor,
   groupSuppliersByPrefix,
 } from '@/hooks';
+import { useUIStore } from '@/store';
 import type { Supplier, PathMapping, CommonPrefixOption } from '@/types/api';
 
 export const SupplierManagement: React.FC = () => {
@@ -54,6 +55,8 @@ export const SupplierManagement: React.FC = () => {
   const updateMutation = useUpdateSupplier();
   const deleteMutation = useDeleteSupplier();
   const toggleMutation = useToggleSupplier();
+  const setActiveTab = useUIStore(state => state.setActiveTab);
+  const [selectedLabSupplierId, setSelectedLabSupplierId] = useState<string | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -206,6 +209,15 @@ export const SupplierManagement: React.FC = () => {
     }
   };
 
+  // 跳转到协议转换实验室
+  const handleOpenProtocolLab = (supplier: Supplier) => {
+    setSelectedLabSupplierId(supplier.id);
+    // 使用 sessionStorage 传递选中的供应商 ID
+    sessionStorage.setItem('protocolLabSupplierId', supplier.id);
+    setActiveTab('protocol-lab');
+    toast.success(`已切换到协议转换实验室: ${supplier.name}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -310,6 +322,16 @@ export const SupplierManagement: React.FC = () => {
                                 />
                               </div>
                               <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="light"
+                                  color="primary"
+                                  onPress={() => handleOpenProtocolLab(supplier)}
+                                  className="text-xs h-8 px-2"
+                                  startContent={<FlaskConical size={14} />}
+                                >
+                                  测试转换
+                                </Button>
                                 <Button
                                   isIconOnly
                                   size="sm"

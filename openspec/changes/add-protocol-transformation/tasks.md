@@ -15,7 +15,7 @@
 - [x] 1.4 接入 `@musistudio/llms`：实现最薄封装的 transformer registry / pipeline（含可用性校验）
 - [x] 1.5 在网关请求管线中插入协议转换：rules 之后、fetch 之前（与研究文档一致）
 - [x] 1.6 上游鉴权注入：当 `supplier.auth` 存在时注入/覆盖上游认证；并禁止透传入站凭证到上游
-- [ ] 1.7 响应转换：非流式响应可正确转换回 Anthropic
+- [x] 1.7 响应转换：非流式响应可正确转换回 Anthropic
 - [ ] 1.8 流式（SSE）转换：当请求/上游为流式时，支持"解析 → 转换 → 序列化 → 输出"，避免全量缓冲
 - [x] 1.9 统一脱敏与安全输出：日志/历史/preview/trace 均不得包含明文 token
 
@@ -32,7 +32,7 @@
 - [x] 3.2 示例请求编辑器：支持 fixture 选择、JSON 编辑、stream on/off
 - [x] 3.3 上游请求预览：展示脱敏后的 headers/body，并支持一键复制（JSON / cURL）
 - [x] 3.4 Trace 面板：展示链选择、步骤摘要、warnings/errors，并支持复制 trace
-- [ ] 3.5 在 supplier 配置页提供入口（或跳转）到实验室页面
+- [x] 3.5 在 supplier 配置页提供入口（或跳转）到实验室页面
 
 ## 4. 测试与验证
 
@@ -42,7 +42,7 @@
 
 ## 5. 文档与迁移
 
-- [ ] 5.1 更新用户文档：解释 gatewayAuth 与 supplier.auth 的区别；修正"不存储密钥"的旧表述
-- [ ] 5.2 更新安全说明：哪些内容会记录到本地、如何脱敏、如何避免泄漏
-- [ ] 5.3 提供最小可用配置示例（Claude Code → OpenAI compatible 单上游）
+- [x] 5.1 更新用户文档：解释 gatewayAuth 与 supplier.auth 的区别；修正"不存储密钥"的旧表述
+- [x] 5.2 更新安全说明：哪些内容会记录到本地、如何脱敏、如何避免泄漏
+- [x] 5.3 提供最小可用配置示例（Claude Code → OpenAI compatible 单上游）
 

@@ -1,0 +1,52 @@
+/**
+ * PromptXY 最小可用配置示例
+ *
+ * 此配置展示如何将 Claude Code 的请求
+ * 通过 PromptXY 转发到 OpenAI 兼容的供应商（如 DeepSeek）
+ */
+
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  },
+
+  // 网关入站鉴权（可选，用于服务器部署）
+  "gatewayAuth": {
+    "enabled": false
+    // 如需启用，设置 token 和 acceptedHeaders
+    // "enabled": true,
+    // "token": "your-gateway-secret-token",
+    // "acceptedHeaders": ["authorization", "x-api-key"]
+  },
+
+  "suppliers": [
+    {
+      "id": "deepseek-proxy",
+      "name": "DeepSeek Proxy",
+      "baseUrl": "https://api.deepseek.com",
+      "localPrefix": "/claude",
+
+      // 上游认证配置
+      "auth": {
+        "type": "bearer",
+        "token": "sk-your-deepseek-api-key"
+      },
+
+      // 协议转换配置
+      "transformer": {
+        "default": ["openai"]
+      },
+
+      "enabled": true
+    }
+  ],
+
+  "rules": [],
+
+  "storage": {
+    "maxHistory": 100
+  },
+
+  "debug": true
+}

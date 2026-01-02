@@ -472,6 +472,7 @@ export function createGateway(
       upstreamPath = applyPathMappings(upstreamPath, matchedRoute.pathMappings);
 
       // ========== 网关入站鉴权（新增）==========
+      let authHeaderUsed: string | undefined;
       if (config.gatewayAuth && config.gatewayAuth.enabled) {
         const authResult = authenticateRequest(req.headers, config.gatewayAuth);
         if (!authResult.authenticated) {
@@ -481,9 +482,10 @@ export function createGateway(
           });
           return;
         }
-        if (config.debug && authResult.authHeaderUsed) {
+        authHeaderUsed = authResult.authHeaderUsed;
+        if (config.debug && authHeaderUsed) {
           logger.debug(
-            `[GatewayAuth] 鉴权通过，使用 header: ${authResult.authHeaderUsed}`,
+            `[GatewayAuth] 鉴权通过，使用 header: ${authHeaderUsed}`,
           );
         }
       }

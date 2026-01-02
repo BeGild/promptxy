@@ -104,7 +104,75 @@
     to: string;
     type?: 'exact' | 'prefix' | 'regex';
   }>;
+  auth?: {                 // 可选：上游认证配置
+    type: 'bearer' | 'header';
+    token?: string;        // type=bearer 时必填
+    headerName?: string;   // type=header 时必填
+    headerValue?: string;  // type=header 时必填
+  };
+  transformer?: {          // 可选：协议转换配置
+    default: TransformerStep[];  // 默认转换链
+    models?: {                    // 模型精确匹配覆盖
+      [modelName: string]: TransformerStep[];
+    };
+  };
   enabled: boolean;        // 必需：是否启用
+}
+```
+
+#### Transformer 配置
+
+Transformer 配置用于将 Anthropic 协议转换为其他供应商协议。
+
+**转换器步骤类型**：
+
+```typescript
+type TransformerStep = string | {
+  name: string;
+  options?: Record<string, unknown>;
+};
+```
+
+**可用转换器**：
+
+| 名称 | 描述 | 支持的供应商 |
+|------|------|-------------|
+| `anthropic` | Anthropic 原始协议（透传） | anthropic |
+| `openai` | OpenAI 兼容格式 | openai, deepseek, groq |
+| `gemini` | Gemini API 格式 | gemini |
+| `cleancache` | 清除 cache_control 字段 | 通用 |
+| `maxtoken` | 设置 max_tokens 值 | 通用 |
+
+**配置示例 - OpenAI 转换**：
+
+```json
+{
+  "transformer": {
+    "default": ["openai"]
+  }
+}
+```
+
+**配置示例 - 带清理的转换**：
+
+```json
+{
+  "transformer": {
+    "default": ["cleancache", "openai"]
+  }
+}
+```
+
+**配置示例 - 模型特定转换**：
+
+```json
+{
+  "transformer": {
+    "default": ["openai"],
+    "models": {
+      "claude-3-5-sonnet-20241022": ["cleancache", "openai"]
+    }
+  }
 }
 ```
 
@@ -565,13 +633,18 @@ PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
 
 ### 凭据处理
 
-**重要原则**：
+**重要变更**：
 
-- ❌ **不在配置文件中存储 API Key**
-- ✅ **完全依赖 CLI 自身的认证信息**
-- ✅ **认证头自动透传到上游**
+从 v2.1.5 开始，PromptXY 支持**存储上游认证信息**，提供以下两种配置方式：
 
-**配置示例**（正确方式）：
+1. **透传客户端凭证（默认行为）**：完全依赖 CLI 自身的认证信息，自动透传到上游
+2. **配置上游认证（新功能）**：在配置文件中存储上游 API Key，自动注入到请求中
+
+#### 方式一：透传客户端凭证（推荐用于本地开发）
+
+CLI 自带的认证信息会自动透传到上游，无需在配置文件中存储 API Key。
+
+**配置示例**：
 
 ```json
 {
@@ -582,22 +655,97 @@ PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
       "baseUrl": "https://api.anthropic.com",
       "localPrefix": "/claude",
       "enabled": true
+      // 不配置 auth，使用 CLI 自带的凭证
     }
-    // 不需要在这里放 API Key
   ]
 }
 ```
 
-**简化版配置示例**：
+#### 方式二：配置上游认证（推荐用于服务器部署）
+
+在配置文件中存储上游 API Key，PromptXY 会自动注入到请求中。
+
+**配置示例 - Bearer Token**：
 
 ```json
 {
-  "upstreams": {
-    "anthropic": "https://api.anthropic.com"
-    // 不需要在这里放 API Key
+  "suppliers": [
+    {
+      "id": "openai-proxy",
+      "name": "OpenAI Proxy",
+      "baseUrl": "https://api.openai.com",
+      "localPrefix": "/openai",
+      "auth": {
+        "type": "bearer",
+        "token": "sk-xxxxx..."
+      },
+      "transformer": {
+        "default": ["openai"]
+      },
+      "enabled": true
+    }
+  ]
+}
+```
+
+**配置示例 - 自定义 Header**：
+
+```json
+{
+  "suppliers": [
+    {
+      "id": "deepseek-proxy",
+      "name": "DeepSeek Proxy",
+      "baseUrl": "https://api.deepseek.com",
+      "localPrefix": "/deepseek",
+      "auth": {
+        "type": "header",
+        "headerName": "Authorization",
+        "headerValue": "Bearer xxxx..."
+      },
+      "transformer": {
+        "default": ["deepseek"]
+      },
+      "enabled": true
+    }
+  ]
+}
+```
+
+#### 网关入站鉴权 (gatewayAuth)
+
+如果需要限制对 PromptXY 网关本身的访问，可以配置 `gatewayAuth`：
+
+```json
+{
+  "gatewayAuth": {
+    "enabled": true,
+    "token": "your-secret-token",
+    "acceptedHeaders": ["authorization", "x-api-key"]
   }
 }
 ```
+
+**说明**：
+- `enabled`: 是否启用入站鉴权
+- `token`: 验证用的 token（与客户端请求头中的值比对）
+- `acceptedHeaders`: 从哪些 header 中读取 token（按顺序检查第一个匹配的）
+
+**工作流程**：
+1. 客户端请求到达 PromptXY
+2. PromptXY 从 `acceptedHeaders` 指定的 header 中读取 token
+3. 与 `token` 字段比对，验证通过才继续处理
+4. **清除**入站鉴权头，避免误传到上游
+5. 根据 `supplier.auth` 配置注入上游认证
+
+#### 脱敏策略
+
+PromptXY 在以下场景中会自动脱敏敏感字段：
+
+- **日志输出**：Authorization、x-api-key、x-goog-api-key 等字段会显示为 `***REDACTED***`
+- **请求历史记录**：所有敏感字段都会被脱敏
+- **预览 API**：默认返回脱敏后的 headers
+- **trace 输出**：authHeaderUsed 字段只包含 header 名称，不包含值
 
 ---
 
