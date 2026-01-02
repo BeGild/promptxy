@@ -36,7 +36,6 @@ import { toast } from 'sonner';
 import { useSuppliers } from '@/hooks';
 import { useConfig } from '@/hooks';
 import axios from 'axios';
-import { useAPI } from '@/hooks/useAPI';
 
 // 示例请求 fixture
 const SAMPLE_REQUESTS = {
@@ -114,7 +113,7 @@ interface TransformPreview {
 
 export const ProtocolLabPage: React.FC = () => {
   const { data: suppliersData, isLoading: suppliersLoading } = useSuppliers();
-  const { data: config } = useConfig();
+  const { config } = useConfig();
 
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
   const [selectedSample, setSelectedSample] = useState<keyof typeof SAMPLE_REQUESTS>('claude_simple');
@@ -254,7 +253,6 @@ export const ProtocolLabPage: React.FC = () => {
                 {suppliers.map(supplier => (
                   <SelectItem
                     key={supplier.id}
-                    value={supplier.id}
                     textValue={supplier.name}
                   >
                     <div className="flex items-center gap-2">

@@ -98,6 +98,45 @@ export interface PathMapping {
   type?: 'exact' | 'prefix' | 'regex';
 }
 
+// ============================================================================
+// 协议转换类型
+// ============================================================================
+
+/**
+ * 转换器步骤定义
+ */
+export type TransformerStep =
+  | string // 转换器名称
+  | {
+      name: string;
+      options?: Record<string, unknown>;
+    };
+
+/**
+ * 转换链定义
+ */
+export type TransformerChain = TransformerStep[];
+
+/**
+ * Transformer 配置（v1 精确匹配）
+ */
+export interface TransformerConfig {
+  /** 默认转换链 */
+  default: TransformerChain;
+  /** 模型精确匹配覆盖链 */
+  models?: Record<string, TransformerChain>;
+}
+
+/**
+ * Supplier 认证配置
+ */
+export interface SupplierAuth {
+  type: 'bearer' | 'header';
+  token?: string;
+  headerName?: string;
+  headerValue?: string;
+}
+
 export interface Supplier {
   id: string;
   name: string;
@@ -105,6 +144,8 @@ export interface Supplier {
   localPrefix: string;
   pathMappings?: PathMapping[];
   enabled: boolean;
+  auth?: SupplierAuth; // 上游认证配置
+  transformer?: TransformerConfig; // 协议转换配置
 }
 
 export interface SuppliersFetchResponse {
