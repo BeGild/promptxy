@@ -60,6 +60,7 @@ const DEFAULT_CONFIG: PromptxyConfig = {
       auth: { type: 'none' },
     },
   ],
+  routes: [],
   rules: [],
   storage: {
     maxHistory: 1000,
@@ -326,6 +327,7 @@ function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyCon
           : base.listen.port,
     },
     suppliers: incoming.suppliers ?? base.suppliers,
+    routes: incoming.routes ?? base.routes,
     rules: incoming.rules ?? base.rules,
     storage: {
       maxHistory: incoming.storage?.maxHistory ?? base.storage.maxHistory,

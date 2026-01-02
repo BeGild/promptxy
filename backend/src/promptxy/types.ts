@@ -159,6 +159,7 @@ export type PromptxyConfig = {
   };
   gatewayAuth?: GatewayAuth; // 网关入站鉴权配置
   suppliers: Supplier[];
+  routes: Route[]; // 路由配置（支持协议转换）
   rules: PromptxyRule[];
   storage: {
     maxHistory: number;
@@ -418,4 +419,79 @@ export interface SupplierToggleResponse {
 export interface PathsResponse {
   paths: string[];
   count: number;
+}
+
+// ============================================================================
+// 路由配置类型
+// ============================================================================
+
+/**
+ * 本地服务类型（对应路径前缀）
+ */
+export type LocalService = 'claude' | 'codex' | 'gemini';
+
+/**
+ * 转换器类型
+ */
+export type TransformerType = 'anthropic' | 'openai' | 'gemini' | 'none';
+
+/**
+ * 路由配置
+ * 将本地服务路径映射到供应商，支持协议转换
+ */
+export interface Route {
+  id: string; // 路由唯一标识
+  localService: LocalService; // 本地服务（/claude, /codex, /gemini）
+  supplierId: string; // 关联的供应商ID
+  transformer: TransformerType; // 转换器类型（自动选择）
+  enabled: boolean; // 是否启用
+}
+
+// 路由获取响应
+export interface RoutesFetchResponse {
+  success: boolean;
+  routes: Route[];
+}
+
+// 路由创建请求
+export interface RouteCreateRequest {
+  route: Omit<Route, 'id'>;
+}
+
+// 路由创建响应
+export interface RouteCreateResponse {
+  success: boolean;
+  message: string;
+  route: Route;
+}
+
+// 路由更新请求
+export interface RouteUpdateRequest {
+  routeId: string;
+  route: Partial<Route>;
+}
+
+// 路由更新响应
+export interface RouteUpdateResponse {
+  success: boolean;
+  message: string;
+  route: Route;
+}
+
+// 路由删除响应
+export interface RouteDeleteResponse {
+  success: boolean;
+  message: string;
+}
+
+// 路由切换请求
+export interface RouteToggleRequest {
+  enabled: boolean;
+}
+
+// 路由切换响应
+export interface RouteToggleResponse {
+  success: boolean;
+  message: string;
+  route: Route;
 }

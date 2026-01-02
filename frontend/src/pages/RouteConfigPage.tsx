@@ -22,6 +22,7 @@ import {
 } from '@heroui/react';
 import { ArrowRight, Plus, Trash2, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useSuppliers } from '@/hooks';
+import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
 import type { Supplier, LocalService, TransformerType, Route } from '@/types/api';
 
 // 本地服务选项
@@ -123,12 +124,21 @@ export const RouteConfigPage: React.FC = () => {
 
   const suppliers = suppliersData?.suppliers || [];
 
-  // 从 suppliers 转换为 routes（临时实现，实际应该从 API 获取）
+  // 从 API 获取路由列表
   useEffect(() => {
-    // 这里应该是从路由 API 获取数据
-    // 暂时使用 suppliers 数据模拟
-    // TODO: 替换为真实的路由 API 调用
-  }, [suppliersData]);
+    const loadRoutes = async () => {
+      try {
+        const response = await fetchRoutes();
+        if (response.success) {
+          setRoutes(response.routes);
+        }
+      } catch (error: any) {
+        console.error('获取路由列表失败:', error);
+        toast.error(`获取路由列表失败: ${error?.message || '未知错误'}`);
+      }
+    };
+    loadRoutes();
+  }, []);
 
   // 自动选择转换器
   useEffect(() => {
@@ -165,18 +175,30 @@ export const RouteConfigPage: React.FC = () => {
     }
 
     try {
-      // TODO: 调用路由 API 创建路由
-      // await createRouteMutation.mutateAsync({ route: newRoute as Omit<Route, 'id'> });
-
-      setIsAddModalOpen(false);
-      setNewRoute({
-        localService: 'claude',
-        supplierId: '',
-        transformer: 'none',
-        enabled: true,
+      // 调用路由 API 创建路由
+      const response = await createRoute({
+        route: newRoute as Omit<Route, 'id'>,
       });
 
-      toast.success('路由配置已添加！');
+      if (response.success) {
+        // 重新加载路由列表
+        const routesResponse = await fetchRoutes();
+        if (routesResponse.success) {
+          setRoutes(routesResponse.routes);
+        }
+
+        setIsAddModalOpen(false);
+        setNewRoute({
+          localService: 'claude',
+          supplierId: '',
+          transformer: 'none',
+          enabled: true,
+        });
+
+        toast.success('路由配置已添加！');
+      } else {
+        toast.error(`添加失败: ${response.message || '未知错误'}`);
+      }
     } catch (error: any) {
       toast.error(`添加失败: ${error?.message || '未知错误'}`);
     }
@@ -185,11 +207,18 @@ export const RouteConfigPage: React.FC = () => {
   // 删除路由
   const handleDeleteRoute = async (routeId: string) => {
     try {
-      // TODO: 调用路由 API 删除路由
-      // await deleteRouteMutation.mutateAsync(routeId);
+      const response = await deleteRoute(routeId);
 
-      setRoutes(prev => prev.filter(r => r.id !== routeId));
-      toast.success('路由配置已删除！');
+      if (response.success) {
+        // 重新加载路由列表
+        const routesResponse = await fetchRoutes();
+        if (routesResponse.success) {
+          setRoutes(routesResponse.routes);
+        }
+        toast.success('路由配置已删除！');
+      } else {
+        toast.error(`删除失败: ${response.message || '未知错误'}`);
+      }
     } catch (error: any) {
       toast.error(`删除失败: ${error?.message || '未知错误'}`);
     }
@@ -198,16 +227,18 @@ export const RouteConfigPage: React.FC = () => {
   // 切换路由状态
   const handleToggleRoute = async (route: Route) => {
     try {
-      // TODO: 调用路由 API 更新路由
-      // await updateRouteMutation.mutateAsync({
-      //   routeId: route.id,
-      //   request: { route: { enabled: !route.enabled } },
-      // });
+      const response = await toggleRoute(route.id, { enabled: !route.enabled });
 
-      setRoutes(prev =>
-        prev.map(r => (r.id === route.id ? { ...r, enabled: !r.enabled } : r)),
-      );
-      toast.success('路由状态已更新！');
+      if (response.success) {
+        // 重新加载路由列表
+        const routesResponse = await fetchRoutes();
+        if (routesResponse.success) {
+          setRoutes(routesResponse.routes);
+        }
+        toast.success('路由状态已更新！');
+      } else {
+        toast.error(`更新失败: ${response.message || '未知错误'}`);
+      }
     } catch (error: any) {
       toast.error(`更新失败: ${error?.message || '未知错误'}`);
     }
@@ -216,14 +247,21 @@ export const RouteConfigPage: React.FC = () => {
   // 更新路由
   const handleUpdateRoute = async (route: Route, field: keyof Route, value: any) => {
     try {
-      // TODO: 调用路由 API 更新路由
-      // await updateRouteMutation.mutateAsync({
-      //   routeId: route.id,
-      //   request: { route: { [field]: value } },
-      // });
+      const response = await updateRoute({
+        routeId: route.id,
+        route: { [field]: value },
+      });
 
-      setRoutes(prev => prev.map(r => (r.id === route.id ? { ...r, [field]: value } : r)));
-      toast.success('路由配置已更新！');
+      if (response.success) {
+        // 重新加载路由列表
+        const routesResponse = await fetchRoutes();
+        if (routesResponse.success) {
+          setRoutes(routesResponse.routes);
+        }
+        toast.success('路由配置已更新！');
+      } else {
+        toast.error(`更新失败: ${response.message || '未知错误'}`);
+      }
     } catch (error: any) {
       toast.error(`更新失败: ${error?.message || '未知错误'}`);
     }

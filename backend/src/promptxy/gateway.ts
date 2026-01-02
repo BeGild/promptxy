@@ -52,6 +52,11 @@ import {
   handleTransformPreview,
   handleGetTransformers,
   handleValidateTransformer,
+  handleGetRoutes,
+  handleCreateRoute,
+  handleUpdateRoute,
+  handleDeleteRoute,
+  handleToggleRoute,
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
@@ -423,6 +428,37 @@ export function createGateway(
         // 验证转换器配置（新增）
         if (method === 'POST' && url.pathname === '/_promptxy/transformers/validate') {
           await handleValidateTransformer(req, res);
+          return;
+        }
+
+        // ========== 路由配置 API（新增）==========
+        // 获取路由列表
+        if (method === 'GET' && url.pathname === '/_promptxy/routes') {
+          await handleGetRoutes(req, res, config);
+          return;
+        }
+
+        // 创建路由
+        if (method === 'POST' && url.pathname === '/_promptxy/routes') {
+          await handleCreateRoute(req, res, config);
+          return;
+        }
+
+        // 更新路由
+        if (method === 'PUT' && url.pathname.startsWith('/_promptxy/routes/')) {
+          await handleUpdateRoute(req, res, config, url);
+          return;
+        }
+
+        // 删除路由
+        if (method === 'DELETE' && url.pathname.startsWith('/_promptxy/routes/')) {
+          await handleDeleteRoute(req, res, config, url);
+          return;
+        }
+
+        // 切换路由状态
+        if (method === 'POST' && url.pathname.match(/\/_promptxy\/routes\/[^/]+\/toggle/)) {
+          await handleToggleRoute(req, res, config, url);
           return;
         }
 

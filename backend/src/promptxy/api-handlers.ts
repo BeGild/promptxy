@@ -22,6 +22,16 @@ import {
   SupplierDeleteResponse,
   SupplierToggleRequest,
   SupplierToggleResponse,
+  Route,
+  RoutesFetchResponse,
+  RouteCreateRequest,
+  RouteCreateResponse,
+  RouteUpdateRequest,
+  RouteUpdateResponse,
+  RouteDeleteResponse,
+  RouteToggleRequest,
+  RouteToggleResponse,
+  LocalService,
 } from './types.js';
 import {
   getRequestList,
@@ -1049,6 +1059,269 @@ export async function handleValidateTransformer(
     sendJson(res, 500, {
       error: 'Validation failed',
       message: error?.message || String(error),
+    });
+  }
+}
+
+// ============================================================================
+// 路由配置 API（新增）
+// ============================================================================
+
+/**
+ * 本地服务到协议的映射
+ */
+const LOCAL_SERVICE_PROTOCOLS: Record<LocalService, 'anthropic' | 'openai' | 'gemini'> = {
+  claude: 'anthropic',
+  codex: 'openai',
+  gemini: 'gemini',
+};
+
+/**
+ * 支持的转换器组合
+ * key: "本地协议->供应商协议"
+ */
+const SUPPORTED_TRANSFORMERS: Record<string, string[]> = {
+  'anthropic->anthropic': ['none'],
+  'anthropic->openai': ['openai'],
+  'anthropic->gemini': ['gemini'],
+  'openai->anthropic': ['anthropic'],
+  'openai->openai': ['none'],
+  'openai->gemini': ['gemini'],
+  'gemini->anthropic': ['anthropic'],
+  'gemini->openai': ['openai'],
+  'gemini->gemini': ['none'],
+};
+
+/**
+ * 根据本地服务和供应商协议自动选择转换器
+ */
+function autoSelectTransformer(
+  localService: LocalService,
+  supplierProtocol: 'anthropic' | 'openai' | 'gemini',
+): string {
+  const localProtocol = LOCAL_SERVICE_PROTOCOLS[localService];
+  const key = `${localProtocol}->${supplierProtocol}`;
+  const transformers = SUPPORTED_TRANSFORMERS[key];
+
+  if (!transformers || transformers.length === 0) {
+    return 'none';
+  }
+
+  return transformers[0];
+}
+
+/**
+ * 处理获取路由列表
+ */
+export async function handleGetRoutes(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+): Promise<void> {
+  const response: RoutesFetchResponse = {
+    success: true,
+    routes: config.routes || [],
+  };
+  sendJson(res, 200, response);
+}
+
+/**
+ * 处理创建路由
+ */
+export async function handleCreateRoute(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+): Promise<void> {
+  try {
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const { route: routeData }: RouteCreateRequest = JSON.parse(body.toString());
+
+    // 验证供应商是否存在
+    const supplier = config.suppliers.find(s => s.id === routeData.supplierId);
+    if (!supplier) {
+      sendJson(res, 400, {
+        success: false,
+        message: '供应商不存在',
+      });
+      return;
+    }
+
+    // 自动选择转换器
+    const transformer = autoSelectTransformer(routeData.localService, supplier.protocol) as any;
+
+    // 创建新路由，生成 ID
+    const newRoute: Route = {
+      ...routeData,
+      id: `route-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      transformer,
+    };
+
+    // 检查是否已存在相同本地服务的路由
+    const existingRouteIndex = config.routes.findIndex(r => r.localService === newRoute.localService);
+    if (existingRouteIndex >= 0) {
+      // 替换现有路由
+      config.routes[existingRouteIndex] = newRoute;
+    } else {
+      // 添加新路由
+      config.routes.push(newRoute);
+    }
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: RouteCreateResponse = {
+      success: true,
+      message: '路由已创建',
+      route: newRoute,
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '创建路由失败',
+    });
+  }
+}
+
+/**
+ * 处理更新路由
+ */
+export async function handleUpdateRoute(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+  url: URL,
+): Promise<void> {
+  try {
+    const routeId = url.pathname.split('/').pop();
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const { route: routeUpdate }: RouteUpdateRequest = JSON.parse(body.toString());
+
+    // 查找路由
+    const index = config.routes.findIndex(r => r.id === routeId);
+    if (index === -1) {
+      sendJson(res, 404, { success: false, message: '路由不存在' });
+      return;
+    }
+
+    // 如果更新了供应商ID，验证供应商是否存在
+    if (routeUpdate.supplierId) {
+      const supplier = config.suppliers.find(s => s.id === routeUpdate.supplierId);
+      if (!supplier) {
+        sendJson(res, 400, { success: false, message: '供应商不存在' });
+        return;
+      }
+
+      // 如果供应商改变，自动重新选择转换器
+      const currentRoute = config.routes[index];
+      if (routeUpdate.supplierId !== currentRoute.supplierId) {
+        routeUpdate.transformer = autoSelectTransformer(
+          routeUpdate.localService || currentRoute.localService,
+          supplier.protocol,
+        ) as any;
+      }
+    }
+
+    // 更新路由
+    config.routes[index] = {
+      ...config.routes[index],
+      ...routeUpdate,
+    };
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: RouteUpdateResponse = {
+      success: true,
+      message: '路由已更新',
+      route: config.routes[index],
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '更新路由失败',
+    });
+  }
+}
+
+/**
+ * 处理删除路由
+ */
+export async function handleDeleteRoute(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+  url: URL,
+): Promise<void> {
+  try {
+    const routeId = url.pathname.split('/').pop();
+
+    // 查找路由
+    const index = config.routes.findIndex(r => r.id === routeId);
+    if (index === -1) {
+      sendJson(res, 404, { success: false, message: '路由不存在' });
+      return;
+    }
+
+    // 删除路由
+    config.routes.splice(index, 1);
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: RouteDeleteResponse = {
+      success: true,
+      message: '路由已删除',
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '删除路由失败',
+    });
+  }
+}
+
+/**
+ * 处理切换路由启用状态
+ */
+export async function handleToggleRoute(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  config: PromptxyConfig,
+  url: URL,
+): Promise<void> {
+  try {
+    // 路径格式: /_promptxy/routes/:id/toggle
+    const routeId = url.pathname.split('/').slice(-2, -1)[0];
+    const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
+    const { enabled }: RouteToggleRequest = JSON.parse(body.toString());
+
+    // 查找路由
+    const index = config.routes.findIndex(r => r.id === routeId);
+    if (index === -1) {
+      sendJson(res, 404, { success: false, message: '路由不存在' });
+      return;
+    }
+
+    // 更新启用状态
+    config.routes[index].enabled = enabled;
+
+    // 保存配置
+    await saveConfig(config);
+
+    const response: RouteToggleResponse = {
+      success: true,
+      message: enabled ? '路由已启用' : '路由已禁用',
+      route: config.routes[index],
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 400, {
+      success: false,
+      message: error?.message || '切换路由状态失败',
     });
   }
 }

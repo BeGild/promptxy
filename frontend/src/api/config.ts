@@ -9,6 +9,15 @@ import type {
   SupplierDeleteResponse,
   SupplierToggleRequest,
   SupplierToggleResponse,
+  Route,
+  RoutesFetchResponse,
+  RouteCreateRequest,
+  RouteCreateResponse,
+  RouteUpdateRequest,
+  RouteUpdateResponse,
+  RouteDeleteResponse,
+  RouteToggleRequest,
+  RouteToggleResponse,
 } from '@/types/api';
 
 /**
@@ -156,5 +165,61 @@ export async function updateSettings(
   settings: Record<string, string>,
 ): Promise<{ success: boolean; message: string }> {
   const response = await apiClient.post('/_promptxy/settings', { settings });
+  return response.data;
+}
+
+// ============================================================================
+// 路由配置 API
+// ============================================================================
+
+/**
+ * 获取路由列表
+ */
+export async function fetchRoutes(): Promise<RoutesFetchResponse> {
+  const response = await apiClient.get('/_promptxy/routes');
+  return response.data;
+}
+
+/**
+ * 创建路由
+ */
+export async function createRoute(
+  request: RouteCreateRequest,
+): Promise<RouteCreateResponse> {
+  const response = await apiClient.post('/_promptxy/routes', {
+    route: request.route,
+  });
+  return response.data;
+}
+
+/**
+ * 更新路由
+ */
+export async function updateRoute(
+  params: { routeId: string; route: Partial<Route> },
+): Promise<RouteUpdateResponse> {
+  const response = await apiClient.put(
+    `/_promptxy/routes/${params.routeId}`,
+    { route: params.route },
+  );
+  return response.data;
+}
+
+/**
+ * 删除路由
+ */
+export async function deleteRoute(routeId: string): Promise<RouteDeleteResponse> {
+  const response = await apiClient.delete(`/_promptxy/routes/${routeId}`);
+  return response.data;
+}
+
+/**
+ * 切换路由启用状态
+ */
+export async function toggleRoute(
+  routeId: string,
+  request: RouteToggleRequest,
+): Promise<RouteToggleResponse> {
+  const response = await apiClient.post(`/_promptxy/routes/${routeId}/toggle`, request);
   return response.data;
 }
