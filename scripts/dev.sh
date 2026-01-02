@@ -11,7 +11,8 @@ echo "========================================="
 echo ""
 
 # 检查是否在正确的目录
-if [ ! -f "backend/package.json" ] || [ ! -f "frontend/package.json" ]; then
+# 后端依赖在根目录 package.json，前端依赖在 frontend/package.json
+if [ ! -f "package.json" ] || [ ! -f "frontend/package.json" ]; then
     echo "错误: 请在项目根目录运行此脚本"
     exit 1
 fi
@@ -24,9 +25,9 @@ fi
 
 # 检查依赖
 echo "检查依赖..."
-if [ ! -d "backend/node_modules" ]; then
+if [ ! -d "node_modules" ]; then
     echo "安装后端依赖..."
-    cd backend && npm install && cd ..
+    npm install
 fi
 
 if [ ! -d "frontend/node_modules" ]; then
@@ -42,10 +43,8 @@ echo ""
 
 # 启动后端
 echo "启动后端服务..."
-cd backend
 npm run dev &
 BACKEND_PID=$!
-cd ..
 
 # 等待后端启动并检测端口
 echo "等待后端服务启动..."
