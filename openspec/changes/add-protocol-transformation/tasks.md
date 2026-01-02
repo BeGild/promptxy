@@ -4,19 +4,19 @@
 
 - [x] 0.1 确认 v1 边界：单 `localPrefix` ⇄ 单 supplier；不引入 Router
 - [x] 0.2 确认 v1 必须支持的上游集合（至少 1 个 OpenAI compatible + 可选 Gemini）
-- [ ] 0.3 基于 `docs/protocol-transformation-research.md` 的 8.5 样例整理测试 fixture（脱敏/截断）
+- [x] 0.3 基于 `docs/protocol-transformation-research.md` 的 8.5 样例整理测试 fixture（脱敏/截断）
 
 ## 1. 后端：协议转换与鉴权
 
 - [x] 1.1 供应商配置扩展：新增 `supplier.transformer`（default + models exact match）与 `supplier.auth`
 - [x] 1.2 网关入站鉴权：新增 `gatewayAuth`，支持从 `acceptedHeaders` 指定的 header 中读取 token 并校验
 - [x] 1.3 确保入站鉴权 header 在转发前被清理（避免误传到上游）
-- [ ] 1.3.1 增加"header 观测"诊断输出：在 transform trace 中返回 `authHeaderUsed`（仅 header 名称，永不包含值），用于在运行 `cc_lo -p "<提示词>"` 时确认 Claude Code 使用的鉴权头名
+- [x] 1.3.1 增加"header 观测"诊断输出：在 transform trace 中返回 `authHeaderDetected`（仅 header 名称，永不包含值），用于在运行 `cc_lo -p "<提示词>"` 时确认 Claude Code 使用的鉴权头名
 - [x] 1.4 接入 `@musistudio/llms`：实现最薄封装的 transformer registry / pipeline（含可用性校验）
 - [x] 1.5 在网关请求管线中插入协议转换：rules 之后、fetch 之前（与研究文档一致）
 - [x] 1.6 上游鉴权注入：当 `supplier.auth` 存在时注入/覆盖上游认证；并禁止透传入站凭证到上游
 - [x] 1.7 响应转换：非流式响应可正确转换回 Anthropic
-- [ ] 1.8 流式（SSE）转换：当请求/上游为流式时，支持"解析 → 转换 → 序列化 → 输出"，避免全量缓冲
+- [x] 1.8 流式（SSE）转换：当请求/上游为流式时，支持"解析 → 转换 → 序列化 → 输出"，避免全量缓冲
 - [x] 1.9 统一脱敏与安全输出：日志/历史/preview/trace 均不得包含明文 token
 
 ## 2. 后端：可验证 Preview + Trace API
@@ -36,9 +36,9 @@
 
 ## 4. 测试与验证
 
-- [ ] 4.1 单元测试：链选择（default vs model override）、配置校验、脱敏策略
-- [ ] 4.2 集成测试：Anthropic ↔ OpenAI compatible（含 tools、streaming）
-- [ ] 4.3 回归测试：确保未启用 transformer 的 supplier 仍保持现有转发行为
+- [x] 4.1 单元测试：链选择（default vs model override）、配置校验、脱敏策略
+- [x] 4.2 集成测试：Anthropic ↔ OpenAI compatible（含 tools、streaming）
+- [x] 4.3 回归测试：确保未启用 transformer 的 supplier 仍保持现有转发行为
 
 ## 5. 文档与迁移
 

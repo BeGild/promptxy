@@ -1,0 +1,86 @@
+{
+  "description": "Gemini streamGenerateContent request with system instruction and tools (sanitized fixture)",
+  "source": "Gemini client - POST /v1beta/models/gemini-2.0-flash-exp:streamGenerateContent",
+  "request": {
+    "method": "POST",
+    "path": "/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "You are a helpful assistant with access to function calling tools."
+          }
+        ]
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Find information about Python programming language"
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "search",
+              "description": "Search for information on the web",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Search query"
+                  }
+                },
+                "required": ["query"]
+              }
+            }
+          ]
+        }
+      ],
+      "generationConfig": {
+        "temperature": 0.7,
+        "maxOutputTokens": 1024
+      }
+    }
+  },
+  "expectedAnthropic": {
+    "method": "POST",
+    "path": "/v1/messages",
+    "body": {
+      "model": "gemini-2.0-flash-exp",
+      "max_tokens": 1024,
+      "stream": true,
+      "system": "You are a helpful assistant with access to function calling tools.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Find information about Python programming language"
+        }
+      ],
+      "tools": [
+        {
+          "name": "search",
+          "description": "Search for information on the web",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query"
+              }
+            },
+            "required": ["query"]
+          }
+        }
+      ]
+    }
+  }
+}

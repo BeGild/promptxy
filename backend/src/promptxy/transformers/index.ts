@@ -33,6 +33,8 @@ export {
 export {
   ProtocolTransformer,
   createProtocolTransformer,
+  selectChain,
+  sanitizeHeaders,
 } from './llms-compat.js';
 
 // 配置验证
@@ -41,3 +43,14 @@ export {
   validateSupplierAuth,
   validateGatewayAuth,
 } from './validation.js';
+
+// SSE 转换
+export {
+  parseSSEChunk,
+  serializeSSEEvent,
+  isSSEResponse,
+  transformOpenAIChunkToAnthropic,
+  transformGeminiChunkToAnthropic,
+  createSSETransformStream,
+} from './sse.js';
+export type { SSEEvent } from './sse.js';

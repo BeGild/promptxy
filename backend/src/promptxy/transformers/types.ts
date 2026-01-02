@@ -112,6 +112,8 @@ export interface TransformTrace {
   errors: string[];
   /** 警告信息 */
   warnings: string[];
+  /** 使用的入站鉴权头名称（仅名称，不包含值）- 用于诊断观测 */
+  authHeaderDetected?: string[];
 }
 
 /**

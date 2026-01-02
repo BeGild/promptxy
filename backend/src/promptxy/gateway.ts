@@ -58,6 +58,7 @@ import {
 } from './api-handlers.js';
 import { createProtocolTransformer } from './transformers/llms-compat.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
+import { isSSEResponse, createSSETransformStream } from './transformers/sse.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -655,6 +656,11 @@ export function createGateway(
         return;
       }
 
+      // 检查是否为 SSE 响应
+      const contentType = upstreamResponse.headers.get('content-type');
+      const isSSE = isSSEResponse(contentType);
+      const needsTransform = matchedRoute.supplier.transformer && matchedRoute.supplier.transformer.default;
+
       // 收集响应体用于记录（同时流式传递给客户端）
       const responseBodyChunks: Buffer[] = [];
       const upstreamStream = Readable.fromWeb(upstreamResponse.body as any);
@@ -663,7 +669,22 @@ export function createGateway(
         responseBodyChunks.push(chunk);
       });
 
-      upstreamStream.pipe(res);
+      // 根据是否需要转换来决定流处理方式
+      if (isSSE && needsTransform) {
+        // SSE 响应需要转换：使用转换流
+        if (config.debug) {
+          logger.debug(`[promptxy] SSE 响应转换已启用，supplier: ${matchedRoute.supplier.name}`);
+        }
+
+        const transformStream = createSSETransformStream(matchedRoute.supplier);
+
+        upstreamStream
+          .pipe(transformStream)
+          .pipe(res);
+      } else {
+        // 非 SSE 或不需要转换：直接透传
+        upstreamStream.pipe(res);
+      }
 
       // 记录请求到数据库（在响应流结束后）
       const duration = Date.now() - startTime;

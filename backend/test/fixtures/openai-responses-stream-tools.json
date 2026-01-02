@@ -1,0 +1,72 @@
+{
+  "description": "OpenAI Responses API request with streaming and tools (sanitized fixture)",
+  "source": "Codex client - POST /responses",
+  "request": {
+    "method": "POST",
+    "path": "/responses",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "model": "gpt-4o",
+      "stream": true,
+      "instructions": "You are a helpful assistant with access to tools.",
+      "input": [
+        {
+          "role": "user",
+          "content": "Calculate 15 * 27"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "name": "calculator",
+          "description": "Perform basic arithmetic calculations",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "expression": {
+                "type": "string",
+                "description": "Math expression to evaluate (e.g., '15 * 27')"
+              }
+            },
+            "required": ["expression"]
+          }
+        }
+      ],
+      "tool_choice": "auto"
+    }
+  },
+  "expectedAnthropic": {
+    "method": "POST",
+    "path": "/v1/messages",
+    "body": {
+      "model": "gpt-4o",
+      "max_tokens": 4096,
+      "stream": true,
+      "system": "You are a helpful assistant with access to tools.",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Calculate 15 * 27"
+        }
+      ],
+      "tools": [
+        {
+          "name": "calculator",
+          "description": "Perform basic arithmetic calculations",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "expression": {
+                "type": "string",
+                "description": "Math expression to evaluate (e.g., '15 * 27')"
+              }
+            },
+            "required": ["expression"]
+          }
+        }
+      ]
+    }
+  }
+}

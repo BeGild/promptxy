@@ -19,8 +19,13 @@ import type {
   TransformStepResult,
 } from './types.js';
 import { createLogger } from '../logger.js';
+import { detectAuthHeaders } from './auth.js';
+import { getGlobalRegistry } from './registry.js';
 
 const logger = createLogger({ debug: false });
+
+// 获取全局注册表，用于检查转换器是否存在
+const registry = getGlobalRegistry();
 
 /**
  * 从转换器步骤中提取名称
@@ -45,7 +50,7 @@ function getStepOptions(step: TransformerStep): Record<string, unknown> | undefi
 /**
  * 选择转换链（根据模型精确匹配）
  */
-function selectChain(
+export function selectChain(
   config: TransformerConfig,
   model?: string,
 ): { chain: TransformerChain; chainType: 'default' | string } {
@@ -58,7 +63,7 @@ function selectChain(
 /**
  * 脱敏 Headers（用于日志/预览）
  */
-function sanitizeHeaders(
+export function sanitizeHeaders(
   headers: Record<string, string>,
 ): Record<string, string> {
   const sanitized: Record<string, string> = {};
@@ -169,6 +174,10 @@ export class ProtocolTransformer {
     } = request;
 
     const startTime = Date.now();
+
+    // 检测请求中的鉴权头（用于诊断观测）
+    const authHeaderDetected = detectAuthHeaders(req.headers);
+
     const trace: TransformTrace = {
       supplierId: supplier.id,
       supplierName: supplier.name,
@@ -179,6 +188,7 @@ export class ProtocolTransformer {
       success: false,
       errors: [],
       warnings: [],
+      authHeaderDetected,
     };
 
     try {
@@ -232,6 +242,16 @@ export class ProtocolTransformer {
           duration: 0,
         };
 
+        // 检查转换器是否存在
+        if (!registry.has(stepName)) {
+          // 未知转换器，透传请求但记录警告
+          trace.warnings.push(`未知的转换器 "${stepName}"，已跳过`);
+          stepResult.success = true;
+          stepResult.duration = Date.now() - stepStartTime;
+          trace.steps.push(stepResult);
+          continue;
+        }
+
         try {
           // 调用 @musistudio/llms 进行转换
           const result = await this.applyTransformer(
@@ -256,7 +276,13 @@ export class ProtocolTransformer {
         }
       }
 
-      // 4. 注入上游认证
+      // 4. 转换路径（基于转换链的最后一个转换器）
+      const transformedPath = this.transformPath(
+        req.path,
+        chain[chain.length - 1],
+      );
+
+      // 5. 注入上游认证
       const finalHeaders = injectUpstreamAuth(
         currentHeaders,
         supplier.auth,
@@ -268,7 +294,7 @@ export class ProtocolTransformer {
       return {
         request: {
           method: req.method,
-          path: req.path,
+          path: transformedPath,
           headers: finalHeaders,
           body: currentBody,
         },
@@ -401,12 +427,13 @@ export class ProtocolTransformer {
   private transformFromOpenAI(
     response: Record<string, unknown>,
   ): Record<string, unknown> {
-    const transformed: Record<string, unknown> = {};
+    const transformed: Record<string, unknown> = {
+      type: 'message', // Anthropic 消息类型
+      role: 'assistant',
+    };
 
     // 基础字段
     if (response.id) transformed.id = response.id;
-    if (response.object) transformed.type = response.object;
-    if (response.created) transformed.created = response.created;
     if (response.model) transformed.model = response.model;
 
     // choices → content
@@ -417,7 +444,6 @@ export class ProtocolTransformer {
         transformed.content = this.convertOpenAIContentToAnthropic(
           choice.message,
         );
-        transformed.role = 'assistant';
       }
       if (choice.finish_reason) {
         transformed.stop_reason = choice.finish_reason;
@@ -438,37 +464,50 @@ export class ProtocolTransformer {
   private convertOpenAIContentToAnthropic(
     message: any,
   ): string | Array<{ type: string; text?: string; [key: string]: any }> {
-    if (!message.content) {
+    const blocks: any[] = [];
+
+    // 处理文本内容
+    if (message.content) {
+      if (typeof message.content === 'string') {
+        blocks.push({
+          type: 'text',
+          text: message.content,
+        });
+      } else if (Array.isArray(message.content)) {
+        for (const item of message.content) {
+          if (item.type === 'text') {
+            blocks.push({
+              type: 'text',
+              text: item.text,
+            });
+          }
+        }
+      }
+    }
+
+    // 处理 tool_calls（转换为 tool_use blocks）
+    if (message.tool_calls && Array.isArray(message.tool_calls)) {
+      for (const toolCall of message.tool_calls) {
+        blocks.push({
+          type: 'tool_use',
+          id: toolCall.id,
+          name: toolCall.function?.name || '',
+          input: JSON.parse(toolCall.function?.arguments || '{}'),
+        });
+      }
+    }
+
+    // 如果只有 text block，简化为字符串
+    if (blocks.length === 1 && blocks[0].type === 'text') {
+      return blocks[0].text;
+    }
+
+    // 如果没有任何内容，返回空字符串
+    if (blocks.length === 0) {
       return '';
     }
 
-    if (typeof message.content === 'string') {
-      return message.content;
-    }
-
-    if (Array.isArray(message.content)) {
-      const blocks: any[] = [];
-      for (const item of message.content) {
-        if (item.type === 'text') {
-          blocks.push({
-            type: 'text',
-            text: item.text,
-          });
-        } else if (item.type === 'tool_use') {
-          // OpenAI 不在 content 中包含 tool_use
-          // 这些信息通常在 tool_calls 中
-          blocks.push({
-            type: 'tool_use',
-            id: item.id,
-            name: item.name,
-            input: item.input,
-          });
-        }
-      }
-      return blocks;
-    }
-
-    return '';
+    return blocks;
   }
 
   /**
@@ -556,6 +595,46 @@ export class ProtocolTransformer {
       return String(body.model);
     }
     return undefined;
+  }
+
+  /**
+   * 转换请求路径
+   *
+   * 根据目标转换器将 Anthropic 路径转换为对应供应商的路径
+   */
+  private transformPath(
+    path: string,
+    lastTransformer: TransformerStep,
+  ): string {
+    const transformerName =
+      typeof lastTransformer === 'string'
+        ? lastTransformer
+        : lastTransformer.name;
+
+    // 路径映射规则
+    const pathMappings: Record<string, Record<string, string>> = {
+      deepseek: {
+        '/v1/messages': '/chat/completions',
+        '/v1/messages/batches': '/chat/completions',
+      },
+      openai: {
+        '/v1/messages': '/chat/completions',
+        '/v1/messages/batches': '/chat/completions',
+      },
+      gemini: {
+        '/v1/messages':
+          '/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent',
+      },
+    };
+
+    // 获取转换器的路径映射
+    const mappings = pathMappings[transformerName];
+    if (mappings && mappings[path]) {
+      return mappings[path];
+    }
+
+    // 默认返回原路径
+    return path;
   }
 
   /**
@@ -649,19 +728,71 @@ export class ProtocolTransformer {
       transformed.top_p = request.top_p;
     }
 
-    if (request.stream) {
+    if ('stream' in request) {
       transformed.stream = request.stream;
     }
 
     // messages 转换
     if (request.messages && Array.isArray(request.messages)) {
       transformed.messages = request.messages.map((msg: any) => {
-        // Anthropic 和 OpenAI 的 messages 格式基本兼容
-        // 但需要处理 content 字段的格式差异
+        // 处理 tool_use 消息（assistant 发起工具调用）
+        if (
+          Array.isArray(msg.content) &&
+          msg.content.some((b: any) => b.type === 'tool_use')
+        ) {
+          const toolCalls = msg.content
+            .filter((b: any) => b.type === 'tool_use')
+            .map((block: any) => ({
+              id: block.id,
+              type: 'function' as const,
+              function: {
+                name: block.name,
+                arguments: JSON.stringify(block.input || {}),
+              },
+            }));
+
+          // 获取文本内容（如果有）
+          const textBlocks = msg.content.filter((b: any) => b.type === 'text');
+          const hasText = textBlocks.length > 0;
+
+          return {
+            role: msg.role,
+            content: hasText ? textBlocks[0].text : null,
+            tool_calls: toolCalls,
+          };
+        }
+
+        // 处理 tool_result 消息（用户返回工具结果）
+        if (
+          Array.isArray(msg.content) &&
+          msg.content.some((b: any) => b.type === 'tool_result')
+        ) {
+          const toolResults = msg.content.filter((b: any) => b.type === 'tool_result');
+
+          // 如果只有一个 tool_result，直接返回
+          if (toolResults.length === 1) {
+            return {
+              role: 'tool',
+              tool_call_id: toolResults[0].tool_use_id,
+              content: toolResults[0].content,
+            };
+          }
+
+          // 多个 tool_result，需要拆分为多个消息（这里简化处理，只返回第一个）
+          return {
+            role: 'tool',
+            tool_call_id: toolResults[0].tool_use_id,
+            content: toolResults[0].content,
+          };
+        }
+
+        // 处理普通文本消息
         if (typeof msg.content === 'string') {
           return msg;
-        } else if (Array.isArray(msg.content)) {
-          // 转换 block 结构
+        }
+
+        // 处理 content 数组（只有 text 和 image 的情况）
+        if (Array.isArray(msg.content)) {
           const openAIContent: any[] = [];
           for (const block of msg.content) {
             if (block.type === 'text') {
@@ -676,25 +807,15 @@ export class ProtocolTransformer {
                   url: block.source?.data || block.source,
                 },
               });
-            } else if (block.type === 'tool_use') {
-              // OpenAI 使用 tool_calls 而不是内联 tool_use
-              // 这里需要在 messages 中保留 tool_use 信息
-              openAIContent.push({
-                type: 'tool_use',
-                id: block.id,
-                name: block.name,
-                input: block.input,
-              });
-            } else if (block.type === 'tool_result') {
-              openAIContent.push({
-                type: 'tool_result',
-                tool_use_id: block.tool_use_id,
-                content: block.content,
-              });
             }
+          }
+          // 如果只有一个 text block，简化为字符串
+          if (openAIContent.length === 1 && openAIContent[0].type === 'text') {
+            return { ...msg, content: openAIContent[0].text };
           }
           return { ...msg, content: openAIContent };
         }
+
         return msg;
       });
     }
