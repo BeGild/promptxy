@@ -200,6 +200,12 @@ export interface RequestRecord {
   responseHeaders?: string; // JSON 字符串
   responseBody?: string; // JSON 字符串
   error?: string;
+
+  // 供应商和转换信息（新增）
+  supplierId?: string; // 供应商 ID
+  supplierName?: string; // 供应商名称
+  transformerChain?: string; // JSON 字符串，转换链数组
+  transformTrace?: string; // JSON 字符串，转换追踪信息
 }
 
 // API 返回的请求记录（解析后的）
@@ -221,6 +227,12 @@ export interface RequestRecordResponse {
   responseHeaders?: Record<string, string>;
   responseBody?: any;
   error?: string;
+
+  // 供应商和转换信息（新增）
+  supplierId?: string; // 供应商 ID
+  supplierName?: string; // 供应商名称
+  transformerChain?: string[]; // 转换链数组
+  transformTrace?: any; // 转换追踪信息
 }
 
 // 请求列表响应

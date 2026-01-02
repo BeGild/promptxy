@@ -38,7 +38,6 @@ import {
   useUploadConfig,
 } from '@/hooks';
 import { useCleanupRequests, useStats } from '@/hooks/useRequests';
-import { SupplierManagement } from './SupplierManagement';
 import { formatBytes, getClientColorStyle } from '@/utils';
 import { fetchSettings, updateSettings } from '@/api/config';
 
@@ -249,11 +248,6 @@ export const SettingsPanel: React.FC = () => {
               </div>
             </CardBody>
           </Card>
-
-          {/* 供应商管理 - 占据全宽 */}
-          <div className="lg:col-span-3">
-            <SupplierManagement />
-          </div>
 
           {/* 配置管理 */}
           <Card className="lg:col-span-1 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 h-full">

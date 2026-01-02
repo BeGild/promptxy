@@ -766,6 +766,12 @@ export function createGateway(
           responseHeaders: responseHeadersStr,
           responseBody: responseBodyStr,
           error: undefined,
+          // 供应商和转换信息
+          supplierId: route?.supplier?.id,
+          supplierName: route?.supplier?.name,
+          transformerChain: route?.supplier?.transformer?.default
+            ? JSON.stringify(route.supplier.transformer.default)
+            : undefined,
         };
 
         // 保存到数据库
@@ -821,6 +827,12 @@ export function createGateway(
             durationMs: duration,
             responseHeaders: undefined,
             error: error,
+            // 供应商和转换信息
+            supplierId: route?.supplier?.id,
+            supplierName: route?.supplier?.name,
+            transformerChain: route?.supplier?.transformer?.default
+              ? JSON.stringify(route.supplier.transformer.default)
+              : undefined,
           };
 
           try {

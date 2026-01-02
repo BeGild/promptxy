@@ -20,7 +20,7 @@ import { Header } from '@/components/layout';
 import { RulesPage } from '@/pages/RulesPage';
 import { RequestsPage } from '@/pages/RequestsPage';
 import { PreviewPage } from '@/pages/PreviewPage';
-import { ProtocolLabPage } from '@/pages/ProtocolLabPage';
+import { ProtocolConfigPage } from '@/pages/ProtocolConfigPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { useUIStore, useAppStore } from '@/store';
 import { useSSE } from '@/hooks';
@@ -68,8 +68,8 @@ function AppContent() {
         return <RequestsPage />;
       case 'preview':
         return <PreviewPage />;
-      case 'protocol-lab':
-        return <ProtocolLabPage />;
+      case 'protocol-config':
+        return <ProtocolConfigPage />;
       case 'settings':
         return <SettingsPage />;
       default:

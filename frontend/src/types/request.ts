@@ -18,6 +18,12 @@ export interface RequestRecord {
   responseHeaders?: Record<string, string>;
   responseBody?: any;
   error?: string;
+
+  // 供应商和转换信息（新增）
+  supplierId?: string; // 供应商 ID
+  supplierName?: string; // 供应商名称
+  transformerChain?: string[]; // 转换链数组
+  transformTrace?: any; // 转换追踪信息
 }
 
 export interface RequestListItem {

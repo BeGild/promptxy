@@ -16,9 +16,10 @@
  * - 参考 styles/tokens/colors.css 中的可用变量
  */
 
-import React from 'react';
-import { Card, CardBody, CardHeader, Chip, Spinner, Divider, Tabs, Tab } from '@heroui/react';
+import React, { useState } from 'react';
+import { Card, CardBody, CardHeader, Chip, Spinner, Divider, Tabs, Tab, Button, Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/react';
 import { RequestRecord } from '@/types';
+import { useUIStore } from '@/store';
 import {
   formatTimeWithMs,
   formatDuration,
@@ -28,6 +29,7 @@ import {
 } from '@/utils';
 import { RequestDetailPanel } from '@/components/request-viewer';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
+import { Server, ArrowRight, Eye, CheckCircle2 } from 'lucide-react';
 
 interface RequestDetailInSidebarProps {
   request: RequestRecord | null;
@@ -50,6 +52,9 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
   onSelectionBasedCreate,
   onBasedOnRequestCreate,
 }) => {
+  const { setActiveTab } = useUIStore();
+  const [isTransformDetailOpen, setIsTransformDetailOpen] = useState(false);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -67,6 +72,10 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
       </div>
     );
   }
+
+  // 解析转换链
+  const transformerChain = request.transformerChain || [];
+  const hasRouteInfo = request.supplierId || request.supplierName || transformerChain.length > 0;
 
   return (
     <div className="space-y-3">
@@ -123,6 +132,126 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
           </div>
         </CardBody>
       </Card>
+
+      {/* 路由信息 - 新增 */}
+      {hasRouteInfo && (
+        <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
+          <CardBody className="px-3 py-2 space-y-2">
+            {/* 供应商信息 */}
+            {request.supplierName && (
+              <div className="flex items-center gap-2 text-xs">
+                <Server size={14} className="text-brand-primary" />
+                <span className="text-tertiary">供应商:</span>
+                <span className="text-secondary font-medium">{request.supplierName}</span>
+              </div>
+            )}
+
+            {/* 转换链信息 */}
+            {transformerChain.length > 0 && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-tertiary">转换链:</span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {transformerChain.map((step, index) => (
+                    <React.Fragment key={index}>
+                      <Chip size="sm" variant="flat" color="primary" className="h-5 min-h-5">
+                        {step}
+                      </Chip>
+                      {index < transformerChain.length - 1 && (
+                        <ArrowRight size={12} className="text-tertiary" />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  variant="light"
+                  color="primary"
+                  onPress={() => setIsTransformDetailOpen(true)}
+                  startContent={<Eye size={14} />}
+                  className="h-5 min-h-5 px-2 min-w-0 text-xs"
+                >
+                  详情
+                </Button>
+              </div>
+            )}
+
+            {/* 跳转到配置 */}
+            {request.supplierId && (
+              <Button
+                size="sm"
+                variant="flat"
+                color="primary"
+                onPress={() => setActiveTab('protocol-config')}
+                className="text-xs h-6"
+              >
+                跳转到配置
+              </Button>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      {/* 转换详情弹窗 */}
+      <Modal
+        isOpen={isTransformDetailOpen}
+        onClose={() => setIsTransformDetailOpen(false)}
+        size="2xl"
+        backdrop="blur"
+        placement="center"
+        classNames={{
+          base: 'border border-brand-primary/30 dark:border-brand-primary/20 bg-canvas dark:bg-secondary',
+          backdrop: 'bg-overlay',
+          header: 'bg-canvas dark:bg-secondary border-b border-subtle rounded-t-large',
+          body: 'bg-canvas dark:bg-secondary',
+          footer: 'bg-canvas dark:bg-secondary border-t border-subtle rounded-b-large',
+        }}
+      >
+        <ModalContent>
+          <ModalHeader>转换详情</ModalHeader>
+          <ModalBody className="space-y-4">
+            {request.supplierName && (
+              <div className="p-3 rounded-lg bg-canvas dark:bg-secondary/50 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-secondary">供应商:</span>
+                  <span className="text-sm font-medium text-primary">
+                    {request.supplierName}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {transformerChain.length > 0 && (
+              <>
+                <div className="p-3 rounded-lg bg-canvas dark:bg-secondary/50 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-secondary">转换链:</span>
+                  </div>
+                  <div className="space-y-2">
+                    {transformerChain.map((step, index) => (
+                      <div key={index} className="p-3 rounded-lg bg-canvas dark:bg-secondary/50">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-secondary">
+                              步骤 {index + 1}
+                            </span>
+                            <Chip size="sm" color="primary" variant="flat">
+                              {step}
+                            </Chip>
+                          </div>
+                          <CheckCircle2 size={16} className="text-status-success" />
+                        </div>
+                        <p className="text-xs text-secondary">
+                          使用 {step} 转换器
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
 
       {/* 匹配规则 - 紧凑单行 */}
       {request.matchedRules && request.matchedRules.length > 0 && (

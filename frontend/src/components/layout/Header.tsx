@@ -42,6 +42,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { StatusIndicator, LogoIcon } from '@/components/common';
+import { ConfigStatusIndicator } from '@/components/layout/ConfigStatusIndicator';
 import { useUIStore } from '@/store';
 
 /**
@@ -52,7 +53,7 @@ const MENU_ITEMS = [
   { key: 'rules', label: '规则管理', icon: ClipboardList, desc: '创建和管理修改规则' },
   { key: 'requests', label: '请求监控', icon: Activity, desc: '查看实时请求历史' },
   { key: 'preview', label: '预览测试', icon: PlayCircle, desc: '测试规则效果' },
-  { key: 'protocol-lab', label: '协议转换实验室', icon: RefreshCw, desc: '预览和验证协议转换' },
+  { key: 'protocol-config', label: '协议配置', icon: RefreshCw, desc: '配置多供应商协议转换' },
   { key: 'settings', label: '设置', icon: Settings, desc: '配置和数据管理' },
 ] as const;
 
@@ -132,8 +133,9 @@ export const Header: React.FC<HeaderProps> = ({ sseConnected, apiConnected }) =>
         })}
       </NavbarContent>
 
-      {/* 右侧：状态指示器和主题切换 */}
+      {/* 右侧：配置状态、状态指示器和主题切换 */}
       <NavbarContent justify="end" className="gap-md">
+        <ConfigStatusIndicator />
         <div className="flex items-center gap-sm px-3 py-1.5 bg-canvas dark:bg-secondary/50 rounded-full border border-subtle">
           <StatusIndicator
             connected={apiConnected}

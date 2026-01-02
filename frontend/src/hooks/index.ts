@@ -9,3 +9,4 @@ export * from './useConfig';
 export * from './useSuppliers';
 export * from './useVirtualList';
 export * from './useTheme';
+export * from './useConfigStatus';
