@@ -1,474 +1,186 @@
 /**
- * PromptXY 集成测试工具函数
- * 提供测试服务器启动、数据库清理、HTTP 客户端等通用功能
+ * PromptXY 集成测试工具函数（统一服务器版本）
+ *
+ * 目标：
+ * - 以单端口统一服务器测试 /_promptxy/* 与 /claude|/codex|/gemini 代理路由
+ * - 使用 FileSystemStorage（YAML 落盘）并通过 HOME/XDG 隔离测试数据目录
  */
 
 import * as http from 'node:http';
-import type { Database } from 'sql.js';
+import os from 'node:os';
+import path from 'node:path';
+import { mkdir, rm } from 'node:fs/promises';
 import { createGateway } from '../../src/promptxy/gateway.js';
-import {
-  initializeDatabase,
-  resetDatabaseForTest,
-  cleanupOldRequests,
-} from '../../src/promptxy/database.js';
-import { loadConfig, saveConfig } from '../../src/promptxy/config.js';
-import { PromptxyConfig, PromptxyRule } from '../../src/promptxy/types.js';
-import * as path from 'node:path';
-import * as os from 'node:os';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { initializeDatabase, resetDatabaseForTest } from '../../src/promptxy/database.js';
+import type { PromptxyConfig, PromptxyRule } from '../../src/promptxy/types.js';
 
-// 测试配置目录
-// 注意：vitest 会并发执行多个 test file；如果所有套件共用同一个目录会导致 rm/写库 互相打架，产生 SQLITE_IOERR/READONLY
+// 测试目录（按 worker/pid 隔离）
 const TEST_RUN_ID =
   process.env.VITEST_WORKER_ID !== undefined
     ? `worker-${process.env.VITEST_WORKER_ID}`
     : `pid-${process.pid}`;
-const TEST_CONFIG_DIR = path.join(os.tmpdir(), `promptxy-test-${TEST_RUN_ID}`);
-const TEST_DB_PATH = path.join(TEST_CONFIG_DIR, 'promptxy-test.db');
-const TEST_CONFIG_PATH = path.join(TEST_CONFIG_DIR, 'config-test.json');
+const TEST_HOME = path.join(os.tmpdir(), `promptxy-integration-${TEST_RUN_ID}`);
 
-/**
- * 测试服务器容器
- */
 export interface TestServerContainer {
   server: http.Server;
   port: number;
+  baseUrl: string;
   shutdown: () => Promise<void>;
 }
 
-/**
- * 创建测试配置
- */
-export async function createTestConfig(
-  overrides: Partial<PromptxyConfig> = {},
-): Promise<PromptxyConfig> {
-  const defaultConfig: PromptxyConfig = {
-    listen: {
-      host: '127.0.0.1',
-      port: 0, // 使用随机端口
-    },
-    suppliers: [
-      {
-        id: 'claude-anthropic',
-        name: 'Claude (Anthropic)',
-        baseUrl: 'https://api.anthropic.com',
-        localPrefix: '/claude',
-        pathMappings: [],
-        enabled: true,
-      },
-      {
-        id: 'openai-official',
-        name: 'OpenAI Official',
-        baseUrl: 'https://api.openai.com',
-        localPrefix: '/openai',
-        pathMappings: [],
-        enabled: true,
-      },
-      {
-        id: 'gemini-google',
-        name: 'Gemini (Google)',
-        baseUrl: 'https://generativelanguage.googleapis.com',
-        localPrefix: '/gemini',
-        pathMappings: [],
-        enabled: true,
-      },
-    ],
-    rules: [],
-    storage: {
-      maxHistory: 100,
-      autoCleanup: false, // 测试时禁用自动清理
-      cleanupInterval: 1,
-    },
-    debug: false,
-    ...overrides,
-  };
-
-  // 确保测试目录存在
-  await mkdir(TEST_CONFIG_DIR, { recursive: true });
-
-  // 设置环境变量以使用测试配置路径
-  process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
-
-  // 保存配置文件
-  await saveConfig(defaultConfig);
-
-  return defaultConfig;
-}
-
-/**
- * 使用测试数据库初始化
- */
-export async function initializeTestDatabase(): Promise<Database> {
-  // 先清理测试目录和数据库文件
-  try {
-    await rm(TEST_CONFIG_DIR, { recursive: true, force: true });
-  } catch {
-    // 忽略清理错误
-  }
-
-  // 重置现有数据库实例
+export async function cleanupTestData(): Promise<void> {
   await resetDatabaseForTest();
-
-  // 确保测试目录存在
-  await mkdir(TEST_CONFIG_DIR, { recursive: true });
-
-  // 设置测试数据库路径的环境变量
-  const originalHome = process.env.HOME;
-  const originalXDG = process.env.XDG_DATA_HOME;
-
-  // 临时修改环境变量，使数据库使用测试路径
-  process.env.HOME = TEST_CONFIG_DIR;
-  process.env.XDG_DATA_HOME = TEST_CONFIG_DIR;
-
-  // 重新初始化数据库
-  const db = await initializeDatabase();
-
-  // 恢复环境变量
-  if (originalHome) process.env.HOME = originalHome;
-  if (originalXDG) process.env.XDG_DATA_HOME = originalXDG;
-
-  return db;
+  await rm(TEST_HOME, { recursive: true, force: true }).catch(() => {});
 }
 
-/**
- * 启动测试服务器
- */
-export async function startTestServers(
-  config: PromptxyConfig,
-  db: Database,
-): Promise<TestServerContainer> {
-  // 创建统一服务器（Gateway + API）
-  const server = createGateway(config, db, config.rules);
+export async function startTestServer(config: PromptxyConfig): Promise<TestServerContainer> {
+  await rm(TEST_HOME, { recursive: true, force: true }).catch(() => {});
+  await mkdir(TEST_HOME, { recursive: true });
 
-  // 启动服务器并获取实际端口
+  // 隔离 storage 落盘路径
+  process.env.HOME = TEST_HOME;
+  process.env.XDG_DATA_HOME = TEST_HOME;
+
+  await resetDatabaseForTest();
+  const db = await initializeDatabase(true);
+
+  const server = createGateway(config, db, config.rules as PromptxyRule[]);
+
   const port = await new Promise<number>((resolve, reject) => {
-    try {
-      const s = server.listen(0, config.listen.host, () => {
-        const addr = s.address();
-        if (typeof addr === 'object' && addr !== null) {
-          resolve(addr.port);
-        } else {
-          resolve(config.listen.port);
-        }
-      });
-      // Add error handling
-      server.on('error', reject);
-    } catch (error) {
-      reject(error);
-    }
+    const s = server.listen(0, config.listen.host, () => {
+      const addr = s.address();
+      if (typeof addr === 'object' && addr !== null) resolve(addr.port);
+      else resolve(0);
+    });
+    server.on('error', reject);
   });
-
-  // 更新配置中的实际端口
-  config.listen.port = port;
 
   return {
     server,
     port,
+    baseUrl: `http://${config.listen.host}:${port}`,
     shutdown: async () => {
-      // 优雅关闭服务器
-      await new Promise<void>(resolve => {
-        if (server.listening) {
-          server.close(() => resolve());
-        } else {
-          resolve();
-        }
-      });
-
-      // 额外等待一小段时间确保端口释放
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise<void>(resolve => server.close(() => resolve()));
+      await resetDatabaseForTest();
+      await rm(TEST_HOME, { recursive: true, force: true }).catch(() => {});
     },
   };
 }
 
-/**
- * 清理测试数据
- */
-export async function cleanupTestData(): Promise<void> {
-  try {
-    // 重置数据库
-    await resetDatabaseForTest();
-
-    // 清理测试配置目录
-    await rm(TEST_CONFIG_DIR, { recursive: true, force: true });
-
-    // 清理环境变量
-    delete process.env.PROMPTXY_CONFIG;
-    delete process.env.HOME;
-    delete process.env.XDG_DATA_HOME;
-  } catch {
-    // 忽略清理错误
-  }
-}
-
-/**
- * HTTP 请求工具
- */
 export class HttpClient {
   constructor(private baseUrl: string) {}
 
-  async get(
-    path: string,
-    headers?: Record<string, string>,
-  ): Promise<{
-    status: number;
-    body: string;
-    headers: Record<string, string>;
-  }> {
-    return this.request('GET', path, undefined, headers);
+  async get(pathname: string): Promise<{ status: number; body: any; headers: Record<string, string> }> {
+    return this.request('GET', pathname);
   }
 
-  async post(
-    path: string,
-    body?: any,
-    headers?: Record<string, string>,
-  ): Promise<{
-    status: number;
-    body: string;
-    headers: Record<string, string>;
-  }> {
-    return this.request('POST', path, body, headers);
-  }
-
-  async put(
-    path: string,
-    body?: any,
-    headers?: Record<string, string>,
-  ): Promise<{
-    status: number;
-    body: string;
-    headers: Record<string, string>;
-  }> {
-    return this.request('PUT', path, body, headers);
-  }
-
-  async delete(
-    path: string,
-    headers?: Record<string, string>,
-  ): Promise<{
-    status: number;
-    body: string;
-    headers: Record<string, string>;
-  }> {
-    return this.request('DELETE', path, undefined, headers);
+  async post(pathname: string, body?: any, headers?: Record<string, string>): Promise<{ status: number; body: any; headers: Record<string, string> }> {
+    return this.request('POST', pathname, body, headers);
   }
 
   async request(
     method: string,
-    path: string,
+    pathname: string,
     body?: any,
     headers?: Record<string, string>,
-  ): Promise<{
-    status: number;
-    body: string;
-    headers: Record<string, string>;
-  }> {
-    const url = new URL(path, this.baseUrl);
+  ): Promise<{ status: number; body: any; headers: Record<string, string> }> {
+    const url = new URL(pathname, this.baseUrl);
 
-    const options: http.RequestOptions = {
+    const res = await fetch(url, {
       method,
       headers: {
-        'Content-Type': 'application/json',
-        ...headers,
+        'content-type': 'application/json',
+        ...(headers || {}),
       },
-    };
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
 
-    if (body !== undefined) {
-      options.headers = {
-        ...options.headers,
-        'Content-Length': Buffer.byteLength(JSON.stringify(body)).toString(),
-      };
+    const text = await res.text();
+    let parsed: any = text;
+    try {
+      parsed = text ? JSON.parse(text) : text;
+    } catch {
+      parsed = text;
     }
 
-    return new Promise((resolve, reject) => {
-      const req = http.request(url, options, res => {
-        let data = '';
+    const outHeaders: Record<string, string> = {};
+    res.headers.forEach((v, k) => (outHeaders[k.toLowerCase()] = v));
 
-        res.on('data', chunk => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          const responseHeaders: Record<string, string> = {};
-          for (const [key, value] of Object.entries(res.headers)) {
-            if (value) {
-              responseHeaders[key] = Array.isArray(value) ? value.join(', ') : (value as string);
-            }
-          }
-
-          resolve({
-            status: res.statusCode || 0,
-            body: data,
-            headers: responseHeaders,
-          });
-        });
-      });
-
-      req.on('error', reject);
-
-      if (body !== undefined) {
-        req.write(JSON.stringify(body));
-      }
-
-      req.end();
-    });
-  }
-
-  /**
-   * SSE 连接测试
-   */
-  async connectSSE(
-    path: string,
-    onEvent: (event: string, data: any) => void,
-  ): Promise<{
-    close: () => void;
-    events: Array<{ event: string; data: any }>;
-  }> {
-    const url = new URL(path, this.baseUrl);
-    const events: Array<{ event: string; data: any }> = [];
-    let buffer = '';
-    let resolved = false;
-
-    return new Promise((resolve, reject) => {
-      const req = http.request(url, { method: 'GET' }, res => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`SSE connection failed: ${res.statusCode}`));
-          return;
-        }
-
-        // Set up data handler
-        res.on('data', chunk => {
-          buffer += chunk.toString();
-
-          // Process complete SSE messages
-          let newlineIndex;
-          while ((newlineIndex = buffer.indexOf('\n\n')) !== -1) {
-            const message = buffer.substring(0, newlineIndex);
-            buffer = buffer.substring(newlineIndex + 2);
-
-            // Parse message
-            const lines = message.split('\n');
-            let event = '';
-            let data = '';
-
-            for (const line of lines) {
-              if (line.startsWith('event:')) {
-                event = line.slice(6).trim();
-              } else if (line.startsWith('data:')) {
-                data = line.slice(5).trim();
-              }
-            }
-
-            if (event && data) {
-              try {
-                const parsed = JSON.parse(data);
-                events.push({ event, data: parsed });
-                onEvent(event, parsed);
-              } catch {
-                // If parsing fails, store raw data
-                events.push({ event, data });
-                onEvent(event, data);
-              }
-
-              // Resolve on first event (connection confirmation)
-              if (!resolved) {
-                resolved = true;
-                resolve({
-                  close: () => {
-                    req.destroy();
-                    res.destroy();
-                  },
-                  events,
-                });
-              }
-            }
-          }
-        });
-
-        res.on('end', () => {
-          if (!resolved) {
-            resolved = true;
-            resolve({
-              close: () => req.destroy(),
-              events,
-            });
-          }
-        });
-
-        res.on('error', err => {
-          if (!resolved) {
-            resolved = true;
-            reject(err);
-          }
-        });
-      });
-
-      req.on('error', err => {
-        if (!resolved) {
-          resolved = true;
-          reject(err);
-        }
-      });
-
-      req.end();
-    });
+    return { status: res.status, body: parsed, headers: outHeaders };
   }
 }
 
-/**
- * 等待条件满足
- */
-export async function waitForCondition(
-  condition: () => boolean | Promise<boolean>,
-  timeout: number = 5000,
-  interval: number = 100,
-): Promise<void> {
+export async function waitForCondition(fn: () => Promise<boolean>, timeoutMs: number): Promise<void> {
   const start = Date.now();
-
-  while (Date.now() - start < timeout) {
-    if (await condition()) {
-      return;
-    }
-    await new Promise(resolve => setTimeout(resolve, interval));
+  while (Date.now() - start < timeoutMs) {
+    if (await fn()) return;
+    await new Promise(r => setTimeout(r, 50));
   }
-
-  throw new Error(`Timeout waiting for condition after ${timeout}ms`);
+  throw new Error('Condition not met within timeout');
 }
 
-/**
- * 创建测试用的规则
- */
 export function createTestRule(
   id: string,
   client: 'claude' | 'codex' | 'gemini',
   field: 'system' | 'instructions',
-  ops: PromptxyRule['ops'],
-): PromptxyRule {
+  ops: any[],
+): any {
   return {
     uuid: id,
     name: id,
-    description: `Test rule ${id}`,
-    when: {
-      client,
-      field,
-    },
+    when: { client, field },
     ops,
     enabled: true,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
   };
 }
 
-/**
- * 模拟上游服务器
- */
-export function createMockUpstream(): http.Server {
-  return http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        id: 'mock-response',
-        content: [{ type: 'text', text: 'Mock upstream response' }],
-      }),
-    );
+export function createMockUpstream(): {
+  server: http.Server;
+  getCaptured: () => { url?: string; method?: string; headers?: any; bodyText?: string };
+} {
+  let captured: { url?: string; method?: string; headers?: any; bodyText?: string } = {};
+
+  const server = http.createServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    captured = {
+      url: req.url,
+      method: req.method,
+      headers: req.headers,
+      bodyText: Buffer.concat(chunks).toString('utf-8'),
+    };
+
+    // 根据路径返回不同响应：/responses 返回一个 chat.completion 兼容 JSON（便于转换回 Anthropic）
+    if (req.url?.startsWith('/responses')) {
+      res.statusCode = 200;
+      res.setHeader('content-type', 'application/json');
+      res.end(
+        JSON.stringify({
+          id: 'chatcmpl-test',
+          model: 'gpt-test',
+          choices: [
+            {
+              index: 0,
+              message: { role: 'assistant', content: 'ok' },
+              finish_reason: 'stop',
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
+    // 默认：回显 JSON
+    res.statusCode = 200;
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ ok: true }));
   });
+
+  return {
+    server,
+    getCaptured: () => captured,
+  };
 }
+

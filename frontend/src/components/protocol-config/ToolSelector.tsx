@@ -36,9 +36,9 @@ const TOOLS: Tool[] = [
   {
     id: 'codex',
     name: 'Codex',
-    description: 'OpenAI 协议',
+    description: 'Codex 协议（Responses）',
     icon: <Sparkles size={24} />,
-    prefix: '/openai',
+    prefix: '/codex',
   },
   {
     id: 'gemini',

@@ -674,7 +674,7 @@ CLI 自带的认证信息会自动透传到上游，无需在配置文件中存�
       "id": "openai-proxy",
       "name": "OpenAI Proxy",
       "baseUrl": "https://api.openai.com",
-      "localPrefix": "/openai",
+      "localPrefix": "/codex",
       "auth": {
         "type": "bearer",
         "token": "sk-xxxxx..."
@@ -876,8 +876,8 @@ curl http://127.0.0.1:7070/_promptxy/health
 # 测试 Claude 供应商（假设 localPrefix 为 /claude）
 curl http://127.0.0.1:7070/claude/v1/messages
 
-# 测试 OpenAI 供应商（假设 localPrefix 为 /openai）
-curl http://127.0.0.1:7070/openai/v1/chat/completions
+# 测试 Codex 供应商（假设 localPrefix 为 /codex）
+curl http://127.0.0.1:7070/codex/responses
 ```
 
 ### 调试模式测试
@@ -983,7 +983,7 @@ PROMPTXY_DEBUG=1 npm run dev
       "id": "openai-official",
       "name": "OpenAI Official",
       "baseUrl": "https://api.openai.com",
-      "localPrefix": "/openai",
+      "localPrefix": "/codex",
       "enabled": true
     }
   ],

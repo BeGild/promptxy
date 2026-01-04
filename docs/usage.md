@@ -23,7 +23,7 @@
 - **id**：唯一标识符
 - **name**：显示名称
 - **baseUrl**：上游 API 地址
-- **localPrefix**：本地路径前缀（如 `/claude`、`/openai`）
+- **localPrefix**：本地路径前缀（如 `/claude`、`/codex`）
 - **pathMappings**：路径映射规则（可选）
 - **enabled**：是否启用
 
@@ -140,7 +140,7 @@ claude -p "hello"
 - `promptxy` 根据规则修改 `system` 字段
 - 修改后的请求转发到配置的上游地址
 
-> **⚠️ 重要变更**：v2.0 开始，所有 AI CLI 配置都必须带上路径前缀（`/claude`、`/openai`、`/gemini`）。
+> **⚠️ 重要变更**：v2.0 开始，所有 AI CLI 配置都必须带上路径前缀（`/claude`、`/codex`、`/gemini`）。
 
 ---
 
@@ -149,7 +149,7 @@ claude -p "hello"
 #### 配置方式 1：环境变量（推荐用于快速测试）
 
 ```bash
-export OPENAI_BASE_URL="http://127.0.0.1:7070/openai"
+export OPENAI_BASE_URL="http://127.0.0.1:7070/codex"
 ```
 
 #### 配置方式 2：配置文件（推荐用于生产）
@@ -162,7 +162,7 @@ wire_api = "responses"
 
 [model_providers.promptxy]
 name = "promptxy"
-base_url = "http://127.0.0.1:7070/openai"
+base_url = "http://127.0.0.1:7070/codex"
 wire_api = "responses"
 requires_openai_auth = true
 ```
@@ -179,7 +179,7 @@ codex "hello"
 
 #### 注意事项
 
-- 必须使用 `/openai` 前缀
+- 必须使用 `/codex` 前缀
 - Codex 可能依赖 `instructions` 字段的前缀，建议使用 `insert_after` 而非整体替换
 - 认证信息会自动透传，无需在 `promptxy` 配置中保存
 - 可以通过 Web UI 设置页面快速切换不同的 OpenAI 兼容上游

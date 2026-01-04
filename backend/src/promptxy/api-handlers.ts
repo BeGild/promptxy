@@ -208,6 +208,14 @@ export async function handleGetRequest(
       responseHeaders: record.responseHeaders ? JSON.parse(record.responseHeaders) : undefined,
       responseBody: record.responseBody ? safeParseJson(record.responseBody) : undefined,
       error: record.error,
+
+      // 路由 / 供应商 / 转换信息
+      routeId: record.routeId,
+      supplierId: record.supplierId,
+      supplierName: record.supplierName,
+      supplierBaseUrl: record.supplierBaseUrl,
+      transformerChain: record.transformerChain ? JSON.parse(record.transformerChain) : undefined,
+      transformTrace: record.transformTrace ? safeParseJson(record.transformTrace) : undefined,
     };
 
     sendJson(res, 200, response);
@@ -1081,14 +1089,13 @@ const LOCAL_SERVICE_PROTOCOLS: Record<LocalService, 'anthropic' | 'openai' | 'ge
  * key: "本地协议->供应商协议"
  */
 const SUPPORTED_TRANSFORMERS: Record<string, string[]> = {
+  // Claude 入口：允许跨协议（通过转换器）
   'anthropic->anthropic': ['none'],
-  'anthropic->openai': ['openai'],
+  'anthropic->openai': ['codex'], // Claude → Codex (Responses)
   'anthropic->gemini': ['gemini'],
-  'openai->anthropic': ['anthropic'],
+
+  // Codex/Gemini 入口：仅透明转发（禁止跨协议）
   'openai->openai': ['none'],
-  'openai->gemini': ['gemini'],
-  'gemini->anthropic': ['anthropic'],
-  'gemini->openai': ['openai'],
   'gemini->gemini': ['none'],
 };
 
@@ -1108,6 +1115,18 @@ function autoSelectTransformer(
   }
 
   return transformers[0];
+}
+
+function assertRouteAllowed(
+  localService: LocalService,
+  supplierProtocol: 'anthropic' | 'openai' | 'gemini',
+): void {
+  const localProtocol = LOCAL_SERVICE_PROTOCOLS[localService];
+  const key = `${localProtocol}->${supplierProtocol}`;
+  const transformers = SUPPORTED_TRANSFORMERS[key];
+  if (!transformers || transformers.length === 0) {
+    throw new Error(`不支持从 ${localService} 对接协议 ${supplierProtocol} 的供应商`);
+  }
 }
 
 /**
@@ -1147,6 +1166,17 @@ export async function handleCreateRoute(
       return;
     }
 
+    // 路由合法性：Codex/Gemini 只允许透明转发；Claude 允许跨协议转换
+    try {
+      assertRouteAllowed(routeData.localService, supplier.protocol);
+    } catch (e: any) {
+      sendJson(res, 400, {
+        success: false,
+        message: e?.message || '不支持的路由组合',
+      });
+      return;
+    }
+
     // 自动选择转换器
     const transformer = autoSelectTransformer(routeData.localService, supplier.protocol) as any;
 
@@ -1157,15 +1187,16 @@ export async function handleCreateRoute(
       transformer,
     };
 
-    // 检查是否已存在相同本地服务的路由
-    const existingRouteIndex = config.routes.findIndex(r => r.localService === newRoute.localService);
-    if (existingRouteIndex >= 0) {
-      // 替换现有路由
-      config.routes[existingRouteIndex] = newRoute;
-    } else {
-      // 添加新路由
-      config.routes.push(newRoute);
+    // 允许同一 localService 多条路由；但启用状态必须唯一
+    if (newRoute.enabled) {
+      for (const r of config.routes) {
+        if (r.localService === newRoute.localService) {
+          r.enabled = false;
+        }
+      }
     }
+
+    config.routes.push(newRoute);
 
     // 保存配置
     await saveConfig(config);
@@ -1205,21 +1236,36 @@ export async function handleUpdateRoute(
       return;
     }
 
-    // 如果更新了供应商ID，验证供应商是否存在
-    if (routeUpdate.supplierId) {
-      const supplier = config.suppliers.find(s => s.id === routeUpdate.supplierId);
-      if (!supplier) {
-        sendJson(res, 400, { success: false, message: '供应商不存在' });
-        return;
-      }
+    const currentRoute = config.routes[index];
+    const nextLocalService = (routeUpdate.localService || currentRoute.localService) as LocalService;
+    const nextSupplierId = routeUpdate.supplierId || currentRoute.supplierId;
 
-      // 如果供应商改变，自动重新选择转换器
-      const currentRoute = config.routes[index];
-      if (routeUpdate.supplierId !== currentRoute.supplierId) {
-        routeUpdate.transformer = autoSelectTransformer(
-          routeUpdate.localService || currentRoute.localService,
-          supplier.protocol,
-        ) as any;
+    // 验证供应商是否存在
+    const nextSupplier = config.suppliers.find(s => s.id === nextSupplierId);
+    if (!nextSupplier) {
+      sendJson(res, 400, { success: false, message: '供应商不存在' });
+      return;
+    }
+
+    // 路由合法性校验
+    try {
+      assertRouteAllowed(nextLocalService, nextSupplier.protocol);
+    } catch (e: any) {
+      sendJson(res, 400, {
+        success: false,
+        message: e?.message || '不支持的路由组合',
+      });
+      return;
+    }
+
+    // 自动重新选择转换器（不允许手动覆写）
+    routeUpdate.transformer = autoSelectTransformer(nextLocalService, nextSupplier.protocol) as any;
+
+    if (routeUpdate.enabled === true) {
+      for (const r of config.routes) {
+        if (r.localService === nextLocalService && r.id !== currentRoute.id) {
+          r.enabled = false;
+        }
       }
     }
 
@@ -1306,7 +1352,16 @@ export async function handleToggleRoute(
       return;
     }
 
-    // 更新启用状态
+    // 启用时：同 localService 的其他 route 必须禁用（确保唯一生效）
+    if (enabled) {
+      const current = config.routes[index];
+      for (const r of config.routes) {
+        if (r.localService === current.localService) {
+          r.enabled = false;
+        }
+      }
+    }
+
     config.routes[index].enabled = enabled;
 
     // 保存配置

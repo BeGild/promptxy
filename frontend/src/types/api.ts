@@ -173,7 +173,7 @@ export type LocalService = 'claude' | 'codex' | 'gemini';
 /**
  * 转换器类型
  */
-export type TransformerType = 'anthropic' | 'openai' | 'gemini' | 'none';
+export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'none';
 
 /**
  * 路由配置

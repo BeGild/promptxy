@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useSuppliers } from './useSuppliers';
-import type { Supplier } from '@/types/api';
+import { useRoutes } from './useRoutes';
+import type { Supplier, Route } from '@/types/api';
 
 interface ConfigStatus {
   '/claude': string | null;
-  '/openai': string | null;
+  '/codex': string | null;
   '/gemini': string | null;
 }
 
@@ -13,17 +14,38 @@ interface ConfigStatus {
  */
 export function useConfigStatus(): ConfigStatus {
   const { data: suppliersData } = useSuppliers();
+  const { data: routesData } = useRoutes();
   const suppliers = suppliersData?.suppliers || [];
+  const routes = routesData?.routes || [];
 
   return useMemo(() => {
     const status: ConfigStatus = {
       '/claude': null,
-      '/openai': null,
+      '/codex': null,
       '/gemini': null,
     };
 
-    // 新的架构中，供应商不再绑定到本地路径
-    // 这里暂时返回空状态，实际应该从路由配置获取
+    const byLocalService: Record<string, Route[]> = {};
+    for (const r of routes) {
+      if (!byLocalService[r.localService]) byLocalService[r.localService] = [];
+      byLocalService[r.localService]!.push(r);
+    }
+
+    const resolveSupplierName = (supplierId: string | undefined): string | null => {
+      if (!supplierId) return null;
+      const s: Supplier | undefined = suppliers.find(x => x.id === supplierId);
+      return s ? s.displayName || s.name : null;
+    };
+
+    const enabledRoute = (localService: 'claude' | 'codex' | 'gemini'): Route | undefined => {
+      const list = byLocalService[localService] || [];
+      return list.find(r => r.enabled);
+    };
+
+    status['/claude'] = resolveSupplierName(enabledRoute('claude')?.supplierId);
+    status['/codex'] = resolveSupplierName(enabledRoute('codex')?.supplierId);
+    status['/gemini'] = resolveSupplierName(enabledRoute('gemini')?.supplierId);
+
     return status;
-  }, [suppliers]);
+  }, [routes, suppliers]);
 }

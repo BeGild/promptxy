@@ -68,9 +68,10 @@ const SAMPLE_REQUESTS = {
       },
     ],
   },
-  openai_simple: {
-    model: 'gpt-4',
-    messages: [
+  codex_simple: {
+    model: 'gpt-4o-mini',
+    instructions: 'You are a helpful assistant.',
+    input: [
       {
         role: 'user',
         content: 'Hello, how are you?',
@@ -137,8 +138,8 @@ export const TestValidation: React.FC<TestValidationProps> = ({
     JSON.stringify(
       selectedToolPrefix === '/claude'
         ? SAMPLE_REQUESTS.claude_simple
-        : selectedToolPrefix === '/openai'
-        ? SAMPLE_REQUESTS.openai_simple
+        : selectedToolPrefix === '/codex'
+        ? SAMPLE_REQUESTS.codex_simple
         : SAMPLE_REQUESTS.gemini_simple,
       null,
       2,
@@ -175,7 +176,12 @@ export const TestValidation: React.FC<TestValidationProps> = ({
           supplierId: supplier.id,
           request: {
             method: 'POST',
-            path: selectedToolPrefix === '/claude' ? '/v1/messages' : '/v1/chat/completions',
+            path:
+              selectedToolPrefix === '/claude'
+                ? '/v1/messages'
+                : selectedToolPrefix === '/codex'
+                ? '/responses'
+                : '/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent',
             headers: {
               'content-type': 'application/json',
             },
@@ -257,12 +263,12 @@ export const TestValidation: React.FC<TestValidationProps> = ({
                 </Button>
               </>
             )}
-            {selectedToolPrefix === '/openai' && (
+            {selectedToolPrefix === '/codex' && (
               <Button
                 size="sm"
                 variant="flat"
                 color="primary"
-                onPress={() => handleSampleChange('openai_simple')}
+                onPress={() => handleSampleChange('codex_simple')}
               >
                 简单请求
               </Button>

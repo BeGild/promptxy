@@ -21,6 +21,20 @@ const logger = createLogger({ debug: false });
  * 基于 @musistudio/llms 的可用转换器
  */
 const BUILTIN_TRANSFORMERS: Record<string, TransformerMetadata> = {
+  codex: {
+    name: 'codex',
+    description: 'Codex（OpenAI Responses）格式转换',
+    supportedSuppliers: ['openai', 'api.openai.com', 'codex'],
+    supportsStreaming: true,
+    supportsTools: true,
+  },
+  openai: {
+    name: 'openai',
+    description: 'OpenAI 兼容协议（Chat Completions）格式转换',
+    supportedSuppliers: ['openai', 'api.openai.com'],
+    supportsStreaming: true,
+    supportsTools: true,
+  },
   anthropic: {
     name: 'anthropic',
     description: 'Anthropic 原始协议（透传）',

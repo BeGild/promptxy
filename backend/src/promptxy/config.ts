@@ -7,6 +7,7 @@ import {
   Supplier,
   PathMapping,
   LegacyPromptxyRule,
+  Route,
 } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { calculateDefaultPort, findAvailablePort } from './port-utils.js';
@@ -19,6 +20,7 @@ import {
 type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
   suppliers?: Supplier[];
+  routes?: Route[];
   storage?: {
     maxHistory?: number;
     // autoCleanup 和 cleanupInterval 已废弃，清理现在在 insertRequestRecord 中自动触发
@@ -60,7 +62,29 @@ const DEFAULT_CONFIG: PromptxyConfig = {
       auth: { type: 'none' },
     },
   ],
-  routes: [],
+  routes: [
+    {
+      id: 'route-claude-default',
+      localService: 'claude',
+      supplierId: 'claude-anthropic',
+      transformer: 'none',
+      enabled: true,
+    },
+    {
+      id: 'route-codex-default',
+      localService: 'codex',
+      supplierId: 'openai-official',
+      transformer: 'none',
+      enabled: true,
+    },
+    {
+      id: 'route-gemini-default',
+      localService: 'gemini',
+      supplierId: 'gemini-google',
+      transformer: 'none',
+      enabled: true,
+    },
+  ],
   rules: [],
   storage: {
     maxHistory: 1000,
@@ -253,6 +277,35 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
   // 验证路径冲突
   assertSupplierPathConflicts(config.suppliers);
 
+  // 路由配置验证
+  if (!config.routes || !Array.isArray(config.routes)) {
+    throw new Error(`config.routes must be an array`);
+  }
+
+  for (let i = 0; i < config.routes.length; i++) {
+    const route = config.routes[i] as any;
+    const label = `config.routes[${i}]`;
+
+    if (!route || typeof route !== 'object') {
+      throw new Error(`${label} must be an object`);
+    }
+    if (!route.id || typeof route.id !== 'string') {
+      throw new Error(`${label}.id must be a non-empty string`);
+    }
+    if (!route.localService || typeof route.localService !== 'string') {
+      throw new Error(`${label}.localService must be a non-empty string`);
+    }
+    if (!route.supplierId || typeof route.supplierId !== 'string') {
+      throw new Error(`${label}.supplierId must be a non-empty string`);
+    }
+    if (!route.transformer || typeof route.transformer !== 'string') {
+      throw new Error(`${label}.transformer must be a non-empty string`);
+    }
+    if (typeof route.enabled !== 'boolean') {
+      throw new Error(`${label}.enabled must be a boolean`);
+    }
+  }
+
   if (!config.rules || !Array.isArray(config.rules)) {
     throw new Error(`config.rules must be an array`);
   }
@@ -414,13 +467,21 @@ export async function loadConfig(cliOptions?: { port?: number }): Promise<Prompt
 
   // 检测并迁移旧格式的规则
   const migratedRules = migrateRules(config.rules);
-  const needsMigration = migratedRules !== config.rules;
+  const migratedRoutes = migrateRoutes(config.routes, config.suppliers);
+  const migratedRulesChanged = migratedRules !== config.rules;
+  const migratedRoutesChanged = migratedRoutes !== config.routes;
+  const needsMigration = migratedRulesChanged || migratedRoutesChanged;
 
   if (needsMigration) {
-    config = { ...config, rules: migratedRules };
+    config = { ...config, rules: migratedRules, routes: migratedRoutes ?? config.routes };
     // 自动保存迁移后的配置（保存到全局配置）
     await saveGlobalConfig(config);
-    console.log('[Config] 规则数据已自动迁移到新格式 (uuid + name)');
+    if (migratedRulesChanged) {
+      console.log('[Config] 规则数据已自动迁移到新格式 (uuid + name)');
+    }
+    if (migratedRoutesChanged) {
+      console.log('[Config] routes 配置已自动迁移/补全（按 localService 唯一启用 + /codex /responses）');
+    }
   }
 
   config = applyEnvOverrides(config);
@@ -430,11 +491,20 @@ export async function loadConfig(cliOptions?: { port?: number }): Promise<Prompt
     config.listen.port = cliOptions.port;
   }
 
-  // 端口强制校验：如果未显式指定，使用hash计算的端口
-  if (config.listen.port <= 0 || config.listen.port > 65535) {
+  // 端口处理策略：
+  // - port=0：表示“自动选择端口”（计算默认端口并寻找可用端口）
+  // - 非法值（非整数、<0、>65535、null 等）：直接报错（避免静默修复掩盖配置问题）
+  if (config.listen.port === 0) {
     const hashedPort = await findAvailablePort(calculateDefaultPort());
     config.listen.port = hashedPort;
     console.log(`[Config] 未指定端口，使用计算端口: ${hashedPort}`);
+  } else if (
+    typeof (config.listen as any).port !== 'number' ||
+    !Number.isInteger(config.listen.port) ||
+    config.listen.port < 1 ||
+    config.listen.port > 65535
+  ) {
+    throw new Error(`config.listen.port must be an integer in [1, 65535]`);
   }
 
   return assertConfig(config);
@@ -473,6 +543,81 @@ function migrateRules(rules: PromptxyRule[]): PromptxyRule[] {
   // 如果有迁移，还需要更新 assertConfig 中的验证逻辑
   // 但由于我们在返回前已经将数据转换为新格式，所以验证逻辑应该可以正常工作
   return hasMigration ? migratedRules : rules;
+}
+
+function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefined {
+  if (!Array.isArray(routes) || routes.length === 0) return routes as Route[] | undefined;
+
+  let changed = false;
+  const next = (routes as Route[]).map(r => ({ ...r }));
+
+  // 1) legacy: claude→openai 的 transformer=openai 迁移为 transformer=codex（对应 /responses）
+  for (const route of next) {
+    if (route.localService !== 'claude') continue;
+    if (route.transformer !== 'openai') continue;
+    route.transformer = 'codex';
+    changed = true;
+  }
+
+  // 2) 同一 localService 只允许一个 enabled
+  const enabledSeen = new Set<Route['localService']>();
+  for (const route of next) {
+    if (!route.enabled) continue;
+    if (enabledSeen.has(route.localService)) {
+      route.enabled = false;
+      changed = true;
+      continue;
+    }
+    enabledSeen.add(route.localService);
+  }
+
+  // 3) 补齐缺失的本地入口路由（claude/codex/gemini）
+  const ensureRoute = (localService: Route['localService']) => {
+    if (next.some(r => r.localService === localService)) return;
+
+    const pickSupplier = () => {
+      if (localService === 'codex') {
+        return suppliers.find(s => s.enabled && s.protocol === 'openai') ?? suppliers.find(s => s.protocol === 'openai');
+      }
+      if (localService === 'gemini') {
+        return suppliers.find(s => s.enabled && s.protocol === 'gemini') ?? suppliers.find(s => s.protocol === 'gemini');
+      }
+      // claude：优先 anthropic，否则允许跨协议
+      return (
+        suppliers.find(s => s.enabled && s.protocol === 'anthropic') ??
+        suppliers.find(s => s.protocol === 'anthropic') ??
+        suppliers.find(s => s.enabled) ??
+        suppliers[0]
+      );
+    };
+
+    const supplier = pickSupplier();
+    if (!supplier) return;
+
+    const id = `route-${localService}-default`;
+    const transformer =
+      localService === 'codex' ? 'none' : localService === 'gemini' ? 'none'
+      : supplier.protocol === 'anthropic' ? 'none'
+      : supplier.protocol === 'openai' ? 'codex'
+      : supplier.protocol === 'gemini' ? 'gemini'
+      : 'none';
+
+    next.push({
+      id,
+      localService,
+      supplierId: supplier.id,
+      transformer,
+      enabled: !enabledSeen.has(localService),
+    });
+    enabledSeen.add(localService);
+    changed = true;
+  };
+
+  ensureRoute('claude');
+  ensureRoute('codex');
+  ensureRoute('gemini');
+
+  return changed ? next : routes;
 }
 
 /**

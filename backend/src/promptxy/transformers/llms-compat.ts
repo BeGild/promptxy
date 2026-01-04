@@ -418,9 +418,10 @@ export class ProtocolTransformer {
     switch (lastTransformerName) {
       case 'deepseek':
       case 'openai':
-      case 'codex': {
-        // Codex 使用 OpenAI Responses API 格式，复用 OpenAI 转换
         return this.transformFromOpenAI(response);
+      case 'codex': {
+        // Codex 上游可能是 Responses API（response.*）或 chat.completion 兼容形态；尽量兼容两者
+        return this.transformFromCodex(response);
       }
       case 'gemini': {
         return this.transformFromGemini(response);
@@ -430,6 +431,70 @@ export class ProtocolTransformer {
         // 透传，不做转换
         return responseBody;
     }
+  }
+
+  /**
+   * Codex /responses → Anthropic 格式转换（尽量兼容）
+   *
+   * 支持两类常见形态：
+   * 1) chat.completion 兼容（choices[0].message.content / tool_calls）
+   * 2) Responses API（output[] / output_text）
+   */
+  private transformFromCodex(
+    response: Record<string, unknown>,
+  ): Record<string, unknown> {
+    // 兼容旧的 chat.completion 形态
+    if (response.choices && Array.isArray(response.choices)) {
+      return this.transformFromOpenAI(response);
+    }
+
+    const transformed: Record<string, unknown> = {
+      type: 'message',
+      role: 'assistant',
+    };
+
+    if (response.id) transformed.id = response.id;
+    if (response.model) transformed.model = response.model;
+
+    // Responses API：可能直接提供 output_text
+    if (typeof (response as any).output_text === 'string') {
+      transformed.content = [
+        { type: 'text', text: (response as any).output_text },
+      ];
+      transformed.stop_reason = 'stop';
+      return transformed;
+    }
+
+    // Responses API：output[] 里包含 message.content blocks
+    const output = (response as any).output;
+    if (Array.isArray(output)) {
+      const blocks: any[] = [];
+
+      for (const item of output) {
+        if (!item || typeof item !== 'object') continue;
+        if (item.type !== 'message') continue;
+        const content = (item as any).content;
+        if (!Array.isArray(content)) continue;
+
+        for (const c of content) {
+          if (!c || typeof c !== 'object') continue;
+          if (c.type === 'output_text' && typeof c.text === 'string') {
+            blocks.push({ type: 'text', text: c.text });
+          }
+          // 其他输出类型先不强行映射，避免误报
+        }
+      }
+
+      if (blocks.length) {
+        transformed.content = blocks.length === 1 ? blocks : blocks;
+      }
+      transformed.stop_reason = 'stop';
+      return transformed;
+    }
+
+    // fallback：未知格式，保持空内容
+    transformed.content = '';
+    return transformed;
   }
 
   /**

@@ -3,33 +3,55 @@
     "host": "127.0.0.1",
     "port": 7070
   },
-  "api": {
-    "host": "127.0.0.1",
-    "port": 7071
-  },
   "suppliers": [
     {
       "id": "claude-anthropic",
-      "name": "Claude (Anthropic)",
+      "name": "claude-anthropic",
+      "displayName": "Claude (Anthropic)",
       "baseUrl": "https://api.anthropic.com",
-      "localPrefix": "/claude",
-      "pathMappings": [],
+      "protocol": "anthropic",
+      "auth": { "type": "none" },
       "enabled": true
     },
     {
       "id": "openai-official",
-      "name": "OpenAI Official",
+      "name": "openai-official",
+      "displayName": "OpenAI (Responses compatible)",
       "baseUrl": "https://api.openai.com",
-      "localPrefix": "/openai",
-      "pathMappings": [],
+      "protocol": "openai",
+      "auth": { "type": "none" },
       "enabled": true
     },
     {
       "id": "gemini-google",
-      "name": "Gemini (Google)",
+      "name": "gemini-google",
+      "displayName": "Gemini (Google)",
       "baseUrl": "https://generativelanguage.googleapis.com",
-      "localPrefix": "/gemini",
-      "pathMappings": [],
+      "protocol": "gemini",
+      "auth": { "type": "none" },
+      "enabled": true
+    }
+  ],
+  "routes": [
+    {
+      "id": "route-claude-default",
+      "localService": "claude",
+      "supplierId": "claude-anthropic",
+      "transformer": "none",
+      "enabled": true
+    },
+    {
+      "id": "route-codex-default",
+      "localService": "codex",
+      "supplierId": "openai-official",
+      "transformer": "none",
+      "enabled": true
+    },
+    {
+      "id": "route-gemini-default",
+      "localService": "gemini",
+      "supplierId": "gemini-google",
+      "transformer": "none",
       "enabled": true
     }
   ],

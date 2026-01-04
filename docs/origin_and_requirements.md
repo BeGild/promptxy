@@ -129,7 +129,7 @@ refence/
 
 ### 5.2 Codex CLI（OpenAI Responses API）
 
-- 入口：`POST /openai/v1/responses`（由本地前缀 `/openai` 映射）
+- 入口：`POST /codex/responses`（由本地前缀 `/codex` 映射）
 - 改写字段：`body.instructions`（string）
 - 风险提示：Codex 侧可能依赖前缀校验，建议优先使用“insert_after 固定前缀”而非整体替换。
 

@@ -138,7 +138,7 @@ export interface Supplier {
 1. **API 与静态资源优先处理**：`/_promptxy/*` 与前端静态资源在代理之前处理。
 2. **按路径查找供应商**：在 *enabled suppliers* 中按 `localPrefix` **长度倒序**匹配（更长的前缀优先）。
 3. **推断 client 类型**（现实现）：  
-   - 前缀以 `/openai` 开头 → `codex`  
+   - 前缀以 `/codex` 开头 → `codex`  
    - 前缀以 `/gemini` 开头 → `gemini`  
    - 其他 → `claude`
 4. **构造上游 URL**：  

@@ -66,8 +66,8 @@ const TRANSFORMER_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { key: 'anthropic', label: 'Anthropic', description: 'Anthropic/Claude 协议' },
-  { key: 'openai', label: 'OpenAI', description: 'OpenAI 协议' },
+  { key: 'anthropic', label: 'Anthropic', description: 'Anthropic/Claude 协议（仅占位）' },
+  { key: 'codex', label: 'Codex', description: 'Codex Responses 协议（/responses）' },
   { key: 'gemini', label: 'Gemini', description: 'Google Gemini 协议' },
   { key: 'none', label: '无转换', description: '直接转发，不进行协议转换' },
 ];
@@ -75,14 +75,13 @@ const TRANSFORMER_OPTIONS: Array<{
 // 支持的转换器组合
 // key: "本地协议->供应商协议"
 const SUPPORTED_TRANSFORMERS: Record<string, TransformerType[]> = {
+  // Claude 入口：允许跨协议（通过转换器）
   'anthropic->anthropic': ['none'],
-  'anthropic->openai': ['openai'],
+  'anthropic->openai': ['codex'],
   'anthropic->gemini': ['gemini'],
-  'openai->anthropic': ['anthropic'],
+
+  // Codex/Gemini 入口：仅透明转发
   'openai->openai': ['none'],
-  'openai->gemini': ['gemini'],
-  'gemini->anthropic': ['anthropic'],
-  'gemini->openai': ['openai'],
   'gemini->gemini': ['none'],
 };
 
@@ -323,80 +322,57 @@ export const RouteConfigPage: React.FC = () => {
                   : 'border-subtle opacity-60'
               }`}
             >
-              <CardBody className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  {/* 三列拼接 */}
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* 本地服务 */}
-                    <div>
-                      <label className="text-xs text-secondary mb-2 block">本地服务</label>
-                      <div className="flex items-center gap-2 p-3 bg-canvas dark:bg-secondary/50 rounded-lg">
-                        <span className="text-2xl">{localService?.icon}</span>
-                        <div>
-                          <div className="font-medium text-primary">
-                            {localService?.label}
-                          </div>
-                          <div className="text-xs text-tertiary">
-                            {localService?.prefix}
-                          </div>
+              <CardBody className="px-4 py-3">
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  {/* 左侧：一行路由（避免换行炸裂） */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg">{localService?.icon}</span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-primary">
+                          {localService?.label}
+                        </div>
+                        <div className="text-xs text-tertiary font-mono">
+                          {localService?.prefix}
                         </div>
                       </div>
                     </div>
 
-                    {/* 箭头 */}
-                    <div className="hidden md:flex items-center justify-center">
-                      <ArrowRight size={20} className="text-tertiary" />
-                    </div>
+                    <ArrowRight size={18} className="text-tertiary shrink-0" />
 
-                    {/* 转换器 */}
-                    <div>
-                      <label className="text-xs text-secondary mb-2 block">转换器</label>
-                      <div className="flex items-center gap-2 p-3 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-lg">
-                        <CheckCircle2 size={20} className="text-brand-primary" />
-                        <div>
-                          <div className="font-medium text-primary">
-                            {transformer?.label}
-                          </div>
-                          <div className="text-xs text-tertiary">
-                            {transformer?.description}
-                          </div>
-                        </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-primary truncate">
+                        {supplier?.displayName || supplier?.name || '未选择供应商'}
                       </div>
-                    </div>
-
-                    {/* 箭头 */}
-                    <div className="hidden md:flex items-center justify-center">
-                      <ArrowRight size={20} className="text-tertiary" />
-                    </div>
-
-                    {/* 上游供应商 */}
-                    <div>
-                      <label className="text-xs text-secondary mb-2 block">上游供应商</label>
-                      <div className="flex items-center gap-2 p-3 bg-canvas dark:bg-secondary/50 rounded-lg">
-                        <div>
-                          <div className="font-medium text-primary">
-                            {supplier?.displayName || supplier?.name}
-                          </div>
-                          <div className="text-xs text-tertiary">
-                            {supplier?.protocol}
-                          </div>
-                        </div>
+                      <div className="text-xs text-tertiary truncate">
+                        {supplier?.baseUrl || supplier?.protocol || ''}
                       </div>
                     </div>
                   </div>
 
-                  {/* 操作按钮 */}
-                  <div className="flex items-center gap-2 md:border-l md:border-subtle md:pl-4">
+                  {/* 中间：转换器（紧凑 chip） */}
+                  <Chip
+                    size="sm"
+                    color={route.enabled ? 'primary' : 'default'}
+                    variant="flat"
+                    className="h-6"
+                    classNames={{
+                      base: 'min-w-0',
+                      content: 'px-2 text-xs min-w-0 truncate',
+                    }}
+                    title={transformer?.description}
+                  >
+                    {transformer?.label || route.transformer}
+                  </Chip>
+
+                  {/* 右侧：开关与删除 */}
+                  <div className="flex items-center gap-2 shrink-0">
                     <Switch
                       isSelected={route.enabled}
                       onValueChange={() => handleToggleRoute(route)}
                       size="sm"
-                    >
-                      <span className="text-sm text-secondary">
-                        {route.enabled ? '已启用' : '已禁用'}
-                      </span>
-                    </Switch>
-
+                      aria-label="启用路由"
+                    />
                     <Button
                       isIconOnly
                       color="danger"
@@ -408,30 +384,6 @@ export const RouteConfigPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-
-                {/* 路由说明 */}
-                {localService && supplier && transformer && (
-                  <div className="mt-4 p-3 bg-canvas dark:bg-secondary/50 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
-                      <div className="text-xs text-secondary">
-                        <p>
-                          <span className="font-medium text-primary">
-                            {localService.icon} {localService.label}
-                          </span>
-                          {' '}请求将通过{' '}
-                          <span className="font-medium text-primary">
-                            {transformer.label}
-                          </span>
-                          {' '}转换器转发到{' '}
-                          <span className="font-medium text-primary">
-                            {supplier.displayName || supplier.name}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardBody>
             </Card>
           );

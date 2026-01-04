@@ -298,13 +298,16 @@ function convertGeminiStreamChunk(data: any): any | null {
  * @param transformType - 转换类型：'openai' 或 'gemini'，其他值表示透传
  */
 export function createSSETransformStream(
-  transformType?: 'openai' | 'gemini' | string,
+  transformType?: 'openai' | 'gemini' | 'codex' | string,
 ): Transform {
   // 确定转换类型
-  let actualTransformType: 'openai' | 'gemini' | 'passthrough' = 'passthrough';
+  let actualTransformType: 'openai' | 'gemini' | 'codex' | 'passthrough' = 'passthrough';
 
-  if (transformType === 'openai' || transformType === 'deepseek' || transformType === 'codex') {
-    // Codex 使用 OpenAI Responses API 格式，复用 OpenAI 转换
+  if (transformType === 'codex') {
+    // Codex /responses 流式事件（response.*）
+    actualTransformType = 'codex';
+  } else if (transformType === 'openai' || transformType === 'deepseek') {
+    // OpenAI-compatible Chat Completions 流式事件
     actualTransformType = 'openai';
   } else if (transformType === 'gemini') {
     actualTransformType = 'gemini';
@@ -312,6 +315,124 @@ export function createSSETransformStream(
 
   if (logger.debugEnabled) {
     logger.debug(`[SSETransform] 转换类型: ${actualTransformType}`);
+  }
+
+  // Codex Responses SSE 转换需要保持状态（message_start/content_block_start 只发一次）
+  let codexStarted = false;
+  let codexContentStarted = false;
+  let codexStopped = false;
+  let codexMessageId: string | undefined;
+
+  function ensureCodexStartEvents(): SSEEvent[] {
+    const events: SSEEvent[] = [];
+    if (!codexStarted) {
+      codexStarted = true;
+      events.push({
+        event: 'message_start',
+        data: JSON.stringify({
+          type: 'message_start',
+          message: {
+            id: codexMessageId || '',
+            type: 'message',
+            role: 'assistant',
+            content: [],
+          },
+        }),
+      });
+    }
+    if (!codexContentStarted) {
+      codexContentStarted = true;
+      events.push({
+        event: 'content_block_start',
+        data: JSON.stringify({
+          type: 'content_block_start',
+          index: 0,
+          content_block: { type: 'text', text: '' },
+        }),
+      });
+    }
+    return events;
+  }
+
+  function codexToAnthropicChunk(chunk: string): string {
+    try {
+      const events = parseSSEChunk(chunk);
+      const out: SSEEvent[] = [];
+
+      for (const evt of events) {
+        if (!evt.data) continue;
+        let parsed: any;
+        try {
+          parsed = JSON.parse(evt.data);
+        } catch {
+          continue;
+        }
+
+        const kind: string | undefined =
+          (evt.event && evt.event.startsWith('response.') ? evt.event : undefined) ||
+          (typeof parsed.type === 'string' ? parsed.type : undefined);
+
+        if (!kind) continue;
+
+        if (kind === 'response.created') {
+          const rid = parsed?.response?.id;
+          if (typeof rid === 'string') codexMessageId = rid;
+          out.push(...ensureCodexStartEvents());
+          continue;
+        }
+
+        if (kind === 'response.output_text.delta') {
+          out.push(...ensureCodexStartEvents());
+          const delta =
+            typeof parsed.delta === 'string'
+              ? parsed.delta
+              : typeof parsed.text === 'string'
+                ? parsed.text
+                : typeof parsed?.output_text === 'string'
+                  ? parsed.output_text
+                  : '';
+          if (!delta) continue;
+
+          out.push({
+            event: 'content_block_delta',
+            data: JSON.stringify({
+              type: 'content_block_delta',
+              index: 0,
+              delta: { type: 'text_delta', text: delta },
+            }),
+          });
+          continue;
+        }
+
+        if (
+          kind === 'response.completed' ||
+          kind === 'response.done' ||
+          kind === 'response.failed' ||
+          kind === 'response.error'
+        ) {
+          if (codexStopped) continue;
+          codexStopped = true;
+          out.push(...ensureCodexStartEvents());
+          out.push({
+            event: 'content_block_stop',
+            data: JSON.stringify({ type: 'content_block_stop', index: 0 }),
+          });
+          out.push({
+            event: 'message_stop',
+            data: JSON.stringify({ type: 'message_stop' }),
+          });
+          continue;
+        }
+      }
+
+      if (out.length === 0) {
+        return '';
+      }
+
+      return out.map(serializeSSEEvent).join('');
+    } catch {
+      return chunk;
+    }
   }
 
   // 创建转换流
@@ -325,6 +446,9 @@ export function createSSETransformStream(
         if (actualTransformType === 'openai') {
           const result = transformOpenAIChunkToAnthropic(chunkStr);
           transformed = result ?? chunkStr;
+        } else if (actualTransformType === 'codex') {
+          const result = codexToAnthropicChunk(chunkStr);
+          transformed = result || '';
         } else if (actualTransformType === 'gemini') {
           const result = transformGeminiChunkToAnthropic(chunkStr);
           transformed = result ?? chunkStr;

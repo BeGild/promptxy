@@ -47,6 +47,13 @@ interface RequestFile {
   error?: string;
   requestHeaders?: string;      // 协议转换后的请求头
   originalRequestHeaders?: string; // 原始请求头
+  // 路由 / 供应商 / 转换信息
+  routeId?: string;
+  supplierId?: string;
+  supplierName?: string;
+  supplierBaseUrl?: string;
+  transformerChain?: string;
+  transformTrace?: string;
 }
 
 /**
@@ -438,6 +445,12 @@ class FileSystemStorage {
       error: record.error,
       requestHeaders: record.requestHeaders,
       originalRequestHeaders: record.originalRequestHeaders,
+      routeId: record.routeId,
+      supplierId: record.supplierId,
+      supplierName: record.supplierName,
+      supplierBaseUrl: record.supplierBaseUrl,
+      transformerChain: record.transformerChain,
+      transformTrace: record.transformTrace,
     };
 
     // 使用 YAML dump，大字段使用多行字符串语法
@@ -478,6 +491,12 @@ class FileSystemStorage {
         error: fileContent.error,
         requestHeaders: fileContent.requestHeaders,
         originalRequestHeaders: fileContent.originalRequestHeaders,
+        routeId: fileContent.routeId,
+        supplierId: fileContent.supplierId,
+        supplierName: fileContent.supplierName,
+        supplierBaseUrl: fileContent.supplierBaseUrl,
+        transformerChain: fileContent.transformerChain,
+        transformTrace: fileContent.transformTrace,
       };
     } catch (error) {
       console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);

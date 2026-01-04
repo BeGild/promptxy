@@ -47,7 +47,7 @@ The system SHALL expose distinct route prefixes for each supported provider so c
 #### Scenario: Provider prefixes are available
 
 - **WHEN** a client is configured to use the gateway for a provider
-- **THEN** it can target a stable local prefix for that provider (e.g., `/openai`, `/gemini`)
+- **THEN** it can target a stable local prefix for that provider (e.g., `/codex`, `/gemini`)
 
 ### Requirement: Sensitive Header Handling
 
@@ -57,4 +57,3 @@ The system MUST NOT log sensitive authentication headers by default, including `
 
 - **WHEN** a request includes an `Authorization` header
 - **THEN** logs do not include the header value
-

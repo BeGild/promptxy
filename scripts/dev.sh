@@ -54,7 +54,8 @@ sleep 3
 
 # 检测后端端口（尝试常见范围）
 BACKEND_PORT=""
-for port in {7070..7100} {8000..8100}; do
+# 说明：后端默认端口通过用户名 hash 计算（范围 8000-9000），因此这里覆盖完整区间
+for port in {7070..7100} {8000..9000}; do
 	if curl -s -m 1 "http://127.0.0.1:${port}/_promptxy/health" >/dev/null 2>&1; then
 		BACKEND_PORT=$port
 		break

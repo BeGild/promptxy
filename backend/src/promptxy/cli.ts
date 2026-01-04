@@ -81,7 +81,7 @@ export function printHelp(): void {
 代理路由:
   /_promptxy/*              Web 管理界面和 API 端点
   /claude/*                 Claude API 代理 (Anthropic)
-  /openai/*                 OpenAI API 代理
+  /codex/*                  Codex API 代理 (Responses)
   /gemini/*                 Gemini API 代理 (Google)
 
 使用示例:
@@ -96,7 +96,7 @@ CLI 工具配置:
   export ANTHROPIC_BASE_URL="http://127.0.0.1:7070/claude"
 
   # OpenAI Codex
-  export OPENAI_BASE_URL="http://127.0.0.1:7070/openai"
+  export OPENAI_BASE_URL="http://127.0.0.1:7070/codex"
 
   # Gemini CLI
   export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:7070/gemini"

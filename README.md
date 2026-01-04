@@ -69,7 +69,7 @@
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │  │  API路由     │  │  SSE推送     │  │  代理核心    │  │
 │  │  │  /_promptxy/*│  │  /_promptxy  │  │  /claude/*   │  │
-│  │  │              │  │              │  │  /openai/*   │  │
+│  │  │              │  │              │  │  /codex/*    │  │
 │  │  │              │  │              │  │  /gemini/*   │  │
 │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
 │  └─────────┼──────────────────┼──────────────────┼─────────┘
@@ -206,7 +206,7 @@ export ANTHROPIC_BASE_URL="http://127.0.0.1:PORT/claude"
 ### Codex CLI
 
 ```bash
-export OPENAI_BASE_URL="http://127.0.0.1:PORT/openai"
+export OPENAI_BASE_URL="http://127.0.0.1:PORT/codex"
 ```
 
 ### Gemini CLI
@@ -216,7 +216,7 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
 ```
 > KEY/TOKEN的配置保持原样即可(透明代理，完美转发)
 
-> 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/openai`、`/gemini`）。
+> 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/codex`、`/gemini`）。
 
 ## 📚 文档
 

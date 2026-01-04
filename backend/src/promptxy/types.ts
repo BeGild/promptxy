@@ -204,8 +204,10 @@ export interface RequestRecord {
   error?: string;
 
   // 供应商和转换信息（新增）
+  routeId?: string; // 命中的路由 ID
   supplierId?: string; // 供应商 ID
   supplierName?: string; // 供应商名称
+  supplierBaseUrl?: string; // 供应商上游地址（用于历史回溯，不依赖当前配置）
   transformerChain?: string; // JSON 字符串，转换链数组
   transformTrace?: string; // JSON 字符串，转换追踪信息
 }
@@ -231,8 +233,10 @@ export interface RequestRecordResponse {
   error?: string;
 
   // 供应商和转换信息（新增）
+  routeId?: string; // 命中的路由 ID
   supplierId?: string; // 供应商 ID
   supplierName?: string; // 供应商名称
+  supplierBaseUrl?: string; // 供应商上游地址
   transformerChain?: string[]; // 转换链数组
   transformTrace?: any; // 转换追踪信息
 }
@@ -433,7 +437,7 @@ export type LocalService = 'claude' | 'codex' | 'gemini';
 /**
  * 转换器类型
  */
-export type TransformerType = 'anthropic' | 'openai' | 'gemini' | 'none';
+export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'none';
 
 /**
  * 路由配置

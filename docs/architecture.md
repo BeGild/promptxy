@@ -126,7 +126,7 @@ promptxy/
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │  │  API路由     │  │  SSE推送     │  │  代理核心    │  │
 │  │  │  /_promptxy/*│  │  /_promptxy  │  │  /claude/*   │  │
-│  │  │              │  │              │  │  /openai/*   │  │
+│  │  │              │  │              │  │  /codex/*    │  │
 │  │  │              │  │              │  │  /gemini/*   │  │
 │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
 │  └─────────┼──────────────────┼──────────────────┼─────────┘
@@ -593,7 +593,7 @@ npm run dev  # Vite 开发服务器，默认 5173
 export ANTHROPIC_BASE_URL="http://127.0.0.1:PORT/claude"
 
 # Codex CLI
-export OPENAI_BASE_URL="http://127.0.0.1:PORT/openai"
+export OPENAI_BASE_URL="http://127.0.0.1:PORT/codex"
 
 # Gemini CLI
 export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
