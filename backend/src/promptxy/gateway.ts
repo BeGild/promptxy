@@ -900,7 +900,7 @@ export function createGateway(
         const responseBodyBuffer = Buffer.concat(responseBodyChunks);
         let responseBodyStr: string | undefined;
 
-        // 尝试解析为 JSON，如果失败则保存原始文本
+        // 完整保存响应体，不截断
         const contentType = upstreamContentType;
         if (contentType.includes('application/json')) {
           try {
@@ -910,12 +910,8 @@ export function createGateway(
             responseBodyStr = responseBodyBuffer.toString('utf-8');
           }
         } else {
-          // 非 JSON 响应，限制保存大小（最多 10KB）
-          const maxSize = 10 * 1024;
-          responseBodyStr =
-            responseBodyBuffer.length > maxSize
-              ? responseBodyBuffer.subarray(0, maxSize).toString('utf-8') + '... (truncated)'
-              : responseBodyBuffer.toString('utf-8');
+          // 非 JSON 响应（包括 SSE）：完整保存
+          responseBodyStr = responseBodyBuffer.toString('utf-8');
         }
 
         const record: RequestRecord = {
