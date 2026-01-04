@@ -218,6 +218,37 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
 
 > 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/codex`、`/gemini`）。
 
+## 🧩 Claude → Codex 模型映射（必配）
+
+当你将 `/claude/*` 路由对接到 OpenAI/Codex 协议供应商（`transformer=codex`）时，Claude Code 发送的 `model` 往往是 `claude-*-sonnet-* / claude-*-opus-* / claude-*-haiku-*`，上游通常无法识别该模型名。
+
+PromptXY 通过“模型映射”解决该问题：
+
+1. **供应商侧**：在「供应商管理」中为上游供应商配置 `supportedModels`（UI 为 Chips：回车添加、× 删除）。
+2. **路由侧**：在「路由配置」中编辑 `/claude` 路由，为 `sonnet` 选择一个上游模型（必选），`haiku/opus` 可选（未配置则回落到 `sonnet`）。
+3. **运行时默认**：
+   - Claude `model` 识别不到档位时，默认当作 `sonnet`
+   - `haiku/opus` 未配置映射时，默认使用 `sonnet` 的映射
+
+### OpenAI ModelSpec（reasoning effort）
+
+对于 OpenAI/Codex 上游请求，你可以在 `supportedModels` 中使用形如 `<base>-<effort>` 的 modelSpec（例如 `gpt-5.2-codex-high`）：
+
+- 当 `<effort>` 命中内置列表（`low/medium/high/xhigh`）时，PromptXY 会在出站时自动拆解为：
+  - `model=<base>`
+  - `reasoning.effort=<effort>`
+- 未命中时不报错，直接透传 modelSpec（便于未来扩展更多档位）。
+
+## 🛠️ 常见问题排查
+
+### 1) 400: claude_model_mapping_missing
+
+含义：`/claude` 路由跨协议转换时缺少模型映射（至少需要 `sonnet`）。
+
+解决：
+- 在「供应商管理」为该上游供应商补齐 `supportedModels`
+- 在「路由配置」编辑 `/claude` 路由，选择 `sonnet` 对应的上游模型
+
 ## 📚 文档
 
 - **[配置参考](docs/configuration.md)** - 完整的配置文件说明，包括所有配置项和环境变量

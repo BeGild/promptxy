@@ -72,6 +72,7 @@ export const SupplierManagementPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [modelInput, setModelInput] = useState('');
   const [formData, setFormData] = useState<Partial<Supplier>>({
     name: '',
     displayName: '',
@@ -79,6 +80,7 @@ export const SupplierManagementPage: React.FC = () => {
     protocol: 'anthropic',
     enabled: true,
     auth: { type: 'none' },
+    supportedModels: [],
     description: '',
   });
 
@@ -87,6 +89,7 @@ export const SupplierManagementPage: React.FC = () => {
   // 打开添加供应商弹窗
   const handleOpenAddModal = useCallback(() => {
     setEditingSupplier(null);
+    setModelInput('');
     setFormData({
       name: '',
       displayName: '',
@@ -94,6 +97,7 @@ export const SupplierManagementPage: React.FC = () => {
       protocol: 'anthropic',
       enabled: true,
       auth: { type: 'none' },
+      supportedModels: [],
       description: '',
     });
     setIsModalOpen(true);
@@ -102,6 +106,7 @@ export const SupplierManagementPage: React.FC = () => {
   // 打开编辑供应商弹窗
   const handleOpenEditModal = useCallback((supplier: Supplier) => {
     setEditingSupplier(supplier);
+    setModelInput('');
     setFormData({ ...supplier });
     setIsModalOpen(true);
   }, []);
@@ -399,6 +404,57 @@ export const SupplierManagementPage: React.FC = () => {
                   </SelectItem>
                 ))}
               </Select>
+            </div>
+
+            {/* 支持模型（Chips） */}
+            <div>
+              <label className="text-sm font-medium text-primary mb-2 block">
+                支持的模型
+              </label>
+              <div className="p-3 rounded-lg border border-subtle bg-canvas dark:bg-secondary/30 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {(formData.supportedModels || []).length === 0 ? (
+                    <span className="text-xs text-tertiary">未配置（/claude 映射与校验将不可用）</span>
+                  ) : (
+                    (formData.supportedModels || []).map(model => (
+                      <Chip
+                        key={model}
+                        size="sm"
+                        variant="flat"
+                        onClose={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            supportedModels: (prev.supportedModels || []).filter(m => m !== model),
+                          }));
+                        }}
+                      >
+                        {model}
+                      </Chip>
+                    ))
+                  )}
+                </div>
+
+                <Input
+                  value={modelInput}
+                  onValueChange={setModelInput}
+                  placeholder="输入模型后回车添加，例如: gpt-5.2-codex-high"
+                  radius="lg"
+                  variant="bordered"
+                  description="支持回车添加、去重；用于 Claude 路由模型映射与校验"
+                  onKeyDown={e => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const value = modelInput.trim();
+                    if (!value) return;
+                    setFormData(prev => {
+                      const list = prev.supportedModels || [];
+                      if (list.includes(value)) return prev;
+                      return { ...prev, supportedModels: [...list, value] };
+                    });
+                    setModelInput('');
+                  }}
+                />
+              </div>
             </div>
 
             {/* 认证配置 */}

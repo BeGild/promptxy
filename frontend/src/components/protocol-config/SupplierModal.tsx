@@ -117,6 +117,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
         baseUrl,
         enabled,
         protocol: 'anthropic', // 默认值，实际应该从表单获取
+        supportedModels: [],
       });
       onClose();
       toast.success(isEditing ? '供应商已更新！' : '供应商已创建！');

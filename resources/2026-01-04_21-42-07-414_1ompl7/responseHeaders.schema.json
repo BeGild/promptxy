@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for responseHeaders from 2026-01-04_21-42-07-414_1ompl7.yaml",
+  "sample_count": 1,
+  "type": "object",
+  "properties": {
+    "content-type": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "server": {
+      "type": "string"
+    },
+    "x-mife-upstream-status": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "content-type",
+    "date",
+    "server",
+    "x-mife-upstream-status"
+  ],
+  "additionalProperties": false
+}

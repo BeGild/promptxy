@@ -3,6 +3,7 @@ type LogLevel = 'silent' | 'info' | 'debug';
 export type PromptxyLogger = {
   info: (message: string) => void;
   debug: (message: string) => void;
+  error: (message: string) => void;
   debugEnabled: boolean;
 };
 
@@ -26,5 +27,10 @@ export function createLogger(options: { debug: boolean }): PromptxyLogger {
     console.log(message);
   };
 
-  return { info, debug, debugEnabled: level === 'debug' };
+  const error = (message: string) => {
+    // error 方法始终输出到 stderr，不受 debug 配置影响
+    console.error('[ERROR]', message);
+  };
+
+  return { info, debug, error, debugEnabled: level === 'debug' };
 }

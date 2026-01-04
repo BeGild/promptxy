@@ -124,6 +124,7 @@ describe('Config Module', () => {
         protocol: 'anthropic',
         enabled: true,
         auth: { type: 'none' },
+        supportedModels: [],
       },
     ];
 
@@ -186,4 +187,3 @@ describe('Config Module', () => {
     expect(getConfigDir()).toBe(TEST_ROOT);
   });
 });
-

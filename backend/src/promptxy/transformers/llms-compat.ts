@@ -18,9 +18,11 @@ import type {
   TransformTrace,
   TransformStepResult,
 } from './types.js';
+import { randomUUID } from 'node:crypto';
 import { createLogger } from '../logger.js';
 import { detectAuthHeaders } from './auth.js';
 import { getGlobalRegistry } from './registry.js';
+import { getCodexInstructions } from './codex-instructions.js';
 
 const logger = createLogger({ debug: false });
 
@@ -1067,121 +1069,142 @@ export class ProtocolTransformer {
   private transformToCodex(
     request: Record<string, unknown>,
   ): { body: unknown; headers: Record<string, string> } {
-    const transformed: Record<string, unknown> = {};
+    // 注意：此处“Codex”转换的目标 schema 以 `/codex` 原生请求为准（见 resources/*/originalBody.json）。
+    // 该 schema 对字段非常严格（additionalProperties=false），因此必须只输出它认可的字段。
 
-    // 基础字段映射
-    if (request.model) {
-      transformed.model = request.model;
-    }
+    const modelSpec = typeof request.model === 'string' ? request.model : '';
 
-    if (request.max_tokens) {
-      transformed.max_tokens = request.max_tokens;
-    }
+    const effortSet = new Set(['low', 'medium', 'high', 'xhigh']);
+    const modelParts = modelSpec.split('-').filter(Boolean);
+    const last = modelParts[modelParts.length - 1];
+    const baseModel = last && effortSet.has(last) ? modelParts.slice(0, -1).join('-') : modelSpec;
+    // instructions 需要尽量贴近 Codex CLI 的“自我描述”格式。
+    // 实测上游会拒绝 `GPT-5.2-codex` 这类变体，因此这里将 baseModel 中的 `-codex` 段去掉。
+    const baseParts = baseModel.split('-').filter(Boolean);
+    const filteredParts = baseParts.filter(p => p.toLowerCase() !== 'codex');
+    const baseForInstructions = filteredParts.join('-');
+    const prettyModelForInstructions = baseForInstructions.toLowerCase().startsWith('gpt-')
+      ? `GPT-${baseForInstructions.slice(4)}`
+      : baseForInstructions;
 
-    if (request.temperature !== undefined) {
-      transformed.temperature = request.temperature;
-    }
-
-    if (request.top_p !== undefined) {
-      transformed.top_p = request.top_p;
-    }
-
-    // stream 字段
-    if ('stream' in request) {
-      transformed.stream = request.stream;
-    }
-
-    // system → instructions
-    if (request.system) {
-      const instructions =
-        typeof request.system === 'string'
-          ? request.system
-          : JSON.stringify(request.system);
-      transformed.instructions = instructions;
-    }
+    const transformed: Record<string, unknown> = {
+      model: modelSpec,
+      // 上游要求 instructions 必填且必须是 string；保持与 Codex CLI 的风格一致
+      instructions: getCodexInstructions(prettyModelForInstructions),
+      // 必填字段（固定默认值，保持与 /codex 原生请求一致）
+      tool_choice: 'auto',
+      parallel_tool_calls: true,
+      store: false,
+      // AICODE Mirror 的 codex backend 要求 stream=true（与 /codex 原生请求一致）
+      stream: true,
+      include: ['reasoning.encrypted_content'],
+      prompt_cache_key: randomUUID(),
+      // 不同 model 对 text.verbosity 的支持范围不同；优先使用更通用的 medium
+      text: { verbosity: 'medium' },
+      // reasoning 必填；effort 会在网关层通过 modelSpec 解析进行覆盖/补齐
+      reasoning: { effort: 'medium', summary: 'detailed' },
+      // input/tools 下面填充
+      input: [],
+      tools: [],
+    };
 
     // messages[] → input[]
-    if (request.messages && Array.isArray(request.messages)) {
-      transformed.input = request.messages.map((msg: any) => {
-        // 转换为 Codex input 格式
-        const codexMessage: any = {
-          type: 'message',
-          role: msg.role || 'user',
-        };
+    const input: any[] = [];
+    if (Array.isArray((request as any).messages)) {
+      for (const msg of (request as any).messages) {
+        const role = msg?.role || 'user';
+        const content = msg?.content;
 
-        // 处理 content
-        if (typeof msg.content === 'string') {
-          // 简单文本
-          codexMessage.content = [{
-            type: 'input_text',
-            text: msg.content,
-          }];
-        } else if (Array.isArray(msg.content)) {
-          // 复杂 content（可能包含 tool_use, tool_result, image 等）
-          codexMessage.content = msg.content.map((block: any) => {
-            if (block.type === 'text') {
-              return {
-                type: 'input_text',
-                text: block.text,
-              };
-            } else if (block.type === 'image') {
-              return {
-                type: 'image_url',
-                image_url: {
-                  url: block.source?.data || block.source,
-                },
-              };
-            } else if (block.type === 'tool_use') {
-              // tool_use 保持原样或转换为特定格式
-              return block;
-            } else if (block.type === 'tool_result') {
-              // tool_result 保持原样
-              return block;
-            }
-            return block;
+        const pushText = (text: unknown) => {
+          if (typeof text !== 'string' || !text) return;
+          input.push({
+            type: 'message',
+            role,
+            content: [{ type: 'input_text', text }],
           });
-        } else {
-          // 其他情况直接使用
-          codexMessage.content = msg.content;
-        }
-
-        // 处理 tool_calls（OpenAI 格式）
-        if (msg.tool_calls && Array.isArray(msg.tool_calls)) {
-          codexMessage.tool_calls = msg.tool_calls;
-        }
-
-        // 处理 tool_call_id（tool 消息）
-        if (msg.tool_call_id) {
-          codexMessage.tool_call_id = msg.tool_call_id;
-        }
-
-        return codexMessage;
-      });
-    }
-
-    // tools 转换：Anthropic → OpenAI function format
-    if (request.tools && Array.isArray(request.tools)) {
-      transformed.tools = request.tools.map((tool: any) => ({
-        type: 'function',
-        function: {
-          name: tool.name,
-          description: tool.description,
-          parameters: tool.input_schema || tool.parameters || {},
-        },
-      }));
-    }
-
-    // tool_choice 转换
-    if (request.tool_choice) {
-      if (typeof request.tool_choice === 'object') {
-        const tc = request.tool_choice as any;
-        transformed.tool_choice = {
-          type: 'function',
-          function: { name: tc.name },
         };
-      } else {
-        transformed.tool_choice = request.tool_choice;
+
+        if (typeof content === 'string') {
+          pushText(content);
+        } else if (Array.isArray(content)) {
+          // Claude Code 常为 blocks；保持拆分，让结构更接近 /codex 原生请求
+          for (const block of content) {
+            if (block?.type === 'text') {
+              pushText(block.text);
+            }
+          }
+        }
       }
+    }
+    transformed.input = input;
+
+    // tools：Anthropic tools → Codex function schema（扁平化）
+    if (Array.isArray((request as any).tools)) {
+      const normalizeToolParameters = (params: any): Record<string, unknown> => {
+        const stripUnsupported = (node: any): any => {
+          if (!node || typeof node !== 'object') return node;
+          if (Array.isArray(node)) return node.map(stripUnsupported);
+          const out: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(node)) {
+            // 更严格的上游可能不接受 JSON Schema 的部分关键词（例如 format=uri）
+            if (k === 'format' || k === '$schema') continue;
+            out[k] = stripUnsupported(v);
+          }
+          return out;
+        };
+
+        const out: Record<string, unknown> =
+          params && typeof params === 'object' ? stripUnsupported(params) : {};
+
+        // OpenAI function parameters 需要是 JSON Schema object
+        if (out.type !== 'object') out.type = 'object';
+        // 更严格校验：必须显式提供 additionalProperties=false
+        (out as any).additionalProperties = false;
+
+        const props = (out as any).properties;
+        const propKeys =
+          props && typeof props === 'object' && !Array.isArray(props)
+            ? Object.keys(props)
+            : [];
+
+        const requiredOrig: string[] = Array.isArray((out as any).required)
+          ? (out as any).required.filter((x: any) => typeof x === 'string')
+          : [];
+
+        // 兼容更严格的校验：
+        // - required 必须存在
+        // - required 必须包含 properties 的所有 key（不能多也不能少）
+        // 为了避免工具 schema 因“可选字段”触发不一致，这里采用：
+        // 1) 若原 schema 提供 required，则裁剪 properties 只保留 required 中出现的 key
+        // 2) 否则认为所有 properties 都是必填
+        if (props && typeof props === 'object' && !Array.isArray(props)) {
+          if (requiredOrig.length > 0) {
+            const pruned: Record<string, unknown> = {};
+            for (const key of requiredOrig) {
+              if (key in (props as any)) pruned[key] = (props as any)[key];
+            }
+            (out as any).properties = pruned;
+            (out as any).required = Object.keys(pruned);
+          } else {
+            (out as any).required = propKeys;
+          }
+        } else {
+          (out as any).properties = {};
+          (out as any).required = [];
+        }
+
+        return out;
+      };
+
+      transformed.tools = (request as any).tools.map((tool: any) => ({
+        type: 'function',
+        name: tool?.name || '',
+        description: tool?.description || '',
+        parameters: normalizeToolParameters(tool?.input_schema || tool?.parameters),
+        strict: true,
+      }));
+    } else {
+      transformed.tools = [];
     }
 
     return { body: transformed, headers: {} };

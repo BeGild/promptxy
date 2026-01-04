@@ -1,0 +1,722 @@
+{
+  "model": "mimo-v2-flash",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "<system-reminder>\nThis is a reminder that your todo list is curr...."
+        },
+        {
+          "type": "text",
+          "text": "你好，你是谁",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ]
+    }
+  ],
+  "system": [
+    {
+      "type": "text",
+      "text": "You are Claude Code, Anthropic's official CLI for Claude.",
+      "cache_control": {
+        "type": "ephemeral"
+      }
+    },
+    {
+      "type": "text",
+      "text": "\nYou are an interactive CLI tool that helps users with software ....",
+      "cache_control": {
+        "type": "ephemeral"
+      }
+    }
+  ],
+  "tools": [
+    {
+      "name": "Task",
+      "description": "Launch a new agent to handle complex, multi-step tasks autonomou....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "A short (3-5 word) description of the task"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The task for the agent to perform"
+          },
+          "subagent_type": {
+            "type": "string",
+            "description": "The type of specialized agent to use for this task"
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "sonnet",
+              "opus",
+              "haiku"
+            ],
+            "description": "Optional model to use for this agent. If not specified, inherits...."
+          },
+          "resume": {
+            "type": "string",
+            "description": "Optional agent ID to resume from. If provided, the agent will co...."
+          },
+          "run_in_background": {
+            "type": "boolean",
+            "description": "Set to true to run this agent in the background. Use TaskOutput ...."
+          }
+        },
+        "required": [
+          "description",
+          "prompt",
+          "subagent_type"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "TaskOutput",
+      "description": "- Retrieves output from a running or completed task (background ....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "description": "The task ID to get output from"
+          },
+          "block": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to wait for completion"
+          },
+          "timeout": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 600000,
+            "default": 30000,
+            "description": "Max wait time in ms"
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Bash",
+      "description": "Executes a given bash command in a persistent shell session with....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "The command to execute"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "Optional timeout in milliseconds (max 600000)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Clear, concise description of what this command does in 5-10 wor...."
+          },
+          "run_in_background": {
+            "type": "boolean",
+            "description": "Set to true to run this command in the background. Use TaskOutpu...."
+          },
+          "dangerouslyDisableSandbox": {
+            "type": "boolean",
+            "description": "Set this to true to dangerously override sandbox mode and run co...."
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Glob",
+      "description": "- Fast file pattern matching tool that works with any codebase s....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "The glob pattern to match files against"
+          },
+          "path": {
+            "type": "string",
+            "description": "The directory to search in. If not specified, the current workin...."
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Grep",
+      "description": "A powerful search tool built on ripgrep\n\n  Usage:\n  - ALWAYS use....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "The regular expression pattern to search for in file contents"
+          },
+          "path": {
+            "type": "string",
+            "description": "File or directory to search in (rg PATH). Defaults to current wo...."
+          },
+          "glob": {
+            "type": "string",
+            "description": "Glob pattern to filter files (e.g. \"*.js\", \"*.{ts,tsx}\") - maps ...."
+          },
+          "output_mode": {
+            "type": "string",
+            "enum": [
+              "content",
+              "files_with_matches",
+              "count"
+            ],
+            "description": "Output mode: \"content\" shows matching lines (supports -A/-B/-C c...."
+          },
+          "-B": {
+            "type": "number",
+            "description": "Number of lines to show before each match (rg -B). Requires outp...."
+          },
+          "-A": {
+            "type": "number",
+            "description": "Number of lines to show after each match (rg -A). Requires outpu...."
+          },
+          "-C": {
+            "type": "number",
+            "description": "Number of lines to show before and after each match (rg -C). Req...."
+          },
+          "-n": {
+            "type": "boolean",
+            "description": "Show line numbers in output (rg -n). Requires output_mode: \"cont...."
+          },
+          "-i": {
+            "type": "boolean",
+            "description": "Case insensitive search (rg -i)"
+          },
+          "type": {
+            "type": "string",
+            "description": "File type to search (rg --type). Common types: js, py, rust, go,...."
+          },
+          "head_limit": {
+            "type": "number",
+            "description": "Limit output to first N lines/entries, equivalent to \"| head -N\"...."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Skip first N lines/entries before applying head_limit, equivalen...."
+          },
+          "multiline": {
+            "type": "boolean",
+            "description": "Enable multiline mode where . matches newlines and patterns can ...."
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "ExitPlanMode",
+      "description": "Use this tool when you are in plan mode and have finished writin....",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": true,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Read",
+      "description": "Reads a file from the local filesystem. You can access any file ....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "The absolute path to the file to read"
+          },
+          "offset": {
+            "type": "number",
+            "description": "The line number to start reading from. Only provide if the file ...."
+          },
+          "limit": {
+            "type": "number",
+            "description": "The number of lines to read. Only provide if the file is too lar...."
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Edit",
+      "description": "Performs exact string replacements in files. \n\nUsage:\n- You must....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "The absolute path to the file to modify"
+          },
+          "old_string": {
+            "type": "string",
+            "description": "The text to replace"
+          },
+          "new_string": {
+            "type": "string",
+            "description": "The text to replace it with (must be different from old_string)"
+          },
+          "replace_all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Replace all occurences of old_string (default false)"
+          }
+        },
+        "required": [
+          "file_path",
+          "old_string",
+          "new_string"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Write",
+      "description": "Writes a file to the local filesystem.\n\nUsage:\n- This tool will ....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "The absolute path to the file to write (must be absolute, not re...."
+          },
+          "content": {
+            "type": "string",
+            "description": "The content to write to the file"
+          }
+        },
+        "required": [
+          "file_path",
+          "content"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "NotebookEdit",
+      "description": "Completely replaces the contents of a specific cell in a Jupyter....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "notebook_path": {
+            "type": "string",
+            "description": "The absolute path to the Jupyter notebook file to edit (must be ...."
+          },
+          "cell_id": {
+            "type": "string",
+            "description": "The ID of the cell to edit. When inserting a new cell, the new c...."
+          },
+          "new_source": {
+            "type": "string",
+            "description": "The new source for the cell"
+          },
+          "cell_type": {
+            "type": "string",
+            "enum": [
+              "code",
+              "markdown"
+            ],
+            "description": "The type of the cell (code or markdown). If not specified, it de...."
+          },
+          "edit_mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "insert",
+              "delete"
+            ],
+            "description": "The type of edit to make (replace, insert, delete). Defaults to ...."
+          }
+        },
+        "required": [
+          "notebook_path",
+          "new_source"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "WebFetch",
+      "description": "\n- Fetches content from a specified URL and processes it using a....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL to fetch content from"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The prompt to run on the fetched content"
+          }
+        },
+        "required": [
+          "url",
+          "prompt"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "TodoWrite",
+      "description": "Use this tool to create and manage a structured task list for yo....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "content": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "in_progress",
+                    "completed"
+                  ]
+                },
+                "activeForm": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "content",
+                "status",
+                "activeForm"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The updated todo list"
+          }
+        },
+        "required": [
+          "todos"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "WebSearch",
+      "description": "\n- Allows Claude to search the web and use the results to inform....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 2,
+            "description": "The search query to use"
+          },
+          "allowed_domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only include search results from these domains"
+          },
+          "blocked_domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Never include search results from these domains"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "KillShell",
+      "description": "\n- Kills a running background bash shell by its ID\n- Takes a she....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "shell_id": {
+            "type": "string",
+            "description": "The ID of the background shell to kill"
+          }
+        },
+        "required": [
+          "shell_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "AskUserQuestion",
+      "description": "Use this tool when you need to ask the user questions during exe....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "description": "The complete question to ask the user. Should be clear, specific...."
+                },
+                "header": {
+                  "type": "string",
+                  "description": "Very short label displayed as a chip/tag (max 12 chars). Example...."
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "description": "The display text for this option that the user will see and sele...."
+                      },
+                      "description": {
+                        "type": "string",
+                        "description": "Explanation of what this option means or what will happen if cho...."
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "description"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 2,
+                  "maxItems": 4,
+                  "description": "The available choices for this question. Must have 2-4 options. ...."
+                },
+                "multiSelect": {
+                  "type": "boolean",
+                  "description": "Set to true to allow the user to select multiple options instead...."
+                }
+              },
+              "required": [
+                "question",
+                "header",
+                "options",
+                "multiSelect"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 4,
+            "description": "Questions to ask the user (1-4 questions)"
+          },
+          "answers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "User answers collected by the permission component"
+          }
+        },
+        "required": [
+          "questions"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "Skill",
+      "description": "Execute a skill within the main conversation\n\n<skills_instructio....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "type": "string",
+            "description": "The skill name. E.g., \"commit\", \"review-pr\", or \"pdf\""
+          },
+          "args": {
+            "type": "string",
+            "description": "Optional arguments for the skill"
+          }
+        },
+        "required": [
+          "skill"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "EnterPlanMode",
+      "description": "Use this tool proactively when you're about to start a non-trivi....",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "LSP",
+      "description": "Interact with Language Server Protocol (LSP) servers to get code....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "goToDefinition",
+              "findReferences",
+              "hover",
+              "documentSymbol",
+              "workspaceSymbol",
+              "goToImplementation",
+              "prepareCallHierarchy",
+              "incomingCalls",
+              "outgoingCalls"
+            ],
+            "description": "The LSP operation to perform"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "The absolute or relative path to the file"
+          },
+          "line": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "The line number (1-based, as shown in editors)"
+          },
+          "character": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "The character offset (1-based, as shown in editors)"
+          }
+        },
+        "required": [
+          "operation",
+          "filePath",
+          "line",
+          "character"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "mcp__sequential-thinking__sequentialthinking",
+      "description": "A detailed tool for dynamic and reflective problem-solving throu....",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "thought": {
+            "type": "string",
+            "description": "Your current thinking step"
+          },
+          "nextThoughtNeeded": {
+            "type": "boolean",
+            "description": "Whether another thought step is needed"
+          },
+          "thoughtNumber": {
+            "type": "integer",
+            "description": "Current thought number",
+            "minimum": 1
+          },
+          "totalThoughts": {
+            "type": "integer",
+            "description": "Estimated total thoughts needed",
+            "minimum": 1
+          },
+          "isRevision": {
+            "type": "boolean",
+            "description": "Whether this revises previous thinking"
+          },
+          "revisesThought": {
+            "type": "integer",
+            "description": "Which thought is being reconsidered",
+            "minimum": 1
+          },
+          "branchFromThought": {
+            "type": "integer",
+            "description": "Branching point thought number",
+            "minimum": 1
+          },
+          "branchId": {
+            "type": "string",
+            "description": "Branch identifier"
+          },
+          "needsMoreThoughts": {
+            "type": "boolean",
+            "description": "If more thoughts are needed"
+          }
+        },
+        "required": [
+          "thought",
+          "nextThoughtNeeded",
+          "thoughtNumber",
+          "totalThoughts"
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "user_id": "user_bda84af9fc086b3bfd86cc53f5bf71b6ee408cbaa69a8fce65fb0ce7f53...."
+  },
+  "max_tokens": 32000,
+  "thinking": {
+    "budget_tokens": 31999,
+    "type": "enabled"
+  },
+  "context_management": {
+    "edits": [
+      {
+        "type": "clear_thinking_20251015",
+        "keep": "all"
+      }
+    ]
+  },
+  "stream": true
+}

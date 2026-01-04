@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for originalRequestHeaders from 2026-01-04_21-46-07-226_mvcluq.yaml",
+  "sample_count": 1,
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "accept": {
+      "type": "string"
+    },
+    "authorization": {
+      "type": "string"
+    },
+    "content-type": {
+      "type": "string"
+    },
+    "user-agent": {
+      "type": "string"
+    },
+    "originator": {
+      "type": "string"
+    },
+    "accept-encoding": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "session_id",
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "originator",
+    "accept-encoding"
+  ],
+  "additionalProperties": false
+}

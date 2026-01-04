@@ -42,6 +42,7 @@ const DEFAULT_CONFIG: PromptxyConfig = {
       protocol: 'anthropic',
       enabled: true,
       auth: { type: 'none' },
+      supportedModels: [],
     },
     {
       id: 'openai-official',
@@ -51,6 +52,7 @@ const DEFAULT_CONFIG: PromptxyConfig = {
       protocol: 'openai',
       enabled: true,
       auth: { type: 'none' },
+      supportedModels: [],
     },
     {
       id: 'gemini-google',
@@ -60,6 +62,7 @@ const DEFAULT_CONFIG: PromptxyConfig = {
       protocol: 'gemini',
       enabled: true,
       auth: { type: 'none' },
+      supportedModels: [],
     },
   ],
   routes: [
@@ -212,6 +215,32 @@ export function assertSupplier(label: string, supplier: Supplier): void {
     throw new Error(`${label}.enabled must be a boolean`);
   }
 
+  // 供应商支持模型列表（用于路由映射/校验）
+  if ((supplier as any).supportedModels !== undefined) {
+    if (!Array.isArray((supplier as any).supportedModels)) {
+      throw new Error(`${label}.supportedModels must be an array`);
+    }
+    for (let i = 0; i < (supplier as any).supportedModels.length; i++) {
+      const m = (supplier as any).supportedModels[i];
+      if (typeof m !== 'string' || !m.trim()) {
+        throw new Error(`${label}.supportedModels[${i}] must be a non-empty string`);
+      }
+    }
+  }
+
+  // reasoningEfforts（UI 不暴露；未知 effort 允许，故仅做结构校验）
+  if ((supplier as any).reasoningEfforts !== undefined) {
+    if (!Array.isArray((supplier as any).reasoningEfforts)) {
+      throw new Error(`${label}.reasoningEfforts must be an array`);
+    }
+    for (let i = 0; i < (supplier as any).reasoningEfforts.length; i++) {
+      const e = (supplier as any).reasoningEfforts[i];
+      if (typeof e !== 'string' || !e.trim()) {
+        throw new Error(`${label}.reasoningEfforts[${i}] must be a non-empty string`);
+      }
+    }
+  }
+
   // 验证 auth 配置
   if (supplier.auth) {
     const authTypes = ['none', 'bearer', 'header'];
@@ -232,6 +261,52 @@ export function assertSupplier(label: string, supplier: Supplier): void {
       }
     }
   }
+}
+
+function normalizeStringList(list: unknown): string[] | undefined {
+  if (list === undefined) return undefined;
+  if (!Array.isArray(list)) return undefined;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+function migrateSuppliers(suppliers: Supplier[]): Supplier[] {
+  if (!Array.isArray(suppliers) || suppliers.length === 0) return suppliers;
+
+  let changed = false;
+  const next = suppliers.map(s => ({ ...s })) as any[];
+
+  for (const supplier of next) {
+    const originalSupportedModels = supplier.supportedModels;
+    const normalizedSupportedModels = normalizeStringList(originalSupportedModels);
+    if (normalizedSupportedModels === undefined) {
+      supplier.supportedModels = [];
+      changed = true;
+    } else if (JSON.stringify(normalizedSupportedModels) !== JSON.stringify(originalSupportedModels)) {
+      supplier.supportedModels = normalizedSupportedModels;
+      changed = true;
+    }
+
+    if (supplier.reasoningEfforts !== undefined) {
+      const originalEfforts = supplier.reasoningEfforts;
+      const normalizedEfforts = normalizeStringList(originalEfforts) ?? [];
+      if (JSON.stringify(normalizedEfforts) !== JSON.stringify(originalEfforts)) {
+        supplier.reasoningEfforts = normalizedEfforts;
+        changed = true;
+      }
+    }
+  }
+
+  return changed ? (next as Supplier[]) : suppliers;
 }
 
 /**
@@ -303,6 +378,39 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     }
     if (typeof route.enabled !== 'boolean') {
       throw new Error(`${label}.enabled must be a boolean`);
+    }
+
+    // Claude 跨协议转换：claudeModelMap 用于运行时映射；缺失时运行时返回 400 提示配置
+    // 这里仅做“存在时的结构校验”，避免老配置导致服务无法启动。
+    if (route.localService === 'claude' && route.transformer !== 'none' && (route as any).claudeModelMap !== undefined) {
+      const supplier = config.suppliers.find(s => s.id === route.supplierId);
+      if (!supplier) {
+        throw new Error(`${label}.supplierId references a missing supplier: ${route.supplierId}`);
+      }
+
+      const map = (route as any).claudeModelMap;
+      if (!map || typeof map !== 'object') {
+        throw new Error(`${label}.claudeModelMap must be an object when provided`);
+      }
+
+      const supportedModels = Array.isArray((supplier as any).supportedModels)
+        ? (supplier as any).supportedModels
+        : [];
+      const validateMappedModel = (tier: string, value: unknown) => {
+        if (value === undefined) return;
+        if (typeof value !== 'string' || !value.trim()) {
+          throw new Error(`${label}.claudeModelMap.${tier} must be a non-empty string when provided`);
+        }
+        if (supportedModels.length > 0 && !supportedModels.includes(value)) {
+          throw new Error(
+            `${label}.claudeModelMap.${tier} must be one of supplier.supportedModels (supplierId=${supplier.id})`,
+          );
+        }
+      };
+
+      validateMappedModel('sonnet', map.sonnet);
+      validateMappedModel('haiku', map.haiku);
+      validateMappedModel('opus', map.opus);
     }
   }
 
@@ -466,16 +574,26 @@ export async function loadConfig(cliOptions?: { port?: number }): Promise<Prompt
   }
 
   // 检测并迁移旧格式的规则
+  const migratedSuppliers = migrateSuppliers(config.suppliers);
   const migratedRules = migrateRules(config.rules);
-  const migratedRoutes = migrateRoutes(config.routes, config.suppliers);
+  const migratedRoutes = migrateRoutes(config.routes, migratedSuppliers);
+  const migratedSuppliersChanged = migratedSuppliers !== config.suppliers;
   const migratedRulesChanged = migratedRules !== config.rules;
   const migratedRoutesChanged = migratedRoutes !== config.routes;
-  const needsMigration = migratedRulesChanged || migratedRoutesChanged;
+  const needsMigration = migratedSuppliersChanged || migratedRulesChanged || migratedRoutesChanged;
 
   if (needsMigration) {
-    config = { ...config, rules: migratedRules, routes: migratedRoutes ?? config.routes };
+    config = {
+      ...config,
+      suppliers: migratedSuppliers,
+      rules: migratedRules,
+      routes: migratedRoutes ?? config.routes,
+    };
     // 自动保存迁移后的配置（保存到全局配置）
     await saveGlobalConfig(config);
+    if (migratedSuppliersChanged) {
+      console.log('[Config] suppliers 配置已自动迁移/补全（supportedModels 等字段）');
+    }
     if (migratedRulesChanged) {
       console.log('[Config] 规则数据已自动迁移到新格式 (uuid + name)');
     }

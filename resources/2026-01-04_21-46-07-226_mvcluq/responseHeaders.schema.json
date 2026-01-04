@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for responseHeaders from 2026-01-04_21-46-07-226_mvcluq.yaml",
+  "sample_count": 1,
+  "type": "object",
+  "properties": {
+    "cache-control": {
+      "type": "string"
+    },
+    "cf-cache-status": {
+      "type": "string"
+    },
+    "cf-ray": {
+      "type": "string"
+    },
+    "content-type": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "nel": {
+      "type": "string"
+    },
+    "report-to": {
+      "type": "string"
+    },
+    "server": {
+      "type": "string"
+    },
+    "set-cookie": {
+      "type": "string"
+    },
+    "strict-transport-security": {
+      "type": "string"
+    },
+    "vary": {
+      "type": "string"
+    },
+    "x-content-type-options": {
+      "type": "string"
+    },
+    "x-frame-options": {
+      "type": "string"
+    },
+    "x-xss-protection": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "cache-control",
+    "cf-cache-status",
+    "cf-ray",
+    "content-type",
+    "date",
+    "nel",
+    "report-to",
+    "server",
+    "set-cookie",
+    "strict-transport-security",
+    "vary",
+    "x-content-type-options",
+    "x-frame-options",
+    "x-xss-protection"
+  ],
+  "additionalProperties": false
+}

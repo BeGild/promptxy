@@ -4,6 +4,10 @@ const HOP_BY_HOP_HEADERS = new Set([
   'connection',
   'proxy-connection',
   'keep-alive',
+  // curl 在请求体较大时会自动带上 Expect: 100-continue。
+  // 该 header 属于 hop-by-hop 语义，转发到上游容易导致上游/中间层直接断开连接，
+  // 在 Node fetch/undici 中会表现为 `fetch failed`。
+  'expect',
   'transfer-encoding',
   'te',
   'trailer',

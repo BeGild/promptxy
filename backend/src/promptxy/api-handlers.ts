@@ -32,6 +32,7 @@ import {
   RouteToggleRequest,
   RouteToggleResponse,
   LocalService,
+  RebuildIndexResponse,
 } from './types.js';
 import {
   getRequestList,
@@ -44,6 +45,7 @@ import {
   getAllSettings,
   getSetting,
   updateSetting,
+  rebuildIndex,
 } from './database.js';
 import {
   saveConfig,
@@ -173,6 +175,34 @@ export async function handleGetPaths(
 }
 
 /**
+ * 解析 headers 字段（兼容 JSON 字符串和对象格式）
+ */
+function parseHeadersField(headers: Record<string, string> | string | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  if (typeof headers === 'string') {
+    try {
+      return JSON.parse(headers);
+    } catch {
+      return undefined;
+    }
+  }
+  return headers;
+}
+
+/**
+ * 解析 responseBody 字段（兼容字符串和 ParsedSSEEvent[]）
+ */
+function parseResponseBodyField(body: string | { data: string }[] | undefined): any {
+  if (!body) return undefined;
+  // 如果是数组（ParsedSSEEvent[]），直接返回
+  if (Array.isArray(body)) {
+    return body;
+  }
+  // 如果是字符串，尝试 JSON 解析
+  return safeParseJson(body);
+}
+
+/**
  * 处理单个请求详情
  */
 export async function handleGetRequest(
@@ -189,7 +219,7 @@ export async function handleGetRequest(
       return;
     }
 
-    // 解析 JSON 字符串
+    // 解析 JSON 字符串和兼容性处理
     const response: RequestRecordResponse = {
       id: record.id,
       timestamp: record.timestamp,
@@ -198,15 +228,15 @@ export async function handleGetRequest(
       method: record.method,
       originalBody: JSON.parse(record.originalBody),
       modifiedBody: JSON.parse(record.modifiedBody),
-      requestHeaders: record.requestHeaders ? JSON.parse(record.requestHeaders) : undefined,
-      originalRequestHeaders: record.originalRequestHeaders ? JSON.parse(record.originalRequestHeaders) : undefined,
+      requestHeaders: parseHeadersField(record.requestHeaders),
+      originalRequestHeaders: parseHeadersField(record.originalRequestHeaders),
       requestSize: record.requestSize,
       responseSize: record.responseSize,
       matchedRules: JSON.parse(record.matchedRules),
       responseStatus: record.responseStatus,
       durationMs: record.durationMs,
-      responseHeaders: record.responseHeaders ? JSON.parse(record.responseHeaders) : undefined,
-      responseBody: record.responseBody ? safeParseJson(record.responseBody) : undefined,
+      responseHeaders: parseHeadersField(record.responseHeaders),
+      responseBody: parseResponseBodyField(record.responseBody),
       error: record.error,
 
       // 路由 / 供应商 / 转换信息
@@ -653,6 +683,9 @@ export async function handleCreateSupplier(
     const newSupplier: Supplier = {
       ...supplierData,
       id: generateId(),
+      supportedModels: Array.isArray((supplierData as any).supportedModels)
+        ? (supplierData as any).supportedModels
+        : [],
     };
 
     // 验证供应商
@@ -695,6 +728,9 @@ export async function handleUpdateSupplier(
     const supplierId = url.pathname.split('/').pop();
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
     const { supplier }: SupplierUpdateRequest = JSON.parse(body.toString());
+    (supplier as any).supportedModels = Array.isArray((supplier as any).supportedModels)
+      ? (supplier as any).supportedModels
+      : [];
 
     // 验证供应商
     assertSupplier(`supplier.${supplierId}`, supplier);
@@ -1129,6 +1165,40 @@ function assertRouteAllowed(
   }
 }
 
+function assertClaudeModelMapValid(
+  routeLike: { localService: LocalService; claudeModelMap?: any },
+  transformer: string,
+  supplier: Supplier,
+): void {
+  if (routeLike.localService !== 'claude') return;
+  if (transformer === 'none') return;
+
+  const map = routeLike.claudeModelMap;
+  if (!map || typeof map !== 'object') {
+    throw new Error('Claude 路由跨协议转换时必须配置模型映射（claudeModelMap）');
+  }
+
+  const sonnet = map.sonnet;
+  if (typeof sonnet !== 'string' || !sonnet.trim()) {
+    throw new Error('Claude 路由跨协议转换时必须配置 sonnet 映射（claudeModelMap.sonnet）');
+  }
+
+  const supported = Array.isArray((supplier as any).supportedModels) ? (supplier as any).supportedModels : [];
+  const ensureInSupported = (tier: string, value: unknown) => {
+    if (value === undefined) return;
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(`claudeModelMap.${tier} 必须是非空字符串`);
+    }
+    if (!supported.includes(value)) {
+      throw new Error(`claudeModelMap.${tier} 必须从该供应商的 supportedModels 中选择`);
+    }
+  };
+
+  ensureInSupported('sonnet', sonnet);
+  ensureInSupported('haiku', map.haiku);
+  ensureInSupported('opus', map.opus);
+}
+
 /**
  * 处理获取路由列表
  */
@@ -1179,6 +1249,17 @@ export async function handleCreateRoute(
 
     // 自动选择转换器
     const transformer = autoSelectTransformer(routeData.localService, supplier.protocol) as any;
+
+    // Claude 跨协议：要求模型映射（至少 sonnet）
+    try {
+      assertClaudeModelMapValid(routeData as any, transformer, supplier);
+    } catch (e: any) {
+      sendJson(res, 400, {
+        success: false,
+        message: e?.message || 'Claude 模型映射配置无效',
+      });
+      return;
+    }
 
     // 创建新路由，生成 ID
     const newRoute: Route = {
@@ -1260,6 +1341,23 @@ export async function handleUpdateRoute(
 
     // 自动重新选择转换器（不允许手动覆写）
     routeUpdate.transformer = autoSelectTransformer(nextLocalService, nextSupplier.protocol) as any;
+
+    // Claude 跨协议：要求模型映射（至少 sonnet）
+    const mergedForValidation: any = {
+      ...currentRoute,
+      ...routeUpdate,
+      localService: nextLocalService,
+      supplierId: nextSupplierId,
+    };
+    try {
+      assertClaudeModelMapValid(mergedForValidation, routeUpdate.transformer as any, nextSupplier);
+    } catch (e: any) {
+      sendJson(res, 400, {
+        success: false,
+        message: e?.message || 'Claude 模型映射配置无效',
+      });
+      return;
+    }
 
     if (routeUpdate.enabled === true) {
       for (const r of config.routes) {
@@ -1377,6 +1475,34 @@ export async function handleToggleRoute(
     sendJson(res, 400, {
       success: false,
       message: error?.message || '切换路由状态失败',
+    });
+  }
+}
+
+// ============================================================================
+// 索引重建 API（新增）
+// ============================================================================
+
+/**
+ * 处理索引重建请求
+ */
+export async function handleRebuildIndex(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const result = await rebuildIndex();
+    const response: RebuildIndexResponse = {
+      success: result.success,
+      message: result.message,
+      count: result.count,
+    };
+    sendJson(res, result.success ? 200 : 500, response);
+  } catch (error: any) {
+    sendJson(res, 500, {
+      success: false,
+      message: error?.message || '重建索引失败',
+      count: 0,
     });
   }
 }

@@ -99,7 +99,9 @@ export function serializeSSEEvent(event: SSEEvent): string {
   }
 
   lines.push(''); // 空行表示事件结束
-  return lines.join('\n');
+  // 注意：事件结束需要“空行”，也就是两个换行符。
+  // 如果只以单个 `\n` 结束，多个事件拼接时会粘连，导致客户端把多事件解析成一个事件。
+  return lines.join('\n') + '\n';
 }
 
 /**
@@ -381,7 +383,16 @@ export function createSSETransformStream(
           continue;
         }
 
+        if (kind === 'response.output_item.added') {
+          const mid = parsed?.item?.id;
+          if (!codexMessageId && typeof mid === 'string') codexMessageId = mid;
+          out.push(...ensureCodexStartEvents());
+          continue;
+        }
+
         if (kind === 'response.output_text.delta') {
+          const mid = parsed?.item_id;
+          if (!codexMessageId && typeof mid === 'string') codexMessageId = mid;
           out.push(...ensureCodexStartEvents());
           const delta =
             typeof parsed.delta === 'string'
@@ -406,16 +417,29 @@ export function createSSETransformStream(
 
         if (
           kind === 'response.completed' ||
+          kind === 'response.output_text.done' ||
+          kind === 'response.output_item.done' ||
+          kind === 'response.content_part.done' ||
           kind === 'response.done' ||
           kind === 'response.failed' ||
           kind === 'response.error'
         ) {
+          const mid = parsed?.item_id || parsed?.item?.id;
+          if (!codexMessageId && typeof mid === 'string') codexMessageId = mid;
           if (codexStopped) continue;
           codexStopped = true;
           out.push(...ensureCodexStartEvents());
           out.push({
             event: 'content_block_stop',
             data: JSON.stringify({ type: 'content_block_stop', index: 0 }),
+          });
+          out.push({
+            event: 'message_delta',
+            data: JSON.stringify({
+              type: 'message_delta',
+              delta: { stop_reason: 'end_turn' },
+              usage: { input_tokens: 0, output_tokens: 0 },
+            }),
           });
           out.push({
             event: 'message_stop',
@@ -465,6 +489,34 @@ export function createSSETransformStream(
     },
 
     flush(callback) {
+      try {
+        // 兜底：如果上游没有发送明确的 completed/done 事件，流结束时补齐 stop 事件，
+        // 避免 Claude 侧因为缺少 message_stop 而报 “Execution error”。
+        if (actualTransformType === 'codex' && codexStarted && !codexStopped) {
+          const out: SSEEvent[] = [];
+          out.push(...ensureCodexStartEvents());
+          out.push({
+            event: 'content_block_stop',
+            data: JSON.stringify({ type: 'content_block_stop', index: 0 }),
+          });
+          out.push({
+            event: 'message_delta',
+            data: JSON.stringify({
+              type: 'message_delta',
+              delta: { stop_reason: 'end_turn' },
+              usage: { input_tokens: 0, output_tokens: 0 },
+            }),
+          });
+          out.push({
+            event: 'message_stop',
+            data: JSON.stringify({ type: 'message_stop' }),
+          });
+          codexStopped = true;
+          (this as Transform).push(Buffer.from(out.map(serializeSSEEvent).join(''), 'utf-8'));
+        }
+      } catch {
+        // ignore
+      }
       callback();
     },
   });

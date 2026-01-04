@@ -45,6 +45,7 @@ describe('E2E Flow', () => {
           protocol: 'openai',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: ['gpt-4o-mini'],
         },
       ],
       routes: [
@@ -53,6 +54,7 @@ describe('E2E Flow', () => {
           localService: 'claude',
           supplierId: 'codex-up',
           transformer: 'codex',
+          claudeModelMap: { sonnet: 'gpt-4o-mini' },
           enabled: true,
         },
       ],
@@ -73,7 +75,7 @@ describe('E2E Flow', () => {
 
   it('应将 Claude /v1/messages 转为 Codex /responses 并将响应转回 Claude 格式', async () => {
     const res = await client.post('/claude/v1/messages', {
-      model: 'gpt-4o-mini',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 32,
       system: 'You are a helpful assistant.',
       messages: [{ role: 'user', content: 'hi' }],
@@ -87,6 +89,7 @@ describe('E2E Flow', () => {
     expect(captured.url).toBe('/responses');
 
     const upstreamBody = JSON.parse(captured.bodyText);
+    expect(upstreamBody.model).toBe('gpt-4o-mini');
     expect(typeof upstreamBody.instructions).toBe('string');
     expect(Array.isArray(upstreamBody.input)).toBe(true);
 
@@ -106,4 +109,3 @@ describe('E2E Flow', () => {
     expect(detail.body.transformTrace).toBeTruthy();
   });
 });
-

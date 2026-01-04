@@ -118,6 +118,8 @@ export interface Supplier {
   protocol: SupplierProtocol; // 上游协议类型
   enabled: boolean;
   auth?: SupplierAuth;
+  supportedModels: string[]; // 供应商支持的上游模型列表
+  reasoningEfforts?: string[]; // 可选：用于解析 modelSpec 的 effort 列表（UI 不暴露）
   description?: string;
 }
 
@@ -183,6 +185,11 @@ export interface Route {
   localService: LocalService; // 本地服务（/claude, /codex, /gemini）
   supplierId: string; // 关联的供应商ID
   transformer: TransformerType; // 转换器类型（自动选择）
+  claudeModelMap?: {
+    sonnet: string;
+    haiku?: string;
+    opus?: string;
+  };
   enabled: boolean;
 }
 
@@ -203,9 +210,7 @@ export interface RouteCreateResponse {
 
 export interface RouteUpdateRequest {
   routeId: string;
-  request: {
-    route: Partial<Route>;
-  };
+  route: Partial<Route>;
 }
 
 export interface RouteUpdateResponse {

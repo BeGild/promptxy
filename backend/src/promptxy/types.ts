@@ -149,6 +149,14 @@ export interface Supplier {
   protocol: 'anthropic' | 'openai' | 'gemini'; // 上游协议类型
   enabled: boolean; // 是否启用
   auth?: SupplierAuth; // 上游认证配置（支持 none/bearer/header）
+  supportedModels: string[]; // 供应商支持的上游模型列表（用于路由映射与校验）
+  /**
+   * 可识别的 reasoning effort 列表。
+   * 用于将 modelSpec "<base>-<effort>" 解析为 `model=<base>` + `reasoning.effort=<effort>`。
+   * - UI 不暴露（选项 A）
+   * - 未命中时不报错，直接透传 modelSpec
+   */
+  reasoningEfforts?: string[];
   description?: string; // 供应商描述
 }
 
@@ -185,9 +193,9 @@ export interface RequestRecord {
   originalBody: string;
   modifiedBody: string;
 
-  // 请求头（JSON 字符串，包含原始请求头和协议转换后的请求头）
-  requestHeaders?: string; // JSON 字符串
-  originalRequestHeaders?: string; // JSON 字符串（原始请求头）
+  // 请求头（对象或 JSON 字符串，兼容旧格式）
+  requestHeaders?: Record<string, string> | string;
+  originalRequestHeaders?: Record<string, string> | string;
 
   // 请求/响应大小（字节）
   requestSize?: number;
@@ -199,8 +207,8 @@ export interface RequestRecord {
   // 响应信息
   responseStatus?: number;
   durationMs?: number;
-  responseHeaders?: string; // JSON 字符串
-  responseBody?: string; // JSON 字符串
+  responseHeaders?: Record<string, string> | string;
+  responseBody?: string | ParsedSSEEvent[]; // 支持字符串或 SSE 事件数组
   error?: string;
 
   // 供应商和转换信息（新增）
@@ -343,6 +351,17 @@ export interface CleanupResponse {
 // SSE 事件类型
 // ============================================================================
 
+/**
+ * 解析后的 SSE 事件结构
+ * 用于存储 SSE 响应体
+ */
+export interface ParsedSSEEvent {
+  id?: string;
+  event?: string;
+  data: string;
+  retry?: number;
+}
+
 export interface SSERequestEvent {
   id: string;
   timestamp: number;
@@ -448,6 +467,16 @@ export interface Route {
   localService: LocalService; // 本地服务（/claude, /codex, /gemini）
   supplierId: string; // 关联的供应商ID
   transformer: TransformerType; // 转换器类型（自动选择）
+  /**
+   * Claude Code 模型档位映射（仅 localService=claude 且跨协议转换时生效）
+   * - sonnet 必填
+   * - haiku/opus 可选，未配置则回落 sonnet
+   */
+  claudeModelMap?: {
+    sonnet: string;
+    haiku?: string;
+    opus?: string;
+  };
   enabled: boolean; // 是否启用
 }
 
@@ -498,4 +527,11 @@ export interface RouteToggleResponse {
   success: boolean;
   message: string;
   route: Route;
+}
+
+// 索引重建响应
+export interface RebuildIndexResponse {
+  success: boolean;
+  message: string;
+  count: number;
 }

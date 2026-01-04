@@ -1,0 +1,620 @@
+{
+  "sse_events": [
+    {
+      "event": "message_start",
+      "data": {
+        "type": "message_start",
+        "message": {
+          "id": "msg_1789bfa1e7274d1b8bdc0229",
+          "type": "message",
+          "role": "assistant",
+          "model": "mimo-v2-flash",
+          "content": [],
+          "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0
+          }
+        }
+      }
+    },
+    {
+      "event": "content_block_start",
+      "data": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "text",
+          "text": ""
+        }
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "你好"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "！"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "我是 Claude"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": " Code，"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "Anth"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "ropic"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": " 开发"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "的 AI"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": " "
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "编"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "程助手"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "。我可以"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "帮助"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "你"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "完成"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "各种"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "软件工程"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "任务"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "，"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "比如：\n\n"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "- "
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "编"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "写、修改"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "和调试"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "代码\n"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "- "
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "探"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "索"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "和理解"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "代码库\n"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "- "
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "运"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "行测试"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "和构建"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "项目"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "\n-"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": " "
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "搜索"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "和"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "分析"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "代码"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "\n-"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": " 回"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "答"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "技术问题"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "\n\n"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "有什么"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "我可以"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "帮"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "你的吗"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_delta",
+      "data": {
+        "type": "content_block_delta",
+        "delta": {
+          "type": "text_delta",
+          "text": "？"
+        },
+        "index": 0
+      }
+    },
+    {
+      "event": "content_block_stop",
+      "data": {
+        "type": "content_block_stop",
+        "index": 0
+      }
+    },
+    {
+      "event": "message_delta",
+      "data": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn"
+        },
+        "usage": {
+          "input_tokens": 17716,
+          "output_tokens": 77
+        }
+      }
+    },
+    {
+      "event": "message_stop",
+      "data": {
+        "type": "message_stop"
+      }
+    }
+  ],
+  "event_count": 56
+}

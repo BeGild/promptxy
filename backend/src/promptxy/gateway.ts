@@ -60,12 +60,19 @@ import {
   handleUpdateRoute,
   handleDeleteRoute,
   handleToggleRoute,
+  handleRebuildIndex,
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
-import { createProtocolTransformer, sanitizeHeaders } from './transformers/llms-compat.js';
+import { createProtocolTransformer } from './transformers/llms-compat.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
 import { createSSETransformStream, isSSEResponse } from './transformers/sse.js';
+import {
+  detectClaudeModelTier,
+  parseOpenAIModelSpec,
+  resolveClaudeMappedModelSpec,
+} from './model-mapping.js';
+import { parseSSEToEvents, isSSEContent } from './utils/sse-parser.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -526,6 +533,12 @@ export function createGateway(
           return;
         }
 
+        // 索引重建（新增）
+        if (method === 'POST' && url.pathname === '/_promptxy/rebuild-index') {
+          await handleRebuildIndex(req, res);
+          return;
+        }
+
         // 404
         jsonError(res, 404, { error: 'API endpoint not found', path: url.pathname });
         return;
@@ -663,6 +676,27 @@ export function createGateway(
       let needsResponseTransform = false;
 
       if (matchedRoute.localService === 'claude' && matchedRoute.route.transformer !== 'none') {
+        // Claude Code 模型映射：将 haiku/sonnet/opus 映射为上游可识别的 modelSpec
+        // - 识别不到默认 sonnet
+        // - haiku/opus 未配置则回落 sonnet
+        // - 若完全未配置映射则返回 400（避免 silent 失败）
+        const tier = detectClaudeModelTier((jsonBody as any)?.model);
+        const mapping = resolveClaudeMappedModelSpec((matchedRoute.route as any).claudeModelMap, tier);
+        if (!mapping.ok) {
+          jsonError(res, 400, {
+            error: 'claude_model_mapping_missing',
+            message: mapping.error,
+            tier,
+            routeId: matchedRoute.route.id,
+            supplierId: matchedRoute.route.supplierId,
+            path: url.pathname,
+          });
+          return;
+        }
+        if (jsonBody && typeof jsonBody === 'object') {
+          (jsonBody as any).model = mapping.modelSpec;
+        }
+
         transformerChain = [matchedRoute.route.transformer];
         const streamFlag =
           Boolean(jsonBody && typeof jsonBody === 'object' && 'stream' in jsonBody && (jsonBody as any).stream);
@@ -689,6 +723,26 @@ export function createGateway(
         effectiveUpstreamPath = transformResult.request.path;
         effectiveHeaders = transformResult.request.headers;
         effectiveBody = transformResult.request.body;
+      }
+
+      // ========== OpenAI/Codex：modelSpec 解析 reasoning.effort（透明转发与 Claude→Codex 均适用）==========
+      if (matchedRoute.supplier.protocol === 'openai' && effectiveBody && typeof effectiveBody === 'object') {
+        const parsed = parseOpenAIModelSpec(
+          (effectiveBody as any).model,
+          (matchedRoute.supplier as any).reasoningEfforts,
+        );
+        if (parsed && parsed.reasoningEffort) {
+          (effectiveBody as any).model = parsed.model;
+
+          const existing = (effectiveBody as any).reasoning;
+          if (!existing || typeof existing !== 'object') {
+            (effectiveBody as any).reasoning = { effort: parsed.reasoningEffort };
+          } else {
+            (effectiveBody as any).reasoning = { ...(existing as any), effort: parsed.reasoningEffort };
+          }
+        } else if (parsed) {
+          (effectiveBody as any).model = parsed.model;
+        }
       }
 
       // ========== 注入上游认证（新增）==========
@@ -761,6 +815,17 @@ export function createGateway(
           }
         }
 
+        // 诊断信息：保存上游原始响应片段到 trace（避免只看到“转换后空内容”）
+        // - 仅在非 2xx 时保存（减少噪音）
+        // - 仅保存截断片段，避免日志/DB 过大
+        if (transformTrace && upstreamResponse.status >= 400) {
+          const snippetLimit = 8 * 1024;
+          const snippet = raw.length > snippetLimit ? `${raw.slice(0, snippetLimit)}...(truncated)` : raw;
+          transformTrace.upstreamStatus = upstreamResponse.status;
+          transformTrace.upstreamContentType = upstreamContentType;
+          transformTrace.upstreamBodySnippet = snippet;
+        }
+
         const transformed = await protocolTransformer.transformResponse(
           {
             id: matchedRoute.supplier.id,
@@ -802,14 +867,14 @@ export function createGateway(
             modifiedBody: effectiveBody
               ? JSON.stringify(effectiveBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
-            requestHeaders: JSON.stringify(sanitizeHeaders(finalRequestHeaders)),
-            originalRequestHeaders: JSON.stringify(sanitizeHeaders(originalRequestHeaders)),
+            requestHeaders: finalRequestHeaders,
+            originalRequestHeaders: originalRequestHeaders,
             requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
             responseSize: Buffer.byteLength(bodyStr),
             matchedRules: JSON.stringify(matches),
             responseStatus: upstreamResponse.status,
             durationMs: duration,
-            responseHeaders: JSON.stringify({ ...responseHeaders, 'content-type': 'application/json' }),
+            responseHeaders: { ...responseHeaders, 'content-type': 'application/json' },
             responseBody: bodyStr,
             error: undefined,
             routeId: matchedRoute.route.id,
@@ -823,7 +888,7 @@ export function createGateway(
           try {
             await insertRequestRecord(record);
           } catch (err: any) {
-            logger.debug(`[promptxy] Failed to save request record: ${err?.message}`);
+            logger.error(`[promptxy] Failed to save request record: ${err?.message}`);
           }
         }
 
@@ -910,8 +975,14 @@ export function createGateway(
             responseBodyStr = responseBodyBuffer.toString('utf-8');
           }
         } else {
-          // 非 JSON 响应（包括 SSE）：完整保存
-          responseBodyStr = responseBodyBuffer.toString('utf-8');
+          // 非 JSON 响应：检测并解析 SSE
+          const rawResponse = responseBodyBuffer.toString('utf-8');
+          if (isSSEContent(rawResponse)) {
+            // SSE 响应：解析为事件数组
+            responseBodyStr = parseSSEToEvents(rawResponse) as any;
+          } else {
+            responseBodyStr = rawResponse;
+          }
         }
 
         const record: RequestRecord = {
@@ -924,8 +995,8 @@ export function createGateway(
           modifiedBody: savedJsonBody
             ? JSON.stringify(savedJsonBody)
             : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
-          requestHeaders: JSON.stringify(sanitizeHeaders(finalRequestHeaders)),
-          originalRequestHeaders: JSON.stringify(sanitizeHeaders(originalRequestHeaders)),
+          requestHeaders: finalRequestHeaders,
+          originalRequestHeaders: originalRequestHeaders,
           requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
           responseSize: responseBodyBuffer.length,
           matchedRules: JSON.stringify(matches),
@@ -947,7 +1018,7 @@ export function createGateway(
         try {
           await insertRequestRecord(record);
         } catch (err: any) {
-          logger.debug(`[promptxy] Failed to save request record: ${err?.message}`);
+          logger.error(`[promptxy] Failed to save request record: ${err?.message}`);
         }
       });
 
@@ -988,8 +1059,8 @@ export function createGateway(
             modifiedBody: effectiveBody
               ? JSON.stringify(effectiveBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
-            requestHeaders: JSON.stringify(sanitizeHeaders(errorRequestHeaders)),
-            originalRequestHeaders: JSON.stringify(sanitizeHeaders(errorRequestHeaders)),
+            requestHeaders: errorRequestHeaders,
+            originalRequestHeaders: errorRequestHeaders,
             requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
             matchedRules: JSON.stringify(matches),
             responseStatus: undefined,
@@ -1008,7 +1079,7 @@ export function createGateway(
           try {
             await insertRequestRecord(record);
           } catch (err: any) {
-            logger.debug(`[promptxy] Failed to save error request record: ${err?.message}`);
+            logger.error(`[promptxy] Failed to save error request record: ${err?.message}`);
           }
         }
 

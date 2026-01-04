@@ -1,0 +1,16 @@
+{
+  "cache-control": "no-cache",
+  "cf-cache-status": "DYNAMIC",
+  "cf-ray": "9b8b2e090904cabc-HKG",
+  "content-type": "text/event-stream",
+  "date": "Sun, 04 Jan 2026 13:46:07 GMT",
+  "nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+  "report-to": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://....",
+  "server": "cloudflare",
+  "set-cookie": "acw_tc=1a0c639d17675343634715304ebd2c3d58b6483dcb0601b2131e15d74....",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-s....",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "x-xss-protection": "1; mode=block"
+}

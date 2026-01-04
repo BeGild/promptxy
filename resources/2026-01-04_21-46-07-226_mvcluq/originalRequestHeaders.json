@@ -1,0 +1,10 @@
+{
+  "conversation_id": "019b8941-ea03-7e02-89b5-03646055b3ab",
+  "session_id": "019b8941-ea03-7e02-89b5-03646055b3ab",
+  "accept": "text/event-stream",
+  "authorization": "Bearer ***REDACTED***",
+  "content-type": "application/json",
+  "user-agent": "codex_exec/0.77.0 (Ubuntu 20.4.0; x86_64) xterm-256color",
+  "originator": "codex_exec",
+  "accept-encoding": "identity"
+}

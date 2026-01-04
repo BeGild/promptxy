@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
 import * as yaml from 'js-yaml';
-import { RequestRecord, RequestListResponse, PathsResponse } from './types.js';
+import { RequestRecord, RequestListResponse, PathsResponse, ParsedSSEEvent } from './types.js';
 
 // ============================================================
 // 类型定义
@@ -39,14 +39,14 @@ interface RequestFile {
   responseSize?: number;
   responseStatus?: number;
   durationMs?: number;
-  responseHeaders?: string;
+  responseHeaders?: Record<string, string> | string;
   originalBody: string;
   modifiedBody: string;
-  responseBody?: string;
+  responseBody?: string | ParsedSSEEvent[];
   matchedRules: string;
   error?: string;
-  requestHeaders?: string;      // 协议转换后的请求头
-  originalRequestHeaders?: string; // 原始请求头
+  requestHeaders?: Record<string, string> | string;      // 协议转换后的请求头
+  originalRequestHeaders?: Record<string, string> | string; // 原始请求头
   // 路由 / 供应商 / 转换信息
   routeId?: string;
   supplierId?: string;
@@ -54,6 +54,21 @@ interface RequestFile {
   supplierBaseUrl?: string;
   transformerChain?: string;
   transformTrace?: string;
+}
+
+/**
+ * 解析 headers 字段（兼容 JSON 字符串和对象格式）
+ */
+function parseHeaders(headers: Record<string, string> | string | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  if (typeof headers === 'string') {
+    try {
+      return JSON.parse(headers);
+    } catch {
+      return undefined;
+    }
+  }
+  return headers;
 }
 
 /**
@@ -483,14 +498,14 @@ class FileSystemStorage {
         responseSize: fileContent.responseSize,
         responseStatus: fileContent.responseStatus,
         durationMs: fileContent.durationMs,
-        responseHeaders: fileContent.responseHeaders,
+        responseHeaders: parseHeaders(fileContent.responseHeaders) as any,
         originalBody: fileContent.originalBody,
         modifiedBody: fileContent.modifiedBody,
         responseBody: fileContent.responseBody,
         matchedRules: fileContent.matchedRules,
         error: fileContent.error,
-        requestHeaders: fileContent.requestHeaders,
-        originalRequestHeaders: fileContent.originalRequestHeaders,
+        requestHeaders: parseHeaders(fileContent.requestHeaders) as any,
+        originalRequestHeaders: parseHeaders(fileContent.originalRequestHeaders) as any,
         routeId: fileContent.routeId,
         supplierId: fileContent.supplierId,
         supplierName: fileContent.supplierName,
@@ -642,6 +657,62 @@ class FileSystemStorage {
       await this.flushIndex();
     } catch (error) {
       console.error('[PromptXY] 重建索引失败', error);
+    }
+  }
+
+  /**
+   * 公共方法：重建索引（从 requests/ 目录）
+   * 返回重建结果
+   */
+  async rebuildIndexPublic(): Promise<{ success: boolean; message: string; count: number }> {
+    try {
+      const files = await fs.readdir(this.requestsDir);
+      const yamlFiles = files.filter(f => f.endsWith('.yaml'));
+
+      const newTimeIndex: RequestIndex[] = [];
+
+      for (const file of yamlFiles) {
+        const id = file.replace('.yaml', '');
+        const record = await this.loadRequestFile(id);
+        if (record) {
+          newTimeIndex.push({
+            id: record.id,
+            timestamp: record.timestamp,
+            client: record.client,
+            path: record.path,
+            method: record.method,
+            requestSize: record.requestSize,
+            responseSize: record.responseSize,
+            responseStatus: record.responseStatus,
+            durationMs: record.durationMs,
+            error: record.error,
+            matchedRulesBrief: record.matchedRules
+              ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
+              : [],
+          });
+          this.pathCache.add(record.path);
+        }
+      }
+
+      // 按时间戳倒序排列
+      newTimeIndex.sort((a, b) => b.timestamp - a.timestamp);
+      this.timeIndex = newTimeIndex;
+
+      // 持久化索引
+      await this.flushIndex();
+
+      return {
+        success: true,
+        message: '索引重建成功',
+        count: newTimeIndex.length,
+      };
+    } catch (error: any) {
+      console.error('[PromptXY] 重建索引失败', error);
+      return {
+        success: false,
+        message: `索引重建失败: ${error?.message || String(error)}`,
+        count: 0,
+      };
     }
   }
 
@@ -1310,6 +1381,14 @@ export async function getDatabaseInfo(): Promise<{
  */
 export async function resetDatabaseForTest(): Promise<void> {
   storageInstance = null;
+}
+
+/**
+ * 重建索引
+ */
+export async function rebuildIndex(): Promise<{ success: boolean; message: string; count: number }> {
+  const storage = getDatabase();
+  return storage.rebuildIndexPublic();
 }
 
 /**

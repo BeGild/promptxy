@@ -46,6 +46,7 @@ describe('Gateway Integration Tests', () => {
           protocol: 'anthropic',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: [],
         },
         {
           id: 'codex-up',
@@ -55,6 +56,7 @@ describe('Gateway Integration Tests', () => {
           protocol: 'openai',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: [],
         },
         {
           id: 'gemini-up',
@@ -64,6 +66,7 @@ describe('Gateway Integration Tests', () => {
           protocol: 'gemini',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: [],
         },
       ],
       routes: [
@@ -125,5 +128,19 @@ describe('Gateway Integration Tests', () => {
     expect(detail.body.supplierBaseUrl).toContain(`:${upstreamPort}`);
     expect(Array.isArray(detail.body.transformerChain)).toBe(true);
   });
-});
 
+  it('应在 /codex 出站时解析 modelSpec 并注入 reasoning.effort（命中 supplier.reasoningEfforts/默认列表）', async () => {
+    const response = await client.post('/codex/responses', {
+      model: 'gpt-5.2-codex-high',
+      instructions: 'hello',
+      input: [{ role: 'user', content: 'hi' }],
+    });
+
+    expect(response.status).toBe(200);
+
+    const captured = getCaptured();
+    const upstreamBody = JSON.parse(captured.bodyText);
+    expect(upstreamBody.model).toBe('gpt-5.2-codex');
+    expect(upstreamBody.reasoning?.effort).toBe('high');
+  });
+});

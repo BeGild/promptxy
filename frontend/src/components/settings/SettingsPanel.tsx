@@ -114,6 +114,7 @@ export const SettingsPanel: React.FC = () => {
   // 供应商编辑弹窗状态
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [supplierModelInput, setSupplierModelInput] = useState('');
   const [supplierFormData, setSupplierFormData] = useState<Partial<Supplier>>({
     name: '',
     displayName: '',
@@ -121,6 +122,7 @@ export const SettingsPanel: React.FC = () => {
     protocol: 'anthropic',
     enabled: true,
     auth: { type: 'none' },
+    supportedModels: [],
     description: '',
   });
 
@@ -249,8 +251,10 @@ export const SettingsPanel: React.FC = () => {
       protocol: 'anthropic',
       enabled: true,
       auth: { type: 'none' },
+      supportedModels: [],
       description: '',
     });
+    setSupplierModelInput('');
     setIsSupplierModalOpen(true);
   };
 
@@ -258,6 +262,7 @@ export const SettingsPanel: React.FC = () => {
   const handleOpenEditSupplierModal = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setSupplierFormData({ ...supplier });
+    setSupplierModelInput('');
     setIsSupplierModalOpen(true);
   };
 
@@ -783,6 +788,59 @@ export const SettingsPanel: React.FC = () => {
                     </SelectItem>
                   ))}
                 </Select>
+              </div>
+
+              {/* 支持模型（Chips） */}
+              <div>
+                <label className="text-sm font-medium text-primary mb-2 block">
+                  支持的模型
+                </label>
+                <div className="p-3 rounded-lg border border-subtle bg-canvas dark:bg-secondary/30 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {(supplierFormData.supportedModels || []).length === 0 ? (
+                      <span className="text-xs text-tertiary">
+                        未配置（/claude 映射与校验将不可用）
+                      </span>
+                    ) : (
+                      (supplierFormData.supportedModels || []).map(model => (
+                        <Chip
+                          key={model}
+                          size="sm"
+                          variant="flat"
+                          onClose={() => {
+                            setSupplierFormData(prev => ({
+                              ...prev,
+                              supportedModels: (prev.supportedModels || []).filter(m => m !== model),
+                            }));
+                          }}
+                        >
+                          {model}
+                        </Chip>
+                      ))
+                    )}
+                  </div>
+
+                  <Input
+                    value={supplierModelInput}
+                    onValueChange={setSupplierModelInput}
+                    placeholder="输入模型后回车添加，例如: gpt-5.2-high"
+                    radius="lg"
+                    variant="bordered"
+                    description="支持回车添加、去重；用于 Claude 路由模型映射与校验"
+                    onKeyDown={e => {
+                      if (e.key !== 'Enter') return;
+                      e.preventDefault();
+                      const value = supplierModelInput.trim();
+                      if (!value) return;
+                      setSupplierFormData(prev => {
+                        const list = prev.supportedModels || [];
+                        if (list.includes(value)) return prev;
+                        return { ...prev, supportedModels: [...list, value] };
+                      });
+                      setSupplierModelInput('');
+                    }}
+                  />
+                </div>
               </div>
 
               <div>

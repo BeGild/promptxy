@@ -3,7 +3,7 @@
  * 配置本地服务到供应商的路由，自动选择转换器
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Card,
@@ -20,7 +20,7 @@ import {
   Chip,
   Divider,
 } from '@heroui/react';
-import { ArrowRight, Plus, Trash2, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Info, AlertCircle, CheckCircle2, Edit2 } from 'lucide-react';
 import { useSuppliers } from '@/hooks';
 import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
 import type { Supplier, LocalService, TransformerType, Route } from '@/types/api';
@@ -114,12 +114,16 @@ export const RouteConfigPage: React.FC = () => {
 
   const [routes, setRoutes] = useState<Route[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [newRoute, setNewRoute] = useState<Partial<Route>>({
     localService: 'claude',
     supplierId: '',
     transformer: 'none',
+    claudeModelMap: undefined,
     enabled: true,
   });
+  const [editRoute, setEditRoute] = useState<Partial<Route>>({});
 
   const suppliers = suppliersData?.suppliers || [];
 
@@ -173,6 +177,15 @@ export const RouteConfigPage: React.FC = () => {
       return;
     }
 
+    // Claude 跨协议：sonnet 映射必填（haiku/opus 可选，默认同 sonnet）
+    if (newRoute.localService === 'claude' && supplier.protocol !== 'anthropic') {
+      const sonnet = (newRoute as any).claudeModelMap?.sonnet;
+      if (!sonnet) {
+        toast.error('Claude 跨协议路由必须配置 sonnet 模型映射');
+        return;
+      }
+    }
+
     try {
       // 调用路由 API 创建路由
       const response = await createRoute({
@@ -191,6 +204,7 @@ export const RouteConfigPage: React.FC = () => {
           localService: 'claude',
           supplierId: '',
           transformer: 'none',
+          claudeModelMap: undefined,
           enabled: true,
         });
 
@@ -258,6 +272,56 @@ export const RouteConfigPage: React.FC = () => {
           setRoutes(routesResponse.routes);
         }
         toast.success('路由配置已更新！');
+      } else {
+        toast.error(`更新失败: ${response.message || '未知错误'}`);
+      }
+    } catch (error: any) {
+      toast.error(`更新失败: ${error?.message || '未知错误'}`);
+    }
+  };
+
+  const handleOpenEditModal = (route: Route) => {
+    setEditingRoute(route);
+    setEditRoute({ ...route });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditRoute = async () => {
+    if (!editingRoute) return;
+
+    const supplierId = editRoute.supplierId || editingRoute.supplierId;
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) {
+      toast.error('无效的供应商');
+      return;
+    }
+
+    if (editingRoute.localService === 'claude' && supplier.protocol !== 'anthropic') {
+      const sonnet = (editRoute as any).claudeModelMap?.sonnet ?? (editingRoute as any).claudeModelMap?.sonnet;
+      if (!sonnet) {
+        toast.error('Claude 跨协议路由必须配置 sonnet 模型映射');
+        return;
+      }
+    }
+
+    try {
+      const response = await updateRoute({
+        routeId: editingRoute.id,
+        route: {
+          supplierId,
+          claudeModelMap: (editRoute as any).claudeModelMap,
+        } as any,
+      });
+
+      if (response.success) {
+        const routesResponse = await fetchRoutes();
+        if (routesResponse.success) {
+          setRoutes(routesResponse.routes);
+        }
+        toast.success('路由配置已更新！');
+        setIsEditModalOpen(false);
+        setEditingRoute(null);
+        setEditRoute({});
       } else {
         toast.error(`更新失败: ${response.message || '未知错误'}`);
       }
@@ -367,6 +431,15 @@ export const RouteConfigPage: React.FC = () => {
 
                   {/* 右侧：开关与删除 */}
                   <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      isIconOnly
+                      variant="light"
+                      onPress={() => handleOpenEditModal(route)}
+                      size="sm"
+                      title="编辑路由"
+                    >
+                      <Edit2 size={16} />
+                    </Button>
                     <Switch
                       isSelected={route.enabled}
                       onValueChange={() => handleToggleRoute(route)}
@@ -434,7 +507,12 @@ export const RouteConfigPage: React.FC = () => {
                   selectedKeys={[newRoute.localService || '']}
                   onSelectionChange={keys => {
                     const key = Array.from(keys)[0] as LocalService;
-                    setNewRoute(prev => ({ ...prev, localService: key }));
+                    setNewRoute(prev => ({
+                      ...prev,
+                      localService: key,
+                      supplierId: '',
+                      claudeModelMap: undefined,
+                    }));
                   }}
                   radius="lg"
                   variant="bordered"
@@ -467,7 +545,7 @@ export const RouteConfigPage: React.FC = () => {
                   selectedKeys={[newRoute.supplierId || '']}
                   onSelectionChange={keys => {
                     const key = Array.from(keys)[0] as string;
-                    setNewRoute(prev => ({ ...prev, supplierId: key }));
+                    setNewRoute(prev => ({ ...prev, supplierId: key, claudeModelMap: undefined }));
                   }}
                   radius="lg"
                   variant="bordered"
@@ -510,6 +588,102 @@ export const RouteConfigPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Claude 模型映射（仅 claude 且跨协议） */}
+            {newRoute.localService === 'claude' && newRoute.supplierId && (() => {
+              const supplier = suppliers.find(s => s.id === newRoute.supplierId);
+              if (!supplier) return null;
+              if (supplier.protocol === 'anthropic') return null;
+              const models = supplier.supportedModels || [];
+              const modelItems = models.map(m => ({ key: m, label: m }));
+              const modelItemsWithDefault = [{ key: '__default__', label: '默认同 sonnet' }, ...modelItems];
+              return (
+                <div className="space-y-3">
+                  <Divider />
+                  <div className="text-sm font-medium text-primary">Claude 模型映射</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-primary mb-2 block">sonnet *</label>
+                      <Select
+                        selectedKeys={[((newRoute as any).claudeModelMap?.sonnet as string) || '']}
+                        onSelectionChange={keys => {
+                          const key = Array.from(keys)[0] as string;
+                          setNewRoute(prev => ({
+                            ...prev,
+                            claudeModelMap: { ...(prev as any).claudeModelMap, sonnet: key },
+                          }));
+                        }}
+                        radius="lg"
+                        variant="bordered"
+                        items={modelItems}
+                      >
+                        {(item: any) => (
+                          <SelectItem key={item.key} textValue={item.label}>
+                            {item.label}
+                          </SelectItem>
+                        )}
+                      </Select>
+                      <p className="text-xs text-tertiary mt-1">识别不到档位默认使用 sonnet</p>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-primary mb-2 block">haiku</label>
+                      <Select
+                        selectedKeys={[((newRoute as any).claudeModelMap?.haiku as string) || '__default__']}
+                        onSelectionChange={keys => {
+                          const key = Array.from(keys)[0] as string;
+                          setNewRoute(prev => ({
+                            ...prev,
+                            claudeModelMap: {
+                              ...(prev as any).claudeModelMap,
+                              haiku: key === '__default__' ? undefined : key,
+                            },
+                          }));
+                        }}
+                        radius="lg"
+                        variant="bordered"
+                        items={modelItemsWithDefault}
+                      >
+                        {(item: any) => (
+                          <SelectItem key={item.key} textValue={item.label}>
+                            {item.label}
+                          </SelectItem>
+                        )}
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-primary mb-2 block">opus</label>
+                      <Select
+                        selectedKeys={[((newRoute as any).claudeModelMap?.opus as string) || '__default__']}
+                        onSelectionChange={keys => {
+                          const key = Array.from(keys)[0] as string;
+                          setNewRoute(prev => ({
+                            ...prev,
+                            claudeModelMap: {
+                              ...(prev as any).claudeModelMap,
+                              opus: key === '__default__' ? undefined : key,
+                            },
+                          }));
+                        }}
+                        radius="lg"
+                        variant="bordered"
+                        items={modelItemsWithDefault}
+                      >
+                        {(item: any) => (
+                          <SelectItem key={item.key} textValue={item.label}>
+                            {item.label}
+                          </SelectItem>
+                        )}
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-tertiary">
+                    haiku/opus 未配置时默认同 sonnet
+                  </p>
+                </div>
+              );
+            })()}
+
             {/* 自动选择的转换器 */}
             {newRoute.localService && newRoute.supplierId && (
               <div className="p-4 bg-canvas dark:bg-secondary/50 rounded-lg">
@@ -543,6 +717,172 @@ export const RouteConfigPage: React.FC = () => {
               isDisabled={!newRoute.localService || !newRoute.supplierId}
             >
               添加路由
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* 编辑路由弹窗（用于配置 Claude 模型映射） */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        size="2xl"
+        backdrop="blur"
+        placement="center"
+      >
+        <ModalContent>
+          <ModalHeader>编辑路由</ModalHeader>
+          <ModalBody className="space-y-4">
+            {!editingRoute ? (
+              <p className="text-sm text-tertiary">未选择路由</p>
+            ) : (
+              <>
+                <div className="p-4 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
+                    <p className="text-xs text-secondary">
+                      编辑供应商与 Claude 模型映射；转换器由系统自动选择。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">本地服务</label>
+                    <Select selectedKeys={[editingRoute.localService]} isDisabled radius="lg" variant="bordered">
+                      {LOCAL_SERVICES.map(service => (
+                        <SelectItem key={service.key} textValue={service.label}>
+                          {service.label}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="hidden md:flex items-center justify-center pt-6">
+                    <ArrowRight size={24} className="text-tertiary" />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">上游供应商 *</label>
+                    <Select
+                      selectedKeys={[editRoute.supplierId || editingRoute.supplierId]}
+                      onSelectionChange={keys => {
+                        const key = Array.from(keys)[0] as string;
+                        setEditRoute(prev => ({ ...prev, supplierId: key, claudeModelMap: undefined }));
+                      }}
+                      radius="lg"
+                      variant="bordered"
+                    >
+                      {getAvailableSuppliers(editingRoute.localService).map(supplier => (
+                        <SelectItem key={supplier.id} textValue={supplier.displayName}>
+                          {supplier.displayName}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+
+                {editingRoute.localService === 'claude' && (() => {
+                  const supplier = suppliers.find(s => s.id === (editRoute.supplierId || editingRoute.supplierId));
+                  if (!supplier) return null;
+                  if (supplier.protocol === 'anthropic') return null;
+                  const models = supplier.supportedModels || [];
+                  const modelItems = models.map(m => ({ key: m, label: m }));
+                  const modelItemsWithDefault = [{ key: '__default__', label: '默认同 sonnet' }, ...modelItems];
+                  const effectiveMap = (editRoute as any).claudeModelMap || (editingRoute as any).claudeModelMap || {};
+                  return (
+                    <div className="space-y-3">
+                      <Divider />
+                      <div className="text-sm font-medium text-primary">Claude 模型映射</div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-primary mb-2 block">sonnet *</label>
+                          <Select
+                            selectedKeys={[effectiveMap.sonnet || '']}
+                            onSelectionChange={keys => {
+                              const key = Array.from(keys)[0] as string;
+                              setEditRoute(prev => ({
+                                ...prev,
+                                claudeModelMap: { ...(prev as any).claudeModelMap, sonnet: key },
+                              }));
+                            }}
+                            radius="lg"
+                            variant="bordered"
+                            items={modelItems}
+                          >
+                            {(item: any) => (
+                              <SelectItem key={item.key} textValue={item.label}>
+                                {item.label}
+                              </SelectItem>
+                            )}
+                          </Select>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-primary mb-2 block">haiku</label>
+                          <Select
+                            selectedKeys={[effectiveMap.haiku || '__default__']}
+                            onSelectionChange={keys => {
+                              const key = Array.from(keys)[0] as string;
+                              setEditRoute(prev => ({
+                                ...prev,
+                                claudeModelMap: {
+                                  ...(prev as any).claudeModelMap,
+                                  haiku: key === '__default__' ? undefined : key,
+                                },
+                              }));
+                            }}
+                            radius="lg"
+                            variant="bordered"
+                            items={modelItemsWithDefault}
+                          >
+                            {(item: any) => (
+                              <SelectItem key={item.key} textValue={item.label}>
+                                {item.label}
+                              </SelectItem>
+                            )}
+                          </Select>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-primary mb-2 block">opus</label>
+                          <Select
+                            selectedKeys={[effectiveMap.opus || '__default__']}
+                            onSelectionChange={keys => {
+                              const key = Array.from(keys)[0] as string;
+                              setEditRoute(prev => ({
+                                ...prev,
+                                claudeModelMap: {
+                                  ...(prev as any).claudeModelMap,
+                                  opus: key === '__default__' ? undefined : key,
+                                },
+                              }));
+                            }}
+                            radius="lg"
+                            variant="bordered"
+                            items={modelItemsWithDefault}
+                          >
+                            {(item: any) => (
+                              <SelectItem key={item.key} textValue={item.label}>
+                                {item.label}
+                              </SelectItem>
+                            )}
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-xs text-tertiary">haiku/opus 未配置时默认同 sonnet；识别不到档位时按 sonnet</p>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setIsEditModalOpen(false)}>
+              取消
+            </Button>
+            <Button color="primary" onPress={handleSaveEditRoute} className="shadow-md" isDisabled={!editingRoute}>
+              保存
             </Button>
           </ModalFooter>
         </ModalContent>

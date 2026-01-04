@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for originalRequestHeaders from 2026-01-04_21-42-07-414_1ompl7.yaml",
+  "sample_count": 1,
+  "type": "object",
+  "properties": {
+    "accept": {
+      "type": "string"
+    },
+    "x-stainless-retry-count": {
+      "type": "string"
+    },
+    "x-stainless-timeout": {
+      "type": "string"
+    },
+    "x-stainless-lang": {
+      "type": "string"
+    },
+    "x-stainless-package-version": {
+      "type": "string"
+    },
+    "x-stainless-os": {
+      "type": "string"
+    },
+    "x-stainless-arch": {
+      "type": "string"
+    },
+    "x-stainless-runtime": {
+      "type": "string"
+    },
+    "x-stainless-runtime-version": {
+      "type": "string"
+    },
+    "anthropic-dangerous-direct-browser-access": {
+      "type": "string"
+    },
+    "anthropic-version": {
+      "type": "string"
+    },
+    "x-app": {
+      "type": "string"
+    },
+    "user-agent": {
+      "type": "string"
+    },
+    "authorization": {
+      "type": "string"
+    },
+    "content-type": {
+      "type": "string"
+    },
+    "anthropic-beta": {
+      "type": "string"
+    },
+    "x-stainless-helper-method": {
+      "type": "string"
+    },
+    "accept-language": {
+      "type": "string"
+    },
+    "sec-fetch-mode": {
+      "type": "string"
+    },
+    "accept-encoding": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "accept",
+    "x-stainless-retry-count",
+    "x-stainless-timeout",
+    "x-stainless-lang",
+    "x-stainless-package-version",
+    "x-stainless-os",
+    "x-stainless-arch",
+    "x-stainless-runtime",
+    "x-stainless-runtime-version",
+    "anthropic-dangerous-direct-browser-access",
+    "anthropic-version",
+    "x-app",
+    "user-agent",
+    "authorization",
+    "content-type",
+    "anthropic-beta",
+    "x-stainless-helper-method",
+    "accept-language",
+    "sec-fetch-mode",
+    "accept-encoding"
+  ],
+  "additionalProperties": false
+}

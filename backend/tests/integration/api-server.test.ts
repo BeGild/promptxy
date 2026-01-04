@@ -22,6 +22,7 @@ describe('API Server - Routes', () => {
           protocol: 'anthropic',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: [],
         },
         {
           id: 'codex-up',
@@ -31,6 +32,7 @@ describe('API Server - Routes', () => {
           protocol: 'openai',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: ['gpt-5.2-codex-high'],
         },
         {
           id: 'gemini-up',
@@ -40,6 +42,7 @@ describe('API Server - Routes', () => {
           protocol: 'gemini',
           enabled: true,
           auth: { type: 'none' },
+          supportedModels: [],
         },
       ],
       routes: [
@@ -74,6 +77,7 @@ describe('API Server - Routes', () => {
         localService: 'claude',
         supplierId: 'codex-up',
         transformer: 'none', // 后端会忽略并自动选择
+        claudeModelMap: { sonnet: 'gpt-5.2-codex-high' },
         enabled: true,
       },
     });

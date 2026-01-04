@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for responseBody from 2026-01-04_21-46-07-226_mvcluq.yaml",
+  "sample_count": 1,
+  "type": "object",
+  "properties": {
+    "sse_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "event",
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "event_count": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "sse_events",
+    "event_count"
+  ],
+  "additionalProperties": false
+}
