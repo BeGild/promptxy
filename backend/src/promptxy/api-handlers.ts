@@ -986,8 +986,8 @@ export async function handleDeleteRule(
 // 协议转换预览 API（新增）
 // ============================================================================
 
-import { createProtocolTransformer } from './transformers/llms-compat.js';
-import type { TransformPreview } from './transformers/types.js';
+import { createProtocolTransformer } from './transformers/index.js';
+import type { TransformTrace } from './transformers/index.js';
 
 /**
  * 处理协议转换预览请求
@@ -1021,24 +1021,34 @@ export async function handleTransformPreview(
     }
 
     // 执行转换预览
+    // request.request 是 Claude 请求体（model, messages 等）
     const transformer = createProtocolTransformer();
-    const preview = await transformer.preview({
+    const result = await transformer.transform({
       supplier: {
         id: supplier.id,
         name: supplier.name,
         baseUrl: supplier.baseUrl,
         auth: supplier.auth,
+        transformer: { default: ['codex'] },
       },
       request: {
-        method: request.request.method || 'POST',
-        path: request.request.path || '/v1/messages',
-        headers: request.request.headers || {},
-        body: request.request.body,
+        method: 'POST',
+        path: '/v1/messages',
+        headers: {},
+        body: request.request,  // 用户提供的 request 字段就是 Claude 请求体
       },
       stream: request.stream || false,
     });
 
-    sendJson<TransformPreview>(res, 200, preview);
+    sendJson<{
+      request: typeof result.request;
+      trace: TransformTrace;
+      needsResponseTransform: boolean;
+    }>(res, 200, {
+      request: result.request,
+      trace: result.trace,
+      needsResponseTransform: result.needsResponseTransform,
+    });
   } catch (error: any) {
     sendJson(res, 500, {
       error: 'Transform preview failed',
@@ -1055,18 +1065,17 @@ export async function handleGetTransformers(
   res: http.ServerResponse,
 ): Promise<void> {
   try {
-    const { getGlobalRegistry } = await import('./transformers/registry.js');
-    const registry = getGlobalRegistry();
-    const transformers = registry.getAllMetadata();
-
+    // 新实现：返回支持的协议转换器
     sendJson(res, 200, {
-      transformers: Object.entries(transformers).map(([key, meta]) => ({
-        name: meta.name,
-        description: meta.description,
-        supportedSuppliers: meta.supportedSuppliers,
-        supportsStreaming: meta.supportsStreaming,
-        supportsTools: meta.supportsTools,
-      })),
+      transformers: [
+        {
+          name: 'codex',
+          description: 'Claude Messages API → Codex Responses API',
+          supportedSuppliers: ['openai'],
+          supportsStreaming: true,
+          supportsTools: true,
+        },
+      ],
     });
   } catch (error: any) {
     sendJson(res, 500, {

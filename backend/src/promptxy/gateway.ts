@@ -64,9 +64,9 @@ import {
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
-import { createProtocolTransformer } from './transformers/llms-compat.js';
+import { createProtocolTransformer } from './transformers/index.js';
+import { createSSETransformStream, isSSEResponse } from './transformers/index.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
-import { createSSETransformStream, isSSEResponse } from './transformers/sse.js';
 import {
   detectClaudeModelTier,
   parseOpenAIModelSpec,
@@ -746,9 +746,9 @@ export function createGateway(
       }
 
       // ========== 注入上游认证（新增）==========
-      // 说明：协议转换器内部会注入 supplier.auth；仅在未经过协议转换时在网关层注入
+      // 协议转换后的 headers 需要注入认证
       headers = effectiveHeaders;
-      if (matchedRoute.route.transformer === 'none' && matchedRoute.supplier.auth) {
+      if (matchedRoute.supplier.auth) {
         if (matchedRoute.supplier.auth.type === 'bearer' && matchedRoute.supplier.auth.token) {
           headers['authorization'] = `Bearer ${matchedRoute.supplier.auth.token}`;
           if (config.debug) {
@@ -920,16 +920,17 @@ export function createGateway(
 
       const responseBodyChunks: Buffer[] = [];
       const upstreamStream = Readable.fromWeb(upstreamResponse.body as any);
+      const transformStream = createSSETransformStream(transformerChain[0]);
       const outboundStream =
         isSSE && needsResponseTransform && transformerChain.length > 0
-          ? upstreamStream.pipe(createSSETransformStream(transformerChain[0]))
+          ? upstreamStream.pipe(transformStream as any)
           : upstreamStream;
 
-      outboundStream.on('data', (chunk: Buffer) => {
+      (outboundStream as any).on('data', (chunk: Buffer) => {
         responseBodyChunks.push(chunk);
       });
 
-      outboundStream.pipe(res);
+      (outboundStream as any).pipe(res);
 
       // 记录请求到数据库（在响应流结束后）
       const duration = Date.now() - startTime;
