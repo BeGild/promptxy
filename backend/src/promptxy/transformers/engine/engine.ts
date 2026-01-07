@@ -251,6 +251,7 @@ export class TransformerEngine {
       messages: parsed.messages,
       tools: parsed.tools,
       stream: parsed.stream,
+      sessionId: parsed.sessionId,
     }, renderConfig, audit);
 
     // 收集目标路径

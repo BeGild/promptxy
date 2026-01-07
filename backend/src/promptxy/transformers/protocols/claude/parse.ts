@@ -102,6 +102,8 @@ export function parseClaudeRequest(request: ClaudeMessagesRequest): {
   stream: boolean;
   model: string;
   metadata?: Record<string, unknown>;
+  /** 从 metadata.user_id 提取的 sessionId，用于 prompt_cache_key */
+  sessionId?: string;
 } {
   const system = normalizeSystem(request.system);
 
@@ -125,6 +127,7 @@ export function parseClaudeRequest(request: ClaudeMessagesRequest): {
     stream: request.stream || false,
     model: request.model,
     metadata: request.metadata,
+    sessionId: extractSessionId(request.metadata),
   };
 }
 

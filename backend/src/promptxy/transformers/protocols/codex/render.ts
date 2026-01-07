@@ -61,11 +61,13 @@ export function renderCodexRequest(
     }>;
     /** stream */
     stream: boolean;
+    /** sessionId（从 metadata.user_id 提取，用于 prompt_cache_key） */
+    sessionId?: string;
   },
   config: RenderConfig,
   audit: FieldAuditCollector,
 ): CodexResponsesApiRequest {
-  const { model, system, messages, tools, stream } = params;
+  const { model, system, messages, tools, stream, sessionId } = params;
 
   // 1. instructions = template + system
   const instructions = renderInstructions(system.text, config.instructionsTemplate, audit);
@@ -98,7 +100,7 @@ export function renderCodexRequest(
     store: false,  // 上游要求必须是 false
     stream: true,  // Codex API 强制要求 stream=true
     include,
-    // prompt_cache_key: 暂不设置，需要 conversation_id
+    prompt_cache_key: sessionId,  // 使用 sessionId 作为 prompt_cache_key
     text,
   };
 }
@@ -155,14 +157,16 @@ function renderInput(
     for (const block of msg.content.blocks) {
       if (block.type === 'text') {
         // text block -> message item
+        // 注意：根据 Codex API 规范，user 角色使用 input_text，assistant 角色使用 output_text
+        const contentType = msg.role === 'assistant' ? 'output_text' : 'input_text';
         const messageItem: CodexMessageItem = {
           type: 'message',
           role: msg.role as 'user' | 'assistant',
           content: [
             {
-              type: 'input_text',
+              type: contentType,
               text: block.text || '',
-            } as CodexInputTextItem,
+            },
           ],
         };
         input.push(messageItem);
