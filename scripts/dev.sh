@@ -35,7 +35,7 @@ if [ ! -d "frontend/node_modules" ]; then
 	cd frontend && npm install && cd ..
 fi
 
-npm run build
+#npm run build
 
 echo ""
 echo "========================================="
