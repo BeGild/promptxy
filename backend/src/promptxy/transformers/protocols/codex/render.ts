@@ -220,8 +220,18 @@ function renderTools(
   return tools.map((tool, idx) => {
     const basePath = `/tools/${idx}`;
 
+    // 修复上游对部分“输出/回填字段”的严格校验：此类字段不应出现在 function 入参 schema 中
+    // 目前已知：AskUserQuestion.input_schema.properties.answers 会导致 OpenAI 上游报
+    // Invalid schema ... Extra required key 'answers' supplied
+    const normalizedInputSchema = normalizeToolInputSchemaForCodex(
+      tool.name,
+      tool.inputSchema,
+      audit,
+      basePath,
+    );
+
     // 策略：强剪裁（移除 format/$schema 等，添加 additionalProperties=false）
-    const prunedSchema = pruneToolSchema(tool.inputSchema, audit);
+    const prunedSchema = pruneToolSchema(normalizedInputSchema, audit);
 
     const codexTool: CodexResponsesApiTool = {
       type: 'function',
@@ -233,6 +243,52 @@ function renderTools(
 
     return codexTool;
   });
+}
+
+/**
+ * 将 Claude tools 的 input schema 规范化为更易被 Codex/OpenAI 上游接受的形式
+ *
+ * 注意：这里处理的是“工具调用入参 schema”，因此应剔除明显的输出/回填字段。
+ */
+function normalizeToolInputSchemaForCodex(
+  toolName: string,
+  inputSchema: Record<string, unknown>,
+  audit: FieldAuditCollector,
+  toolBasePath: string,
+): Record<string, unknown> {
+  // 避免就地修改上游/解析阶段对象：做一个浅拷贝即可（我们只动顶层 properties/required）
+  const schema: Record<string, unknown> = { ...inputSchema };
+
+  if (toolName !== 'AskUserQuestion') {
+    return schema;
+  }
+
+  const props = schema.properties;
+  if (!props || typeof props !== 'object' || Array.isArray(props)) {
+    return schema;
+  }
+
+  // AskUserQuestion 的 answers 是权限组件回填的“用户回答”，不是模型调用时要提供的入参
+  if ('answers' in (props as Record<string, unknown>)) {
+    const clonedProps = { ...(props as Record<string, unknown>) };
+    delete clonedProps.answers;
+    schema.properties = clonedProps;
+
+    if (Array.isArray(schema.required)) {
+      schema.required = (schema.required as unknown[]).filter(
+        key => typeof key === 'string' && key !== 'answers',
+      );
+    }
+
+    audit.addDiff({
+      op: 'remove',
+      path: `${toolBasePath}/input_schema/properties/answers` as any,
+      valuePreview: undefined,
+    });
+    audit.setMetadata('askUserQuestionAnswersStripped', true);
+  }
+
+  return schema;
 }
 
 /**
@@ -259,10 +315,8 @@ function pruneToolSchema(
     }
   }
 
-  // 添加 additionalProperties=false（严格模式）
-  if (!('additionalProperties' in pruned)) {
-    pruned.additionalProperties = false;
-  }
+  // 强制设置 additionalProperties=false（严格模式，上游要求）
+  pruned.additionalProperties = false;
 
   // 对于 strict 模式，确保 required 包含所有 properties 中的 key
   // 上游要求：required 必须存在且包含所有 properties 的 key
@@ -302,6 +356,8 @@ function pruneToolSchema(
 /**
  * 清理嵌套的 schema
  * 确保嵌套对象也有 additionalProperties: false 和 required 字段
+ *
+ * 参考 codex-rs/core/src/tools/spec.rs 的 sanitize_json_schema 逻辑
  */
 function sanitizeNestedSchema(
   schema: unknown,
@@ -315,30 +371,33 @@ function sanitizeNestedSchema(
     if (!Array.isArray(schema)) {
       const obj = schema as Record<string, unknown>;
 
-      // 如果是对象类型，确保有 additionalProperties
-      if (obj.type === 'object') {
-        if (!('additionalProperties' in obj)) {
-          obj.additionalProperties = false;
+      // 移除可能导致上游拒绝的字段（与 pruneToolSchema 保持一致）
+      const fieldsToRemove = ['$schema', 'format', 'title', 'examples', 'default'];
+      for (const field of fieldsToRemove) {
+        if (field in obj) {
+          delete obj[field];
         }
+      }
 
-        // 如果有 properties，处理 required（只有当 properties 非空时）
-        if (obj.properties && typeof obj.properties === 'object') {
-          const propertyKeys = Object.keys(obj.properties);
-          if (!obj.required && propertyKeys.length > 0) {
-            obj.required = propertyKeys;
-          }
-
-          // 递归处理嵌套的属性
-          for (const key of propertyKeys) {
-            const value = (obj.properties as Record<string, unknown>)[key];
-            if (value && typeof value === 'object') {
-              (obj.properties as Record<string, unknown>)[key] = sanitizeNestedSchema(value, audit, depth + 1);
-            }
+      // 首先递归处理嵌套的 schema holders
+      // 1. properties
+      if (obj.properties && typeof obj.properties === 'object') {
+        const propertyKeys = Object.keys(obj.properties);
+        // 递归处理每个属性值
+        for (const key of propertyKeys) {
+          const value = (obj.properties as Record<string, unknown>)[key];
+          if (value && typeof value === 'object') {
+            (obj.properties as Record<string, unknown>)[key] = sanitizeNestedSchema(value, audit, depth + 1);
           }
         }
       }
 
-      // 递归处理 anyOf、oneOf、allOf
+      // 2. items
+      if (obj.items && typeof obj.items === 'object') {
+        obj.items = sanitizeNestedSchema(obj.items, audit, depth + 1);
+      }
+
+      // 3. anyOf、oneOf、allOf
       for (const combiner of ['anyOf', 'oneOf', 'allOf'] as const) {
         if (combiner in obj && Array.isArray(obj[combiner])) {
           obj[combiner] = obj[combiner].map(item =>
@@ -349,7 +408,58 @@ function sanitizeNestedSchema(
         }
       }
 
+      // 推断类型：如果包含 properties/required/additionalProperties，则是对象类型
+      const isObjectType = obj.type === 'object' ||
+        ('properties' in obj) ||
+        ('required' in obj) ||
+        ('additionalProperties' in obj);
+
+      // 如果是对象类型，确保有 additionalProperties
+      if (isObjectType) {
+        // 如果 additionalProperties 是一个对象 schema，先递归清理它
+        if ('additionalProperties' in obj) {
+          const ap = obj.additionalProperties;
+          if (typeof ap === 'object' && ap !== null && !Array.isArray(ap)) {
+            sanitizeNestedSchema(ap, audit, depth + 1);  // 就地修改，不需要赋值
+          }
+        }
+
+        // 强制设置 additionalProperties = false（上游要求）
+        obj.additionalProperties = false;
+
+        // 如果有 properties，确保正确设置 required
+        // 上游要求：required 必须包含 properties 中的所有键，且不能包含额外的键
+        if (obj.properties && typeof obj.properties === 'object') {
+          const propertyKeys = Object.keys(obj.properties);
+
+          if (propertyKeys.length > 0) {
+            // 如果 required 已存在，过滤掉不在 properties 中的键
+            if (obj.required && Array.isArray(obj.required)) {
+              obj.required = obj.required.filter((key: unknown) =>
+                typeof key === 'string' && propertyKeys.includes(key)
+              );
+            } else {
+              // 如果 required 不存在，设置为所有 property keys
+              obj.required = propertyKeys;
+            }
+          } else {
+            // 如果 properties 为空，移除 required 字段（让上游使用默认行为）
+            delete obj.required;
+          }
+        } else if (obj.required) {
+          // 如果没有 properties 但有 required，移除 required
+          delete obj.required;
+        }
+      }
+
       return obj;
+    } else {
+      // 是数组，递归处理每个元素
+      return (schema as unknown[]).map(item =>
+        typeof item === 'object' && item !== null
+          ? sanitizeNestedSchema(item, audit, depth + 1)
+          : item
+      );
     }
   }
 
