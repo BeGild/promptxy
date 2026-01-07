@@ -225,6 +225,76 @@ function summarizeMatches(matches: PromptxyRuleMatch[]): string {
 }
 
 /**
+ * 检测是否为 warmup 请求
+ *
+ * Warmup 请求特征（参考 claude-relay-service）：
+ * - 只有单条消息
+ * - 没有附带 tools
+ *
+ * 这种请求通常是 Claude Code 的预热/探测请求，对 codex 供应商无效
+ *
+ * @param body - 请求体
+ * @returns 是否为 warmup 请求
+ */
+function isWarmupRequest(body: any): boolean {
+  if (!body || typeof body !== 'object') return false;
+
+  const messages = body?.messages;
+  const tools = body?.tools;
+
+  // 必须有 messages 数组
+  if (!Array.isArray(messages) || messages.length === 0) return false;
+
+  // 单条消息 + 无 tools = warmup
+  if (messages.length === 1) {
+    // 检查是否没有 tools 或者 tools 数组为空
+    if (!tools || (Array.isArray(tools) && tools.length === 0)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * 检测是否为 "count" 探测请求
+ *
+ * 这种请求特征：只有一个 message，内容仅为 "count" 文本
+ * 通常是 Claude Code 的另一种探测请求，对 codex 供应商无效
+ *
+ * @param body - 请求体
+ * @returns 是否为 count 探测请求
+ */
+function isCountProbeRequest(body: any): boolean {
+  if (!body || typeof body !== 'object') return false;
+
+  const messages = body?.messages;
+  if (!Array.isArray(messages) || messages.length !== 1) return false;
+
+  const msg = messages[0];
+  if (!msg || typeof msg !== 'object') return false;
+
+  // 处理字符串格式 content: { content: "count" }
+  if (typeof msg.content === 'string') {
+    return msg.content.trim() === 'count';
+  }
+
+  // 处理数组格式 content: { content: [{ type: "text", text: "count" }] }
+  if (Array.isArray(msg.content)) {
+    // 只有一个 content block 且是 text 类型，内容为 "count"
+    if (msg.content.length === 1) {
+      const block = msg.content[0];
+      if (block && typeof block === 'object' && block.type === 'text') {
+        const text = block.text || block.input_text || '';
+        return text.trim() === 'count';
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * 获取前端静态文件目录路径
  */
 function getFrontendDir(): string | null {
@@ -591,6 +661,20 @@ export function createGateway(
 
       upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
 
+      // ========== 路径过滤：Codex 供应商仅支持 /v1/messages ==========
+      if (
+        matchedRoute.localService === 'claude' &&
+        matchedRoute.route.transformer === 'codex' &&
+        upstreamPath !== '/v1/messages'
+      ) {
+        jsonError(res, 404, {
+          error: 'not_found',
+          message: 'Codex 供应商仅支持 /v1/messages 端点',
+          path: upstreamPath,
+        });
+        return;
+      }
+
       // ========== 网关入站鉴权（新增）==========
       let authHeaderUsed: string | undefined;
       if (config.gatewayAuth && config.gatewayAuth.enabled) {
@@ -667,6 +751,50 @@ export function createGateway(
           jsonBody = result.body;
           matches = result.matches;
         }
+      }
+
+      // ========== Warmup 请求过滤：跳过无意义的预热请求 ==========
+      // 参考项目：claude-relay-service
+      // Warmup 请求特征：单条消息 + 无 tools，通常是 Claude Code 的探测请求
+      if (
+        matchedRoute.localService === 'claude' &&
+        matchedRoute.route.transformer === 'codex' &&
+        isWarmupRequest(jsonBody)
+      ) {
+        if (config.debug) {
+          logger.debug(
+            `[promptxy] 检测到 warmup 请求，跳过转发以节省 token`,
+          );
+        }
+        // 返回空响应，快速处理
+        jsonError(res, 200, {
+          type: 'result',
+          role: 'assistant',
+          content: [{ type: 'text', text: '' }],
+        });
+        return;
+      }
+
+      // ========== Count 探测请求过滤：跳过 "count" 文本探测 ==========
+      // 这种请求只有一个 message，内容仅为 "count"
+      // 对 codex 供应商无效，直接返回空响应
+      if (
+        matchedRoute.localService === 'claude' &&
+        matchedRoute.route.transformer === 'codex' &&
+        isCountProbeRequest(jsonBody)
+      ) {
+        if (config.debug) {
+          logger.debug(
+            `[promptxy] 检测到 count 探测请求，跳过转发以节省 token`,
+          );
+        }
+        // 返回空响应，快速处理
+        jsonError(res, 200, {
+          type: 'result',
+          role: 'assistant',
+          content: [{ type: 'text', text: '' }],
+        });
+        return;
       }
 
       // ========== 协议转换（仅 Claude 入口允许跨协议）==========
