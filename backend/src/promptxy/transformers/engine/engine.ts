@@ -160,12 +160,15 @@ export class TransformerEngine {
     // 返回转换后的请求
     const codexRequest = result.data as CodexResponsesApiRequest;
 
+    // 映射请求头：移除 Claude SDK 特定请求头，添加 Codex 特定请求头
+    const mappedHeaders = mapHeadersForCodex(req.request.headers);
+
     return {
       request: {
         method: 'POST',
         path: '/v1/responses',
         headers: {
-          ...req.request.headers,
+          ...mappedHeaders,
           'content-type': 'application/json',
         },
         body: codexRequest,
@@ -293,4 +296,40 @@ export class TransformerEngine {
       audit: audit.getAudit(),
     };
   }
+}
+
+/**
+ * 映射请求头：Claude SDK → Codex
+ *
+ * 移除 Claude SDK 特定的请求头（anthropic-*、x-stainless-* 等）
+ * 保留通用的请求头（authorization、content-type 等）
+ */
+function mapHeadersForCodex(headers: Record<string, string>): Record<string, string> {
+  const mapped: Record<string, string> = {};
+
+  // 需要移除的 Claude SDK 特定请求头前缀
+  const removePrefixes = [
+    'anthropic-',
+    'x-stainless-',
+    'x-api-key',
+    'x-app',
+  ];
+
+  for (const [key, value] of Object.entries(headers)) {
+    const keyLower = key.toLowerCase();
+
+    // 移除 Claude SDK 特定的请求头
+    const shouldRemove = removePrefixes.some(prefix =>
+      keyLower.startsWith(prefix.toLowerCase())
+    );
+
+    if (shouldRemove) {
+      continue;
+    }
+
+    // 保留其他请求头
+    mapped[key] = value;
+  }
+
+  return mapped;
 }
