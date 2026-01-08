@@ -1,0 +1,61 @@
+{
+  "description": "简单的纯文本对话（无工具）",
+  "claude_request": {
+    "model": "claude-3-5-sonnet-20241022",
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello, how are you?"
+      }
+    ]
+  },
+  "expected_gemini_request": {
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Hello, how are you?"
+          }
+        ]
+      }
+    ],
+    "generationConfig": {
+      "maxOutputTokens": 4096
+    }
+  },
+  "gemini_response": {
+    "candidates": [
+      {
+        "content": {
+          "parts": [
+            {
+              "text": "I'm doing well, thank you for asking! How can I help you today?"
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 10,
+      "candidatesTokenCount": 15,
+      "totalTokenCount": 25
+    }
+  },
+  "expected_claude_response": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I'm doing well, thank you for asking! How can I help you today?"
+      }
+    ],
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 10,
+      "output_tokens": 15
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "description": "带工具调用的对话",
+  "claude_request": {
+    "model": "claude-3-5-sonnet-20241022",
+    "max_tokens": 4096,
+    "messages": [
+      {
+        "role": "user",
+        "content": "What's the weather in San Francisco?"
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a location",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "The city and state, e.g. San Francisco, CA"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["celsius", "fahrenheit"],
+              "description": "Temperature unit"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    ]
+  },
+  "expected_gemini_request": {
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "text": "What's the weather in San Francisco?"
+          }
+        ]
+      }
+    ],
+    "tools": {
+      "functionDeclarations": [
+        {
+          "name": "get_weather",
+          "description": "Get the current weather for a location",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "string",
+                "description": "The city and state, e.g. San Francisco, CA"
+              },
+              "unit": {
+                "type": "string",
+                "enum": ["celsius", "fahrenheit"],
+                "description": "Temperature unit"
+              }
+            },
+            "required": ["location"]
+          }
+        }
+      ]
+    },
+    "generationConfig": {
+      "maxOutputTokens": 4096
+    }
+  },
+  "gemini_response": {
+    "candidates": [
+      {
+        "content": {
+          "parts": [
+            {
+              "text": "I'll check the weather in San Francisco for you."
+            },
+            {
+              "functionCall": {
+                "name": "get_weather",
+                "args": {
+                  "location": "San Francisco, CA",
+                  "unit": "fahrenheit"
+                }
+              }
+            }
+          ]
+        },
+        "finishReason": "STOP"
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 25,
+      "candidatesTokenCount": 20,
+      "totalTokenCount": 45
+    }
+  },
+  "expected_claude_response": {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I'll check the weather in San Francisco for you."
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_",
+        "name": "get_weather",
+        "input": {
+          "location": "San Francisco, CA",
+          "unit": "fahrenheit"
+        }
+      }
+    ],
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 25,
+      "output_tokens": 20
+    }
+  }
+}
