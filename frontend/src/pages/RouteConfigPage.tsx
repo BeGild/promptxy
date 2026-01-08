@@ -22,6 +22,7 @@ import {
 } from '@heroui/react';
 import { ArrowRight, Plus, Trash2, Info, AlertCircle, CheckCircle2, Edit2 } from 'lucide-react';
 import { useSuppliers } from '@/hooks';
+import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
 import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
 import type { Supplier, LocalService, TransformerType, Route } from '@/types/api';
 
@@ -32,31 +33,31 @@ const LOCAL_SERVICES: Array<{
   prefix: string;
   protocol: 'anthropic' | 'openai' | 'gemini';
   color: string;
-  icon: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
 }> = [
   {
     key: 'claude',
     label: 'Claude',
     prefix: '/claude',
     protocol: 'anthropic',
-    color: '🟣',
-    icon: '🤖',
+    color: '#D4935D',
+    icon: AnthropicIcon,
   },
   {
     key: 'codex',
     label: 'Codex',
     prefix: '/codex',
     protocol: 'openai',
-    color: '🟢',
-    icon: '🧠',
+    color: '#10A37F',
+    icon: OpenAIIcon,
   },
   {
     key: 'gemini',
     label: 'Gemini',
     prefix: '/gemini',
     protocol: 'gemini',
-    color: '🔵',
-    icon: '💎',
+    color: '#4285F4',
+    icon: GeminiIcon,
   },
 ];
 
@@ -391,8 +392,10 @@ export const RouteConfigPage: React.FC = () => {
                   {/* 左侧：一行路由（避免换行炸裂） */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-lg">{localService?.icon}</span>
-                      <div className="min-w-0">
+                    <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: `${localService?.color}15` }}>
+                      {localService && <localService.icon size={20} />}
+                    </div>
+                    <div className="min-w-0">
                         <div className="text-sm font-medium text-primary">
                           {localService?.label}
                         </div>
@@ -404,12 +407,24 @@ export const RouteConfigPage: React.FC = () => {
 
                     <ArrowRight size={18} className="text-tertiary shrink-0" />
 
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-primary truncate">
-                        {supplier?.displayName || supplier?.name || '未选择供应商'}
-                      </div>
-                      <div className="text-xs text-tertiary truncate">
-                        {supplier?.baseUrl || supplier?.protocol || ''}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {supplier && (() => {
+                        const protocol = LOCAL_SERVICES.find(s => s.protocol === supplier.protocol);
+                        const IconComponent = protocol?.icon;
+                        const color = protocol?.color || '#888';
+                        return (
+                          <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
+                            {IconComponent && <IconComponent size={20} />}
+                          </div>
+                        );
+                      })()}
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-primary truncate">
+                          {supplier?.displayName || supplier?.name || '未选择供应商'}
+                        </div>
+                        <div className="text-xs text-tertiary truncate">
+                          {supplier?.baseUrl || supplier?.protocol || ''}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -517,17 +532,22 @@ export const RouteConfigPage: React.FC = () => {
                   radius="lg"
                   variant="bordered"
                 >
-                  {LOCAL_SERVICES.map(service => (
-                    <SelectItem key={service.key} textValue={service.label}>
-                      <div className="flex items-center gap-2">
-                        <span>{service.icon}</span>
-                        <div>
+                  {LOCAL_SERVICES.map(service => {
+                    const IconComponent = service.icon;
+                    return (
+                      <SelectItem key={service.key} textValue={service.label}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${service.color}15` }}>
+                            <IconComponent size={16} />
+                          </div>
+                          <div>
                           <div>{service.label}</div>
                           <div className="text-xs text-tertiary">{service.prefix}</div>
                         </div>
                       </div>
                     </SelectItem>
-                  ))}
+                    );
+                  })}
                 </Select>
               </div>
 
@@ -555,10 +575,15 @@ export const RouteConfigPage: React.FC = () => {
                     const availableSuppliers = getAvailableSuppliers(newRoute.localService as LocalService);
                     const items = availableSuppliers.map(supplier => {
                       const protocol = LOCAL_SERVICES.find(s => s.protocol === supplier.protocol);
+                      const IconComponent = protocol?.icon;
                       return (
                         <SelectItem key={supplier.id} textValue={supplier.displayName}>
                           <div className="flex items-center gap-2">
-                            <span>{protocol?.icon}</span>
+                            {IconComponent && (
+                              <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${protocol?.color}15` }}>
+                                <IconComponent size={16} />
+                              </div>
+                            )}
                             <div>
                               <div>{supplier.displayName}</div>
                               <div className="text-xs text-tertiary">{supplier.protocol}</div>

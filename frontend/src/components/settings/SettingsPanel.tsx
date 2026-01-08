@@ -31,6 +31,8 @@ import {
   Edit2,
   Globe,
   Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -51,6 +53,7 @@ import {
   useToggleSupplier,
 } from '@/hooks/useSuppliers';
 import type { Supplier, SupplierProtocol } from '@/types/api';
+import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
 
 // 供应商协议选项
 const SUPPLIER_PROTOCOLS: Array<{
@@ -58,30 +61,40 @@ const SUPPLIER_PROTOCOLS: Array<{
   label: string;
   description: string;
   color: string;
-  icon: string;
 }> = [
   {
     key: 'anthropic',
     label: 'Anthropic',
-    description: 'Claude API 协议',
-    color: '🟣',
-    icon: '🤖',
+    description: '/messages 协议',
+    color: '#D4935D',
   },
   {
     key: 'openai',
     label: 'OpenAI',
-    description: 'OpenAI API 协议',
-    color: '🟢',
-    icon: '🧠',
+    description: '/responses 协议',
+    color: '#10A37F',
   },
   {
     key: 'gemini',
     label: 'Gemini',
-    description: 'Google Gemini API 协议',
-    color: '🔵',
-    icon: '💎',
+    description: '/v1beta/models/ 协议',
+    color: '#4285F4',
   },
 ];
+
+// 获取供应商图标组件
+const getSupplierIcon = (protocol: SupplierProtocol) => {
+  switch (protocol) {
+    case 'anthropic':
+      return AnthropicIcon;
+    case 'openai':
+      return OpenAIIcon;
+    case 'gemini':
+      return GeminiIcon;
+    default:
+      return null;
+  }
+};
 
 // 认证类型选项
 const AUTH_TYPES = [
@@ -115,13 +128,14 @@ export const SettingsPanel: React.FC = () => {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [supplierModelInput, setSupplierModelInput] = useState('');
+  const [isTokenVisible, setIsTokenVisible] = useState(false);
   const [supplierFormData, setSupplierFormData] = useState<Partial<Supplier>>({
     name: '',
     displayName: '',
     baseUrl: '',
     protocol: 'anthropic',
     enabled: true,
-    auth: { type: 'none' },
+    auth: { type: 'bearer' },
     supportedModels: [],
     description: '',
   });
@@ -250,7 +264,7 @@ export const SettingsPanel: React.FC = () => {
       baseUrl: '',
       protocol: 'anthropic',
       enabled: true,
-      auth: { type: 'none' },
+      auth: { type: 'bearer' },
       supportedModels: [],
       description: '',
     });
@@ -394,6 +408,133 @@ export const SettingsPanel: React.FC = () => {
                     {stats?.database?.path}
                   </div>
                 </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* 供应商管理 - 占据全宽 */}
+          <Card className="lg:col-span-3 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings size={24} className="text-brand-primary" />
+                  <h4 className="text-lg font-bold text-primary">供应商管理</h4>
+                </div>
+                <Button
+                  color="primary"
+                  onPress={handleOpenAddSupplierModal}
+                  startContent={<Plus size={18} />}
+                  size="sm"
+                  radius="lg"
+                >
+                  添加供应商
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {suppliers.map(supplier => {
+                  const protocol = SUPPLIER_PROTOCOLS.find(p => p.key === supplier.protocol);
+                  const IconComponent = getSupplierIcon(supplier.protocol);
+
+                  return (
+                    <Card
+                      key={supplier.id}
+                      className={`border transition-all ${
+                        supplier.enabled
+                          ? 'border-brand-primary/30 dark:border-brand-primary/20 bg-elevated'
+                          : 'border-subtle opacity-60'
+                      }`}
+                    >
+                      <CardBody className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${protocol?.color}15` }}>
+                              {IconComponent && <IconComponent size={28} />}
+                            </div>
+                            <div>
+                              <h5 className="font-bold text-primary text-sm">
+                                {supplier.displayName || supplier.name}
+                              </h5>
+                              <p className="text-xs text-secondary">{supplier.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={supplier.enabled}
+                                onChange={() => handleToggleSupplier(supplier)}
+                                className="w-4 h-4 rounded"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="mb-2">
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            style={{ backgroundColor: `${protocol?.color}20`, color: protocol?.color }}
+                          >
+                            {protocol?.label}
+                          </Chip>
+                        </div>
+
+                        <div className="mb-2">
+                          <div className="flex items-center gap-1 text-xs text-secondary">
+                            <Globe size={12} />
+                            <span className="truncate">{supplier.baseUrl}</span>
+                          </div>
+                        </div>
+
+                        {supplier.auth && supplier.auth.type !== 'none' && (
+                          <div className="mb-2">
+                            <div className="flex items-center gap-1 text-xs text-secondary">
+                              <Lock size={12} />
+                              <span>
+                                {supplier.auth.type === 'bearer' && 'Bearer Token 认证'}
+                                {supplier.auth.type === 'header' && '自定义 Header 认证'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Divider className="my-2" />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleOpenEditSupplierModal(supplier)}
+                            startContent={<Edit2 size={12} />}
+                            className="flex-1"
+                          >
+                            编辑
+                          </Button>
+                          <Button
+                            size="sm"
+                            color="danger"
+                            variant="light"
+                            onPress={() => handleDeleteSupplier(supplier)}
+                            isIconOnly
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  );
+                })}
+
+                {suppliers.length === 0 && !suppliersLoading && (
+                  <Card className="col-span-full border border-dashed border-subtle">
+                    <CardBody className="py-8 text-center">
+                      <p className="text-secondary font-medium">暂无供应商</p>
+                      <p className="text-sm text-tertiary mt-1">
+                        点击上方按钮添加新的上游供应商
+                      </p>
+                    </CardBody>
+                  </Card>
+                )}
               </div>
             </CardBody>
           </Card>
@@ -568,126 +709,6 @@ export const SettingsPanel: React.FC = () => {
               </div>
             </CardBody>
           </Card>
-
-          {/* 供应商管理 - 占据全宽 */}
-          <Card className="lg:col-span-3 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5">
-            <CardBody className="space-y-4 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Settings size={24} className="text-brand-primary" />
-                  <h4 className="text-lg font-bold text-primary">供应商管理</h4>
-                </div>
-                <Button
-                  color="primary"
-                  onPress={handleOpenAddSupplierModal}
-                  startContent={<Plus size={18} />}
-                  size="sm"
-                  radius="lg"
-                >
-                  添加供应商
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {suppliers.map(supplier => {
-                  const protocol = SUPPLIER_PROTOCOLS.find(p => p.key === supplier.protocol);
-
-                  return (
-                    <Card
-                      key={supplier.id}
-                      className={`border transition-all ${
-                        supplier.enabled
-                          ? 'border-brand-primary/30 dark:border-brand-primary/20 bg-elevated'
-                          : 'border-subtle opacity-60'
-                      }`}
-                    >
-                      <CardBody className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="text-2xl">{protocol?.icon}</div>
-                            <div>
-                              <h5 className="font-bold text-primary text-sm">
-                                {supplier.displayName || supplier.name}
-                              </h5>
-                              <p className="text-xs text-secondary">{supplier.name}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <label className="flex items-center gap-1 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={supplier.enabled}
-                                onChange={() => handleToggleSupplier(supplier)}
-                                className="w-4 h-4 rounded"
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="mb-2">
-                          <Chip size="sm" variant="flat">
-                            {protocol?.color} {protocol?.label}
-                          </Chip>
-                        </div>
-
-                        <div className="mb-2">
-                          <div className="flex items-center gap-1 text-xs text-secondary">
-                            <Globe size={12} />
-                            <span className="truncate">{supplier.baseUrl}</span>
-                          </div>
-                        </div>
-
-                        {supplier.auth && supplier.auth.type !== 'none' && (
-                          <div className="mb-2">
-                            <div className="flex items-center gap-1 text-xs text-secondary">
-                              <Lock size={12} />
-                              <span>
-                                {supplier.auth.type === 'bearer' && 'Bearer Token 认证'}
-                                {supplier.auth.type === 'header' && '自定义 Header 认证'}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        <Divider className="my-2" />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={() => handleOpenEditSupplierModal(supplier)}
-                            startContent={<Edit2 size={12} />}
-                            className="flex-1"
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            size="sm"
-                            color="danger"
-                            variant="light"
-                            onPress={() => handleDeleteSupplier(supplier)}
-                            isIconOnly
-                          >
-                            <Trash2 size={12} />
-                          </Button>
-                        </div>
-                      </CardBody>
-                    </Card>
-                  );
-                })}
-
-                {suppliers.length === 0 && !suppliersLoading && (
-                  <Card className="col-span-full border border-dashed border-subtle">
-                    <CardBody className="py-8 text-center">
-                      <p className="text-secondary font-medium">暂无供应商</p>
-                      <p className="text-sm text-tertiary mt-1">
-                        点击上方按钮添加新的上游供应商
-                      </p>
-                    </CardBody>
-                  </Card>
-                )}
-              </div>
-            </CardBody>
-          </Card>
         </div>
 
         {/* 供应商编辑弹窗 */}
@@ -775,18 +796,23 @@ export const SettingsPanel: React.FC = () => {
                   radius="lg"
                   variant="bordered"
                 >
-                  {SUPPLIER_PROTOCOLS.map(protocol => (
-                    <SelectItem
-                      key={protocol.key}
-                      textValue={protocol.label}
-                      description={protocol.description}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{protocol.icon}</span>
-                        <span>{protocol.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {SUPPLIER_PROTOCOLS.map(protocol => {
+                    const IconComponent = getSupplierIcon(protocol.key);
+                    return (
+                      <SelectItem
+                        key={protocol.key}
+                        textValue={protocol.label}
+                        description={protocol.description}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${protocol.color}15` }}>
+                            {IconComponent && <IconComponent size={16} />}
+                          </div>
+                          <span>{protocol.label}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </Select>
               </div>
 
@@ -883,8 +909,21 @@ export const SettingsPanel: React.FC = () => {
                     placeholder="sk-ant-..."
                     radius="lg"
                     variant="bordered"
-                    type="password"
+                    type={isTokenVisible ? 'text' : 'password'}
                     description="API 认证令牌"
+                    endContent={
+                      <button
+                        type="button"
+                        onClick={() => setIsTokenVisible(!isTokenVisible)}
+                        className="focus:outline-none"
+                      >
+                        {isTokenVisible ? (
+                          <EyeOff size={18} className="text-tertiary hover:text-secondary" />
+                        ) : (
+                          <Eye size={18} className="text-tertiary hover:text-secondary" />
+                        )}
+                      </button>
+                    }
                   />
                 </div>
               )}
