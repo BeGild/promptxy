@@ -18,11 +18,18 @@ import { parseClaudeRequest } from '../protocols/claude/parse.js';
 import { renderCodexRequest, type RenderConfig } from '../protocols/codex/render.js';
 import { validateCodexRequest } from '../protocols/codex/validate.js';
 import { collectJsonPointers } from '../audit/json-pointer.js';
+import { transformCodexResponseToClaude } from '../protocols/codex/response.js';
+import type { GeminiGenerateContentResponse } from '../protocols/gemini/types.js';
+import {
+  buildGeminiPath,
+  transformClaudeToGeminiRequest,
+} from '../protocols/gemini/request.js';
+import { transformGeminiResponseToClaude } from '../protocols/gemini/response.js';
 
 /**
  * 协议对类型
  */
-export type ProtocolPair = 'claude-to-codex' | 'codex-to-claude';
+export type ProtocolPair = 'claude-to-codex' | 'claude-to-gemini' | 'codex-to-claude' | 'gemini-to-claude';
 
 /**
  * 转换请求
@@ -110,9 +117,17 @@ export class TransformerEngine {
   }
 
   /**
-   * 执行转换（Claude → Codex）
+   * 执行转换（Claude → 上游协议）
    */
   async transform(req: TransformRequest): Promise<TransformResponse> {
+    const transformerName = req.supplier.transformer?.default?.[0] || 'none';
+    if (transformerName === 'gemini') {
+      return this.transformClaudeToGemini(req);
+    }
+    if (transformerName !== 'codex') {
+      throw new Error(`Unsupported transformer: ${transformerName}`);
+    }
+
     const startTime = Date.now();
 
     // 创建 Pipeline
@@ -166,12 +181,84 @@ export class TransformerEngine {
     return {
       request: {
         method: 'POST',
-        path: '/v1/responses',
+        // 注意：PromptXY 的 openai supplier.baseUrl 可能已经包含 /v1，
+        // 且部分上游（如镜像/代理）仅暴露 /responses 而非 /v1/responses。
+        // 因此这里使用相对路径 /responses，由 supplier.baseUrl 决定最终 URL。
+        path: '/responses',
         headers: {
           ...mappedHeaders,
           'content-type': 'application/json',
         },
         body: codexRequest,
+      },
+      needsResponseTransform: true,
+      trace,
+    };
+  }
+
+  /**
+   * 执行转换（Claude → Gemini v1beta）
+   */
+  private async transformClaudeToGemini(req: TransformRequest): Promise<TransformResponse> {
+    const startTime = Date.now();
+
+    const body = req.request.body as ClaudeMessagesRequest;
+
+    // 复用 Claude parse（用于收集 sourcePaths & 统一 system/messages 规范化语义）
+    const auditCollector = new FieldAuditCollector();
+    const sourcePaths = collectJsonPointers(body);
+    auditCollector.addSourcePaths(sourcePaths);
+    const parsed = parseClaudeRequest(body);
+
+    // 构造 Gemini 请求体（使用现有协议实现）
+    const { request: geminiRequest } = transformClaudeToGeminiRequest(
+      parsed.model,
+      parsed.system.text,
+      (body.messages || []).map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : (m.content || []),
+      })),
+      body.tools,
+      parsed.stream,
+      body.max_tokens,
+      body.temperature,
+      body.top_p,
+      body.stop_sequences,
+    );
+
+    // 收集 targetPaths
+    const targetPaths = collectJsonPointers(geminiRequest as any);
+    auditCollector.addTargetPaths(targetPaths);
+
+    // path 由 supplier.baseUrl 形态决定（兼容 /v1beta/models 与根域）
+    const upstreamPath = buildGeminiPath({
+      baseUrl: req.supplier.baseUrl,
+      model: parsed.model,
+      stream: parsed.stream,
+    });
+
+    const duration = Date.now() - startTime;
+    const trace: TransformTrace = {
+      protocolPair: 'claude-to-gemini',
+      steps: [
+        { name: 'parse', duration: 0, success: true },
+        { name: 'render', duration, success: true },
+      ],
+      audit: auditCollector.getAudit(),
+      success: true,
+    };
+
+    const mappedHeaders = mapHeadersForGemini(req.request.headers, { stream: parsed.stream });
+
+    return {
+      request: {
+        method: 'POST',
+        path: upstreamPath,
+        headers: {
+          ...mappedHeaders,
+          'content-type': 'application/json',
+        },
+        body: geminiRequest as any,
       },
       needsResponseTransform: true,
       trace,
@@ -192,8 +279,16 @@ export class TransformerEngine {
     response: unknown,
     contentType?: string,
   ): Promise<unknown> {
-    // 暂时直接返回原始响应
-    // TODO: 实现实际的响应转换逻辑
+    const transformerName = supplier.transformer?.default?.[0] || 'none';
+
+    if (transformerName === 'gemini') {
+      return transformGeminiResponseToClaude(response as GeminiGenerateContentResponse);
+    }
+
+    if (transformerName === 'codex') {
+      return transformCodexResponseToClaude(response);
+    }
+
     return response;
   }
 
@@ -330,6 +425,40 @@ function mapHeadersForCodex(headers: Record<string, string>): Record<string, str
 
     // 保留其他请求头
     mapped[key] = value;
+  }
+
+  return mapped;
+}
+
+/**
+ * 映射请求头：Claude SDK → Gemini
+ *
+ * - 移除 Claude SDK/网关相关头（anthropic-* / x-stainless-* 等）
+ * - 保留通用头（user-agent 等）
+ * - stream 时尽量明确 accept
+ */
+function mapHeadersForGemini(
+  headers: Record<string, string>,
+  options: { stream: boolean },
+): Record<string, string> {
+  const mapped: Record<string, string> = {};
+
+  const removePrefixes = [
+    'anthropic-',
+    'x-stainless-',
+    'x-api-key',
+    'x-app',
+  ];
+
+  for (const [key, value] of Object.entries(headers)) {
+    const keyLower = key.toLowerCase();
+    if (removePrefixes.some(prefix => keyLower.startsWith(prefix))) continue;
+    mapped[keyLower] = value;
+  }
+
+  if (options.stream) {
+    // Gemini v1beta SSE：显式声明 event-stream 更稳定
+    mapped['accept'] = 'text/event-stream';
   }
 
   return mapped;

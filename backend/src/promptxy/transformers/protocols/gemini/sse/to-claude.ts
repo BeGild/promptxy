@@ -69,6 +69,104 @@ export type SSETransformResult = {
 };
 
 /**
+ * 流式增量转换器（用于 Node Transform 流式 pipe：chunk-by-chunk）
+ *
+ * 说明：
+ * - Gemini SSE 是逐 chunk 到达的；Gateway 需要“边读边转发”而不是等完整数组。
+ * - 这里暴露一个轻量状态机，复用本文件的转换逻辑。
+ */
+export type GeminiSSEToClaudeStreamTransformer = {
+  pushChunk: (chunk: GeminiSSEChunk) => { events: ClaudeSSEEvent[]; streamEnd: boolean };
+  finalize: () => { events: ClaudeSSEEvent[]; streamEnd: boolean };
+};
+
+export function createGeminiSSEToClaudeStreamTransformer(): GeminiSSEToClaudeStreamTransformer {
+  const state = createInitialState();
+  let ended = false;
+
+  function pushChunk(chunk: GeminiSSEChunk): { events: ClaudeSSEEvent[]; streamEnd: boolean } {
+    if (ended) return { events: [], streamEnd: true };
+
+    const events: ClaudeSSEEvent[] = [];
+
+    const invalidType = detectInvalidStream(chunk);
+    if (invalidType) {
+      events.push({
+        type: 'error',
+        error: { message: `Invalid stream: ${invalidType}` },
+      });
+      events.push({ type: 'message_stop' });
+      state.messageStopped = true;
+      ended = true;
+      return { events, streamEnd: true };
+    }
+
+    if (chunk.usageMetadata) {
+      state.usageMetadata = {
+        ...state.usageMetadata,
+        ...chunk.usageMetadata,
+      };
+    }
+
+    const candidate = chunk.candidates?.[0];
+    if (!candidate) {
+      return { events, streamEnd: false };
+    }
+
+    if (candidate.finishReason) {
+      state.finishReason = transformFinishReason(candidate.finishReason);
+    }
+
+    const parts = candidate.content?.parts ?? [];
+    for (const part of parts) {
+      events.push(...transformPart(part, state));
+    }
+
+    if (candidate.finishReason && state.textBlockStarted) {
+      events.push(createContentBlockStopEvent(0));
+      state.textBlockStarted = false;
+    }
+
+    return { events, streamEnd: false };
+  }
+
+  function finalize(): { events: ClaudeSSEEvent[]; streamEnd: boolean } {
+    if (ended) return { events: [], streamEnd: true };
+
+    const events: ClaudeSSEEvent[] = [];
+
+    if (!state.messageStopped) {
+      if (state.pendingToolCall) {
+        events.push(...completePendingToolCall(state));
+      }
+
+      if (state.usageMetadata.candidatesTokenCount !== undefined) {
+        events.push(
+          createMessageDeltaEvent({
+            stop_reason: state.finishReason ?? 'end_turn',
+            usage: { output_tokens: state.usageMetadata.candidatesTokenCount },
+          }),
+        );
+      } else if (state.finishReason) {
+        events.push(
+          createMessageDeltaEvent({
+            stop_reason: state.finishReason,
+          }),
+        );
+      }
+
+      events.push({ type: 'message_stop' });
+      state.messageStopped = true;
+    }
+
+    ended = true;
+    return { events, streamEnd: true };
+  }
+
+  return { pushChunk, finalize };
+}
+
+/**
  * Invalid Stream 类型
  */
 type InvalidStreamType =
@@ -120,89 +218,18 @@ function detectInvalidStream(chunk: GeminiSSEChunk): InvalidStreamType | null {
 export function transformGeminiSSEToClaude(
   geminiChunks: GeminiSSEChunk[],
 ): SSETransformResult {
-  const claudeEvents: ClaudeSSEEvent[] = [];
-  const state = createInitialState();
+  const transformer = createGeminiSSEToClaudeStreamTransformer();
+  const events: ClaudeSSEEvent[] = [];
 
   for (const chunk of geminiChunks) {
-    // 检测 invalid stream
-    const invalidType = detectInvalidStream(chunk);
-    if (invalidType) {
-      // 发送错误并结束流
-      claudeEvents.push({
-        type: 'error',
-        error: {
-          message: `Invalid stream: ${invalidType}`,
-        },
-      });
-      claudeEvents.push({ type: 'message_stop' });
-      return { events: claudeEvents, streamEnd: true };
-    }
-
-    // 累积 usage metadata
-    if (chunk.usageMetadata) {
-      state.usageMetadata = {
-        ...state.usageMetadata,
-        ...chunk.usageMetadata,
-      };
-    }
-
-    // 处理候选响应
-    const candidate = chunk.candidates?.[0];
-    if (candidate) {
-      // 处理 finish reason
-      if (candidate.finishReason) {
-        state.finishReason = transformFinishReason(candidate.finishReason);
-      }
-
-      // 处理 parts
-      const parts = candidate.content?.parts ?? [];
-      for (const part of parts) {
-        const events = transformPart(part, state);
-        claudeEvents.push(...events);
-      }
-
-      // 如果有 finish reason，结束当前 block
-      if (candidate.finishReason && state.textBlockStarted) {
-        claudeEvents.push(createContentBlockStopEvent(0));
-        state.textBlockStarted = false;
-      }
-    }
+    const res = transformer.pushChunk(chunk);
+    events.push(...res.events);
+    if (res.streamEnd) return { events, streamEnd: true };
   }
 
-  // 流结束：发送 message_delta 和 message_stop
-  if (!state.messageStopped) {
-    // 如果有待处理的 tool call，完成它
-    if (state.pendingToolCall) {
-      const toolEvents = completePendingToolCall(state);
-      claudeEvents.push(...toolEvents);
-    }
-
-    // 发送 message_delta（包含 usage）
-    if (state.usageMetadata.candidatesTokenCount !== undefined) {
-      claudeEvents.push(
-        createMessageDeltaEvent({
-          stop_reason: state.finishReason ?? 'end_turn',
-          usage: {
-            output_tokens: state.usageMetadata.candidatesTokenCount,
-          },
-        })
-      );
-    } else if (state.finishReason) {
-      claudeEvents.push(
-        createMessageDeltaEvent({
-          stop_reason: state.finishReason,
-        })
-      );
-    }
-
-    claudeEvents.push({ type: 'message_stop' });
-    state.messageStopped = true;
-  }
-
-  return {
-    events: claudeEvents,
-    streamEnd: true,
-  };
+  const fin = transformer.finalize();
+  events.push(...fin.events);
+  return { events, streamEnd: fin.streamEnd };
 }
 
 /**

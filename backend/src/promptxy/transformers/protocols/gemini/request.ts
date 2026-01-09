@@ -36,6 +36,36 @@ export interface URLConfig {
 }
 
 /**
+ * 构造 Gemini 上游 Path（不含 baseUrl）
+ *
+ * 说明：
+ * - Gateway 当前使用 joinUrl(baseUrl, path, search) 的拼接方式。
+ * - 为避免密钥在 trace/历史里出现明文，这里不注入 `key=` 查询参数，认证统一走 supplier.auth 注入。
+ * - 仅在 stream 时追加 `?alt=sse`（Gemini v1beta 标准行为）。
+ */
+export function buildGeminiPath(config: Omit<URLConfig, 'apiKey'>): string {
+  const { baseUrl, model, stream } = config;
+
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const hasVersion = normalizedBase.includes('/v1beta');
+  const hasModels = normalizedBase.includes('/models');
+
+  const action = stream ? 'streamGenerateContent' : 'generateContent';
+
+  let path: string;
+  if (hasModels) {
+    path = `/${model}:${action}`;
+  } else if (hasVersion) {
+    path = `/models/${model}:${action}`;
+  } else {
+    path = `/v1beta/models/${model}:${action}`;
+  }
+
+  if (!stream) return path;
+  return `${path}?alt=sse`;
+}
+
+/**
  * 请求转换配置
  */
 export interface TransformRequestConfig {

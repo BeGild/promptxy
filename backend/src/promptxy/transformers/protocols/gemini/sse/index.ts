@@ -9,7 +9,9 @@ export {
 
 export {
   transformGeminiSSEToClaude,
+  createGeminiSSEToClaudeStreamTransformer,
   type SSETransformResult,
+  type GeminiSSEToClaudeStreamTransformer,
 } from './to-claude.js';
 
 export {

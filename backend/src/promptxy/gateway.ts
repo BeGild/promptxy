@@ -231,7 +231,10 @@ function summarizeMatches(matches: PromptxyRuleMatch[]): string {
  * - 只有单条消息
  * - 没有附带 tools
  *
- * 这种请求通常是 Claude Code 的预热/探测请求，对 codex 供应商无效
+ * 注意：单条消息+无 tools 过于宽泛，会误伤正常对话（例如用户首次问“hi”）。
+ * 这里采取更保守的判定：只有当该唯一消息的可提取文本为空时，才认为是 warmup。
+ *
+ * 这种请求通常是 Claude Code 的预热/探测请求，对 codex 供应商无效（可直接返回空结果节省 token）。
  *
  * @param body - 请求体
  * @returns 是否为 warmup 请求
@@ -243,15 +246,27 @@ function isWarmupRequest(body: any): boolean {
   const tools = body?.tools;
 
   // 必须有 messages 数组
-  if (!Array.isArray(messages) || messages.length === 0) return false;
+  if (!Array.isArray(messages) || messages.length !== 1) return false;
 
-  // 单条消息 + 无 tools = warmup
-  if (messages.length === 1) {
-    // 检查是否没有 tools 或者 tools 数组为空
-    if (!tools || (Array.isArray(tools) && tools.length === 0)) {
-      return true;
-    }
+  // 必须没有 tools（或 tools 为空）
+  if (tools && Array.isArray(tools) && tools.length > 0) return false;
+
+  const msg = messages[0];
+  if (!msg || typeof msg !== 'object') return false;
+
+  // 提取“可视文本”
+  let text = '';
+  if (typeof msg.content === 'string') {
+    text = msg.content;
+  } else if (Array.isArray(msg.content)) {
+    text = msg.content
+      .filter((b: any) => b && typeof b === 'object' && b.type === 'text')
+      .map((b: any) => b.text || b.input_text || '')
+      .join('');
   }
+
+  // 仅当内容为空才认为是 warmup（保守，避免误伤真实请求）
+  if (typeof text === 'string' && text.trim() === '') return true;
 
   return false;
 }

@@ -6,6 +6,7 @@
 
 import { TransformerEngine } from './engine/index.js';
 import { Transform } from 'node:stream';
+import { createGeminiSSEToClaudeStreamTransformer } from './protocols/gemini/sse/index.js';
 
 // ============================================================
 // Public API（供 gateway/preview 调用）
@@ -30,6 +31,95 @@ export function createProtocolTransformer(config?: {
  */
 export function createSSETransformStream(transformerName: string) {
   // 仅支持 codex 转换器
+  if (transformerName === 'gemini') {
+    // Gemini SSE → Claude SSE 转换流（增量）
+    let buffer = '';
+    let streamEnded = false;
+
+    const geminiTransformer = createGeminiSSEToClaudeStreamTransformer();
+
+    function emitEvents(stream: Transform, events: Array<Record<string, unknown>>) {
+      for (const event of events) {
+        const eventType = (event as any).type;
+        stream.push(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
+      }
+    }
+
+    function processEventBlock(stream: Transform, eventBlock: string) {
+      if (streamEnded) return;
+
+      const lines = eventBlock.split('\n');
+      const dataLines: string[] = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const data = trimmed.slice(5).trim();
+        if (!data) continue;
+        if (data === '[DONE]') return;
+        dataLines.push(data);
+      }
+
+      if (dataLines.length === 0) return;
+
+      // Gemini SSE 通常单行 data: JSON；多行时按 SSE 语义拼接
+      const payload = dataLines.join('\n');
+
+      try {
+        const chunk = JSON.parse(payload);
+        const res = geminiTransformer.pushChunk(chunk);
+        emitEvents(stream, res.events as any);
+        if (res.streamEnd) {
+          streamEnded = true;
+        }
+      } catch {
+        // 可能是分块导致的 JSON 不完整，留给下一次 buffer 补齐
+      }
+    }
+
+    return new Transform({
+      transform(chunk: Buffer, encoding: BufferEncoding, callback) {
+        try {
+          buffer += chunk.toString('utf-8').replace(/\r\n/g, '\n');
+
+          // SSE 事件以空行分隔
+          while (!streamEnded) {
+            const idx = buffer.indexOf('\n\n');
+            if (idx < 0) break;
+
+            const eventBlock = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+
+            if (eventBlock.trim() === '') continue;
+            processEventBlock(this, eventBlock);
+          }
+
+          callback();
+        } catch (error) {
+          callback(error as Error);
+        }
+      },
+
+      flush(callback) {
+        try {
+          if (!streamEnded && buffer.trim()) {
+            processEventBlock(this, buffer);
+            buffer = '';
+          }
+
+          if (!streamEnded) {
+            const fin = geminiTransformer.finalize();
+            emitEvents(this, fin.events as any);
+            streamEnded = true;
+          }
+
+          callback();
+        } catch (error) {
+          callback(error as Error);
+        }
+      },
+    });
+  }
+
   if (transformerName !== 'codex') {
     // 其他转换器透传
     return new Transform({

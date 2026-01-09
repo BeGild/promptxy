@@ -37,6 +37,7 @@ export type {
 
 export {
   buildGeminiURL,
+  buildGeminiPath,
   buildCountTokensURL,
   transformClaudeToGeminiRequest,
   transformHeaders,
