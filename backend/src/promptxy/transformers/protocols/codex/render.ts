@@ -11,6 +11,7 @@ import type {
   CodexFunctionCallItem,
   CodexFunctionCallOutputItem,
   CodexInputTextItem,
+  CodexInputImageItem,
   CodexContentItem,
   CodexResponsesApiTool,
 } from './types.js';
@@ -200,8 +201,22 @@ function renderInput(
         };
         input.push(fnOutputItem);
         itemIndex++;
+      } else if (block.type === 'image') {
+        // image -> message item with input_image content
+        // 参考: refence/claude-relay-service/src/services/openaiToClaude.js:238-290
+        const messageItem: CodexMessageItem = {
+          type: 'message',
+          role: msg.role as 'user' | 'assistant',
+          content: [
+            {
+              type: 'input_image',
+              source: block.source,
+            },
+          ],
+        };
+        input.push(messageItem);
+        itemIndex++;
       }
-      // 其他类型（image）暂不映射
     }
   }
 

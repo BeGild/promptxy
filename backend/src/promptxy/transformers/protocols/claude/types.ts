@@ -121,12 +121,12 @@ export type ClaudeSSEEventType =
 /**
  * Content Block 类型
  */
-export type ClaudeContentBlockType = 'text' | 'tool_use';
+export type ClaudeContentBlockType = 'text' | 'tool_use' | 'thinking';
 
 /**
  * Delta 类型
  */
-export type ClaudeDeltaType = 'text_delta' | 'input_json_delta';
+export type ClaudeDeltaType = 'text_delta' | 'input_json_delta' | 'thinking_delta';
 
 /**
  * message_start 事件
@@ -151,6 +151,7 @@ export type ClaudeContentBlockStartEvent = {
   content_block: {
     type: ClaudeContentBlockType;
     text?: string;
+    thinking?: string;
     id?: string;
     name?: string;
   };
@@ -165,6 +166,7 @@ export type ClaudeContentBlockDeltaEvent = {
   delta: {
     type: ClaudeDeltaType;
     text?: string;
+    thinking?: string;
     partial_json?: string;
   };
 };
@@ -188,6 +190,8 @@ export type ClaudeMessageDeltaEvent = {
   };
   usage?: {
     output_tokens: number;
+    cached_tokens?: number;
+    reasoning_tokens?: number;
   };
 };
 

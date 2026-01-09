@@ -28,12 +28,18 @@ type State = {
   messageStarted: boolean;
   /** 是否已开始文本 block */
   textBlockStarted: boolean;
-  /** 当前 tool index（从 1 开始，0 预留给文本） */
+  /** 当前 tool index（从 1 开始，0 预留给文本和 thinking） */
   currentToolIndex: number;
   /** 是否已发送 message_stop */
   messageStopped: boolean;
   /** 是否已收到 response.completed */
   completedReceived: boolean;
+  /** 是否已开始 reasoning (thinking) block */
+  reasoningBlockStarted: boolean;
+  /** 当前 reasoning index */
+  currentReasoningIndex: number;
+  /** reasoning summary index */
+  reasoningSummaryIndex: number;
 };
 
 /**
@@ -46,15 +52,43 @@ function createInitialState(): State {
     currentToolIndex: 1,
     messageStopped: false,
     completedReceived: false,
+    reasoningBlockStarted: false,
+    currentReasoningIndex: 0,
+    reasoningSummaryIndex: 0,
   };
+}
+
+/**
+ * 映射 Codex finish_reason 到 Claude stop_reason
+ *
+ * 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:327-338
+ *
+ * 映射规则:
+ * - tool_calls → tool_use (模型想要调用工具)
+ * - stop → end_turn (模型自然完成响应)
+ * - length → max_tokens (达到 max_tokens 限制)
+ * - content_filter → end_turn (内容过滤停止)
+ * - null/其他 → end_turn (默认情况)
+ */
+function mapStopReason(codexFinishReason: string | null | undefined): string {
+  const mapping: Record<string, string> = {
+    'tool_calls': 'tool_use',
+    'stop': 'end_turn',
+    'length': 'max_tokens',
+    'content_filter': 'end_turn',
+  };
+
+  if (!codexFinishReason) {
+    return 'end_turn';
+  }
+
+  return mapping[codexFinishReason] || 'end_turn';
 }
 
 /**
  * SSE 转换配置
  */
 export type SSETransformConfig = {
-  /** stop_reason 策略 */
-  stopReasonStrategy: 'end_turn' | 'tool_use';
   /** custom_tool_call 映射策略 */
   customToolCallStrategy: 'wrap_object' | 'error';
 };
@@ -110,24 +144,28 @@ export function transformCodexSSEToClaude(
       state.completedReceived = true;
     }
 
-    // 检查是否流结束
+    // 检查是否流结束（在处理完事件后检查）
     if (isStreamEndEvent(codexEvent)) {
       state.messageStopped = true;
-      break;
+      // 不要 break，让循环继续处理后续逻辑
     }
   }
 
-  // 处理流结束但缺失 completed 的情况
-  if (!state.completedReceived && !state.messageStopped) {
-    // 补齐 message_stop
-    claudeEvents.push(createMessageStopEvent());
-    audit.setMetadata('missingUpstreamCompleted', true);
-  } else if (state.completedReceived && !state.messageStopped) {
+  // 处理流结束
+  if (state.completedReceived || state.messageStopped) {
     // 正常结束，补齐 content_block_stop 和 message_stop
     if (state.textBlockStarted) {
       claudeEvents.push(createContentBlockStopEvent(0));
     }
+    // 如果有 reasoning block，也需要停止
+    if (state.reasoningBlockStarted) {
+      claudeEvents.push(createContentBlockStopEvent(state.currentReasoningIndex));
+    }
     claudeEvents.push(createMessageStopEvent());
+  } else if (!state.completedReceived && !state.messageStopped) {
+    // 缺失 completed 的情况，补齐 message_stop
+    claudeEvents.push(createMessageStopEvent());
+    audit.setMetadata('missingUpstreamCompleted', true);
   }
 
   return {
@@ -191,9 +229,66 @@ function transformSingleEvent(
       break;
     }
 
-    case 'response.completed':
+    case 'response.reasoning_text.delta': {
+      // 推理内容增量
+      // 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:147-175
+      const reasoningEvent = event as any;
+      const delta = reasoningEvent.delta || '';
+
+      // 如果还没有开始 reasoning block，先创建
+      if (!state.reasoningBlockStarted) {
+        // reasoning block 使用独立的 index（从 1 开始，因为 0 是 text）
+        state.currentReasoningIndex = state.currentToolIndex;
+        claudeEvents.push(createContentBlockStartEvent(state.currentReasoningIndex, 'thinking'));
+        state.reasoningBlockStarted = true;
+      }
+
+      claudeEvents.push(createContentBlockDeltaEvent(state.currentReasoningIndex, 'thinking_delta', {
+        thinking: delta,
+      }));
+      break;
+    }
+
+    case 'response.reasoning_summary_text.delta': {
+      // 推理摘要增量（与 reasoning_text.delta 类似处理）
+      const reasoningEvent = event as any;
+      const delta = reasoningEvent.delta || '';
+
+      // 如果还没有开始 reasoning block，先创建
+      if (!state.reasoningBlockStarted) {
+        state.currentReasoningIndex = state.currentToolIndex;
+        claudeEvents.push(createContentBlockStartEvent(state.currentReasoningIndex, 'thinking'));
+        state.reasoningBlockStarted = true;
+      }
+
+      claudeEvents.push(createContentBlockDeltaEvent(state.currentReasoningIndex, 'thinking_delta', {
+        thinking: delta,
+      }));
+      break;
+    }
+
+    case 'response.completed': {
+      // 从 response.completed 中提取 usage 信息
+      // 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:285-289
+      const completedEvent = event as any;
+      const codexUsage = completedEvent.usage;
+
+      if (codexUsage) {
+        // 映射 Codex usage 到 Claude usage
+        const usage = {
+          output_tokens: codexUsage.output_tokens || 0,
+          cached_tokens: codexUsage.input_tokens_details?.cached_tokens,
+          reasoning_tokens: codexUsage.output_tokens_details?.reasoning_tokens,
+        };
+
+        // 生成 message_delta 事件包含 usage
+        claudeEvents.push(createMessageDeltaEventWithUsage({
+          stop_reason: 'end_turn',
+        }, usage));
+      }
       // 流结束标记，在主循环处理
       break;
+    }
 
     case 'response.failed':
       // 错误情况，也要结束流
@@ -264,9 +359,10 @@ function transformToolCall(
   events.push(createContentBlockStopEvent(toolIndex));
 
   // message_delta (触发 tool loop)
+  // 工具调用场景下，stop_reason 固定为 tool_use
   events.push(
     createMessageDeltaEvent({
-      stop_reason: config.stopReasonStrategy,
+      stop_reason: 'tool_use',
     }),
   );
 
@@ -290,7 +386,7 @@ function createMessageStartEvent(): ClaudeMessageStartEvent {
 
 function createContentBlockStartEvent(
   index: number,
-  blockType: 'text' | 'tool_use',
+  blockType: 'text' | 'tool_use' | 'thinking',
   extras?: { id?: string; name?: string },
 ): ClaudeContentBlockStartEvent {
   const event: ClaudeContentBlockStartEvent = {
@@ -303,6 +399,8 @@ function createContentBlockStartEvent(
 
   if (blockType === 'text') {
     event.content_block.text = '';
+  } else if (blockType === 'thinking') {
+    event.content_block.thinking = '';
   } else if (blockType === 'tool_use' && extras) {
     event.content_block.id = extras.id;
     event.content_block.name = extras.name;
@@ -313,8 +411,8 @@ function createContentBlockStartEvent(
 
 function createContentBlockDeltaEvent(
   index: number,
-  deltaType: 'text_delta' | 'input_json_delta',
-  content: { text?: string; partial_json?: string },
+  deltaType: 'text_delta' | 'input_json_delta' | 'thinking_delta',
+  content: { text?: string; partial_json?: string; thinking?: string },
 ): ClaudeContentBlockDeltaEvent {
   const event: ClaudeContentBlockDeltaEvent = {
     type: 'content_block_delta',
@@ -326,6 +424,8 @@ function createContentBlockDeltaEvent(
 
   if (deltaType === 'text_delta' && content.text !== undefined) {
     event.delta.text = content.text;
+  } else if (deltaType === 'thinking_delta' && content.thinking !== undefined) {
+    event.delta.thinking = content.thinking;
   } else if (deltaType === 'input_json_delta' && content.partial_json !== undefined) {
     event.delta.partial_json = content.partial_json;
   }
@@ -348,6 +448,17 @@ function createMessageDeltaEvent(
   return {
     type: 'message_delta',
     delta,
+  };
+}
+
+function createMessageDeltaEventWithUsage(
+  delta: { stop_reason?: string; stop_sequence?: number },
+  usage: { output_tokens: number; cached_tokens?: number; reasoning_tokens?: number },
+): ClaudeMessageDeltaEvent {
+  return {
+    type: 'message_delta',
+    delta,
+    usage,
   };
 }
 

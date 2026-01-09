@@ -208,6 +208,26 @@ export type CodexOutputTextDeltaEvent = {
 };
 
 /**
+ * response.reasoning_text.delta 事件
+ * 参考: refence/codex/codex-rs/codex-api/src/sse/responses.rs:231-241
+ */
+export type CodexReasoningTextDeltaEvent = {
+  type: 'response.reasoning_text.delta';
+  delta: string;
+  content_index?: number;
+};
+
+/**
+ * response.reasoning_summary_text.delta 事件
+ * 参考: refence/codex/codex-rs/codex-api/src/sse/responses.rs:220-230
+ */
+export type CodexReasoningSummaryTextDeltaEvent = {
+  type: 'response.reasoning_summary_text.delta';
+  delta: string;
+  summary_index?: number;
+};
+
+/**
  * Output Item（用于 output_item.done）
  */
 export type CodexOutputItem =
@@ -273,10 +293,24 @@ export type CodexResponseFailedEvent = {
 
 /**
  * response.completed 事件
+ * 参考: refence/codex/codex-rs/codex-api/src/sse/responses.rs:85-116
  */
+export type CodexResponseCompletedUsage = {
+  input_tokens: number;
+  input_tokens_details?: {
+    cached_tokens: number;
+  };
+  output_tokens: number;
+  output_tokens_details?: {
+    reasoning_tokens: number;
+  };
+  total_tokens: number;
+};
+
 export type CodexResponseCompletedEvent = {
   type: 'response.completed';
   id: string;
+  usage?: CodexResponseCompletedUsage;
 };
 
 /**
@@ -285,6 +319,8 @@ export type CodexResponseCompletedEvent = {
 export type CodexSSEEvent =
   | CodexResponseCreatedEvent
   | CodexOutputTextDeltaEvent
+  | CodexReasoningTextDeltaEvent
+  | CodexReasoningSummaryTextDeltaEvent
   | CodexOutputItemAddedEvent
   | CodexOutputItemDoneEvent
   | CodexResponseFailedEvent

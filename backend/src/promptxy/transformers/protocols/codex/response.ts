@@ -7,6 +7,26 @@
 
 import type { ClaudeContentBlock } from '../claude/types.js';
 
+/**
+ * 映射 Codex finish_reason 到 Claude stop_reason
+ *
+ * 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:327-338
+ */
+function mapStopReason(codexFinishReason: string | null | undefined): string {
+  const mapping: Record<string, string> = {
+    'tool_calls': 'tool_use',
+    'stop': 'end_turn',
+    'length': 'max_tokens',
+    'content_filter': 'end_turn',
+  };
+
+  if (!codexFinishReason) {
+    return 'end_turn';
+  }
+
+  return mapping[codexFinishReason] || 'end_turn';
+}
+
 type OpenAIChatCompletionResponse = {
   id?: string;
   choices?: Array<{
@@ -48,6 +68,10 @@ export function transformCodexResponseToClaude(response: unknown): unknown {
   const message = choice?.message;
   const finishReason = choice?.finish_reason ?? null;
 
+  // 映射 Codex finish_reason 到 Claude stop_reason
+  // 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:327-338
+  const stopReason = mapStopReason(finishReason);
+
   const contentBlocks: ClaudeContentBlock[] = [];
 
   // 文本内容（可能为 null）
@@ -73,7 +97,7 @@ export function transformCodexResponseToClaude(response: unknown): unknown {
     type: 'message',
     role: 'assistant',
     content: contentBlocks.length > 0 ? contentBlocks : '',
-    stop_reason: finishReason,
+    stop_reason: stopReason,
   };
 
   if (r.usage && (r.usage.prompt_tokens !== undefined || r.usage.completion_tokens !== undefined)) {
