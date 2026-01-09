@@ -38,6 +38,7 @@ import {
   Moon,
   Monitor,
   Laptop,
+  GitBranch,
   LucideIcon,
 } from 'lucide-react';
 import { StatusIndicator, LogoIcon } from '@/components/common';
@@ -52,7 +53,7 @@ const MENU_ITEMS = [
   { key: 'rules', label: '规则管理', icon: ClipboardList, desc: '创建和管理修改规则' },
   { key: 'requests', label: '请求监控', icon: Activity, desc: '查看实时请求历史' },
   { key: 'preview', label: '预览测试', icon: PlayCircle, desc: '测试规则效果' },
-  { key: 'route-config', label: '路由配置', icon: Activity, desc: '配置协议转换路由' },
+  { key: 'route-config', label: '路由配置', icon: GitBranch, desc: '配置协议转换路由' },
   { key: 'settings', label: '设置', icon: Settings, desc: '配置和数据管理' },
 ] as const;
 

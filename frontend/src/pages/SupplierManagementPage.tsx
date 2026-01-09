@@ -21,9 +21,10 @@ import {
   Chip,
   Divider,
 } from '@heroui/react';
-import { Plus, Edit2, Trash2, Settings, Globe, Lock, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Settings, Globe, Lock, Info, Eye, EyeOff } from 'lucide-react';
 import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, useToggleSupplier } from '@/hooks';
 import type { Supplier, SupplierProtocol } from '@/types/api';
+import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
 
 // 供应商协议选项
 const SUPPLIER_PROTOCOLS: Array<{
@@ -31,30 +32,40 @@ const SUPPLIER_PROTOCOLS: Array<{
   label: string;
   description: string;
   color: string;
-  icon: string;
 }> = [
   {
     key: 'anthropic',
     label: 'Anthropic',
-    description: 'Claude API 协议',
-    color: '🟣',
-    icon: '🤖',
+    description: '/messages 协议',
+    color: '#D4935D',
   },
   {
     key: 'openai',
     label: 'OpenAI',
-    description: 'OpenAI API 协议',
-    color: '🟢',
-    icon: '🧠',
+    description: '/responses 协议',
+    color: '#10A37F',
   },
   {
     key: 'gemini',
     label: 'Gemini',
-    description: 'Google Gemini API 协议',
-    color: '🔵',
-    icon: '💎',
+    description: '/v1beta/models/ 协议',
+    color: '#4285F4',
   },
 ];
+
+// 获取供应商图标组件
+const getSupplierIcon = (protocol: SupplierProtocol) => {
+  switch (protocol) {
+    case 'anthropic':
+      return AnthropicIcon;
+    case 'openai':
+      return OpenAIIcon;
+    case 'gemini':
+      return GeminiIcon;
+    default:
+      return null;
+  }
+};
 
 // 认证类型选项
 const AUTH_TYPES = [
@@ -73,13 +84,14 @@ export const SupplierManagementPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [modelInput, setModelInput] = useState('');
+  const [isTokenVisible, setIsTokenVisible] = useState(false);
   const [formData, setFormData] = useState<Partial<Supplier>>({
     name: '',
     displayName: '',
     baseUrl: '',
     protocol: 'anthropic',
     enabled: true,
-    auth: { type: 'none' },
+    auth: { type: 'bearer' },
     supportedModels: [],
     description: '',
   });
@@ -96,7 +108,7 @@ export const SupplierManagementPage: React.FC = () => {
       baseUrl: '',
       protocol: 'anthropic',
       enabled: true,
-      auth: { type: 'none' },
+      auth: { type: 'bearer' },
       supportedModels: [],
       description: '',
     });
@@ -190,6 +202,7 @@ export const SupplierManagementPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {suppliers.map(supplier => {
           const protocol = SUPPLIER_PROTOCOLS.find(p => p.key === supplier.protocol);
+          const IconComponent = getSupplierIcon(supplier.protocol);
 
           return (
             <Card
@@ -204,7 +217,9 @@ export const SupplierManagementPage: React.FC = () => {
                 {/* 供应商头部 */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="text-3xl">{protocol?.icon}</div>
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${protocol?.color}15` }}>
+                      {IconComponent && <IconComponent size={28} className="text-primary" />}
+                    </div>
                     <div>
                       <h3 className="font-bold text-primary text-lg">
                         {supplier.displayName || supplier.name}
@@ -227,9 +242,9 @@ export const SupplierManagementPage: React.FC = () => {
                   <Chip
                     size="sm"
                     variant="flat"
-                    className="bg-brand-primary/10 dark:bg-brand-primary/20"
+                    style={{ backgroundColor: `${protocol?.color}20`, color: protocol?.color }}
                   >
-                    {protocol?.color} {protocol?.label}
+                    {protocol?.label}
                   </Chip>
                 </div>
 
@@ -391,18 +406,23 @@ export const SupplierManagementPage: React.FC = () => {
                 radius="lg"
                 variant="bordered"
               >
-                {SUPPLIER_PROTOCOLS.map(protocol => (
-                  <SelectItem
-                    key={protocol.key}
-                    textValue={protocol.label}
-                    description={protocol.description}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{protocol.icon}</span>
-                      <span>{protocol.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {SUPPLIER_PROTOCOLS.map(protocol => {
+                  const IconComponent = getSupplierIcon(protocol.key);
+                  return (
+                    <SelectItem
+                      key={protocol.key}
+                      textValue={protocol.label}
+                      description={protocol.description}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${protocol.color}15` }}>
+                          {IconComponent && <IconComponent size={16} />}
+                        </div>
+                        <span>{protocol.label}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </Select>
             </div>
 
@@ -499,8 +519,21 @@ export const SupplierManagementPage: React.FC = () => {
                   placeholder="sk-ant-..."
                   radius="lg"
                   variant="bordered"
-                  type="password"
+                  type={isTokenVisible ? 'text' : 'password'}
                   description="API 认证令牌"
+                  endContent={
+                    <button
+                      type="button"
+                      onClick={() => setIsTokenVisible(!isTokenVisible)}
+                      className="focus:outline-none"
+                    >
+                      {isTokenVisible ? (
+                        <EyeOff size={18} className="text-tertiary hover:text-secondary" />
+                      ) : (
+                        <Eye size={18} className="text-tertiary hover:text-secondary" />
+                      )}
+                    </button>
+                  }
                 />
               </div>
             )}
