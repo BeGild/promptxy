@@ -290,7 +290,7 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
       >
         <RequestDetailPanel
           request={request.modifiedBody}
-          originalRequest={request.originalBody}
+          originalRequest={request.transformedBody || request.originalBody}
           responseStatus={request.responseStatus}
           responseDuration={request.durationMs}
           onSelectionBasedCreate={onSelectionBasedCreate}
