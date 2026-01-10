@@ -35,15 +35,10 @@ import {
 import { Filter, RefreshCw, X, Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
-import {
-  formatTimeWithMs,
-  formatBytes,
-  formatDuration,
-  getStatusColor,
-  formatClient,
-  getClientColorStyle,
-} from '@/utils';
+import { formatTimeWithMs, getStatusColor } from '@/utils';
 import { PathAutocomplete } from './PathAutocomplete';
+import { TransformFlowBadge } from './TransformFlowBadge';
+import { PathCell } from './PathCell';
 
 interface CustomPaginationProps {
   page: number;
@@ -401,9 +396,9 @@ const RequestListComponent: React.FC<RequestListProps> = ({
             <TableColumn className="w-w1 text-center" aria-label="指示条">
               {' '}
             </TableColumn>
-            <TableColumn className="w-44 text-center">时间</TableColumn>
-            <TableColumn className="w-28 text-center">客户端</TableColumn>
-            <TableColumn className="w-56 max-w-72 text-left">路径</TableColumn>
+            <TableColumn className="w-40 text-center">时间</TableColumn>
+            <TableColumn className="w-36 text-center">请求路径</TableColumn>
+            <TableColumn className="w-64 max-w-80 text-left">路径</TableColumn>
             <TableColumn className="w-16 text-center">规则</TableColumn>
             <TableColumn className="text-center">状态</TableColumn>
             <TableColumn className="w-32 text-left">大小</TableColumn>
@@ -471,26 +466,24 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     {(isSelected || isViewed) && <div className="h-full w-1 bg-accent rounded-r" />}
                   </TableCell>
 
-                  <TableCell className="w-44 text-sm font-mono text-xs text-primary dark:text-primary text-center">
+                  <TableCell className="w-40 text-sm font-mono text-xs text-primary dark:text-primary text-center">
                     {formatTimeWithMs(item.timestamp)}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Chip
-                      size="sm"
-                      variant="flat"
-                      className="font-medium"
-                      style={getClientColorStyle(item.client)}
-                    >
-                      {formatClient(item.client)}
-                    </Chip>
+                    <TransformFlowBadge
+                      fromClient={item.client}
+                      toClient={item.supplierClient}
+                      isSupplierRequest={!!item.supplierName}
+                      transformerChain={item.transformerChain}
+                      supplierName={item.supplierName}
+                      size="md"
+                    />
                   </TableCell>
-                  <TableCell className="w-56 max-w-72">
-                    <span
-                      className="font-mono text-xs text-primary dark:text-primary truncate block"
-                      title={item.path}
-                    >
-                      {item.path}
-                    </span>
+                  <TableCell className="w-64 max-w-80">
+                    <PathCell
+                      originalPath={item.path}
+                      transformedPath={item.transformedPath}
+                    />
                   </TableCell>
                   <TableCell className="text-center">
                     {item.matchedRules && item.matchedRules.length > 0 ? (

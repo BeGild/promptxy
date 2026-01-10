@@ -19,7 +19,7 @@ interface UIState {
 
   // 请求侧边栏状态
   isRequestSidebarOpen: boolean;
-  sidebarMode: 'detail' | 'response' | 'rule';
+  sidebarMode: 'original' | 'detail' | 'response' | 'rule';
   sidebarWidth: number; // 记忆用户偏好 (vw)
 
   // 操作
@@ -39,7 +39,7 @@ interface UIState {
   // 侧边栏操作
   openRequestSidebar: (requestId: string) => void;
   closeRequestSidebar: () => void;
-  setSidebarMode: (mode: 'detail' | 'response' | 'rule') => void;
+  setSidebarMode: (mode: 'original' | 'detail' | 'response' | 'rule') => void;
   setSidebarWidth: (width: number) => void;
 }
 
@@ -55,7 +55,7 @@ const initialState = {
   theme: 'system' as const,
   // 侧边栏初始状态
   isRequestSidebarOpen: false,
-  sidebarMode: 'detail' as 'detail' | 'response' | 'rule',
+  sidebarMode: 'detail' as 'original' | 'detail' | 'response' | 'rule',
   sidebarWidth: 40, // 默认 40vw
 };
 
@@ -155,7 +155,7 @@ export const useUIStore = create<UIState>()(
               // 不清除 selectedRequestId，保持选中状态
             }),
 
-          setSidebarMode: (mode: 'detail' | 'response' | 'rule') =>
+          setSidebarMode: (mode: 'original' | 'detail' | 'response' | 'rule') =>
             dedupedSet({ sidebarMode: mode }),
 
           setSidebarWidth: (width: number) => dedupedSet({ sidebarWidth: width }),

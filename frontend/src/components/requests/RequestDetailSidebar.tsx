@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Tabs, Tab, Spinner } from '@heroui/react';
 import { RequestRecord, PromptxyRule, PromptxyClient } from '@/types';
 import { useUIStore } from '@/store';
-import { RequestDetailInSidebar, ResponsePanel } from '@/components/requests';
+import { RequestDetailInSidebar, ResponsePanel, OriginalRequestPanel } from '@/components/requests';
 import { QuickRuleEditor } from '@/components/rules';
 import { toast } from 'sonner';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
@@ -182,7 +182,7 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
       {/* 模式切换 Tabs */}
       <Tabs
         selectedKey={sidebarMode}
-        onSelectionChange={key => setSidebarMode(key as 'detail' | 'response' | 'rule')}
+        onSelectionChange={key => setSidebarMode(key as 'original' | 'detail' | 'response' | 'rule')}
         variant="underlined"
         classNames={{
           base: 'w-full px-md pt-sm',
@@ -192,6 +192,7 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
           tabContent: 'group-data-[selected=true]:text-primary text-tertiary font-medium text-sm',
         }}
       >
+        {request.originalBody && <Tab key="original" title="原始请求" />}
         <Tab key="detail" title="请求详情" />
         <Tab key="response" title="响应信息" />
         <Tab key="rule" title="创建规则" />
@@ -199,6 +200,11 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
 
       {/* 内容区域 */}
       <div className="flex-1 overflow-auto">
+        {sidebarMode === 'original' && (
+          <div className="p-md">
+            <OriginalRequestPanel request={request} />
+          </div>
+        )}
         {sidebarMode === 'detail' && (
           <RequestDetailInSidebar
             request={request}

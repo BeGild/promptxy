@@ -9,23 +9,25 @@ export interface RequestRecord {
   path: string;
   method: string;
   originalBody: any;
+  transformedBody?: any;
   modifiedBody: any;
   requestSize?: number;
   responseSize?: number;
   matchedRules: Array<{ ruleId: string; opType: string }>;
   responseStatus?: number;
   durationMs?: number;
+  requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
   responseBody?: any;
   error?: string;
 
-  // 供应商和转换信息（新增）
-  routeId?: string; // 命中的路由 ID
-  supplierId?: string; // 供应商 ID
-  supplierName?: string; // 供应商名称
-  supplierBaseUrl?: string; // 供应商上游地址
-  transformerChain?: string[]; // 转换链数组
-  transformTrace?: any; // 转换追踪信息
+  // 供应商和转换信息
+  routeId?: string;
+  supplierId?: string;
+  supplierName?: string;
+  supplierBaseUrl?: string;
+  transformerChain?: string[];
+  transformTrace?: any;
 }
 
 export interface RequestListItem {
@@ -40,6 +42,12 @@ export interface RequestListItem {
   responseStatus?: number;
   durationMs?: number;
   error?: string;
+
+  // 供应商和转换信息
+  supplierName?: string;
+  supplierClient?: string;
+  transformerChain?: string[];
+  transformedPath?: string;
 }
 
 export interface RequestListResponse {

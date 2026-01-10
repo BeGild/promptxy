@@ -24,6 +24,12 @@ interface RequestIndex {
   durationMs?: number;
   error?: string;
   matchedRulesBrief: string[];
+
+  // 供应商和转换信息
+  supplierName?: string;
+  supplierClient?: string;
+  transformerChain?: string[];
+  transformedPath?: string;
 }
 
 /**
@@ -41,25 +47,30 @@ interface RequestFile {
   durationMs?: number;
   responseHeaders?: Record<string, string> | string;
   originalBody: string;
+  transformedBody?: string; // 转换器处理后的请求体（可选）
   modifiedBody: string;
   responseBody?: string | ParsedSSEEvent[];
   matchedRules: string;
   error?: string;
-  requestHeaders?: Record<string, string> | string;      // 协议转换后的请求头
+  requestHeaders?: Record<string, string> | string; // 协议转换后的请求头
   originalRequestHeaders?: Record<string, string> | string; // 原始请求头
   // 路由 / 供应商 / 转换信息
   routeId?: string;
   supplierId?: string;
   supplierName?: string;
   supplierBaseUrl?: string;
+  supplierClient?: string; // 供应商客户端类型（如 'codex', 'claude', 'gemini'）
   transformerChain?: string;
   transformTrace?: string;
+  transformedPath?: string; // 转换后的请求路径
 }
 
 /**
  * 解析 headers 字段（兼容 JSON 字符串和对象格式）
  */
-function parseHeaders(headers: Record<string, string> | string | undefined): Record<string, string> | undefined {
+function parseHeaders(
+  headers: Record<string, string> | string | undefined,
+): Record<string, string> | undefined {
   if (!headers) return undefined;
   if (typeof headers === 'string') {
     try {
@@ -264,7 +275,7 @@ class FileSystemStorage {
         if (isAlive) {
           throw new Error(
             `PromptXY 已在运行 (PID: ${lockInfo.pid}, 启动时间: ${lockInfo.createdAt})\n` +
-              `如需重新启动，请先执行: kill ${lockInfo.pid}`
+              `如需重新启动，请先执行: kill ${lockInfo.pid}`,
           );
         }
 
@@ -388,7 +399,7 @@ class FileSystemStorage {
       Number(hours),
       Number(minutes),
       Number(seconds),
-      Number(ms)
+      Number(ms),
     );
 
     return date.getTime();
@@ -409,7 +420,7 @@ class FileSystemStorage {
       dir,
       `${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
         .toString(16)
-        .slice(2)}.tmp`
+        .slice(2)}.tmp`,
     );
 
     try {
@@ -454,6 +465,7 @@ class FileSystemStorage {
       durationMs: record.durationMs,
       responseHeaders: record.responseHeaders,
       originalBody: record.originalBody,
+      transformedBody: record.transformedBody,
       modifiedBody: record.modifiedBody,
       responseBody: record.responseBody,
       matchedRules: record.matchedRules,
@@ -500,6 +512,7 @@ class FileSystemStorage {
         durationMs: fileContent.durationMs,
         responseHeaders: parseHeaders(fileContent.responseHeaders) as any,
         originalBody: fileContent.originalBody,
+        transformedBody: fileContent.transformedBody,
         modifiedBody: fileContent.modifiedBody,
         responseBody: fileContent.responseBody,
         matchedRules: fileContent.matchedRules,
@@ -510,8 +523,10 @@ class FileSystemStorage {
         supplierId: fileContent.supplierId,
         supplierName: fileContent.supplierName,
         supplierBaseUrl: fileContent.supplierBaseUrl,
+        supplierClient: fileContent.supplierClient,
         transformerChain: fileContent.transformerChain,
         transformTrace: fileContent.transformTrace,
+        transformedPath: fileContent.transformedPath,
       };
     } catch (error) {
       console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);
@@ -546,7 +561,6 @@ class FileSystemStorage {
 
   /**
    * 解析索引行
-   * 格式: timestamp|id|client|path|method|reqSize|respSize|status|duration|error|rules
    */
   private parseIndexLine(line: string): RequestIndex | null {
     const parts = line.split('|');
@@ -566,7 +580,21 @@ class FileSystemStorage {
       durationStr,
       error,
       rulesStr,
+      supplierName = '',
+      supplierClient = '',
+      transformerChainStr = '',
+      transformedPath = '',
     ] = parts;
+
+    // 解析 transformerChain（从 JSON 字符串转为数组）
+    let transformerChain: string[] | undefined;
+    if (transformerChainStr) {
+      try {
+        transformerChain = JSON.parse(transformerChainStr);
+      } catch {
+        transformerChain = undefined;
+      }
+    }
 
     return {
       id,
@@ -580,6 +608,11 @@ class FileSystemStorage {
       durationMs: durationStr ? Number(durationStr) : undefined,
       error: error || undefined,
       matchedRulesBrief: rulesStr ? JSON.parse(rulesStr) : [],
+      // 供应商和转换信息
+      supplierName: supplierName || undefined,
+      supplierClient: supplierClient || undefined,
+      transformerChain: transformerChain,
+      transformedPath: transformedPath || undefined,
     };
   }
 
@@ -599,6 +632,11 @@ class FileSystemStorage {
       index.durationMs ?? '',
       index.error ?? '',
       JSON.stringify(index.matchedRulesBrief),
+      // 供应商和转换信息
+      index.supplierName ?? '',
+      index.supplierClient ?? '',
+      index.transformerChain ? JSON.stringify(index.transformerChain) : '',
+      index.transformedPath ?? '',
     ].join('|');
   }
 
@@ -630,6 +668,16 @@ class FileSystemStorage {
         const id = file.replace('.yaml', '');
         const record = await this.loadRequestFile(id);
         if (record) {
+          // 解析 transformerChain（从 JSON 字符串转为数组）
+          let transformerChain: string[] | undefined;
+          if (record.transformerChain) {
+            try {
+              transformerChain = JSON.parse(record.transformerChain);
+            } catch {
+              transformerChain = undefined;
+            }
+          }
+
           newTimeIndex.push({
             id: record.id,
             timestamp: record.timestamp,
@@ -644,6 +692,11 @@ class FileSystemStorage {
             matchedRulesBrief: record.matchedRules
               ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
               : [],
+            // 供应商和转换信息
+            supplierName: record.supplierName,
+            supplierClient: record.supplierClient,
+            transformerChain: transformerChain,
+            transformedPath: record.transformedPath,
           });
           this.pathCache.add(record.path);
         }
@@ -675,6 +728,16 @@ class FileSystemStorage {
         const id = file.replace('.yaml', '');
         const record = await this.loadRequestFile(id);
         if (record) {
+          // 解析 transformerChain（从 JSON 字符串转为数组）
+          let transformerChain: string[] | undefined;
+          if (record.transformerChain) {
+            try {
+              transformerChain = JSON.parse(record.transformerChain);
+            } catch {
+              transformerChain = undefined;
+            }
+          }
+
           newTimeIndex.push({
             id: record.id,
             timestamp: record.timestamp,
@@ -689,6 +752,11 @@ class FileSystemStorage {
             matchedRulesBrief: record.matchedRules
               ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
               : [],
+            // 供应商和转换信息
+            supplierName: record.supplierName,
+            supplierClient: record.supplierClient,
+            transformerChain: transformerChain,
+            transformedPath: record.transformedPath,
           });
           this.pathCache.add(record.path);
         }
@@ -758,15 +826,11 @@ class FileSystemStorage {
           this.flushDirty = false;
 
           // 写入时间索引
-          const timestampContent = this.timeIndex
-            .map(idx => this.formatIndexLine(idx))
-            .join('\n');
+          const timestampContent = this.timeIndex.map(idx => this.formatIndexLine(idx)).join('\n');
           await this.atomicWrite(this.timestampIndexPath, timestampContent);
 
           // 写入路径索引
-          const pathsContent = Array.from(this.pathCache)
-            .sort()
-            .join('\n');
+          const pathsContent = Array.from(this.pathCache).sort().join('\n');
           await this.atomicWrite(this.pathsIndexPath, pathsContent);
 
           // 写入统计缓存
@@ -878,7 +942,17 @@ class FileSystemStorage {
     // 1. 写入请求文件
     await this.writeRequestFile(record);
 
-    // 2. 创建索引条目
+    // 2. 解析 transformerChain（从 JSON 字符串转为数组）
+    let transformerChain: string[] | undefined;
+    if (record.transformerChain) {
+      try {
+        transformerChain = JSON.parse(record.transformerChain);
+      } catch {
+        transformerChain = undefined;
+      }
+    }
+
+    // 3. 创建索引条目
     const index: RequestIndex = {
       id: record.id,
       timestamp: record.timestamp,
@@ -893,17 +967,20 @@ class FileSystemStorage {
       matchedRulesBrief: record.matchedRules
         ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
         : [],
+      // 供应商和转换信息
+      supplierName: record.supplierName,
+      supplierClient: record.supplierClient,
+      transformerChain: transformerChain,
+      transformedPath: record.transformedPath,
     };
 
-    // 3. 更新内存索引
+    // 4. 更新内存索引
     this.updateIndex(index);
 
-    // 4. 异步持久化索引
-    this.flushIndex().catch(err =>
-      console.error('[PromptXY] 异步持久化索引失败', err)
-    );
+    // 5. 异步持久化索引
+    this.flushIndex().catch(err => console.error('[PromptXY] 异步持久化索引失败', err));
 
-    // 5. 自动清理旧记录
+    // 6. 自动清理旧记录
     const maxHistory = this.getSetting('max_history');
     const keep = maxHistory ? Number(maxHistory) : 1000;
 
@@ -957,7 +1034,7 @@ class FileSystemStorage {
         filtered = filtered.filter(
           idx =>
             idx.id.toLowerCase().includes(searchLower) ||
-            idx.path.toLowerCase().includes(searchLower)
+            idx.path.toLowerCase().includes(searchLower),
         );
       }
     }
@@ -979,6 +1056,11 @@ class FileSystemStorage {
       responseStatus: idx.responseStatus,
       durationMs: idx.durationMs,
       error: idx.error,
+      // 供应商和转换信息
+      supplierName: idx.supplierName,
+      supplierClient: idx.supplierClient,
+      transformerChain: idx.transformerChain,
+      transformedPath: idx.transformedPath,
     }));
 
     return {
@@ -1386,7 +1468,11 @@ export async function resetDatabaseForTest(): Promise<void> {
 /**
  * 重建索引
  */
-export async function rebuildIndex(): Promise<{ success: boolean; message: string; count: number }> {
+export async function rebuildIndex(): Promise<{
+  success: boolean;
+  message: string;
+  count: number;
+}> {
   const storage = getDatabase();
   return storage.rebuildIndexPublic();
 }

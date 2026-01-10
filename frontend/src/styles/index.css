@@ -31,11 +31,11 @@
 /* ==================== 语义类名兜底/修正 ==================== */
 /**
  * 背景：
- * - 项目历史上大量使用 `text-secondary` / `bg-secondary` / `bg-canvas` 等“语义类名”
- * - HeroUI 也会注入同名色系（secondary 往往会被配置成品牌/强调色），导致深色模式出现“整体发绿”等问题
+ * - 项目历史上大量使用 `text-secondary` / `bg-secondary` / `bg-canvas` 等"语义类名"
+ * - HeroUI 也会注入同名色系（secondary 往往会被配置成品牌/强调色），导致深色模式出现"整体发绿"等问题
  *
  * 目标：
- * - 在不大规模重写 className 的前提下，让这些“语义类名”稳定指向 Design Tokens（var(--color-*)）
+ * - 在不大规模重写 className 的前提下，让这些"语义类名"稳定指向 Design Tokens（var(--color-*)）
  * - 同时覆盖常见的 `/30` `/50` `/60` `/90` 透明度用法（避免半透明背景仍被 HeroUI secondary 接管）
  *
  * 注意：

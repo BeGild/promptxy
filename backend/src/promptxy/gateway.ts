@@ -450,6 +450,7 @@ export function createGateway(
     let method: string = req.method || 'unknown';
     let transformerChain: string[] = [];
     let transformTrace: any | undefined;
+    let transformedBody: string | undefined;
     // 协议转换后的变量（在 try 块外定义，以便在 catch 块中访问）
     let effectiveUpstreamPath: string;
     let effectiveHeaders: Record<string, string>;
@@ -959,6 +960,7 @@ export function createGateway(
         effectiveUpstreamPath = transformResult.request.path;
         effectiveHeaders = transformResult.request.headers;
         effectiveBody = transformResult.request.body;
+        transformedBody = JSON.stringify(transformResult.request.body);
       }
 
       // ========== OpenAI/Codex：modelSpec 解析 reasoning.effort（透明转发与 Claude→Codex 均适用）==========
@@ -1108,6 +1110,7 @@ export function createGateway(
             path: upstreamPath,
             method: method,
             originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+            transformedBody: transformedBody,
             modifiedBody: effectiveBody
               ? JSON.stringify(effectiveBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
@@ -1237,6 +1240,7 @@ export function createGateway(
           path: savedPath,
           method: method,
           originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+          transformedBody: transformedBody,
           modifiedBody: savedJsonBody
             ? JSON.stringify(savedJsonBody)
             : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
@@ -1301,6 +1305,7 @@ export function createGateway(
             path: upstreamPath,
             method: method,
             originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+            transformedBody: transformedBody,
             modifiedBody: effectiveBody
               ? JSON.stringify(effectiveBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
