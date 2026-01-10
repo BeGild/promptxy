@@ -24,6 +24,12 @@ interface RequestIndex {
   durationMs?: number;
   error?: string;
   matchedRulesBrief: string[];
+
+  // 供应商和转换信息
+  supplierName?: string;
+  supplierClient?: string;
+  transformerChain?: string[];
+  transformedPath?: string;
 }
 
 /**
@@ -53,8 +59,10 @@ interface RequestFile {
   supplierId?: string;
   supplierName?: string;
   supplierBaseUrl?: string;
+  supplierClient?: string; // 供应商客户端类型（如 'codex', 'claude', 'gemini'）
   transformerChain?: string;
   transformTrace?: string;
+  transformedPath?: string; // 转换后的请求路径
 }
 
 /**
@@ -515,8 +523,10 @@ class FileSystemStorage {
         supplierId: fileContent.supplierId,
         supplierName: fileContent.supplierName,
         supplierBaseUrl: fileContent.supplierBaseUrl,
+        supplierClient: fileContent.supplierClient,
         transformerChain: fileContent.transformerChain,
         transformTrace: fileContent.transformTrace,
+        transformedPath: fileContent.transformedPath,
       };
     } catch (error) {
       console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);
@@ -551,7 +561,6 @@ class FileSystemStorage {
 
   /**
    * 解析索引行
-   * 格式: timestamp|id|client|path|method|reqSize|respSize|status|duration|error|rules
    */
   private parseIndexLine(line: string): RequestIndex | null {
     const parts = line.split('|');
@@ -571,7 +580,21 @@ class FileSystemStorage {
       durationStr,
       error,
       rulesStr,
+      supplierName = '',
+      supplierClient = '',
+      transformerChainStr = '',
+      transformedPath = '',
     ] = parts;
+
+    // 解析 transformerChain（从 JSON 字符串转为数组）
+    let transformerChain: string[] | undefined;
+    if (transformerChainStr) {
+      try {
+        transformerChain = JSON.parse(transformerChainStr);
+      } catch {
+        transformerChain = undefined;
+      }
+    }
 
     return {
       id,
@@ -585,6 +608,11 @@ class FileSystemStorage {
       durationMs: durationStr ? Number(durationStr) : undefined,
       error: error || undefined,
       matchedRulesBrief: rulesStr ? JSON.parse(rulesStr) : [],
+      // 供应商和转换信息
+      supplierName: supplierName || undefined,
+      supplierClient: supplierClient || undefined,
+      transformerChain: transformerChain,
+      transformedPath: transformedPath || undefined,
     };
   }
 
@@ -604,6 +632,11 @@ class FileSystemStorage {
       index.durationMs ?? '',
       index.error ?? '',
       JSON.stringify(index.matchedRulesBrief),
+      // 供应商和转换信息
+      index.supplierName ?? '',
+      index.supplierClient ?? '',
+      index.transformerChain ? JSON.stringify(index.transformerChain) : '',
+      index.transformedPath ?? '',
     ].join('|');
   }
 
@@ -635,6 +668,16 @@ class FileSystemStorage {
         const id = file.replace('.yaml', '');
         const record = await this.loadRequestFile(id);
         if (record) {
+          // 解析 transformerChain（从 JSON 字符串转为数组）
+          let transformerChain: string[] | undefined;
+          if (record.transformerChain) {
+            try {
+              transformerChain = JSON.parse(record.transformerChain);
+            } catch {
+              transformerChain = undefined;
+            }
+          }
+
           newTimeIndex.push({
             id: record.id,
             timestamp: record.timestamp,
@@ -649,6 +692,11 @@ class FileSystemStorage {
             matchedRulesBrief: record.matchedRules
               ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
               : [],
+            // 供应商和转换信息
+            supplierName: record.supplierName,
+            supplierClient: record.supplierClient,
+            transformerChain: transformerChain,
+            transformedPath: record.transformedPath,
           });
           this.pathCache.add(record.path);
         }
@@ -680,6 +728,16 @@ class FileSystemStorage {
         const id = file.replace('.yaml', '');
         const record = await this.loadRequestFile(id);
         if (record) {
+          // 解析 transformerChain（从 JSON 字符串转为数组）
+          let transformerChain: string[] | undefined;
+          if (record.transformerChain) {
+            try {
+              transformerChain = JSON.parse(record.transformerChain);
+            } catch {
+              transformerChain = undefined;
+            }
+          }
+
           newTimeIndex.push({
             id: record.id,
             timestamp: record.timestamp,
@@ -694,6 +752,11 @@ class FileSystemStorage {
             matchedRulesBrief: record.matchedRules
               ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
               : [],
+            // 供应商和转换信息
+            supplierName: record.supplierName,
+            supplierClient: record.supplierClient,
+            transformerChain: transformerChain,
+            transformedPath: record.transformedPath,
           });
           this.pathCache.add(record.path);
         }
@@ -879,7 +942,17 @@ class FileSystemStorage {
     // 1. 写入请求文件
     await this.writeRequestFile(record);
 
-    // 2. 创建索引条目
+    // 2. 解析 transformerChain（从 JSON 字符串转为数组）
+    let transformerChain: string[] | undefined;
+    if (record.transformerChain) {
+      try {
+        transformerChain = JSON.parse(record.transformerChain);
+      } catch {
+        transformerChain = undefined;
+      }
+    }
+
+    // 3. 创建索引条目
     const index: RequestIndex = {
       id: record.id,
       timestamp: record.timestamp,
@@ -894,15 +967,20 @@ class FileSystemStorage {
       matchedRulesBrief: record.matchedRules
         ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
         : [],
+      // 供应商和转换信息
+      supplierName: record.supplierName,
+      supplierClient: record.supplierClient,
+      transformerChain: transformerChain,
+      transformedPath: record.transformedPath,
     };
 
-    // 3. 更新内存索引
+    // 4. 更新内存索引
     this.updateIndex(index);
 
-    // 4. 异步持久化索引
+    // 5. 异步持久化索引
     this.flushIndex().catch(err => console.error('[PromptXY] 异步持久化索引失败', err));
 
-    // 5. 自动清理旧记录
+    // 6. 自动清理旧记录
     const maxHistory = this.getSetting('max_history');
     const keep = maxHistory ? Number(maxHistory) : 1000;
 
@@ -978,6 +1056,11 @@ class FileSystemStorage {
       responseStatus: idx.responseStatus,
       durationMs: idx.durationMs,
       error: idx.error,
+      // 供应商和转换信息
+      supplierName: idx.supplierName,
+      supplierClient: idx.supplierClient,
+      transformerChain: idx.transformerChain,
+      transformedPath: idx.transformedPath,
     }));
 
     return {

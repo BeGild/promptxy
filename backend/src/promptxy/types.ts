@@ -209,16 +209,18 @@ export interface RequestRecord {
   responseStatus?: number;
   durationMs?: number;
   responseHeaders?: Record<string, string> | string;
-  responseBody?: string | ParsedSSEEvent[]; // 支持字符串或 SSE 事件数组
+  responseBody?: string | ParsedSSEEvent[];
   error?: string;
 
-  // 供应商和转换信息（新增）
-  routeId?: string; // 命中的路由 ID
-  supplierId?: string; // 供应商 ID
-  supplierName?: string; // 供应商名称
-  supplierBaseUrl?: string; // 供应商上游地址（用于历史回溯，不依赖当前配置）
-  transformerChain?: string; // JSON 字符串，转换链数组
-  transformTrace?: string; // JSON 字符串，转换追踪信息
+  // 供应商和转换信息
+  routeId?: string;
+  supplierId?: string;
+  supplierName?: string;
+  supplierBaseUrl?: string;
+  supplierClient?: string;
+  transformerChain?: string;
+  transformTrace?: string;
+  transformedPath?: string;
 }
 
 // API 返回的请求记录（解析后的）
