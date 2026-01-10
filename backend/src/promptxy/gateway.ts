@@ -3,9 +3,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
-import { mutateClaudeBody } from './adapters/claude.js';
+import { mutateClaudeBody, handleClaudeCountTokens } from './adapters/claude.js';
 import { mutateCodexBody } from './adapters/codex.js';
 import { mutateGeminiBody } from './adapters/gemini.js';
+import { detectOpenAICountTokensSupport } from './utils/upstream-detector.js';
 import {
   cloneAndFilterRequestHeaders,
   filterResponseHeaders,
@@ -26,7 +27,12 @@ import {
   LocalService,
   TransformerType,
 } from './types.js';
-import { insertRequestRecord, getFilteredPaths, shouldFilterPath, generateRequestId } from './database.js';
+import {
+  insertRequestRecord,
+  getFilteredPaths,
+  shouldFilterPath,
+  generateRequestId,
+} from './database.js';
 import { broadcastRequest, setSSEConnections } from './api-handlers.js';
 import type { FileSystemStorage } from './database.js';
 import {
@@ -88,14 +94,20 @@ function matchLocalService(pathname: string): {
   localService: LocalService;
   pathPrefix: string;
 } | null {
-  if (pathname.startsWith('/claude/')) return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
-  if (pathname === '/claude') return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
+  if (pathname.startsWith('/claude/'))
+    return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
+  if (pathname === '/claude')
+    return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
 
-  if (pathname.startsWith('/codex/')) return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
-  if (pathname === '/codex') return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
+  if (pathname.startsWith('/codex/'))
+    return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
+  if (pathname === '/codex')
+    return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
 
-  if (pathname.startsWith('/gemini/')) return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
-  if (pathname === '/gemini') return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
+  if (pathname.startsWith('/gemini/'))
+    return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
+  if (pathname === '/gemini')
+    return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
 
   return null;
 }
@@ -104,11 +116,13 @@ function validateRouteConstraints(route: Route, supplier: Supplier): string | nu
   // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
     if (supplier.protocol !== 'openai') return 'Codex 入口仅允许对接 openai 协议供应商';
-    if (route.transformer !== 'none') return 'Codex 入口不允许跨协议转换（transformer 必须为 none）';
+    if (route.transformer !== 'none')
+      return 'Codex 入口不允许跨协议转换（transformer 必须为 none）';
   }
   if (route.localService === 'gemini') {
     if (supplier.protocol !== 'gemini') return 'Gemini 入口仅允许对接 gemini 协议供应商';
-    if (route.transformer !== 'none') return 'Gemini 入口不允许跨协议转换（transformer 必须为 none）';
+    if (route.transformer !== 'none')
+      return 'Gemini 入口不允许跨协议转换（transformer 必须为 none）';
   }
 
   // Claude：允许跨协议，但 transformer 必须与 supplier 协议一致
@@ -127,11 +141,17 @@ function validateRouteConstraints(route: Route, supplier: Supplier): string | nu
   return null;
 }
 
-function resolveRouteByPath(pathname: string, routes: Route[], suppliers: Supplier[]): RouteInfo | null {
+function resolveRouteByPath(
+  pathname: string,
+  routes: Route[],
+  suppliers: Supplier[],
+): RouteInfo | null {
   const local = matchLocalService(pathname);
   if (!local) return null;
 
-  const enabledRoutes = (routes || []).filter(r => r.localService === local.localService && r.enabled);
+  const enabledRoutes = (routes || []).filter(
+    r => r.localService === local.localService && r.enabled,
+  );
   if (enabledRoutes.length === 0) {
     // 允许返回一个“占位 route”，上层能给出明确的 503 提示
     return {
@@ -167,16 +187,15 @@ function resolveRouteByPath(pathname: string, routes: Route[], suppliers: Suppli
       localService: local.localService,
       pathPrefix: local.pathPrefix,
       upstreamBaseUrl: '',
-      supplier:
-        (supplier ||
-          ({
-            id: route.supplierId,
-            name: 'missing',
-            displayName: 'missing',
-            baseUrl: '',
-            protocol: 'anthropic',
-            enabled: false,
-          } as any)) as Supplier,
+      supplier: (supplier ||
+        ({
+          id: route.supplierId,
+          name: 'missing',
+          displayName: 'missing',
+          baseUrl: '',
+          protocol: 'anthropic',
+          enabled: false,
+        } as any)) as Supplier,
       route,
     };
   }
@@ -280,6 +299,10 @@ function isWarmupRequest(body: any): boolean {
  * @param body - 请求体
  * @returns 是否为 count 探测请求
  */
+function isCountTokensRequest(path: string): boolean {
+  return path === '/v1/messages/count_tokens';
+}
+
 function isCountProbeRequest(body: any): boolean {
   if (!body || typeof body !== 'object') return false;
 
@@ -340,7 +363,11 @@ function getFrontendDir(): string | null {
 /**
  * 处理前端静态文件服务
  */
-function handleFrontendStatic(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
+function handleFrontendStatic(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): boolean {
   const frontendDir = getFrontendDir();
   if (!frontendDir) {
     return false;
@@ -388,7 +415,7 @@ function handleFrontendStatic(req: http.IncomingMessage, res: http.ServerRespons
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'public, max-age=3600',
     });
     res.end(content);
     return true;
@@ -703,9 +730,7 @@ export function createGateway(
         }
         authHeaderUsed = authResult.authHeaderUsed;
         if (config.debug && authHeaderUsed) {
-          logger.debug(
-            `[GatewayAuth] 鉴权通过，使用 header: ${authHeaderUsed}`,
-          );
+          logger.debug(`[GatewayAuth] 鉴权通过，使用 header: ${authHeaderUsed}`);
         }
       }
 
@@ -777,9 +802,7 @@ export function createGateway(
         isWarmupRequest(jsonBody)
       ) {
         if (config.debug) {
-          logger.debug(
-            `[promptxy] 检测到 warmup 请求，跳过转发以节省 token`,
-          );
+          logger.debug(`[promptxy] 检测到 warmup 请求，跳过转发以节省 token`);
         }
         // 返回空响应，快速处理
         jsonError(res, 200, {
@@ -799,9 +822,7 @@ export function createGateway(
         isCountProbeRequest(jsonBody)
       ) {
         if (config.debug) {
-          logger.debug(
-            `[promptxy] 检测到 count 探测请求，跳过转发以节省 token`,
-          );
+          logger.debug(`[promptxy] 检测到 count 探测请求，跳过转发以节省 token`);
         }
         // 返回空响应，快速处理
         jsonError(res, 200, {
@@ -824,7 +845,10 @@ export function createGateway(
         // - haiku/opus 未配置则回落 sonnet
         // - 若完全未配置映射则返回 400（避免 silent 失败）
         const tier = detectClaudeModelTier((jsonBody as any)?.model);
-        const mapping = resolveClaudeMappedModelSpec((matchedRoute.route as any).claudeModelMap, tier);
+        const mapping = resolveClaudeMappedModelSpec(
+          (matchedRoute.route as any).claudeModelMap,
+          tier,
+        );
         if (!mapping.ok) {
           jsonError(res, 400, {
             error: 'claude_model_mapping_missing',
@@ -837,12 +861,81 @@ export function createGateway(
           return;
         }
         if (jsonBody && typeof jsonBody === 'object') {
+          if (matchedRoute.client === 'claude') {
+            const result = mutateClaudeBody({
+              body: jsonBody,
+              method: method,
+              path: upstreamPath,
+              rules: config.rules,
+            });
+            jsonBody = result.body;
+            matches = result.matches;
+          } else if (matchedRoute.client === 'codex') {
+            const result = mutateCodexBody({
+              body: jsonBody,
+              method: method,
+              path: upstreamPath,
+              rules: config.rules,
+            });
+            jsonBody = result.body;
+            matches = result.matches;
+            warnings.push(...result.warnings);
+          } else if (matchedRoute.client === 'gemini') {
+            const result = mutateGeminiBody({
+              body: jsonBody,
+              method: method,
+              path: upstreamPath,
+              rules: config.rules,
+            });
+            jsonBody = result.body;
+            matches = result.matches;
+          }
+        }
+
+        if (matchedRoute.client === 'claude' && isCountTokensRequest(upstreamPath!)) {
+          try {
+            let capabilities;
+
+            if (matchedRoute.supplier.protocol === 'openai') {
+              capabilities = await detectOpenAICountTokensSupport(matchedRoute.supplier);
+            }
+
+            const result = await handleClaudeCountTokens({
+              body: jsonBody,
+              capabilities,
+              baseUrl: matchedRoute.upstreamBaseUrl,
+              auth:
+                matchedRoute.supplier.auth?.type === 'none'
+                  ? undefined
+                  : matchedRoute.supplier.auth,
+            });
+
+            const bodyStr = JSON.stringify(result);
+            res.statusCode = 200;
+            res.setHeader('content-type', 'application/json');
+            res.setHeader('content-length', Buffer.byteLength(bodyStr));
+            res.end(bodyStr);
+            return;
+          } catch (error: any) {
+            jsonError(res, 400, {
+              error: 'count_tokens_error',
+              message: error?.message || 'Failed to count tokens',
+            });
+            return;
+          }
+        }
+
+        if (jsonBody && typeof jsonBody === 'object') {
           (jsonBody as any).model = mapping.modelSpec;
         }
 
         transformerChain = [matchedRoute.route.transformer];
-        const streamFlag =
-          Boolean(jsonBody && typeof jsonBody === 'object' && 'stream' in jsonBody && (jsonBody as any).stream);
+        const streamFlag = Boolean(
+          jsonBody &&
+          typeof jsonBody === 'object' &&
+          'stream' in jsonBody &&
+          (jsonBody as any).stream,
+        );
 
         const transformResult = await protocolTransformer.transform({
           supplier: {
@@ -869,7 +962,11 @@ export function createGateway(
       }
 
       // ========== OpenAI/Codex：modelSpec 解析 reasoning.effort（透明转发与 Claude→Codex 均适用）==========
-      if (matchedRoute.supplier.protocol === 'openai' && effectiveBody && typeof effectiveBody === 'object') {
+      if (
+        matchedRoute.supplier.protocol === 'openai' &&
+        effectiveBody &&
+        typeof effectiveBody === 'object'
+      ) {
         const parsed = parseOpenAIModelSpec(
           (effectiveBody as any).model,
           (matchedRoute.supplier as any).reasoningEfforts,
@@ -881,7 +978,10 @@ export function createGateway(
           if (!existing || typeof existing !== 'object') {
             (effectiveBody as any).reasoning = { effort: parsed.reasoningEffort };
           } else {
-            (effectiveBody as any).reasoning = { ...(existing as any), effort: parsed.reasoningEffort };
+            (effectiveBody as any).reasoning = {
+              ...(existing as any),
+              effort: parsed.reasoningEffort,
+            };
           }
         } else if (parsed) {
           (effectiveBody as any).model = parsed.model;
@@ -963,7 +1063,8 @@ export function createGateway(
         // - 仅保存截断片段，避免日志/DB 过大
         if (transformTrace && upstreamResponse.status >= 400) {
           const snippetLimit = 8 * 1024;
-          const snippet = raw.length > snippetLimit ? `${raw.slice(0, snippetLimit)}...(truncated)` : raw;
+          const snippet =
+            raw.length > snippetLimit ? `${raw.slice(0, snippetLimit)}...(truncated)` : raw;
           transformTrace.upstreamStatus = upstreamResponse.status;
           transformTrace.upstreamContentType = upstreamContentType;
           transformTrace.upstreamBodySnippet = snippet;

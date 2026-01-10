@@ -1,5 +1,7 @@
 import { applyPromptRules } from '../rules/engine.js';
-import { PromptxyRule, PromptxyRuleMatch, PromptxyRequestContext } from '../types.js';
+import { PromptxyRule, PromptxyRuleMatch, PromptxyRequestContext, SupplierAuth } from '../types.js';
+import { countClaudeTokens } from '../utils/token-counter.js';
+import type { TokenCountResult } from '../utils/token-counter.js';
 
 type ClaudeSystemTextBlock = {
   type?: string;
@@ -68,4 +70,36 @@ export function mutateClaudeBody(options: {
   }
 
   return { body, matches: [] };
+}
+
+export async function handleClaudeCountTokens(options: {
+  body: any;
+  capabilities?: { supportsCountTokens: boolean; countTokensEndpoint?: string };
+  baseUrl?: string;
+  auth?: SupplierAuth;
+}): Promise<TokenCountResult> {
+  const { body, capabilities, baseUrl, auth } = options;
+
+  if (!body || typeof body !== 'object') {
+    throw new Error('Invalid request body');
+  }
+
+  if (!Array.isArray(body.messages) || body.messages.length === 0) {
+    throw new Error('messages is required and must be a non-empty array');
+  }
+
+  const messages = body.messages;
+  const system = body.system;
+  const tools = body.tools;
+
+  const result = await countClaudeTokens({
+    messages,
+    system,
+    tools,
+    capabilities,
+    baseUrl,
+    auth,
+  });
+
+  return result;
 }
