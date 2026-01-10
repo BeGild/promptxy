@@ -153,7 +153,7 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
         <div className="border border-subtle rounded-lg overflow-hidden h-[50vh]">
           <RequestDetailPanel
             request={request.modifiedBody}
-            originalRequest={request.originalBody}
+            originalRequest={request.transformedBody || request.originalBody}
             responseStatus={request.responseStatus}
             responseDuration={request.durationMs}
           />

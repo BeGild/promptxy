@@ -88,7 +88,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
         <span className="text-sm text-tertiary">
           {isNoChanges
             ? viewMode === 'side-by-side'
-              ? '原始请求（无改写）'
+              ? '转换后请求（无改写）'
               : 'JSON 格式化视图'
             : viewMode === 'side-by-side'
               ? '左右对比视图'
@@ -121,12 +121,12 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           <Card className="border border-subtle">
             <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
-                <b className="text-sm">原始请求</b>
+                <b className="text-sm">转换后请求</b>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => copyToClipboard(originalStr, '原始请求')}
+                  onPress={() => copyToClipboard(originalStr, '转换后请求')}
                   className="min-w-6 h-6"
                 >
                   <Copy size={14} />
@@ -157,13 +157,13 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           <Card className="border border-subtle">
             <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
-                <b className="text-sm">修改后请求</b>
+                <b className="text-sm">最终请求</b>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
                   onPress={() =>
-                    copyToClipboard(isNoChanges ? originalStr : modifiedStr, '修改后请求')
+                    copyToClipboard(isNoChanges ? originalStr : modifiedStr, '最终请求')
                   }
                   className="min-w-6 h-6"
                 >
@@ -198,12 +198,12 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           <Card className="border border-subtle">
             <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
-                <b className="text-sm">原始</b>
+                <b className="text-sm">转换后</b>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={() => copyToClipboard(originalStr, '原始请求')}
+                  onPress={() => copyToClipboard(originalStr, '转换后请求')}
                   className="min-w-6 h-6"
                 >
                   <Copy size={14} />
@@ -219,7 +219,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
           <Card className="border border-subtle">
             <CardHeader className="bg-secondary border-b border-subtle py-2">
               <div className="flex items-center justify-between w-full">
-                <b className="text-sm">{isNoChanges ? '原始请求' : '修改后'}</b>
+                <b className="text-sm">{isNoChanges ? '转换后请求' : '最终请求'}</b>
                 <Button
                   isIconOnly
                   size="sm"
@@ -227,7 +227,7 @@ const DiffViewerComponent: React.FC<DiffViewerProps> = ({ original, modified }) 
                   onPress={() =>
                     copyToClipboard(
                       isNoChanges ? originalStr : modifiedStr,
-                      isNoChanges ? '原始请求' : '修改后请求',
+                      isNoChanges ? '转换后请求' : '最终请求',
                     )
                   }
                   className="min-w-6 h-6"

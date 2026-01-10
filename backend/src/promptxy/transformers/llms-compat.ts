@@ -362,7 +362,7 @@ export function createProtocolTransformer() {
         } catch (e: any) {
           step.success = false;
           step.error = e?.message || String(e);
-          trace.errors.push({ type: 'transform_error', message: step.error });
+          trace.errors.push({ type: 'transform_error', message: step.error || 'Unknown error' });
           trace.success = false;
         } finally {
           step.duration = Date.now() - stepStart;

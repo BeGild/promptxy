@@ -9,6 +9,7 @@ export interface RequestRecord {
   path: string;
   method: string;
   originalBody: any;
+  transformedBody?: any; // 转换器处理后的请求体（可选）
   modifiedBody: any;
   requestSize?: number;
   responseSize?: number;

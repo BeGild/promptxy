@@ -26,7 +26,12 @@ import {
   LocalService,
   TransformerType,
 } from './types.js';
-import { insertRequestRecord, getFilteredPaths, shouldFilterPath, generateRequestId } from './database.js';
+import {
+  insertRequestRecord,
+  getFilteredPaths,
+  shouldFilterPath,
+  generateRequestId,
+} from './database.js';
 import { broadcastRequest, setSSEConnections } from './api-handlers.js';
 import type { FileSystemStorage } from './database.js';
 import {
@@ -88,14 +93,20 @@ function matchLocalService(pathname: string): {
   localService: LocalService;
   pathPrefix: string;
 } | null {
-  if (pathname.startsWith('/claude/')) return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
-  if (pathname === '/claude') return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
+  if (pathname.startsWith('/claude/'))
+    return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
+  if (pathname === '/claude')
+    return { client: 'claude', localService: 'claude', pathPrefix: '/claude' };
 
-  if (pathname.startsWith('/codex/')) return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
-  if (pathname === '/codex') return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
+  if (pathname.startsWith('/codex/'))
+    return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
+  if (pathname === '/codex')
+    return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
 
-  if (pathname.startsWith('/gemini/')) return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
-  if (pathname === '/gemini') return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
+  if (pathname.startsWith('/gemini/'))
+    return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
+  if (pathname === '/gemini')
+    return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
 
   return null;
 }
@@ -104,11 +115,13 @@ function validateRouteConstraints(route: Route, supplier: Supplier): string | nu
   // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
     if (supplier.protocol !== 'openai') return 'Codex 入口仅允许对接 openai 协议供应商';
-    if (route.transformer !== 'none') return 'Codex 入口不允许跨协议转换（transformer 必须为 none）';
+    if (route.transformer !== 'none')
+      return 'Codex 入口不允许跨协议转换（transformer 必须为 none）';
   }
   if (route.localService === 'gemini') {
     if (supplier.protocol !== 'gemini') return 'Gemini 入口仅允许对接 gemini 协议供应商';
-    if (route.transformer !== 'none') return 'Gemini 入口不允许跨协议转换（transformer 必须为 none）';
+    if (route.transformer !== 'none')
+      return 'Gemini 入口不允许跨协议转换（transformer 必须为 none）';
   }
 
   // Claude：允许跨协议，但 transformer 必须与 supplier 协议一致
@@ -127,11 +140,17 @@ function validateRouteConstraints(route: Route, supplier: Supplier): string | nu
   return null;
 }
 
-function resolveRouteByPath(pathname: string, routes: Route[], suppliers: Supplier[]): RouteInfo | null {
+function resolveRouteByPath(
+  pathname: string,
+  routes: Route[],
+  suppliers: Supplier[],
+): RouteInfo | null {
   const local = matchLocalService(pathname);
   if (!local) return null;
 
-  const enabledRoutes = (routes || []).filter(r => r.localService === local.localService && r.enabled);
+  const enabledRoutes = (routes || []).filter(
+    r => r.localService === local.localService && r.enabled,
+  );
   if (enabledRoutes.length === 0) {
     // 允许返回一个“占位 route”，上层能给出明确的 503 提示
     return {
@@ -167,16 +186,15 @@ function resolveRouteByPath(pathname: string, routes: Route[], suppliers: Suppli
       localService: local.localService,
       pathPrefix: local.pathPrefix,
       upstreamBaseUrl: '',
-      supplier:
-        (supplier ||
-          ({
-            id: route.supplierId,
-            name: 'missing',
-            displayName: 'missing',
-            baseUrl: '',
-            protocol: 'anthropic',
-            enabled: false,
-          } as any)) as Supplier,
+      supplier: (supplier ||
+        ({
+          id: route.supplierId,
+          name: 'missing',
+          displayName: 'missing',
+          baseUrl: '',
+          protocol: 'anthropic',
+          enabled: false,
+        } as any)) as Supplier,
       route,
     };
   }
@@ -340,7 +358,11 @@ function getFrontendDir(): string | null {
 /**
  * 处理前端静态文件服务
  */
-function handleFrontendStatic(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
+function handleFrontendStatic(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): boolean {
   const frontendDir = getFrontendDir();
   if (!frontendDir) {
     return false;
@@ -388,7 +410,7 @@ function handleFrontendStatic(req: http.IncomingMessage, res: http.ServerRespons
 
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'public, max-age=3600',
     });
     res.end(content);
     return true;
@@ -423,6 +445,7 @@ export function createGateway(
     let method: string = req.method || 'unknown';
     let transformerChain: string[] = [];
     let transformTrace: any | undefined;
+    let transformedBody: string | undefined;
     // 协议转换后的变量（在 try 块外定义，以便在 catch 块中访问）
     let effectiveUpstreamPath: string;
     let effectiveHeaders: Record<string, string>;
@@ -703,9 +726,7 @@ export function createGateway(
         }
         authHeaderUsed = authResult.authHeaderUsed;
         if (config.debug && authHeaderUsed) {
-          logger.debug(
-            `[GatewayAuth] 鉴权通过，使用 header: ${authHeaderUsed}`,
-          );
+          logger.debug(`[GatewayAuth] 鉴权通过，使用 header: ${authHeaderUsed}`);
         }
       }
 
@@ -777,9 +798,7 @@ export function createGateway(
         isWarmupRequest(jsonBody)
       ) {
         if (config.debug) {
-          logger.debug(
-            `[promptxy] 检测到 warmup 请求，跳过转发以节省 token`,
-          );
+          logger.debug(`[promptxy] 检测到 warmup 请求，跳过转发以节省 token`);
         }
         // 返回空响应，快速处理
         jsonError(res, 200, {
@@ -799,9 +818,7 @@ export function createGateway(
         isCountProbeRequest(jsonBody)
       ) {
         if (config.debug) {
-          logger.debug(
-            `[promptxy] 检测到 count 探测请求，跳过转发以节省 token`,
-          );
+          logger.debug(`[promptxy] 检测到 count 探测请求，跳过转发以节省 token`);
         }
         // 返回空响应，快速处理
         jsonError(res, 200, {
@@ -824,7 +841,10 @@ export function createGateway(
         // - haiku/opus 未配置则回落 sonnet
         // - 若完全未配置映射则返回 400（避免 silent 失败）
         const tier = detectClaudeModelTier((jsonBody as any)?.model);
-        const mapping = resolveClaudeMappedModelSpec((matchedRoute.route as any).claudeModelMap, tier);
+        const mapping = resolveClaudeMappedModelSpec(
+          (matchedRoute.route as any).claudeModelMap,
+          tier,
+        );
         if (!mapping.ok) {
           jsonError(res, 400, {
             error: 'claude_model_mapping_missing',
@@ -841,8 +861,12 @@ export function createGateway(
         }
 
         transformerChain = [matchedRoute.route.transformer];
-        const streamFlag =
-          Boolean(jsonBody && typeof jsonBody === 'object' && 'stream' in jsonBody && (jsonBody as any).stream);
+        const streamFlag = Boolean(
+          jsonBody &&
+          typeof jsonBody === 'object' &&
+          'stream' in jsonBody &&
+          (jsonBody as any).stream,
+        );
 
         const transformResult = await protocolTransformer.transform({
           supplier: {
@@ -866,10 +890,15 @@ export function createGateway(
         effectiveUpstreamPath = transformResult.request.path;
         effectiveHeaders = transformResult.request.headers;
         effectiveBody = transformResult.request.body;
+        transformedBody = JSON.stringify(transformResult.request.body);
       }
 
       // ========== OpenAI/Codex：modelSpec 解析 reasoning.effort（透明转发与 Claude→Codex 均适用）==========
-      if (matchedRoute.supplier.protocol === 'openai' && effectiveBody && typeof effectiveBody === 'object') {
+      if (
+        matchedRoute.supplier.protocol === 'openai' &&
+        effectiveBody &&
+        typeof effectiveBody === 'object'
+      ) {
         const parsed = parseOpenAIModelSpec(
           (effectiveBody as any).model,
           (matchedRoute.supplier as any).reasoningEfforts,
@@ -881,7 +910,10 @@ export function createGateway(
           if (!existing || typeof existing !== 'object') {
             (effectiveBody as any).reasoning = { effort: parsed.reasoningEffort };
           } else {
-            (effectiveBody as any).reasoning = { ...(existing as any), effort: parsed.reasoningEffort };
+            (effectiveBody as any).reasoning = {
+              ...(existing as any),
+              effort: parsed.reasoningEffort,
+            };
           }
         } else if (parsed) {
           (effectiveBody as any).model = parsed.model;
@@ -963,7 +995,8 @@ export function createGateway(
         // - 仅保存截断片段，避免日志/DB 过大
         if (transformTrace && upstreamResponse.status >= 400) {
           const snippetLimit = 8 * 1024;
-          const snippet = raw.length > snippetLimit ? `${raw.slice(0, snippetLimit)}...(truncated)` : raw;
+          const snippet =
+            raw.length > snippetLimit ? `${raw.slice(0, snippetLimit)}...(truncated)` : raw;
           transformTrace.upstreamStatus = upstreamResponse.status;
           transformTrace.upstreamContentType = upstreamContentType;
           transformTrace.upstreamBodySnippet = snippet;
@@ -1007,6 +1040,7 @@ export function createGateway(
             path: upstreamPath,
             method: method,
             originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+            transformedBody: transformedBody,
             modifiedBody: effectiveBody
               ? JSON.stringify(effectiveBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
@@ -1136,6 +1170,7 @@ export function createGateway(
           path: savedPath,
           method: method,
           originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+          transformedBody: transformedBody,
           modifiedBody: savedJsonBody
             ? JSON.stringify(savedJsonBody)
             : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
@@ -1200,6 +1235,7 @@ export function createGateway(
             path: upstreamPath,
             method: method,
             originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+            transformedBody: transformedBody,
             modifiedBody: effectiveBody
               ? JSON.stringify(effectiveBody)
               : (originalBodyBuffer?.toString('utf-8') ?? '{}'),

@@ -191,6 +191,7 @@ export interface RequestRecord {
 
   // 请求体（JSON 字符串）
   originalBody: string;
+  transformedBody?: string; // 转换器处理后的请求体（可选）
   modifiedBody: string;
 
   // 请求头（对象或 JSON 字符串，兼容旧格式）
@@ -228,6 +229,7 @@ export interface RequestRecordResponse {
   path: string;
   method: string;
   originalBody: any;
+  transformedBody?: any; // 转换器处理后的请求体（可选）
   modifiedBody: any;
   requestHeaders?: Record<string, string>; // 协议转换后的请求头
   originalRequestHeaders?: Record<string, string>; // 原始请求头

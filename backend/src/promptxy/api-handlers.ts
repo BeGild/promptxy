@@ -177,7 +177,9 @@ export async function handleGetPaths(
 /**
  * 解析 headers 字段（兼容 JSON 字符串和对象格式）
  */
-function parseHeadersField(headers: Record<string, string> | string | undefined): Record<string, string> | undefined {
+function parseHeadersField(
+  headers: Record<string, string> | string | undefined,
+): Record<string, string> | undefined {
   if (!headers) return undefined;
   if (typeof headers === 'string') {
     try {
@@ -227,6 +229,7 @@ export async function handleGetRequest(
       path: record.path,
       method: record.method,
       originalBody: JSON.parse(record.originalBody),
+      transformedBody: record.transformedBody ? JSON.parse(record.transformedBody) : undefined,
       modifiedBody: JSON.parse(record.modifiedBody),
       requestHeaders: parseHeadersField(record.requestHeaders),
       originalRequestHeaders: parseHeadersField(record.originalRequestHeaders),
@@ -1035,7 +1038,7 @@ export async function handleTransformPreview(
         method: 'POST',
         path: '/v1/messages',
         headers: {},
-        body: request.request,  // 用户提供的 request 字段就是 Claude 请求体
+        body: request.request, // 用户提供的 request 字段就是 Claude 请求体
       },
       stream: request.stream || false,
     });
@@ -1192,7 +1195,9 @@ function assertClaudeModelMapValid(
     throw new Error('Claude 路由跨协议转换时必须配置 sonnet 映射（claudeModelMap.sonnet）');
   }
 
-  const supported = Array.isArray((supplier as any).supportedModels) ? (supplier as any).supportedModels : [];
+  const supported = Array.isArray((supplier as any).supportedModels)
+    ? (supplier as any).supportedModels
+    : [];
   const ensureInSupported = (tier: string, value: unknown) => {
     if (value === undefined) return;
     if (typeof value !== 'string' || !value.trim()) {
@@ -1327,7 +1332,8 @@ export async function handleUpdateRoute(
     }
 
     const currentRoute = config.routes[index];
-    const nextLocalService = (routeUpdate.localService || currentRoute.localService) as LocalService;
+    const nextLocalService = (routeUpdate.localService ||
+      currentRoute.localService) as LocalService;
     const nextSupplierId = routeUpdate.supplierId || currentRoute.supplierId;
 
     // 验证供应商是否存在

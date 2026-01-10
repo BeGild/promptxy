@@ -41,11 +41,12 @@ interface RequestFile {
   durationMs?: number;
   responseHeaders?: Record<string, string> | string;
   originalBody: string;
+  transformedBody?: string; // 转换器处理后的请求体（可选）
   modifiedBody: string;
   responseBody?: string | ParsedSSEEvent[];
   matchedRules: string;
   error?: string;
-  requestHeaders?: Record<string, string> | string;      // 协议转换后的请求头
+  requestHeaders?: Record<string, string> | string; // 协议转换后的请求头
   originalRequestHeaders?: Record<string, string> | string; // 原始请求头
   // 路由 / 供应商 / 转换信息
   routeId?: string;
@@ -59,7 +60,9 @@ interface RequestFile {
 /**
  * 解析 headers 字段（兼容 JSON 字符串和对象格式）
  */
-function parseHeaders(headers: Record<string, string> | string | undefined): Record<string, string> | undefined {
+function parseHeaders(
+  headers: Record<string, string> | string | undefined,
+): Record<string, string> | undefined {
   if (!headers) return undefined;
   if (typeof headers === 'string') {
     try {
@@ -264,7 +267,7 @@ class FileSystemStorage {
         if (isAlive) {
           throw new Error(
             `PromptXY 已在运行 (PID: ${lockInfo.pid}, 启动时间: ${lockInfo.createdAt})\n` +
-              `如需重新启动，请先执行: kill ${lockInfo.pid}`
+              `如需重新启动，请先执行: kill ${lockInfo.pid}`,
           );
         }
 
@@ -388,7 +391,7 @@ class FileSystemStorage {
       Number(hours),
       Number(minutes),
       Number(seconds),
-      Number(ms)
+      Number(ms),
     );
 
     return date.getTime();
@@ -409,7 +412,7 @@ class FileSystemStorage {
       dir,
       `${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
         .toString(16)
-        .slice(2)}.tmp`
+        .slice(2)}.tmp`,
     );
 
     try {
@@ -454,6 +457,7 @@ class FileSystemStorage {
       durationMs: record.durationMs,
       responseHeaders: record.responseHeaders,
       originalBody: record.originalBody,
+      transformedBody: record.transformedBody,
       modifiedBody: record.modifiedBody,
       responseBody: record.responseBody,
       matchedRules: record.matchedRules,
@@ -500,6 +504,7 @@ class FileSystemStorage {
         durationMs: fileContent.durationMs,
         responseHeaders: parseHeaders(fileContent.responseHeaders) as any,
         originalBody: fileContent.originalBody,
+        transformedBody: fileContent.transformedBody,
         modifiedBody: fileContent.modifiedBody,
         responseBody: fileContent.responseBody,
         matchedRules: fileContent.matchedRules,
@@ -758,15 +763,11 @@ class FileSystemStorage {
           this.flushDirty = false;
 
           // 写入时间索引
-          const timestampContent = this.timeIndex
-            .map(idx => this.formatIndexLine(idx))
-            .join('\n');
+          const timestampContent = this.timeIndex.map(idx => this.formatIndexLine(idx)).join('\n');
           await this.atomicWrite(this.timestampIndexPath, timestampContent);
 
           // 写入路径索引
-          const pathsContent = Array.from(this.pathCache)
-            .sort()
-            .join('\n');
+          const pathsContent = Array.from(this.pathCache).sort().join('\n');
           await this.atomicWrite(this.pathsIndexPath, pathsContent);
 
           // 写入统计缓存
@@ -899,9 +900,7 @@ class FileSystemStorage {
     this.updateIndex(index);
 
     // 4. 异步持久化索引
-    this.flushIndex().catch(err =>
-      console.error('[PromptXY] 异步持久化索引失败', err)
-    );
+    this.flushIndex().catch(err => console.error('[PromptXY] 异步持久化索引失败', err));
 
     // 5. 自动清理旧记录
     const maxHistory = this.getSetting('max_history');
@@ -957,7 +956,7 @@ class FileSystemStorage {
         filtered = filtered.filter(
           idx =>
             idx.id.toLowerCase().includes(searchLower) ||
-            idx.path.toLowerCase().includes(searchLower)
+            idx.path.toLowerCase().includes(searchLower),
         );
       }
     }
@@ -1386,7 +1385,11 @@ export async function resetDatabaseForTest(): Promise<void> {
 /**
  * 重建索引
  */
-export async function rebuildIndex(): Promise<{ success: boolean; message: string; count: number }> {
+export async function rebuildIndex(): Promise<{
+  success: boolean;
+  message: string;
+  count: number;
+}> {
   const storage = getDatabase();
   return storage.rebuildIndexPublic();
 }
