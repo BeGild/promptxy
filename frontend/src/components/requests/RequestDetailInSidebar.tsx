@@ -26,10 +26,11 @@ import {
   getStatusColor,
   formatClient,
   formatSize,
+  formatHeadersAsJSON,
 } from '@/utils';
 import { RequestDetailPanel } from '@/components/request-viewer';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
-import { Server, ArrowRight, Eye, CheckCircle2 } from 'lucide-react';
+import { Server, ArrowRight, Eye, CheckCircle2, ChevronDown, Copy } from 'lucide-react';
 
 interface RequestDetailInSidebarProps {
   request: RequestRecord | null;
@@ -45,6 +46,87 @@ interface RequestDetailInSidebarProps {
   /** 基于当前请求创建规则的回调 */
   onBasedOnRequestCreate?: () => void;
 }
+
+/**
+ * 请求头折叠面板组件
+ */
+const RequestHeadersAccordion: React.FC<{
+  headers: Record<string, string> | undefined;
+}> = ({ headers }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  if (!headers || Object.keys(headers).length === 0) {
+    return null;
+  }
+
+  const headerCount = Object.keys(headers).length;
+  const formattedJSON = formatHeadersAsJSON(headers);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(formattedJSON);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
+
+  return (
+    <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
+      <CardBody className="px-3 py-2">
+        <div
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <div className="flex items-center gap-2 text-xs">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-brand-primary"
+            >
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            <span className="font-medium text-primary">请求头</span>
+            <span className="text-secondary bg-primary/50 px-2 py-0.5 rounded-full border border-subtle">
+              {headerCount} 项
+            </span>
+          </div>
+          <ChevronDown
+            size={14}
+            className={`text-secondary transition-transform duration-300 ${
+              isExpanded ? 'rotate-180' : ''
+            }`}
+          />
+        </div>
+
+        {isExpanded && (
+          <div className="relative mt-2">
+            <button
+              onClick={handleCopy}
+              className={`absolute top-1 right-1 w-6 h-6 rounded border border-default bg-primary text-secondary hover:bg-secondary hover:text-primary transition-all flex items-center justify-center ${
+                isCopied
+                  ? 'bg-status-warning-bg text-status-warning border-status-warning'
+                  : ''
+              }`}
+              title="复制 JSON"
+            >
+              <Copy size={12} />
+            </button>
+            <pre className="font-mono text-xs bg-secondary p-2 overflow-x-auto text-primary whitespace-pre">
+              {formattedJSON}
+            </pre>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+};
 
 export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
   request,
@@ -282,6 +364,9 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
           </CardBody>
         </Card>
       )}
+
+      {/* 请求头折叠面板 */}
+      <RequestHeadersAccordion headers={request.requestHeaders} />
 
       {/* 请求详情 */}
       <div

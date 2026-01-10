@@ -16,6 +16,7 @@ export interface RequestRecord {
   matchedRules: Array<{ ruleId: string; opType: string }>;
   responseStatus?: number;
   durationMs?: number;
+  requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
   responseBody?: any;
   error?: string;
