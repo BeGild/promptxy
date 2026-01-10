@@ -17,18 +17,6 @@ import type {
 } from './types.js';
 import type { FieldAuditCollector } from '../../audit/field-audit.js';
 import type { JsonPointer } from '../../audit/json-pointer.js';
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-
-// 获取当前文件目录
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// Codex 默认提示词模板（使用 gpt_5_2_prompt.md）
-const DEFAULT_CODEX_INSTRUCTIONS = readFileSync(
-  join(__dirname, './templates/gpt_5_2.md'),
-  'utf-8'
-);
 
 /**
  * 渲染配置
@@ -109,29 +97,28 @@ export function renderCodexRequest(
 /**
  * 渲染 instructions
  *
- * 规则：使用 Codex 模板（替换 Claude system，因为上游会验证身份）
+ * 规则：直接使用 Claude system.text（上游不验证 instructions 内容）
  *
- * 上游验证逻辑：检查 instructions 是否包含 Codex 身份标识
- * - "You are Codex, based on GPT-5. You are running as a coding agent..."
+ * 根据测试验证（见 docs/codex-instructions-minimization-test-plan.md）：
+ * - 上游不检测 instructions 字段的内容
+ * - 即使空 instructions 也能通过验证
+ * - 因此直接透传 Claude 的 system 即可
  */
 function renderInstructions(
   systemText: string,
   template: string | undefined,
   audit: FieldAuditCollector,
 ): string {
-  // 使用配置的 template 或默认 Codex 模板
-  const codexTemplate = template || DEFAULT_CODEX_INSTRUCTIONS;
-
-  // 记录 Codex 模板来源（用于上游验证）
+  // 记录透传来源
   audit.addDefaulted({
     path: '/instructions',
-    source: 'template',
-    reason: 'Codex identity template (replaces Claude system for upstream validation)',
+    source: 'claude_system',
+    reason: 'Direct pass-through of Claude system (upstream does not validate instructions content)',
   });
 
-  // 返回 Codex 模板，不附加 Claude system（Claude 的 system 已经被规范化处理，
-  // 包含了必要的配置信息，但上游需要 Codex 身份验证）
-  return codexTemplate;
+  // 直接返回 Claude system.text
+  // 如果 systemText 为空，返回空字符串（上游验证通过）
+  return systemText || '';
 }
 
 /**
