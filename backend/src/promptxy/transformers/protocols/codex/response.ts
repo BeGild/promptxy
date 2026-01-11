@@ -5,6 +5,29 @@
  * 这里将其转换为 Claude Messages 的 message 响应，供 Claude Code 消费。
  */
 
+/**
+ * 记录缓存指标到审计元数据
+ *
+ * @param cachedTokens 缓存命中的 token 数
+ * @param inputTokens 总输入 token 数
+ * @returns 缓存统计信息
+ */
+function logCacheMetrics(cachedTokens: number, inputTokens: number): {
+  cacheHitCount: number;
+  cacheHitRate: number;
+} {
+  const cacheHitCount = cachedTokens;
+  const cacheHitRate = inputTokens > 0 ? (cacheHitCount / inputTokens) * 100 : 0;
+
+  // 输出缓存指标日志（仅在开发环境或缓存命中时）
+  if (cachedTokens > 0) {
+    // eslint-disable-next-line no-console
+    console.log(`[Cache Metrics] Hit: ${cachedTokens}/${inputTokens} tokens (${cacheHitRate.toFixed(1)}%)`);
+  }
+
+  return { cacheHitCount, cacheHitRate };
+}
+
 import type { ClaudeContentBlock } from '../claude/types.js';
 
 /**
@@ -46,6 +69,14 @@ type OpenAIChatCompletionResponse = {
     prompt_tokens?: number;
     completion_tokens?: number;
     total_tokens?: number;
+    /** OpenAI/Codex 缓存命中的 token 数 */
+    prompt_tokens_details?: {
+      cached_tokens?: number;
+    };
+    /** OpenAI/Codex 推理 token 数 */
+    completion_tokens_details?: {
+      reasoning_tokens?: number;
+    };
   };
 };
 
@@ -114,10 +145,28 @@ export function transformCodexResponseToClaude(response: unknown): unknown {
   };
 
   if (r.usage && (r.usage.prompt_tokens !== undefined || r.usage.completion_tokens !== undefined)) {
+    // 映射 OpenAI/Codex 缓存指标到 Claude 格式
+    // cached_tokens → cache_read_input_tokens
+    const cachedTokens = r.usage.prompt_tokens_details?.cached_tokens || 0;
+    const reasoningTokens = r.usage.completion_tokens_details?.reasoning_tokens || 0;
+    const inputTokens = r.usage.prompt_tokens || 0;
+
+    // 记录缓存指标
+    logCacheMetrics(cachedTokens, inputTokens);
+
     out.usage = {
-      input_tokens: r.usage.prompt_tokens,
+      input_tokens: inputTokens,
       output_tokens: r.usage.completion_tokens,
+      // Claude 格式的缓存指标：cache_read_input_tokens 表示从缓存读取的 token 数
+      cache_read_input_tokens: cachedTokens,
+      // OpenAI 不区分 cache_creation，设为 0
+      cache_creation_input_tokens: 0,
     };
+
+    // 如果有 reasoning tokens，添加到 usage 中
+    if (reasoningTokens > 0) {
+      (out.usage as any).reasoning_tokens = reasoningTokens;
+    }
   }
 
   return out;

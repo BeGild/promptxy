@@ -274,10 +274,20 @@ function transformSingleEvent(
       const codexUsage = completedEvent.usage;
 
       if (codexUsage) {
+        const cachedTokens = codexUsage.input_tokens_details?.cached_tokens || 0;
+        const inputTokens = codexUsage.input_tokens || 0;
+
+        // 记录缓存指标（流式响应）
+        if (cachedTokens > 0) {
+          const cacheHitRate = inputTokens > 0 ? (cachedTokens / inputTokens) * 100 : 0;
+          // eslint-disable-next-line no-console
+          console.log(`[Cache Metrics] Stream Hit: ${cachedTokens}/${inputTokens} tokens (${cacheHitRate.toFixed(1)}%)`);
+        }
+
         // 映射 Codex usage 到 Claude usage
         const usage = {
           output_tokens: codexUsage.output_tokens || 0,
-          cached_tokens: codexUsage.input_tokens_details?.cached_tokens,
+          cached_tokens: cachedTokens,
           reasoning_tokens: codexUsage.output_tokens_details?.reasoning_tokens,
         };
 

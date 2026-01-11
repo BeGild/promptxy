@@ -173,7 +173,10 @@ export type CodexResponsesApiRequest = {
   store: boolean;
   stream: boolean;
   include: string[];
+  /** 缓存键，用于影响路由，提高缓存命中率 */
   prompt_cache_key?: string;
+  /** 缓存保留策略：in_memory (默认) 或 24h */
+  prompt_cache_retention?: 'in_memory' | '24h';
   text?: CodexText;
 };
 

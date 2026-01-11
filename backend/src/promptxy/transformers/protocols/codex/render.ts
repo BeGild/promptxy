@@ -64,11 +64,13 @@ export function renderCodexRequest(
     stream: boolean;
     /** sessionId（从 metadata.user_id 提取，用于 prompt_cache_key） */
     sessionId?: string;
+    /** 缓存保留策略（从 metadata 提取） */
+    promptCacheRetention?: 'in_memory' | '24h';
   },
   config: RenderConfig,
   audit: FieldAuditCollector,
 ): CodexResponsesApiRequest {
-  const { model, system, messages, tools, stream, sessionId } = params;
+  const { model, system, messages, tools, stream, sessionId, promptCacheRetention } = params;
 
   // 1. instructions = template + system
   const instructions = renderInstructions(system.text, config.instructionsTemplate, audit);
@@ -90,7 +92,7 @@ export function renderCodexRequest(
   // 6. text（可选的 verbosity 配置）
   const text: { verbosity: 'low' | 'medium' | 'high' } = { verbosity: 'high' };
 
-  return {
+  const request: CodexResponsesApiRequest = {
     model,
     instructions,
     input,
@@ -104,6 +106,18 @@ export function renderCodexRequest(
     prompt_cache_key: sessionId,  // 使用 sessionId 作为 prompt_cache_key
     text,
   };
+
+  // 添加缓存保留策略（如果指定）
+  if (promptCacheRetention) {
+    request.prompt_cache_retention = promptCacheRetention;
+    audit.addDefaulted({
+      path: '/prompt_cache_retention',
+      source: 'inferred',
+      reason: `Cache retention policy from client metadata: ${promptCacheRetention}`,
+    });
+  }
+
+  return request;
 }
 
 /**

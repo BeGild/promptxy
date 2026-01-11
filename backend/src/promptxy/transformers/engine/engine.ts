@@ -347,6 +347,7 @@ export class TransformerEngine {
       tools: parsed.tools,
       stream: parsed.stream,
       sessionId: parsed.sessionId,
+      promptCacheRetention: parsed.promptCacheRetention,
     }, renderConfig, audit);
 
     // 收集目标路径
