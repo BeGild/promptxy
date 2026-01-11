@@ -112,6 +112,19 @@ function matchLocalService(pathname: string): {
   return null;
 }
 
+/**
+ * 将供应商协议类型转换为客户端类型
+ * 映射关系: anthropic -> claude, openai -> codex, gemini -> gemini
+ */
+function protocolToClient(protocol: 'anthropic' | 'openai' | 'gemini'): PromptxyClient {
+  const protocolClientMap: Record<string, PromptxyClient> = {
+    anthropic: 'claude',
+    openai: 'codex',
+    gemini: 'gemini',
+  };
+  return protocolClientMap[protocol] || 'claude';
+}
+
 function validateRouteConstraints(route: Route, supplier: Supplier): string | null {
   // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
@@ -1128,6 +1141,7 @@ export function createGateway(
             supplierId: matchedRoute.supplier.id,
             supplierName: matchedRoute.supplier.name,
             supplierBaseUrl: matchedRoute.supplier.baseUrl,
+            supplierClient: protocolToClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
           };
@@ -1259,6 +1273,7 @@ export function createGateway(
           supplierId: matchedRoute.supplier.id,
           supplierName: matchedRoute.supplier.name,
           supplierBaseUrl: matchedRoute.supplier.baseUrl,
+          supplierClient: protocolToClient(matchedRoute.supplier.protocol),
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
         };
@@ -1322,6 +1337,7 @@ export function createGateway(
             supplierId: route?.supplier?.id,
             supplierName: route?.supplier?.name,
             supplierBaseUrl: route?.supplier?.baseUrl,
+            supplierClient: route?.supplier?.protocol ? protocolToClient(route.supplier.protocol) : undefined,
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
           };
