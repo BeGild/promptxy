@@ -261,12 +261,13 @@ function summarizeMatches(matches: PromptxyRuleMatch[]): string {
  *
  * Warmup 请求特征（参考 claude-relay-service）：
  * - 只有单条消息
- * - 没有附带 tools
+ * - content 大小 <= 2（数组格式）
+ * - content 中任意一项为空或只包含 "Warmup" 文本
  *
- * 注意：单条消息+无 tools 过于宽泛，会误伤正常对话（例如用户首次问“hi”）。
- * 这里采取更保守的判定：只有当该唯一消息的可提取文本为空时，才认为是 warmup。
+ * 注意：Claude Code 的 warmup 请求可能包含 tools，所以不检查 tools
  *
- * 这种请求通常是 Claude Code 的预热/探测请求，对 codex 供应商无效（可直接返回空结果节省 token）。
+ * 这种请求通常是 Claude Code 的预热/探测请求，对跨协议转换（codex/gemini）无效
+ * （可直接返回空结果节省 token）。
  *
  * @param body - 请求体
  * @returns 是否为 warmup 请求
@@ -275,30 +276,40 @@ function isWarmupRequest(body: any): boolean {
   if (!body || typeof body !== 'object') return false;
 
   const messages = body?.messages;
-  const tools = body?.tools;
 
   // 必须有 messages 数组
   if (!Array.isArray(messages) || messages.length !== 1) return false;
 
-  // 必须没有 tools（或 tools 为空）
-  if (tools && Array.isArray(tools) && tools.length > 0) return false;
-
   const msg = messages[0];
   if (!msg || typeof msg !== 'object') return false;
 
-  // 提取“可视文本”
-  let text = '';
-  if (typeof msg.content === 'string') {
-    text = msg.content;
-  } else if (Array.isArray(msg.content)) {
-    text = msg.content
-      .filter((b: any) => b && typeof b === 'object' && b.type === 'text')
-      .map((b: any) => b.text || b.input_text || '')
-      .join('');
+  const content = msg.content;
+
+  // 字符串格式：直接判断
+  if (typeof content === 'string') {
+    return content.trim() === '' || content.trim() === 'Warmup';
   }
 
-  // 仅当内容为空才认为是 warmup（保守，避免误伤真实请求）
-  if (typeof text === 'string' && text.trim() === '') return true;
+  // 数组格式：检查 content 大小和每一项
+  if (Array.isArray(content)) {
+    // content 大小必须 <= 2
+    if (content.length > 2) return false;
+
+    // 检查是否有任意一项只包含 "Warmup" 或为空
+    for (const block of content) {
+      if (block && typeof block === 'object') {
+        const isTextBlock = block.type === 'text' || block.type === 'input_text';
+        if (isTextBlock) {
+          const text = block.text || block.input_text || '';
+          const trimmed = text.trim();
+          // 只要有一项是空或只包含 "Warmup" 就认为是 warmup 请求
+          if (trimmed === '' || trimmed === 'Warmup') {
+            return true;
+          }
+        }
+      }
+    }
+  }
 
   return false;
 }
@@ -775,6 +786,43 @@ export function createGateway(
         }
       }
 
+      // ========== Warmup 请求过滤：必须在 mutate 之前检查（原始请求体）==========
+      // 参考项目：claude-relay-service
+      // Warmup 请求特征：单条消息 + content 中包含 "Warmup" 文本
+      // 对跨协议转换（codex/gemini）无效，直接返回空响应节省 token
+      if (jsonBody && typeof jsonBody === 'object') {
+        if (
+          matchedRoute.localService === 'claude' &&
+          (matchedRoute.route.transformer === 'codex' || matchedRoute.route.transformer === 'gemini') &&
+          isWarmupRequest(jsonBody)
+        ) {
+          // 返回空响应，快速处理
+          jsonError(res, 200, {
+            type: 'result',
+            role: 'assistant',
+            content: [{ type: 'text', text: '' }],
+          });
+          return;
+        }
+
+        // ========== Count 探测请求过滤：必须在 mutate 之前检查（原始请求体）==========
+        // 这种请求只有一个 message，内容仅为 "count"
+        // 对跨协议转换（codex/gemini）无效，直接返回空响应节省 token
+        if (
+          matchedRoute.localService === 'claude' &&
+          (matchedRoute.route.transformer === 'codex' || matchedRoute.route.transformer === 'gemini') &&
+          isCountProbeRequest(jsonBody)
+        ) {
+          // 返回空响应，快速处理
+          jsonError(res, 200, {
+            type: 'result',
+            role: 'assistant',
+            content: [{ type: 'text', text: '' }],
+          });
+          return;
+        }
+      }
+
       if (jsonBody && typeof jsonBody === 'object') {
         if (matchedRoute.client === 'claude') {
           const result = mutateClaudeBody({
@@ -805,46 +853,6 @@ export function createGateway(
           jsonBody = result.body;
           matches = result.matches;
         }
-      }
-
-      // ========== Warmup 请求过滤：跳过无意义的预热请求 ==========
-      // 参考项目：claude-relay-service
-      // Warmup 请求特征：单条消息 + 无 tools，通常是 Claude Code 的探测请求
-      if (
-        matchedRoute.localService === 'claude' &&
-        matchedRoute.route.transformer === 'codex' &&
-        isWarmupRequest(jsonBody)
-      ) {
-        if (config.debug) {
-          logger.debug(`[promptxy] 检测到 warmup 请求，跳过转发以节省 token`);
-        }
-        // 返回空响应，快速处理
-        jsonError(res, 200, {
-          type: 'result',
-          role: 'assistant',
-          content: [{ type: 'text', text: '' }],
-        });
-        return;
-      }
-
-      // ========== Count 探测请求过滤：跳过 "count" 文本探测 ==========
-      // 这种请求只有一个 message，内容仅为 "count"
-      // 对 codex 供应商无效，直接返回空响应
-      if (
-        matchedRoute.localService === 'claude' &&
-        matchedRoute.route.transformer === 'codex' &&
-        isCountProbeRequest(jsonBody)
-      ) {
-        if (config.debug) {
-          logger.debug(`[promptxy] 检测到 count 探测请求，跳过转发以节省 token`);
-        }
-        // 返回空响应，快速处理
-        jsonError(res, 200, {
-          type: 'result',
-          role: 'assistant',
-          content: [{ type: 'text', text: '' }],
-        });
-        return;
       }
 
       // ========== 协议转换（仅 Claude 入口允许跨协议）==========
