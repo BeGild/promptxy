@@ -233,6 +233,41 @@ export const RequestDetail: React.FC<RequestDetailProps> = ({
         </Card>
       )}
 
+      {/* 转换追踪 (transformTrace) - 包含上游原始错误信息 */}
+      {request.transformTrace && (
+        <Card className="border border-warning/30 dark:border-warning/20 bg-gradient-to-br from-elevated to-warning/5 dark:from-elevated dark:to-warning/10">
+          <CardHeader className="bg-warning/10 dark:bg-warning/20 border-b border-warning/30 dark:border-warning/20 py-2">
+            <div className="flex items-center justify-between w-full">
+              <h5 className="text-md font-bold">转换追踪 (transformTrace)</h5>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() =>
+                  copyToClipboard(JSON.stringify(request.transformTrace, null, 2), '转换追踪')
+                }
+                className="min-w-6 h-6"
+              >
+                <Copy size={14} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-sm">
+            <pre className="font-mono text-xs bg-secondary dark:bg-secondary p-3 rounded-lg overflow-x-auto max-h-[300px] overflow-y-auto">
+              {JSON.stringify(request.transformTrace, null, 2)}
+            </pre>
+            {request.transformTrace.upstreamBodySnippet && (
+              <div className="mt-2 space-y-1">
+                <div className="text-xs text-secondary font-medium">上游原始错误片段：</div>
+                <pre className="font-mono text-xs bg-status-error/10 dark:bg-status-error/20 p-3 rounded-lg overflow-x-auto max-h-[200px] overflow-y-auto text-status-error dark:text-status-error">
+                  {request.transformTrace.upstreamBodySnippet}
+                </pre>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
       {/* 操作按钮 */}
       <div className="flex gap-2 justify-end pt-2 border-t border-subtle">
         {onReplay && (

@@ -63,6 +63,19 @@ function safeJsonParse(input: string | undefined): Record<string, unknown> {
 export function transformCodexResponseToClaude(response: unknown): unknown {
   if (!response || typeof response !== 'object') return response;
 
+  // 检测错误响应并透传：避免将错误消息错误地转换为空的 assistant 消息
+  // 支持多种错误格式：
+  // - OpenAI/Codex: { error: { message: "...", type: "...", code: "..." } }
+  // - FastAPI: { detail: "..." }
+  // 注意：正常 chat.completion 响应会有 choices 字段
+  const hasChoices = 'choices' in response;
+  const hasErrorField = 'error' in response || 'detail' in response;
+
+  // 有错误字段但没有 choices 字段 → 判定为错误响应，直接透传
+  if (hasErrorField && !hasChoices) {
+    return response;
+  }
+
   const r = response as OpenAIChatCompletionResponse;
   const choice = r.choices?.[0];
   const message = choice?.message;
