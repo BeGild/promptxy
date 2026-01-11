@@ -35,7 +35,7 @@ export type FieldDiff = {
 /**
  * 默认值来源
  */
-export type DefaultSource = 'template' | 'route' | 'supplier' | 'inferred' | 'fallback' | 'claude_system';
+export type DefaultSource = 'template' | 'route' | 'supplier' | 'inferred' | 'fallback';
 
 /**
  * 默认值记录
