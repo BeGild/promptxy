@@ -463,6 +463,30 @@ export type LocalService = 'claude' | 'codex' | 'gemini';
 export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'none';
 
 /**
+ * 模型映射规则
+ */
+export interface ModelMappingRule {
+  /** 规则唯一ID */
+  id: string;
+  /** 通配符模式，如 "claude-*-sonnet-*" */
+  pattern: string;
+  /** 目标模型 */
+  target: string;
+  /** 可选描述 */
+  description?: string;
+}
+
+/**
+ * 模型映射配置
+ */
+export interface ModelMapping {
+  /** 是否启用模型映射 */
+  enabled: boolean;
+  /** 映射规则列表（按顺序匹配，第一个命中的生效） */
+  rules: ModelMappingRule[];
+}
+
+/**
  * 路由配置
  * 将本地服务路径映射到供应商，支持协议转换
  */
@@ -471,16 +495,8 @@ export interface Route {
   localService: LocalService; // 本地服务（/claude, /codex, /gemini）
   supplierId: string; // 关联的供应商ID
   transformer: TransformerType; // 转换器类型（自动选择）
-  /**
-   * Claude Code 模型档位映射（仅 localService=claude 且跨协议转换时生效）
-   * - sonnet 必填
-   * - haiku/opus 可选，未配置则回落 sonnet
-   */
-  claudeModelMap?: {
-    sonnet: string;
-    haiku?: string;
-    opus?: string;
-  };
+  /** 模型映射配置（未匹配时原样透传） */
+  modelMapping?: ModelMapping;
   enabled: boolean; // 是否启用
 }
 

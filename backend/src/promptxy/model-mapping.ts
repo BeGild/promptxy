@@ -1,40 +1,64 @@
-export type ClaudeModelTier = 'haiku' | 'sonnet' | 'opus';
+import type { ModelMapping, ModelMappingRule } from './types.js';
 
-export function detectClaudeModelTier(model: unknown): ClaudeModelTier {
-  if (typeof model !== 'string') return 'sonnet';
-  const lower = model.toLowerCase();
-  // 优先级：opus > haiku > sonnet（识别不到默认 sonnet）
-  if (lower.includes('opus')) return 'opus';
-  if (lower.includes('haiku')) return 'haiku';
-  return 'sonnet';
+/**
+ * 将通配符模式转换为正则表达式
+ * 支持 * 匹配任意字符（0个或多个）
+ */
+function wildcardToRegex(pattern: string): RegExp {
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // 转义特殊字符
+    .replace(/\*/g, '.*'); // * → .*
+  return new RegExp(`^${escaped}$`, 'i');
 }
 
-export type ClaudeModelMap = {
-  sonnet: string;
-  haiku?: string;
-  opus?: string;
-};
-
-export function resolveClaudeMappedModelSpec(
-  claudeModelMap: unknown,
-  tier: ClaudeModelTier,
-): { ok: true; modelSpec: string } | { ok: false; error: string } {
-  if (!claudeModelMap || typeof claudeModelMap !== 'object') {
-    return { ok: false, error: 'Claude 路由跨协议转换时必须配置 claudeModelMap（至少 sonnet）' };
-  }
-  const map = claudeModelMap as Record<string, unknown>;
-  const sonnet = map.sonnet;
-  if (typeof sonnet !== 'string' || !sonnet.trim()) {
-    return { ok: false, error: 'Claude 路由跨协议转换时必须配置 claudeModelMap.sonnet' };
-  }
-
-  const tierValue = map[tier];
-  if (typeof tierValue === 'string' && tierValue.trim()) {
-    return { ok: true, modelSpec: tierValue };
-  }
-
-  return { ok: true, modelSpec: sonnet };
+/**
+ * 匹配模型名称（通配符模式）
+ */
+function matchModel(model: string, rule: ModelMappingRule): boolean {
+  return wildcardToRegex(rule.pattern).test(model);
 }
+
+/**
+ * 解析模型映射结果
+ */
+export type ModelMappingResult =
+  | { mapped: true; target: string; rule: ModelMappingRule }
+  | { mapped: false };
+
+/**
+ * 解析模型映射
+ * @param inboundModel 入站模型名称
+ * @param config 模型映射配置
+ * @returns 映射结果；mapped=false 表示原样透传
+ */
+export function resolveModelMapping(
+  inboundModel: string | undefined,
+  config: ModelMapping | undefined,
+): ModelMappingResult {
+  // 无配置或未启用：不映射（透传）
+  if (!config || !config.enabled) {
+    return { mapped: false };
+  }
+
+  // 无入站模型：不映射（透传）
+  if (!inboundModel) {
+    return { mapped: false };
+  }
+
+  // 按顺序匹配规则
+  for (const rule of config.rules) {
+    if (matchModel(inboundModel, rule)) {
+      return { mapped: true, target: rule.target, rule };
+    }
+  }
+
+  // 未命中任何规则：不映射（原样透传）
+  return { mapped: false };
+}
+
+// ============================================================================
+// OpenAI reasoning effort 解析（保留原有功能）
+// ============================================================================
 
 export const DEFAULT_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
 

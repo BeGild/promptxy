@@ -258,7 +258,7 @@ PromptXY 通过“模型映射”解决该问题：
 
 ## 📝 配置文件
 
-配置文件位置: `~/.promptxy/config.json` 或项目根目录 `promptxy.config.json`
+配置文件位置: `~/.config/promptxy/config.json` 或项目根目录 `promptxy.config.json`
 
 > 💡 **详细配置说明请参考** [配置参考文档](docs/configuration.md)
 

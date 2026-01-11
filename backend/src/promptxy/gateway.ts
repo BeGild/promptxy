@@ -74,9 +74,8 @@ import { createProtocolTransformer } from './transformers/index.js';
 import { createSSETransformStream, isSSEResponse } from './transformers/index.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
 import {
-  detectClaudeModelTier,
   parseOpenAIModelSpec,
-  resolveClaudeMappedModelSpec,
+  resolveModelMapping,
 } from './model-mapping.js';
 import { parseSSEToEvents, isSSEContent } from './utils/sse-parser.js';
 
@@ -834,33 +833,30 @@ export function createGateway(
         return;
       }
 
-      // ========== 协议转换（仅 Claude 入口允许跨协议）==========
+      // ========== 协议转换与模型映射 ==========
       effectiveUpstreamPath = upstreamPath!;
       effectiveHeaders = headers;
       effectiveBody = jsonBody;
       let needsResponseTransform = false;
 
-      if (matchedRoute.localService === 'claude' && matchedRoute.route.transformer !== 'none') {
-        // Claude Code 模型映射：将 haiku/sonnet/opus 映射为上游可识别的 modelSpec
-        // - 识别不到默认 sonnet
-        // - haiku/opus 未配置则回落 sonnet
-        // - 若完全未配置映射则返回 400（避免 silent 失败）
-        const tier = detectClaudeModelTier((jsonBody as any)?.model);
-        const mapping = resolveClaudeMappedModelSpec(
-          (matchedRoute.route as any).claudeModelMap,
-          tier,
-        );
-        if (!mapping.ok) {
-          jsonError(res, 400, {
-            error: 'claude_model_mapping_missing',
-            message: mapping.error,
-            tier,
-            routeId: matchedRoute.route.id,
-            supplierId: matchedRoute.route.supplierId,
-            path: url.pathname,
-          });
-          return;
+      // ========== 模型映射（适用于所有路由，包括同协议）==========
+      if (jsonBody && typeof jsonBody === 'object' && (jsonBody as any).model) {
+        const inboundModel = (jsonBody as any).model as string;
+        const mappingResult = resolveModelMapping(inboundModel, matchedRoute.route.modelMapping);
+
+        if (mappingResult.mapped) {
+          (jsonBody as any).model = mappingResult.target;
+          if (config.debug) {
+            logger.debug(
+              `[ModelMapping] ${inboundModel} → ${mappingResult.target}` +
+              (mappingResult.rule ? ` (rule: ${mappingResult.rule.id})` : ''),
+            );
+          }
         }
+      }
+
+      // ========== 协议转换（仅 Claude 入口跨协议时）==========
+      if (matchedRoute.localService === 'claude' && matchedRoute.route.transformer !== 'none') {
         if (jsonBody && typeof jsonBody === 'object') {
           if (matchedRoute.client === 'claude') {
             const result = mutateClaudeBody({
@@ -924,10 +920,6 @@ export function createGateway(
             });
             return;
           }
-        }
-
-        if (jsonBody && typeof jsonBody === 'object') {
-          (jsonBody as any).model = mapping.modelSpec;
         }
 
         transformerChain = [matchedRoute.route.transformer];

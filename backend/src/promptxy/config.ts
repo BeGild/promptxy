@@ -380,37 +380,43 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
       throw new Error(`${label}.enabled must be a boolean`);
     }
 
-    // Claude 跨协议转换：claudeModelMap 用于运行时映射；缺失时运行时返回 400 提示配置
-    // 这里仅做“存在时的结构校验”，避免老配置导致服务无法启动。
-    if (route.localService === 'claude' && route.transformer !== 'none' && (route as any).claudeModelMap !== undefined) {
-      const supplier = config.suppliers.find(s => s.id === route.supplierId);
-      if (!supplier) {
-        throw new Error(`${label}.supplierId references a missing supplier: ${route.supplierId}`);
+    // 模型映射验证（可选）
+    if (route.modelMapping !== undefined) {
+      const mapping = route.modelMapping;
+      const mappingLabel = `${label}.modelMapping`;
+
+      if (typeof mapping !== 'object' || mapping === null) {
+        throw new Error(`${mappingLabel} must be an object`);
       }
 
-      const map = (route as any).claudeModelMap;
-      if (!map || typeof map !== 'object') {
-        throw new Error(`${label}.claudeModelMap must be an object when provided`);
+      if (typeof mapping.enabled !== 'boolean') {
+        throw new Error(`${mappingLabel}.enabled must be a boolean`);
       }
 
-      const supportedModels = Array.isArray((supplier as any).supportedModels)
-        ? (supplier as any).supportedModels
-        : [];
-      const validateMappedModel = (tier: string, value: unknown) => {
-        if (value === undefined) return;
-        if (typeof value !== 'string' || !value.trim()) {
-          throw new Error(`${label}.claudeModelMap.${tier} must be a non-empty string when provided`);
-        }
-        if (supportedModels.length > 0 && !supportedModels.includes(value)) {
-          throw new Error(
-            `${label}.claudeModelMap.${tier} must be one of supplier.supportedModels (supplierId=${supplier.id})`,
-          );
-        }
-      };
+      if (!Array.isArray(mapping.rules)) {
+        throw new Error(`${mappingLabel}.rules must be an array`);
+      }
 
-      validateMappedModel('sonnet', map.sonnet);
-      validateMappedModel('haiku', map.haiku);
-      validateMappedModel('opus', map.opus);
+      for (let j = 0; j < mapping.rules.length; j++) {
+        const rule = mapping.rules[j];
+        const ruleLabel = `${mappingLabel}.rules[${j}]`;
+
+        if (!rule || typeof rule !== 'object') {
+          throw new Error(`${ruleLabel} must be an object`);
+        }
+        if (!rule.id || typeof rule.id !== 'string') {
+          throw new Error(`${ruleLabel}.id must be a non-empty string`);
+        }
+        if (!rule.pattern || typeof rule.pattern !== 'string') {
+          throw new Error(`${ruleLabel}.pattern must be a non-empty string`);
+        }
+        if (!rule.target || typeof rule.target !== 'string') {
+          throw new Error(`${ruleLabel}.target must be a non-empty string`);
+        }
+        if (rule.description !== undefined && typeof rule.description !== 'string') {
+          throw new Error(`${ruleLabel}.description must be a string when provided`);
+        }
+      }
     }
   }
 
