@@ -42,9 +42,9 @@ export function useConfigStatus(): ConfigStatus {
       return list.find(r => r.enabled);
     };
 
-    status['/claude'] = resolveSupplierName(enabledRoute('claude')?.supplierId);
-    status['/codex'] = resolveSupplierName(enabledRoute('codex')?.supplierId);
-    status['/gemini'] = resolveSupplierName(enabledRoute('gemini')?.supplierId);
+    status['/claude'] = resolveSupplierName(enabledRoute('claude')?.defaultSupplierId);
+    status['/codex'] = resolveSupplierName(enabledRoute('codex')?.defaultSupplierId);
+    status['/gemini'] = resolveSupplierName(enabledRoute('gemini')?.defaultSupplierId);
 
     return status;
   }, [routes, suppliers]);

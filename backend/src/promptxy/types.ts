@@ -470,8 +470,13 @@ export interface ModelMappingRule {
   id: string;
   /** 通配符模式，如 "claude-*-sonnet-*" */
   pattern: string;
-  /** 目标模型 */
-  target: string;
+  /** 命中后选择的目标供应商 */
+  targetSupplierId: string;
+  /**
+   * 可选；缺失时透传入站 model。
+   * 若目标 supplier 配置了 supportedModels 且非空，前端应优先提供下拉选择。
+   */
+  targetModel?: string;
   /** 可选描述 */
   description?: string;
 }
@@ -493,9 +498,8 @@ export interface ModelMapping {
 export interface Route {
   id: string; // 路由唯一标识
   localService: LocalService; // 本地服务（/claude, /codex, /gemini）
-  supplierId: string; // 关联的供应商ID
-  transformer: TransformerType; // 转换器类型（自动选择）
-  /** 模型映射配置（未匹配时原样透传） */
+  defaultSupplierId: string; // 默认上游供应商ID（未命中规则时使用）
+  /** 模型映射配置：可按入站 model 选择 supplier + 可选 targetModel；targetModel 为空则透传 */
   modelMapping?: ModelMapping;
   enabled: boolean; // 是否启用
 }

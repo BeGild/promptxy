@@ -1177,40 +1177,76 @@ function assertRouteAllowed(
   }
 }
 
-function assertClaudeModelMapValid(
-  routeLike: { localService: LocalService; claudeModelMap?: any },
-  transformer: string,
+function assertTargetModelAllowed(
+  label: string,
   supplier: Supplier,
+  targetModel: unknown,
 ): void {
-  if (routeLike.localService !== 'claude') return;
-  if (transformer === 'none') return;
-
-  const map = routeLike.claudeModelMap;
-  if (!map || typeof map !== 'object') {
-    throw new Error('Claude 路由跨协议转换时必须配置模型映射（claudeModelMap）');
-  }
-
-  const sonnet = map.sonnet;
-  if (typeof sonnet !== 'string' || !sonnet.trim()) {
-    throw new Error('Claude 路由跨协议转换时必须配置 sonnet 映射（claudeModelMap.sonnet）');
+  if (targetModel === undefined) return;
+  if (typeof targetModel !== 'string' || !targetModel.trim()) {
+    throw new Error(`${label} 必须是非空字符串`);
   }
 
   const supported = Array.isArray((supplier as any).supportedModels)
-    ? (supplier as any).supportedModels
+    ? ((supplier as any).supportedModels as string[])
     : [];
-  const ensureInSupported = (tier: string, value: unknown) => {
-    if (value === undefined) return;
-    if (typeof value !== 'string' || !value.trim()) {
-      throw new Error(`claudeModelMap.${tier} 必须是非空字符串`);
-    }
-    if (!supported.includes(value)) {
-      throw new Error(`claudeModelMap.${tier} 必须从该供应商的 supportedModels 中选择`);
-    }
-  };
+  if (supported.length > 0 && !supported.includes(targetModel)) {
+    throw new Error(`${label} 必须从该供应商的 supportedModels 中选择`);
+  }
+}
 
-  ensureInSupported('sonnet', sonnet);
-  ensureInSupported('haiku', map.haiku);
-  ensureInSupported('opus', map.opus);
+function assertRouteModelMappingValid(
+  label: string,
+  routeLike: { modelMapping?: any },
+  suppliers: Supplier[],
+): void {
+  const mapping = (routeLike as any).modelMapping;
+  if (!mapping || typeof mapping !== 'object') return;
+
+  const rules = (mapping as any).rules;
+  if (!Array.isArray(rules)) return;
+
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i];
+    const ruleLabel = `${label}.modelMapping.rules[${i}]`;
+    if (!rule || typeof rule !== 'object') continue;
+
+    const supplierId = (rule as any).targetSupplierId;
+    if (typeof supplierId !== 'string' || !supplierId.trim()) {
+      throw new Error(`${ruleLabel}.targetSupplierId 必须是非空字符串`);
+    }
+
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) {
+      throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${supplierId}`);
+    }
+
+    assertTargetModelAllowed(`${ruleLabel}.targetModel`, supplier, (rule as any).targetModel);
+  }
+}
+
+function assertRouteProtocolConstraint(
+  localService: LocalService,
+  supplierProtocol: Supplier['protocol'],
+): void {
+  if (localService === 'codex' && supplierProtocol !== 'openai') {
+    throw new Error('Codex 入口仅允许对接 openai 协议供应商');
+  }
+  if (localService === 'gemini' && supplierProtocol !== 'gemini') {
+    throw new Error('Gemini 入口仅允许对接 gemini 协议供应商');
+  }
+}
+
+function deriveTransformer(
+  localService: LocalService,
+  supplierProtocol: Supplier['protocol'],
+): string {
+  if (localService === 'codex') return 'none';
+  if (localService === 'gemini') return 'none';
+  if (supplierProtocol === 'anthropic') return 'none';
+  if (supplierProtocol === 'openai') return 'codex';
+  if (supplierProtocol === 'gemini') return 'gemini';
+  return 'none';
 }
 
 /**
@@ -1241,36 +1277,33 @@ export async function handleCreateRoute(
     const { route: routeData }: RouteCreateRequest = JSON.parse(body.toString());
 
     // 验证供应商是否存在
-    const supplier = config.suppliers.find(s => s.id === routeData.supplierId);
-    if (!supplier) {
+    const defaultSupplier = config.suppliers.find(s => s.id === routeData.defaultSupplierId);
+    if (!defaultSupplier) {
       sendJson(res, 400, {
         success: false,
-        message: '供应商不存在',
+        message: '默认上游供应商不存在',
       });
       return;
     }
 
-    // 路由合法性：Codex/Gemini 只允许透明转发；Claude 允许跨协议转换
+    // 入口协议约束（codex/gemini 不允许跨协议）
     try {
-      assertRouteAllowed(routeData.localService, supplier.protocol);
+      assertRouteProtocolConstraint(routeData.localService, defaultSupplier.protocol);
     } catch (e: any) {
       sendJson(res, 400, {
         success: false,
-        message: e?.message || '不支持的路由组合',
+        message: e?.message || '路由协议不合法',
       });
       return;
     }
 
-    // 自动选择转换器
-    const transformer = autoSelectTransformer(routeData.localService, supplier.protocol) as any;
-
-    // Claude 跨协议：要求模型映射（至少 sonnet）
+    // 校验规则级 targetSupplierId/targetModel
     try {
-      assertClaudeModelMapValid(routeData as any, transformer, supplier);
+      assertRouteModelMappingValid('route', routeData as any, config.suppliers);
     } catch (e: any) {
       sendJson(res, 400, {
         success: false,
-        message: e?.message || 'Claude 模型映射配置无效',
+        message: e?.message || '模型映射配置无效',
       });
       return;
     }
@@ -1279,7 +1312,6 @@ export async function handleCreateRoute(
     const newRoute: Route = {
       ...routeData,
       id: `route-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      transformer,
     };
 
     // 允许同一 localService 多条路由；但启用状态必须唯一
@@ -1334,45 +1366,71 @@ export async function handleUpdateRoute(
     const currentRoute = config.routes[index];
     const nextLocalService = (routeUpdate.localService ||
       currentRoute.localService) as LocalService;
-    const nextSupplierId = routeUpdate.supplierId || currentRoute.supplierId;
+    const nextDefaultSupplierId =
+      routeUpdate.defaultSupplierId || currentRoute.defaultSupplierId;
 
     // 验证供应商是否存在
-    const nextSupplier = config.suppliers.find(s => s.id === nextSupplierId);
-    if (!nextSupplier) {
-      sendJson(res, 400, { success: false, message: '供应商不存在' });
+    const nextDefaultSupplier = config.suppliers.find(s => s.id === nextDefaultSupplierId);
+    if (!nextDefaultSupplier) {
+      sendJson(res, 400, { success: false, message: '默认上游供应商不存在' });
       return;
     }
 
-    // 路由合法性校验
+    // 入口协议约束（codex/gemini 不允许跨协议）
     try {
-      assertRouteAllowed(nextLocalService, nextSupplier.protocol);
+      assertRouteProtocolConstraint(nextLocalService, nextDefaultSupplier.protocol);
     } catch (e: any) {
       sendJson(res, 400, {
         success: false,
-        message: e?.message || '不支持的路由组合',
+        message: e?.message || '路由协议不合法',
       });
       return;
     }
 
-    // 自动重新选择转换器（不允许手动覆写）
-    routeUpdate.transformer = autoSelectTransformer(nextLocalService, nextSupplier.protocol) as any;
-
-    // Claude 跨协议：要求模型映射（至少 sonnet）
+    // 校验规则级 targetSupplierId/targetModel
     const mergedForValidation: any = {
       ...currentRoute,
       ...routeUpdate,
       localService: nextLocalService,
-      supplierId: nextSupplierId,
+      defaultSupplierId: nextDefaultSupplierId,
     };
     try {
-      assertClaudeModelMapValid(mergedForValidation, routeUpdate.transformer as any, nextSupplier);
+      assertRouteModelMappingValid('route', mergedForValidation, config.suppliers);
     } catch (e: any) {
       sendJson(res, 400, {
         success: false,
-        message: e?.message || 'Claude 模型映射配置无效',
+        message: e?.message || '模型映射配置无效',
       });
       return;
     }
+
+    // 不允许手动设置 transformer（字段已移除）
+    delete (routeUpdate as any).transformer;
+    delete (routeUpdate as any).supplierId;
+    delete (routeUpdate as any).claudeModelMap;
+
+    // 若更新 defaultSupplierId，需要同步补齐规则 targetSupplierId（与迁移语义一致）
+    if (
+      mergedForValidation.modelMapping &&
+      typeof mergedForValidation.modelMapping === 'object' &&
+      Array.isArray((mergedForValidation.modelMapping as any).rules)
+    ) {
+      for (const rule of (mergedForValidation.modelMapping as any).rules as any[]) {
+        if (!rule || typeof rule !== 'object') continue;
+        if (!rule.targetSupplierId && nextDefaultSupplierId) {
+          rule.targetSupplierId = nextDefaultSupplierId;
+        }
+      }
+    }
+
+    // 将补齐后的 modelMapping 写回 routeUpdate
+    if ('modelMapping' in mergedForValidation) {
+      (routeUpdate as any).modelMapping = mergedForValidation.modelMapping;
+    }
+
+    // 将 localService/defaultSupplierId 更新写回 routeUpdate
+    (routeUpdate as any).localService = nextLocalService;
+    (routeUpdate as any).defaultSupplierId = nextDefaultSupplierId;
 
     if (routeUpdate.enabled === true) {
       for (const r of config.routes) {

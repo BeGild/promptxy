@@ -22,8 +22,13 @@ function matchModel(model: string, rule: ModelMappingRule): boolean {
  * 解析模型映射结果
  */
 export type ModelMappingResult =
-  | { mapped: true; target: string; rule: ModelMappingRule }
-  | { mapped: false };
+  | {
+      matched: true;
+      targetSupplierId: string;
+      targetModel?: string;
+      rule: ModelMappingRule;
+    }
+  | { matched: false };
 
 /**
  * 解析模型映射
@@ -37,23 +42,28 @@ export function resolveModelMapping(
 ): ModelMappingResult {
   // 无配置或未启用：不映射（透传）
   if (!config || !config.enabled) {
-    return { mapped: false };
+    return { matched: false };
   }
 
   // 无入站模型：不映射（透传）
   if (!inboundModel) {
-    return { mapped: false };
+    return { matched: false };
   }
 
   // 按顺序匹配规则
   for (const rule of config.rules) {
     if (matchModel(inboundModel, rule)) {
-      return { mapped: true, target: rule.target, rule };
+      return {
+        matched: true,
+        targetSupplierId: rule.targetSupplierId,
+        targetModel: rule.targetModel,
+        rule,
+      };
     }
   }
 
   // 未命中任何规则：不映射（原样透传）
-  return { mapped: false };
+  return { matched: false };
 }
 
 // ============================================================================

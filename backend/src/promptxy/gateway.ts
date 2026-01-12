@@ -73,10 +73,7 @@ import {
 import { createProtocolTransformer } from './transformers/index.js';
 import { createSSETransformStream, isSSEResponse } from './transformers/index.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
-import {
-  parseOpenAIModelSpec,
-  resolveModelMapping,
-} from './model-mapping.js';
+import { parseOpenAIModelSpec, resolveModelMapping } from './model-mapping.js';
 import { parseSSEToEvents, isSSEContent } from './utils/sse-parser.js';
 
 type RouteInfo = {
@@ -111,39 +108,63 @@ function matchLocalService(pathname: string): {
   return null;
 }
 
+function deriveTransformer(
+  localService: Route['localService'],
+  supplierProtocol: Supplier['protocol'],
+): TransformerType {
+  if (localService === 'codex') return 'none';
+  if (localService === 'gemini') return 'none';
+
+  if (supplierProtocol === 'anthropic') return 'none';
+  if (supplierProtocol === 'openai') return 'codex';
+  if (supplierProtocol === 'gemini') return 'gemini';
+
+  return 'none';
+}
+
 function validateRouteConstraints(route: Route, supplier: Supplier): string | null {
   // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
     if (supplier.protocol !== 'openai') return 'Codex 入口仅允许对接 openai 协议供应商';
-    if (route.transformer !== 'none')
-      return 'Codex 入口不允许跨协议转换（transformer 必须为 none）';
   }
   if (route.localService === 'gemini') {
     if (supplier.protocol !== 'gemini') return 'Gemini 入口仅允许对接 gemini 协议供应商';
-    if (route.transformer !== 'none')
-      return 'Gemini 入口不允许跨协议转换（transformer 必须为 none）';
   }
 
-  // Claude：允许跨协议，但 transformer 必须与 supplier 协议一致
+  // Claude：允许跨协议；transformer 由 supplier 协议推断
   if (route.localService === 'claude') {
-    if (supplier.protocol === 'anthropic' && route.transformer !== 'none') {
-      return 'Claude → anthropic 供应商不需要转换（transformer 必须为 none）';
-    }
-    if (supplier.protocol === 'openai' && route.transformer !== 'codex') {
-      return 'Claude → openai 供应商必须使用 codex 转换器（Responses）';
-    }
-    if (supplier.protocol === 'gemini' && route.transformer !== 'gemini') {
-      return 'Claude → gemini 供应商必须使用 gemini 转换器';
-    }
+    // 这里不再校验 route.transformer（字段已移除）
+    return null;
   }
 
   return null;
+}
+
+function resolveEffectiveModelMapping(
+  inboundModel: string | undefined,
+  route: Route,
+): { supplierId: string; model: string | undefined; ruleId?: string } {
+  if (!inboundModel) {
+    return { supplierId: route.defaultSupplierId, model: inboundModel };
+  }
+
+  const mappingResult = resolveModelMapping(inboundModel, route.modelMapping);
+  if (!mappingResult.matched) {
+    return { supplierId: route.defaultSupplierId, model: inboundModel };
+  }
+
+  return {
+    supplierId: mappingResult.targetSupplierId,
+    model: mappingResult.targetModel ?? inboundModel,
+    ruleId: mappingResult.rule?.id,
+  };
 }
 
 function resolveRouteByPath(
   pathname: string,
   routes: Route[],
   suppliers: Supplier[],
+  jsonBody: any,
 ): RouteInfo | null {
   const local = matchLocalService(pathname);
   if (!local) return null;
@@ -169,15 +190,19 @@ function resolveRouteByPath(
       route: {
         id: 'missing',
         localService: local.localService,
-        supplierId: 'missing',
-        transformer: 'none' as TransformerType,
+        defaultSupplierId: 'missing',
         enabled: false,
       },
     };
   }
 
   const route = enabledRoutes[0]!;
-  const supplier = suppliers.find(s => s.id === route.supplierId);
+
+  // 根据 modelMapping（如启用）选择目标 supplier + 可选 targetModel
+  const inboundModel = jsonBody && typeof jsonBody === 'object' ? ((jsonBody as any).model as string | undefined) : undefined;
+  const effective = resolveEffectiveModelMapping(inboundModel, route);
+
+  const supplier = suppliers.find(s => s.id === effective.supplierId);
 
   // 供应商缺失/禁用：返回占位信息，由上层返回 503
   if (!supplier || !supplier.enabled) {
@@ -188,7 +213,7 @@ function resolveRouteByPath(
       upstreamBaseUrl: '',
       supplier: (supplier ||
         ({
-          id: route.supplierId,
+          id: effective.supplierId,
           name: 'missing',
           displayName: 'missing',
           baseUrl: '',
@@ -667,7 +692,7 @@ export function createGateway(
       // ========== Gateway代理路由 ==========
 
       // 根据路径查找本地服务与启用路由（Route → Supplier）
-      route = resolveRouteByPath(url.pathname, config.routes, config.suppliers);
+      route = resolveRouteByPath(url.pathname, config.routes, config.suppliers, jsonBody);
       if (!route) {
         jsonError(res, 404, { error: 'Unknown gateway prefix', path: url.pathname });
         return;
@@ -693,9 +718,9 @@ export function createGateway(
           error: reason ? 'route_invalid' : 'supplier_unavailable',
           message:
             reason ||
-            `路由已启用但供应商不可用（不存在或已禁用）：supplierId=${matchedRoute.route.supplierId}`,
+            `路由已启用但供应商不可用（不存在或已禁用）：defaultSupplierId=${matchedRoute.route.defaultSupplierId}`,
           routeId: matchedRoute.route.id,
-          supplierId: matchedRoute.route.supplierId,
+          supplierId: matchedRoute.supplier.id,
           path: url.pathname,
         });
         return;
@@ -703,10 +728,10 @@ export function createGateway(
 
       upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
 
-      // ========== 路径过滤：Codex 供应商仅支持 /v1/messages ==========
+      // ========== 路径过滤：Claude→OpenAI(codex transformer) 仅支持 /v1/messages ==========
       if (
         matchedRoute.localService === 'claude' &&
-        matchedRoute.route.transformer === 'codex' &&
+        transformerChain[0] === 'codex' &&
         upstreamPath !== '/v1/messages'
       ) {
         jsonError(res, 404, {
@@ -798,7 +823,7 @@ export function createGateway(
       // Warmup 请求特征：单条消息 + 无 tools，通常是 Claude Code 的探测请求
       if (
         matchedRoute.localService === 'claude' &&
-        matchedRoute.route.transformer === 'codex' &&
+        transformerChain[0] === 'codex' &&
         isWarmupRequest(jsonBody)
       ) {
         if (config.debug) {
@@ -818,7 +843,7 @@ export function createGateway(
       // 对 codex 供应商无效，直接返回空响应
       if (
         matchedRoute.localService === 'claude' &&
-        matchedRoute.route.transformer === 'codex' &&
+        transformerChain[0] === 'codex' &&
         isCountProbeRequest(jsonBody)
       ) {
         if (config.debug) {
@@ -839,24 +864,25 @@ export function createGateway(
       effectiveBody = jsonBody;
       let needsResponseTransform = false;
 
-      // ========== 模型映射（适用于所有路由，包括同协议）==========
-      if (jsonBody && typeof jsonBody === 'object' && (jsonBody as any).model) {
-        const inboundModel = (jsonBody as any).model as string;
-        const mappingResult = resolveModelMapping(inboundModel, matchedRoute.route.modelMapping);
-
-        if (mappingResult.mapped) {
-          (jsonBody as any).model = mappingResult.target;
-          if (config.debug) {
-            logger.debug(
-              `[ModelMapping] ${inboundModel} → ${mappingResult.target}` +
-              (mappingResult.rule ? ` (rule: ${mappingResult.rule.id})` : ''),
-            );
-          }
+      // 注意：route 选择阶段已根据 modelMapping 计算 effective supplierId + effective model。
+      // 这里仅保证请求体 model 写回 effective model（targetModel 为空时保持透传）。
+      if (jsonBody && typeof jsonBody === 'object' && 'model' in (jsonBody as any)) {
+        const inboundModel = (jsonBody as any).model as string | undefined;
+        const effective = resolveEffectiveModelMapping(inboundModel, matchedRoute.route);
+        (jsonBody as any).model = effective.model;
+        if (config.debug && effective.ruleId) {
+          logger.debug(
+            `[ModelMapping] ${inboundModel ?? ''} → supplier=${effective.supplierId}` +
+              (effective.model !== inboundModel ? ` model=${effective.model}` : '') +
+              ` (rule: ${effective.ruleId})`,
+          );
         }
       }
 
+      const derivedTransformer = deriveTransformer(matchedRoute.localService, matchedRoute.supplier.protocol);
+
       // ========== 协议转换（仅 Claude 入口跨协议时）==========
-      if (matchedRoute.localService === 'claude' && matchedRoute.route.transformer !== 'none') {
+      if (matchedRoute.localService === 'claude' && derivedTransformer !== 'none') {
         if (jsonBody && typeof jsonBody === 'object') {
           if (matchedRoute.client === 'claude') {
             const result = mutateClaudeBody({
@@ -922,7 +948,7 @@ export function createGateway(
           }
         }
 
-        transformerChain = [matchedRoute.route.transformer];
+        transformerChain = [derivedTransformer];
         const streamFlag = Boolean(
           jsonBody &&
           typeof jsonBody === 'object' &&
@@ -1184,6 +1210,10 @@ export function createGateway(
       const savedClient = matchedRoute.client;
       const savedPath = upstreamPath;
       const savedJsonBody = effectiveBody;
+      const savedSupplierId = matchedRoute.supplier.id;
+      const savedSupplierName = matchedRoute.supplier.name;
+      const savedSupplierBaseUrl = matchedRoute.supplier.baseUrl;
+      const savedRouteId = matchedRoute.route.id;
 
       // 监听响应流结束，保存包含响应体的记录
       outboundStream.on('end', async () => {
@@ -1247,10 +1277,10 @@ export function createGateway(
           responseBody: responseBodyStr,
           error: undefined,
           // 路由 / 供应商 / 转换信息
-          routeId: matchedRoute.route.id,
-          supplierId: matchedRoute.supplier.id,
-          supplierName: matchedRoute.supplier.name,
-          supplierBaseUrl: matchedRoute.supplier.baseUrl,
+          routeId: savedRouteId,
+          supplierId: savedSupplierId,
+          supplierName: savedSupplierName,
+          supplierBaseUrl: savedSupplierBaseUrl,
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
         };

@@ -21,7 +21,8 @@ interface ClaudeModelMap {
 interface ModelMappingRule {
   id: string;
   pattern: string;
-  target: string;
+  targetSupplierId: string;
+  targetModel?: string;
   description?: string;
 }
 
@@ -45,7 +46,11 @@ function buildRuleId(routeId: string, kind: 'sonnet' | 'haiku' | 'opus'): string
  * 将 claudeModelMap 转换为 modelMapping
  * 迁移语义：保持旧行为：如果 haiku/opus 未配置，则回落 sonnet 目标模型
  */
-function migrateClaudeModelMap(routeId: string, claudeModelMap: ClaudeModelMap): ModelMapping {
+function migrateClaudeModelMap(
+  routeId: string,
+  defaultSupplierId: string,
+  claudeModelMap: ClaudeModelMap,
+): ModelMapping {
   const rules: ModelMappingRule[] = [];
 
   const sonnetTarget = (claudeModelMap.sonnet || '').trim();
@@ -56,7 +61,8 @@ function migrateClaudeModelMap(routeId: string, claudeModelMap: ClaudeModelMap):
   rules.push({
     id: buildRuleId(routeId, 'sonnet'),
     pattern: 'claude-*-sonnet-*',
-    target: sonnetTarget,
+    targetSupplierId: defaultSupplierId,
+    targetModel: sonnetTarget,
     description: '从 claudeModelMap.sonnet 迁移',
   });
 
@@ -64,7 +70,8 @@ function migrateClaudeModelMap(routeId: string, claudeModelMap: ClaudeModelMap):
   rules.push({
     id: buildRuleId(routeId, 'haiku'),
     pattern: 'claude-*-haiku-*',
-    target: haikuTarget || sonnetTarget,
+    targetSupplierId: defaultSupplierId,
+    targetModel: haikuTarget || sonnetTarget,
     description: haikuTarget ? '从 claudeModelMap.haiku 迁移' : '兼容旧行为：haiku 回落 sonnet',
   });
 
@@ -72,7 +79,8 @@ function migrateClaudeModelMap(routeId: string, claudeModelMap: ClaudeModelMap):
   rules.push({
     id: buildRuleId(routeId, 'opus'),
     pattern: 'claude-*-opus-*',
-    target: opusTarget || sonnetTarget,
+    targetSupplierId: defaultSupplierId,
+    targetModel: opusTarget || sonnetTarget,
     description: opusTarget ? '从 claudeModelMap.opus 迁移' : '兼容旧行为：opus 回落 sonnet',
   });
 
@@ -91,21 +99,56 @@ function migrateClaudeModelMap(routeId: string, claudeModelMap: ClaudeModelMap):
 function migrateRoute(route: AnyRoute): AnyRoute {
   if (!route || typeof route !== 'object') return route;
 
-  if (!('claudeModelMap' in route) || !route.claudeModelMap) {
-    return route;
+  const routeId = typeof route.id === 'string' && route.id.trim() ? route.id : 'unknown-route';
+
+  const migrated: AnyRoute = { ...route };
+
+  // 1) supplierId -> defaultSupplierId
+  if (migrated.supplierId && !migrated.defaultSupplierId) {
+    migrated.defaultSupplierId = migrated.supplierId;
+    delete migrated.supplierId;
   }
 
-  const routeId = typeof route.id === 'string' && route.id.trim() ? route.id : 'unknown-route';
-  const claudeModelMap = route.claudeModelMap as ClaudeModelMap;
+  // 2) 移除 transformer（改为运行时推断）
+  if ('transformer' in migrated) {
+    delete migrated.transformer;
+  }
 
-  const migrated: AnyRoute = {
-    ...route,
-    modelMapping: migrateClaudeModelMap(routeId, claudeModelMap),
-  };
+  // 3) claudeModelMap -> modelMapping（补齐 targetSupplierId=defaultSupplierId）
+  if ('claudeModelMap' in migrated && migrated.claudeModelMap) {
+    const defaultSupplierId = String(migrated.defaultSupplierId || '').trim();
+    if (!defaultSupplierId) {
+      throw new Error(`路由 ${routeId} 存在 claudeModelMap，但无法推断 defaultSupplierId（缺少 supplierId/defaultSupplierId）`);
+    }
 
-  delete migrated.claudeModelMap;
+    migrated.modelMapping = migrateClaudeModelMap(routeId, defaultSupplierId, migrated.claudeModelMap as ClaudeModelMap);
+    delete migrated.claudeModelMap;
 
-  console.log(`✅ 迁移路由 ${routeId} 的 claudeModelMap → modelMapping`);
+    console.log(`✅ 迁移路由 ${routeId} 的 claudeModelMap → modelMapping`);
+  }
+
+  // 4) legacy: modelMapping.rules[].target -> targetModel，并补齐 targetSupplierId
+  if (migrated.modelMapping && typeof migrated.modelMapping === 'object') {
+    const mapping = migrated.modelMapping as any;
+    if (Array.isArray(mapping.rules)) {
+      for (const rule of mapping.rules as any[]) {
+        if (!rule || typeof rule !== 'object') continue;
+
+        if (rule.target && !rule.targetModel) {
+          rule.targetModel = rule.target;
+          delete rule.target;
+        }
+
+        if (!rule.targetSupplierId) {
+          const defaultSupplierId = String(migrated.defaultSupplierId || '').trim();
+          if (defaultSupplierId) {
+            rule.targetSupplierId = defaultSupplierId;
+          }
+        }
+      }
+    }
+  }
+
   return migrated;
 }
 
@@ -119,11 +162,14 @@ function migrateConfig(configPath: string): void {
   const configContent = readFileSync(configPath, 'utf-8');
   const config: Config = JSON.parse(configContent);
 
-  // 检查是否有需要迁移的路由
-  const routesToMigrate = config.routes.filter(route => (route as any).claudeModelMap);
+  // 检查是否有需要迁移的路由（只要存在 legacy 字段就认为需要迁移）
+  const routesToMigrate = config.routes.filter(route => {
+    const r: any = route;
+    return Boolean(r?.claudeModelMap || r?.supplierId || r?.transformer || (r?.modelMapping && r?.modelMapping?.rules?.some((x: any) => x?.target)));
+  });
 
   if (routesToMigrate.length === 0) {
-    console.log('✅ 没有需要迁移的路由（未发现 claudeModelMap）\n');
+    console.log('✅ 没有需要迁移的路由（未发现 supplierId/transformer/claudeModelMap/legacy modelMapping.target）\n');
     return;
   }
 

@@ -114,8 +114,7 @@ export const RouteConfigPage: React.FC = () => {
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [newRoute, setNewRoute] = useState<Partial<Route>>({
     localService: 'claude',
-    supplierId: '',
-    transformer: 'none',
+    defaultSupplierId: '',
     modelMapping: undefined,
     enabled: true,
   });
@@ -139,37 +138,25 @@ export const RouteConfigPage: React.FC = () => {
     loadRoutes();
   }, []);
 
-  // 自动选择转换器
-  useEffect(() => {
-    if (newRoute.localService && newRoute.supplierId) {
-      const localService = LOCAL_SERVICES.find(s => s.key === newRoute.localService);
-      const supplier = suppliers.find(s => s.id === newRoute.supplierId);
-
-      if (localService && supplier) {
-        const transformer = autoSelectTransformer(localService.protocol, supplier.protocol);
-        setNewRoute(prev => ({ ...prev, transformer }));
-      }
-    }
-  }, [newRoute.localService, newRoute.supplierId, suppliers]);
 
   // 添加新路由
   const handleAddRoute = async () => {
-    if (!newRoute.localService || !newRoute.supplierId) {
-      toast.error('请选择本地服务和供应商');
+    if (!newRoute.localService || !newRoute.defaultSupplierId) {
+      toast.error('请选择本地服务和默认上游供应商');
       return;
     }
 
     const localService = LOCAL_SERVICES.find(s => s.key === newRoute.localService);
-    const supplier = suppliers.find(s => s.id === newRoute.supplierId);
+    const supplier = suppliers.find(s => s.id === newRoute.defaultSupplierId);
 
     if (!localService || !supplier) {
       toast.error('无效的本地服务或供应商');
       return;
     }
 
-    // 检查是否支持转换
+    // 检查入口协议约束
     if (!isTransformationSupported(localService.protocol, supplier.protocol)) {
-      toast.error(`不支持从 ${localService.label} 转换到 ${supplier.displayName}`);
+      toast.error(`不支持从 ${localService.label} 对接到 ${supplier.displayName}`);
       return;
     }
 
@@ -187,8 +174,7 @@ export const RouteConfigPage: React.FC = () => {
         setIsAddModalOpen(false);
         setNewRoute({
           localService: 'claude',
-          supplierId: '',
-          transformer: 'none',
+          defaultSupplierId: '',
           modelMapping: undefined,
           enabled: true,
         });
@@ -253,7 +239,7 @@ export const RouteConfigPage: React.FC = () => {
       const response = await updateRoute({
         routeId: editingRoute.id,
         route: {
-          supplierId: editRoute.supplierId,
+          defaultSupplierId: editRoute.defaultSupplierId,
           modelMapping: editRoute.modelMapping,
         } as any,
       });
@@ -285,12 +271,22 @@ export const RouteConfigPage: React.FC = () => {
     );
   };
 
+  const getSupplierDisplay = (supplierId: string | undefined): Supplier | undefined => {
+    if (!supplierId) return undefined;
+    return suppliers.find(s => s.id === supplierId);
+  };
+
   // 模型映射编辑器组件
   const ModelMappingEditor: React.FC<{
     value: ModelMapping | undefined;
     onChange: (value: ModelMapping | undefined) => void;
-    availableModels: string[];
-  }> = ({ value, onChange, availableModels }) => {
+    routeLocalService: LocalService;
+  }> = ({ value, onChange, routeLocalService }) => {
+    const getAllowedSuppliers = () => getAvailableSuppliers(routeLocalService);
+    const getSupplierModels = (supplierId: string | undefined) => {
+      const supplier = getSupplierDisplay(supplierId);
+      return supplier?.supportedModels || [];
+    };
     const mapping = value || { enabled: false, rules: [] };
 
     const handleToggleEnabled = (enabled: boolean) => {
@@ -298,10 +294,15 @@ export const RouteConfigPage: React.FC = () => {
     };
 
     const handleAddRule = () => {
+      const allowedSuppliers = getAllowedSuppliers();
+      const defaultSupplierId = allowedSuppliers[0]?.id || '';
+      const supplierModels = getSupplierModels(defaultSupplierId);
+
       const newRule: ModelMappingRule = {
         id: generateId(),
         pattern: '',
-        target: availableModels[0] || '',
+        targetSupplierId: defaultSupplierId,
+        targetModel: supplierModels[0] || undefined,
         description: '',
       };
       onChange({ ...mapping, rules: [...mapping.rules, newRule] });
@@ -309,7 +310,14 @@ export const RouteConfigPage: React.FC = () => {
 
     const handleUpdateRule = (index: number, field: keyof ModelMappingRule, val: string) => {
       const newRules = [...mapping.rules];
-      newRules[index] = { ...newRules[index], [field]: val };
+      const nextRule: any = { ...newRules[index], [field]: val };
+
+      // 允许用空字符串表示“透传”（targetModel 为可选字段）
+      if (field === 'targetModel' && (!val || !val.trim())) {
+        delete nextRule.targetModel;
+      }
+
+      newRules[index] = nextRule;
       onChange({ ...mapping, rules: newRules });
     };
 
@@ -348,23 +356,64 @@ export const RouteConfigPage: React.FC = () => {
                       className="flex-1"
                     />
                     <ArrowRight size={16} className="text-tertiary shrink-0" />
+
                     <Select
                       size="sm"
-                      label="目标模型"
-                      selectedKeys={[rule.target]}
+                      label="目标供应商"
+                      selectedKeys={[rule.targetSupplierId || '']}
                       onSelectionChange={keys => {
                         const key = Array.from(keys)[0] as string;
-                        handleUpdateRule(index, 'target', key);
+                        handleUpdateRule(index, 'targetSupplierId', key);
+                        // 切换供应商时，重置 targetModel 为该供应商的第一个模型（若存在）
+                        const models = getSupplierModels(key);
+                        handleUpdateRule(index, 'targetModel', models[0] || '');
+                        if (models.length === 0) {
+                          handleUpdateRule(index, 'targetModel', '');
+                        }
                       }}
                       variant="bordered"
                       className="flex-1"
                     >
-                      {availableModels.map(model => (
-                        <SelectItem key={model} textValue={model}>
-                          {model}
+                      {getAllowedSuppliers().map(supplier => (
+                        <SelectItem key={supplier.id} textValue={supplier.displayName}>
+                          {supplier.displayName}
                         </SelectItem>
                       ))}
                     </Select>
+
+                    <ArrowRight size={16} className="text-tertiary shrink-0" />
+
+                    {(() => {
+                      const models = getSupplierModels(rule.targetSupplierId);
+                      if (models.length === 0) {
+                        return (
+                          <div className="flex-1 text-xs text-tertiary">
+                            目标模型：透传
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <Select
+                          size="sm"
+                          label="目标模型（可选）"
+                          selectedKeys={rule.targetModel ? [rule.targetModel] : []}
+                          onSelectionChange={keys => {
+                            const key = Array.from(keys)[0] as string;
+                            handleUpdateRule(index, 'targetModel', key);
+                          }}
+                          variant="bordered"
+                          className="flex-1"
+                        >
+                          {models.map(model => (
+                            <SelectItem key={model} textValue={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                      );
+                    })()}
+
                     <Button
                       isIconOnly
                       size="sm"
@@ -391,13 +440,13 @@ export const RouteConfigPage: React.FC = () => {
               variant="flat"
               onPress={handleAddRule}
               startContent={<Plus size={16} />}
-              isDisabled={availableModels.length === 0}
+              isDisabled={getAllowedSuppliers().length === 0}
             >
               添加映射规则
             </Button>
 
             <p className="text-xs text-tertiary">
-              💡 规则按顺序匹配，首个命中的生效；未匹配任何规则时原样透传
+              💡 规则按顺序匹配，首个命中的生效；未匹配任何规则时走默认上游；targetModel 为空时透传入站 model
             </p>
           </>
         )}
@@ -439,8 +488,12 @@ export const RouteConfigPage: React.FC = () => {
       <div className="space-y-4">
         {routes.map(route => {
           const localService = LOCAL_SERVICES.find(s => s.key === route.localService);
-          const supplier = suppliers.find(s => s.id === route.supplierId);
-          const transformer = TRANSFORMER_OPTIONS.find(t => t.key === route.transformer);
+          const supplier = suppliers.find(s => s.id === route.defaultSupplierId);
+          const transformer = autoSelectTransformer(
+            LOCAL_SERVICES.find(s => s.key === route.localService)?.protocol || 'anthropic',
+            supplier?.protocol || 'anthropic',
+          );
+          const transformerInfo = TRANSFORMER_OPTIONS.find(t => t.key === transformer);
 
           return (
             <Card
@@ -504,9 +557,9 @@ export const RouteConfigPage: React.FC = () => {
                         base: 'min-w-0',
                         content: 'px-2 text-xs min-w-0 truncate',
                       }}
-                      title={transformer?.description}
+                      title={transformerInfo?.description}
                     >
-                      {transformer?.label || route.transformer}
+                      {transformerInfo?.label || transformer}
                     </Chip>
                     {route.modelMapping?.enabled && (
                       <Chip
@@ -587,7 +640,7 @@ export const RouteConfigPage: React.FC = () => {
               <div className="flex items-start gap-2">
                 <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-secondary">
-                  选择本地服务和供应商，系统会自动选择合适的转换器。支持配置模型映射以实现灵活的模型转换。
+                  选择本地服务和默认上游供应商。模型映射规则可按入站 model 选择目标供应商与可选目标模型。
                 </p>
               </div>
             </div>
@@ -605,7 +658,7 @@ export const RouteConfigPage: React.FC = () => {
                     setNewRoute(prev => ({
                       ...prev,
                       localService: key,
-                      supplierId: '',
+                      defaultSupplierId: '',
                       modelMapping: undefined,
                     }));
                   }}
@@ -636,16 +689,20 @@ export const RouteConfigPage: React.FC = () => {
                 <ArrowRight size={24} className="text-tertiary" />
               </div>
 
-              {/* 上游供应商 */}
+              {/* 默认上游供应商 */}
               <div>
                 <label className="text-sm font-medium text-primary mb-2 block">
-                  上游供应商 *
+                  默认上游供应商 *
                 </label>
                 <Select
-                  selectedKeys={[newRoute.supplierId || '']}
+                  selectedKeys={[newRoute.defaultSupplierId || '']}
                   onSelectionChange={keys => {
                     const key = Array.from(keys)[0] as string;
-                    setNewRoute(prev => ({ ...prev, supplierId: key, modelMapping: undefined }));
+                    setNewRoute(prev => ({
+                      ...prev,
+                      defaultSupplierId: key,
+                      modelMapping: undefined,
+                    }));
                   }}
                   radius="lg"
                   variant="bordered"
@@ -688,18 +745,13 @@ export const RouteConfigPage: React.FC = () => {
             </div>
 
             {/* 模型映射配置 */}
-            {newRoute.supplierId && (() => {
-              const supplier = suppliers.find(s => s.id === newRoute.supplierId);
-              if (!supplier) return null;
-              const models = supplier.supportedModels || [];
-              return (
-                <ModelMappingEditor
-                  value={newRoute.modelMapping}
-                  onChange={val => setNewRoute(prev => ({ ...prev, modelMapping: val }))}
-                  availableModels={models}
-                />
-              );
-            })()}
+            {newRoute.defaultSupplierId && (
+              <ModelMappingEditor
+                value={newRoute.modelMapping}
+                onChange={val => setNewRoute(prev => ({ ...prev, modelMapping: val }))}
+                routeLocalService={newRoute.localService as LocalService}
+              />
+            )}
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={() => setIsAddModalOpen(false)}>
@@ -709,7 +761,7 @@ export const RouteConfigPage: React.FC = () => {
               color="primary"
               onPress={handleAddRoute}
               className="shadow-md"
-              isDisabled={!newRoute.localService || !newRoute.supplierId}
+              isDisabled={!newRoute.localService || !newRoute.defaultSupplierId}
             >
               添加路由
             </Button>
@@ -759,12 +811,12 @@ export const RouteConfigPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-primary mb-2 block">上游供应商 *</label>
+                    <label className="text-sm font-medium text-primary mb-2 block">默认上游供应商 *</label>
                     <Select
-                      selectedKeys={[editRoute.supplierId || editingRoute.supplierId]}
+                      selectedKeys={[editRoute.defaultSupplierId || editingRoute.defaultSupplierId]}
                       onSelectionChange={keys => {
                         const key = Array.from(keys)[0] as string;
-                        setEditRoute(prev => ({ ...prev, supplierId: key }));
+                        setEditRoute(prev => ({ ...prev, defaultSupplierId: key }));
                       }}
                       radius="lg"
                       variant="bordered"
@@ -779,18 +831,18 @@ export const RouteConfigPage: React.FC = () => {
                 </div>
 
                 {(() => {
-                  const supplierId = editRoute.supplierId || editingRoute.supplierId;
+                  const supplierId = editRoute.defaultSupplierId || editingRoute.defaultSupplierId;
                   const supplier = suppliers.find(s => s.id === supplierId);
                   if (!supplier) return null;
-                  const models = supplier.supportedModels || [];
-                  const effectiveMapping = editRoute.modelMapping !== undefined
-                    ? editRoute.modelMapping
-                    : editingRoute.modelMapping;
+
+                  const effectiveMapping =
+                    editRoute.modelMapping !== undefined ? editRoute.modelMapping : editingRoute.modelMapping;
+
                   return (
                     <ModelMappingEditor
                       value={effectiveMapping}
                       onChange={val => setEditRoute(prev => ({ ...prev, modelMapping: val }))}
-                      availableModels={models}
+                      routeLocalService={editingRoute.localService}
                     />
                   );
                 })()}
