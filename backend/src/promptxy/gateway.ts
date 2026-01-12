@@ -786,43 +786,6 @@ export function createGateway(
         }
       }
 
-      // ========== Warmup 请求过滤：必须在 mutate 之前检查（原始请求体）==========
-      // 参考项目：claude-relay-service
-      // Warmup 请求特征：单条消息 + content 中包含 "Warmup" 文本
-      // 对跨协议转换（codex/gemini）无效，直接返回空响应节省 token
-      if (jsonBody && typeof jsonBody === 'object') {
-        if (
-          matchedRoute.localService === 'claude' &&
-          (matchedRoute.route.transformer === 'codex' || matchedRoute.route.transformer === 'gemini') &&
-          isWarmupRequest(jsonBody)
-        ) {
-          // 返回空响应，快速处理
-          jsonError(res, 200, {
-            type: 'result',
-            role: 'assistant',
-            content: [{ type: 'text', text: '' }],
-          });
-          return;
-        }
-
-        // ========== Count 探测请求过滤：必须在 mutate 之前检查（原始请求体）==========
-        // 这种请求只有一个 message，内容仅为 "count"
-        // 对跨协议转换（codex/gemini）无效，直接返回空响应节省 token
-        if (
-          matchedRoute.localService === 'claude' &&
-          (matchedRoute.route.transformer === 'codex' || matchedRoute.route.transformer === 'gemini') &&
-          isCountProbeRequest(jsonBody)
-        ) {
-          // 返回空响应，快速处理
-          jsonError(res, 200, {
-            type: 'result',
-            role: 'assistant',
-            content: [{ type: 'text', text: '' }],
-          });
-          return;
-        }
-      }
-
       if (jsonBody && typeof jsonBody === 'object') {
         if (routeMatch.client === 'claude') {
           const result = mutateClaudeBody({
