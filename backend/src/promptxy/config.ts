@@ -70,19 +70,27 @@ const DEFAULT_CONFIG: PromptxyConfig = {
     {
       id: 'route-claude-default',
       localService: 'claude',
-      defaultSupplierId: 'claude-anthropic',
+      modelMappings: [
+        {
+          id: 'claude-default-mapping',
+          inboundModel: '*',
+          targetSupplierId: 'claude-anthropic',
+          outboundModel: undefined,
+          enabled: true,
+        },
+      ],
       enabled: true,
     },
     {
       id: 'route-codex-default',
       localService: 'codex',
-      defaultSupplierId: 'openai-official',
+      singleSupplierId: 'openai-official',
       enabled: true,
     },
     {
       id: 'route-gemini-default',
       localService: 'gemini',
-      defaultSupplierId: 'gemini-google',
+      singleSupplierId: 'gemini-google',
       enabled: true,
     },
   ],
@@ -425,63 +433,60 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     if (!route.localService || typeof route.localService !== 'string') {
       throw new Error(`${label}.localService must be a non-empty string`);
     }
-    if (!route.defaultSupplierId || typeof route.defaultSupplierId !== 'string') {
-      throw new Error(`${label}.defaultSupplierId must be a non-empty string`);
-    }
     if (typeof route.enabled !== 'boolean') {
       throw new Error(`${label}.enabled must be a boolean`);
     }
 
-    const defaultSupplier = supplierById.get(route.defaultSupplierId);
-    if (!defaultSupplier) {
-      throw new Error(`${label}.defaultSupplierId 引用的供应商不存在：${route.defaultSupplierId}`);
+    // Claude: 验证 modelMappings
+    if (route.localService === 'claude') {
+      if (route.modelMappings !== undefined) {
+        if (!Array.isArray(route.modelMappings)) {
+          throw new Error(`${label}.modelMappings must be an array`);
+        }
+
+        for (let j = 0; j < route.modelMappings.length; j++) {
+          const rule = route.modelMappings[j];
+          const ruleLabel = `${label}.modelMappings[${j}]`;
+
+          if (!rule || typeof rule !== 'object') {
+            throw new Error(`${ruleLabel} must be an object`);
+          }
+          if (!rule.id || typeof rule.id !== 'string') {
+            throw new Error(`${ruleLabel}.id must be a non-empty string`);
+          }
+          if (!rule.inboundModel || typeof rule.inboundModel !== 'string') {
+            throw new Error(`${ruleLabel}.inboundModel must be a non-empty string`);
+          }
+          if (!rule.targetSupplierId || typeof rule.targetSupplierId !== 'string') {
+            throw new Error(`${ruleLabel}.targetSupplierId must be a non-empty string`);
+          }
+          if (rule.enabled !== undefined && typeof rule.enabled !== 'boolean') {
+            throw new Error(`${ruleLabel}.enabled must be a boolean when provided`);
+          }
+          if (rule.description !== undefined && typeof rule.description !== 'string') {
+            throw new Error(`${ruleLabel}.description must be a string when provided`);
+          }
+
+          const targetSupplier = supplierById.get(rule.targetSupplierId);
+          if (!targetSupplier) {
+            throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${rule.targetSupplierId}`);
+          }
+          // Claude 支持所有协议的供应商转换
+          assertTargetModelForSupplier(ruleLabel, targetSupplier, rule.outboundModel);
+        }
+      }
     }
-    assertSupplierProtocolForRoute(`${label}.defaultSupplierId`, route.localService, defaultSupplier);
-
-    // 模型映射验证（可选）
-    if (route.modelMapping !== undefined) {
-      const mapping = route.modelMapping;
-      const mappingLabel = `${label}.modelMapping`;
-
-      if (typeof mapping !== 'object' || mapping === null) {
-        throw new Error(`${mappingLabel} must be an object`);
+    // Codex/Gemini: 验证 singleSupplierId
+    else {
+      if (!route.singleSupplierId || typeof route.singleSupplierId !== 'string') {
+        throw new Error(`${label}.singleSupplierId must be a non-empty string`);
       }
 
-      if (typeof mapping.enabled !== 'boolean') {
-        throw new Error(`${mappingLabel}.enabled must be a boolean`);
+      const targetSupplier = supplierById.get(route.singleSupplierId);
+      if (!targetSupplier) {
+        throw new Error(`${label}.singleSupplierId 引用的供应商不存在：${route.singleSupplierId}`);
       }
-
-      if (!Array.isArray(mapping.rules)) {
-        throw new Error(`${mappingLabel}.rules must be an array`);
-      }
-
-      for (let j = 0; j < mapping.rules.length; j++) {
-        const rule = mapping.rules[j];
-        const ruleLabel = `${mappingLabel}.rules[${j}]`;
-
-        if (!rule || typeof rule !== 'object') {
-          throw new Error(`${ruleLabel} must be an object`);
-        }
-        if (!rule.id || typeof rule.id !== 'string') {
-          throw new Error(`${ruleLabel}.id must be a non-empty string`);
-        }
-        if (!rule.pattern || typeof rule.pattern !== 'string') {
-          throw new Error(`${ruleLabel}.pattern must be a non-empty string`);
-        }
-        if (!rule.targetSupplierId || typeof rule.targetSupplierId !== 'string') {
-          throw new Error(`${ruleLabel}.targetSupplierId must be a non-empty string`);
-        }
-        if (rule.description !== undefined && typeof rule.description !== 'string') {
-          throw new Error(`${ruleLabel}.description must be a string when provided`);
-        }
-
-        const targetSupplier = supplierById.get(rule.targetSupplierId);
-        if (!targetSupplier) {
-          throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${rule.targetSupplierId}`);
-        }
-        assertSupplierProtocolForRoute(`${ruleLabel}.targetSupplierId`, route.localService, targetSupplier);
-        assertTargetModelForSupplier(ruleLabel, targetSupplier, rule.targetModel);
-      }
+      assertSupplierProtocolForRoute(`${label}.singleSupplierId`, route.localService, targetSupplier);
     }
   }
 
@@ -812,12 +817,30 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
 
     const id = `route-${localService}-default`;
 
-    next.push({
-      id,
-      localService,
-      defaultSupplierId: supplier.id,
-      enabled: !enabledSeen.has(localService),
-    });
+    // 根据本地服务类型创建不同的路由结构
+    if (localService === 'claude') {
+      next.push({
+        id,
+        localService,
+        modelMappings: [
+          {
+            id: `${id}-mapping`,
+            inboundModel: '*',
+            targetSupplierId: supplier.id,
+            outboundModel: undefined,
+            enabled: true,
+          },
+        ],
+        enabled: !enabledSeen.has(localService),
+      });
+    } else {
+      next.push({
+        id,
+        localService,
+        singleSupplierId: supplier.id,
+        enabled: !enabledSeen.has(localService),
+      });
+    }
     enabledSeen.add(localService);
     changed = true;
   };

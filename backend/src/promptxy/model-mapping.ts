@@ -1,4 +1,4 @@
-import type { ModelMapping, ModelMappingRule } from './types.js';
+import type { ModelMappingRule, TransformerType } from './types.js';
 
 /**
  * 将通配符模式转换为正则表达式
@@ -14,8 +14,8 @@ function wildcardToRegex(pattern: string): RegExp {
 /**
  * 匹配模型名称（通配符模式）
  */
-function matchModel(model: string, rule: ModelMappingRule): boolean {
-  return wildcardToRegex(rule.pattern).test(model);
+function matchModel(model: string, inboundModel: string): boolean {
+  return wildcardToRegex(inboundModel).test(model);
 }
 
 /**
@@ -26,6 +26,7 @@ export type ModelMappingResult =
       matched: true;
       targetSupplierId: string;
       targetModel?: string;
+      transformer?: TransformerType;
       rule: ModelMappingRule;
     }
   | { matched: false };
@@ -33,36 +34,35 @@ export type ModelMappingResult =
 /**
  * 解析模型映射
  * @param inboundModel 入站模型名称
- * @param config 模型映射配置
- * @returns 映射结果；mapped=false 表示原样透传
+ * @param rules 模型映射规则数组
+ * @returns 映射结果；matched=false 表示未匹配任何规则
  */
 export function resolveModelMapping(
   inboundModel: string | undefined,
-  config: ModelMapping | undefined,
+  rules: ModelMappingRule[] | undefined,
 ): ModelMappingResult {
-  // 无配置或未启用：不映射（透传）
-  if (!config || !config.enabled) {
-    return { matched: false };
-  }
-
-  // 无入站模型：不映射（透传）
-  if (!inboundModel) {
+  // 无规则或无入站模型：不匹配
+  if (!rules || rules.length === 0 || !inboundModel) {
     return { matched: false };
   }
 
   // 按顺序匹配规则
-  for (const rule of config.rules) {
-    if (matchModel(inboundModel, rule)) {
+  for (const rule of rules) {
+    // 跳过未启用的规则
+    if (rule.enabled === false) continue;
+
+    if (matchModel(inboundModel, rule.inboundModel)) {
       return {
         matched: true,
         targetSupplierId: rule.targetSupplierId,
-        targetModel: rule.targetModel,
+        targetModel: rule.outboundModel,
+        transformer: rule.transformer,
         rule,
       };
     }
   }
 
-  // 未命中任何规则：不映射（原样透传）
+  // 未命中任何规则
   return { matched: false };
 }
 

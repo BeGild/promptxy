@@ -1276,36 +1276,57 @@ export async function handleCreateRoute(
     const body = await readRequestBody(req, { maxBytes: 10 * 1024 });
     const { route: routeData }: RouteCreateRequest = JSON.parse(body.toString());
 
-    // 验证供应商是否存在
-    const defaultSupplier = config.suppliers.find(s => s.id === routeData.defaultSupplierId);
-    if (!defaultSupplier) {
-      sendJson(res, 400, {
-        success: false,
-        message: '默认上游供应商不存在',
-      });
-      return;
-    }
+    const localService = routeData.localService;
 
-    // 入口协议约束（codex/gemini 不允许跨协议）
-    try {
-      assertRouteProtocolConstraint(routeData.localService, defaultSupplier.protocol);
-    } catch (e: any) {
-      sendJson(res, 400, {
-        success: false,
-        message: e?.message || '路由协议不合法',
-      });
-      return;
+    // Codex/Gemini: 验证单一供应商
+    if (localService === 'codex' || localService === 'gemini') {
+      if (!routeData.singleSupplierId) {
+        sendJson(res, 400, {
+          success: false,
+          message: `${localService} 路由必须指定上游供应商`,
+        });
+        return;
+      }
+      const supplier = config.suppliers.find(s => s.id === routeData.singleSupplierId);
+      if (!supplier) {
+        sendJson(res, 400, {
+          success: false,
+          message: '指定的上游供应商不存在',
+        });
+        return;
+      }
+      // 入口协议约束（codex/gemini 不允许跨协议）
+      try {
+        assertRouteProtocolConstraint(localService, supplier.protocol);
+      } catch (e: any) {
+        sendJson(res, 400, {
+          success: false,
+          message: e?.message || '路由协议不合法',
+        });
+        return;
+      }
     }
-
-    // 校验规则级 targetSupplierId/targetModel
-    try {
-      assertRouteModelMappingValid('route', routeData as any, config.suppliers);
-    } catch (e: any) {
-      sendJson(res, 400, {
-        success: false,
-        message: e?.message || '模型映射配置无效',
-      });
-      return;
+    // Claude: 验证模型映射规则
+    else {
+      const mappings = routeData.modelMappings || [];
+      if (mappings.length === 0) {
+        sendJson(res, 400, {
+          success: false,
+          message: 'Claude 路由必须至少包含一条模型映射规则',
+        });
+        return;
+      }
+      // 验证每个规则的供应商存在
+      for (const mapping of mappings) {
+        const supplier = config.suppliers.find(s => s.id === mapping.targetSupplierId);
+        if (!supplier) {
+          sendJson(res, 400, {
+            success: false,
+            message: `规则 ${mapping.inboundModel} 指定的供应商不存在`,
+          });
+          return;
+        }
+      }
     }
 
     // 创建新路由，生成 ID
@@ -1364,73 +1385,53 @@ export async function handleUpdateRoute(
     }
 
     const currentRoute = config.routes[index];
-    const nextLocalService = (routeUpdate.localService ||
-      currentRoute.localService) as LocalService;
-    const nextDefaultSupplierId =
-      routeUpdate.defaultSupplierId || currentRoute.defaultSupplierId;
+    const nextLocalService = currentRoute.localService;
 
-    // 验证供应商是否存在
-    const nextDefaultSupplier = config.suppliers.find(s => s.id === nextDefaultSupplierId);
-    if (!nextDefaultSupplier) {
-      sendJson(res, 400, { success: false, message: '默认上游供应商不存在' });
-      return;
+    // Codex/Gemini: 验证单一供应商
+    if (nextLocalService === 'codex' || nextLocalService === 'gemini') {
+      const nextSupplierId = routeUpdate.singleSupplierId ?? currentRoute.singleSupplierId;
+      if (!nextSupplierId) {
+        sendJson(res, 400, { success: false, message: '必须指定上游供应商' });
+        return;
+      }
+      const supplier = config.suppliers.find(s => s.id === nextSupplierId);
+      if (!supplier) {
+        sendJson(res, 400, { success: false, message: '指定的上游供应商不存在' });
+        return;
+      }
+      // 入口协议约束（codex/gemini 不允许跨协议）
+      try {
+        assertRouteProtocolConstraint(nextLocalService, supplier.protocol);
+      } catch (e: any) {
+        sendJson(res, 400, {
+          success: false,
+          message: e?.message || '路由协议不合法',
+        });
+        return;
+      }
     }
-
-    // 入口协议约束（codex/gemini 不允许跨协议）
-    try {
-      assertRouteProtocolConstraint(nextLocalService, nextDefaultSupplier.protocol);
-    } catch (e: any) {
-      sendJson(res, 400, {
-        success: false,
-        message: e?.message || '路由协议不合法',
-      });
-      return;
-    }
-
-    // 校验规则级 targetSupplierId/targetModel
-    const mergedForValidation: any = {
-      ...currentRoute,
-      ...routeUpdate,
-      localService: nextLocalService,
-      defaultSupplierId: nextDefaultSupplierId,
-    };
-    try {
-      assertRouteModelMappingValid('route', mergedForValidation, config.suppliers);
-    } catch (e: any) {
-      sendJson(res, 400, {
-        success: false,
-        message: e?.message || '模型映射配置无效',
-      });
-      return;
-    }
-
-    // 不允许手动设置 transformer（字段已移除）
-    delete (routeUpdate as any).transformer;
-    delete (routeUpdate as any).supplierId;
-    delete (routeUpdate as any).claudeModelMap;
-
-    // 若更新 defaultSupplierId，需要同步补齐规则 targetSupplierId（与迁移语义一致）
-    if (
-      mergedForValidation.modelMapping &&
-      typeof mergedForValidation.modelMapping === 'object' &&
-      Array.isArray((mergedForValidation.modelMapping as any).rules)
-    ) {
-      for (const rule of (mergedForValidation.modelMapping as any).rules as any[]) {
-        if (!rule || typeof rule !== 'object') continue;
-        if (!rule.targetSupplierId && nextDefaultSupplierId) {
-          rule.targetSupplierId = nextDefaultSupplierId;
+    // Claude: 验证模型映射规则
+    else {
+      const nextMappings = routeUpdate.modelMappings ?? currentRoute.modelMappings;
+      if (!nextMappings || nextMappings.length === 0) {
+        sendJson(res, 400, { success: false, message: 'Claude 路由必须至少包含一条模型映射规则' });
+        return;
+      }
+      // 验证每个规则的供应商存在
+      for (const mapping of nextMappings) {
+        const supplier = config.suppliers.find(s => s.id === mapping.targetSupplierId);
+        if (!supplier) {
+          sendJson(res, 400, {
+            success: false,
+            message: `规则 ${mapping.inboundModel} 指定的供应商不存在`,
+          });
+          return;
         }
       }
     }
 
-    // 将补齐后的 modelMapping 写回 routeUpdate
-    if ('modelMapping' in mergedForValidation) {
-      (routeUpdate as any).modelMapping = mergedForValidation.modelMapping;
-    }
-
-    // 将 localService/defaultSupplierId 更新写回 routeUpdate
-    (routeUpdate as any).localService = nextLocalService;
-    (routeUpdate as any).defaultSupplierId = nextDefaultSupplierId;
+    // 不允许修改 localService
+    delete (routeUpdate as any).localService;
 
     if (routeUpdate.enabled === true) {
       for (const r of config.routes) {

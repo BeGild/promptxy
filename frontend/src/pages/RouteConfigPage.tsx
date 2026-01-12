@@ -25,7 +25,7 @@ import { ArrowRight, Plus, Trash2, Info, Edit2 } from 'lucide-react';
 import { useSuppliers } from '@/hooks';
 import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
 import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
-import type { Supplier, LocalService, TransformerType, Route, ModelMapping, ModelMappingRule } from '@/types/api';
+import type { Supplier, LocalService, TransformerType, Route, ModelMappingRule } from '@/types/api';
 
 // 本地服务选项
 const LOCAL_SERVICES: Array<{
@@ -62,45 +62,12 @@ const LOCAL_SERVICES: Array<{
   },
 ];
 
-// 转换器选项
-const TRANSFORMER_OPTIONS: Array<{
-  key: TransformerType;
-  label: string;
-  description: string;
-}> = [
-  { key: 'anthropic', label: 'Anthropic', description: 'Anthropic/Claude 协议（仅占位）' },
-  { key: 'codex', label: 'Codex', description: 'Codex Responses 协议（/responses）' },
-  { key: 'gemini', label: 'Gemini', description: 'Google Gemini 协议' },
-  { key: 'none', label: '无转换', description: '直接转发，不进行协议转换' },
+// Claude 预设模型模式
+const CLAUDE_PRESET_PATTERNS = [
+  { inboundModel: 'claude-*-haiku-*', description: 'Haiku 系列' },
+  { inboundModel: 'claude-*-sonnet-*', description: 'Sonnet 系列' },
+  { inboundModel: 'claude-*-opus-*', description: 'Opus 系列' },
 ];
-
-// 支持的转换器组合
-const SUPPORTED_TRANSFORMERS: Record<string, TransformerType[]> = {
-  'anthropic->anthropic': ['none'],
-  'anthropic->openai': ['codex'],
-  'anthropic->gemini': ['gemini'],
-  'openai->openai': ['none'],
-  'gemini->gemini': ['none'],
-};
-
-// 根据本地服务和供应商协议自动选择转换器
-const autoSelectTransformer = (
-  localProtocol: 'anthropic' | 'openai' | 'gemini',
-  supplierProtocol: 'anthropic' | 'openai' | 'gemini',
-): TransformerType => {
-  const key = `${localProtocol}->${supplierProtocol}`;
-  const transformers = SUPPORTED_TRANSFORMERS[key];
-  return transformers?.[0] || 'none';
-};
-
-// 检查是否支持转换
-const isTransformationSupported = (
-  localProtocol: 'anthropic' | 'openai' | 'gemini',
-  supplierProtocol: 'anthropic' | 'openai' | 'gemini',
-): boolean => {
-  const key = `${localProtocol}->${supplierProtocol}`;
-  return !!SUPPORTED_TRANSFORMERS[key];
-};
 
 // 生成唯一 ID
 const generateId = () => `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -114,8 +81,14 @@ export const RouteConfigPage: React.FC = () => {
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [newRoute, setNewRoute] = useState<Partial<Route>>({
     localService: 'claude',
-    defaultSupplierId: '',
-    modelMapping: undefined,
+    modelMappings: CLAUDE_PRESET_PATTERNS.map(p => ({
+      id: generateId(),
+      inboundModel: p.inboundModel,
+      targetSupplierId: '',
+      outboundModel: undefined,
+      description: p.description,
+      enabled: true,
+    })),
     enabled: true,
   });
   const [editRoute, setEditRoute] = useState<Partial<Route>>({});
@@ -138,26 +111,39 @@ export const RouteConfigPage: React.FC = () => {
     loadRoutes();
   }, []);
 
-
   // 添加新路由
   const handleAddRoute = async () => {
-    if (!newRoute.localService || !newRoute.defaultSupplierId) {
-      toast.error('请选择本地服务和默认上游供应商');
+    if (!newRoute.localService) {
+      toast.error('请选择本地服务');
       return;
     }
 
     const localService = LOCAL_SERVICES.find(s => s.key === newRoute.localService);
-    const supplier = suppliers.find(s => s.id === newRoute.defaultSupplierId);
-
-    if (!localService || !supplier) {
-      toast.error('无效的本地服务或供应商');
+    if (!localService) {
+      toast.error('无效的本地服务');
       return;
     }
 
-    // 检查入口协议约束
-    if (!isTransformationSupported(localService.protocol, supplier.protocol)) {
-      toast.error(`不支持从 ${localService.label} 对接到 ${supplier.displayName}`);
-      return;
+    // Claude: 检查所有规则都有供应商
+    if (newRoute.localService === 'claude') {
+      const mappings = newRoute.modelMappings || [];
+      if (mappings.length === 0) {
+        toast.error('请至少添加一条模型映射规则');
+        return;
+      }
+      for (const mapping of mappings) {
+        if (!mapping.targetSupplierId) {
+          toast.error('请为所有模型映射规则选择目标供应商');
+          return;
+        }
+      }
+    }
+    // Codex/Gemini: 检查单一供应商
+    else {
+      if (!newRoute.singleSupplierId) {
+        toast.error('请选择上游供应商');
+        return;
+      }
     }
 
     try {
@@ -172,10 +158,17 @@ export const RouteConfigPage: React.FC = () => {
         }
 
         setIsAddModalOpen(false);
+        // 重置表单
         setNewRoute({
           localService: 'claude',
-          defaultSupplierId: '',
-          modelMapping: undefined,
+          modelMappings: CLAUDE_PRESET_PATTERNS.map(p => ({
+            id: generateId(),
+            inboundModel: p.inboundModel,
+            targetSupplierId: '',
+            outboundModel: undefined,
+            description: p.description,
+            enabled: true,
+          })),
           enabled: true,
         });
 
@@ -238,10 +231,7 @@ export const RouteConfigPage: React.FC = () => {
     try {
       const response = await updateRoute({
         routeId: editingRoute.id,
-        route: {
-          defaultSupplierId: editRoute.defaultSupplierId,
-          modelMapping: editRoute.modelMapping,
-        } as any,
+        route: editRoute,
       });
 
       if (response.success) {
@@ -266,9 +256,13 @@ export const RouteConfigPage: React.FC = () => {
     const localService = LOCAL_SERVICES.find(s => s.key === localServiceKey);
     if (!localService) return [];
 
-    return suppliers.filter(supplier =>
-      isTransformationSupported(localService.protocol, supplier.protocol),
-    );
+    // Claude: 支持所有协议转换
+    if (localServiceKey === 'claude') {
+      return suppliers.filter(s => s.enabled);
+    }
+
+    // Codex/Gemini: 只支持同协议
+    return suppliers.filter(s => s.protocol === localService.protocol && s.enabled);
   };
 
   const getSupplierDisplay = (supplierId: string | undefined): Supplier | undefined => {
@@ -276,54 +270,49 @@ export const RouteConfigPage: React.FC = () => {
     return suppliers.find(s => s.id === supplierId);
   };
 
+  const getSupplierModels = (supplierId: string | undefined) => {
+    const supplier = getSupplierDisplay(supplierId);
+    return supplier?.supportedModels || [];
+  };
+
   // 模型映射编辑器组件
   const ModelMappingEditor: React.FC<{
-    value: ModelMapping | undefined;
-    onChange: (value: ModelMapping | undefined) => void;
+    mappings: ModelMappingRule[];
+    onChange: (mappings: ModelMappingRule[]) => void;
     routeLocalService: LocalService;
-  }> = ({ value, onChange, routeLocalService }) => {
-    const getAllowedSuppliers = () => getAvailableSuppliers(routeLocalService);
-    const getSupplierModels = (supplierId: string | undefined) => {
-      const supplier = getSupplierDisplay(supplierId);
-      return supplier?.supportedModels || [];
-    };
-    const mapping = value || { enabled: false, rules: [] };
-
-    const handleToggleEnabled = (enabled: boolean) => {
-      onChange({ ...mapping, enabled });
-    };
-
+  }> = ({ mappings, onChange, routeLocalService }) => {
     const handleAddRule = () => {
-      const allowedSuppliers = getAllowedSuppliers();
+      const allowedSuppliers = getAvailableSuppliers(routeLocalService);
       const defaultSupplierId = allowedSuppliers[0]?.id || '';
       const supplierModels = getSupplierModels(defaultSupplierId);
 
       const newRule: ModelMappingRule = {
         id: generateId(),
-        pattern: '',
+        inboundModel: '',
         targetSupplierId: defaultSupplierId,
-        targetModel: supplierModels[0] || undefined,
+        outboundModel: supplierModels[0],
         description: '',
+        enabled: true,
       };
-      onChange({ ...mapping, rules: [...mapping.rules, newRule] });
+      onChange([...mappings, newRule]);
     };
 
-    const handleUpdateRule = (index: number, field: keyof ModelMappingRule, val: string) => {
-      const newRules = [...mapping.rules];
-      const nextRule: any = { ...newRules[index], [field]: val };
+    const handleUpdateRule = (index: number, field: keyof ModelMappingRule, val: string | boolean | undefined) => {
+      const newMappings = [...mappings];
+      newMappings[index] = { ...newMappings[index], [field]: val };
+      onChange(newMappings);
+    };
 
-      // 允许用空字符串表示“透传”（targetModel 为可选字段）
-      if (field === 'targetModel' && (!val || !val.trim())) {
-        delete nextRule.targetModel;
-      }
-
-      newRules[index] = nextRule;
-      onChange({ ...mapping, rules: newRules });
+    // 批量更新规则的多个字段
+    const handleUpdateRuleMultiple = (index: number, updates: Partial<ModelMappingRule>) => {
+      const newMappings = [...mappings];
+      newMappings[index] = { ...newMappings[index], ...updates };
+      onChange(newMappings);
     };
 
     const handleDeleteRule = (index: number) => {
-      const newRules = mapping.rules.filter((_, i) => i !== index);
-      onChange({ ...mapping, rules: newRules });
+      const newMappings = mappings.filter((_, i) => i !== index);
+      onChange(newMappings);
     };
 
     return (
@@ -331,125 +320,135 @@ export const RouteConfigPage: React.FC = () => {
         <Divider />
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium text-primary">模型映射</div>
-          <Switch
-            size="sm"
-            isSelected={mapping.enabled}
-            onValueChange={handleToggleEnabled}
-          >
-            启用
-          </Switch>
+          <span className="text-xs text-tertiary">{mappings.length} 条规则</span>
         </div>
 
-        {mapping.enabled && (
-          <>
-            <div className="space-y-2">
-              {mapping.rules.map((rule, index) => (
-                <div key={rule.id} className="p-3 bg-canvas dark:bg-secondary/30 rounded-lg space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      size="sm"
-                      label="匹配模式"
-                      placeholder="如: claude-*-sonnet-*"
-                      value={rule.pattern}
-                      onValueChange={val => handleUpdateRule(index, 'pattern', val)}
-                      variant="bordered"
-                      className="flex-1"
-                    />
-                    <ArrowRight size={16} className="text-tertiary shrink-0" />
+        <div className="space-y-2">
+          {mappings.map((rule, index) => (
+            <div key={rule.id} className="p-3 bg-canvas dark:bg-secondary/30 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  size="sm"
+                  label="入站模型"
+                  placeholder="如: claude-*-sonnet-*"
+                  value={rule.inboundModel}
+                  onValueChange={val => handleUpdateRule(index, 'inboundModel', val)}
+                  variant="bordered"
+                  className="flex-1"
+                />
+                <ArrowRight size={16} className="text-tertiary shrink-0" />
 
+                <Select
+                  size="sm"
+                  label="目标供应商"
+                  selectedKeys={rule.targetSupplierId ? [rule.targetSupplierId] : []}
+                  onSelectionChange={keys => {
+                    const key = Array.from(keys)[0] as string;
+                    // 切换供应商时，重置 outboundModel 为该供应商的第一个模型（若存在）
+                    const models = getSupplierModels(key);
+                    handleUpdateRuleMultiple(index, { targetSupplierId: key, outboundModel: models[0] });
+                  }}
+                  variant="bordered"
+                  className="flex-1"
+                  classNames={{
+                    trigger: 'min-h-8 py-1',
+                    value: 'text-small',
+                  }}
+                  renderValue={(items) => {
+                    // 如果有选中的值，直接通过 rule.targetSupplierId 查找供应商
+                    if (rule.targetSupplierId) {
+                      const supplier = getAvailableSuppliers(routeLocalService).find(s => s.id === rule.targetSupplierId);
+                      if (supplier) {
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-small">{supplier.displayName || supplier.name}</span>
+                          </div>
+                        );
+                      }
+                    }
+                    // 如果没有选中的值或找不到供应商，显示默认文本
+                    return '目标供应商';
+                  }}
+                >
+                  {getAvailableSuppliers(routeLocalService).map(supplier => (
+                    <SelectItem key={supplier.id} textValue={supplier.displayName || supplier.name}>
+                      <div className="flex flex-col">
+                        <span className="text-small">{supplier.displayName || supplier.name}</span>
+                        <span className="text-tiny text-default-400">{supplier.protocol}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </Select>
+
+                <ArrowRight size={16} className="text-tertiary shrink-0" />
+
+                {(() => {
+                  const models = getSupplierModels(rule.targetSupplierId);
+                  if (models.length === 0) {
+                    return (
+                      <div className="flex-1 text-xs text-tertiary flex items-center">
+                        透传
+                      </div>
+                    );
+                  }
+
+                  const modelItems = [
+                    <SelectItem key="" textValue="透传">
+                      透传入站模型
+                    </SelectItem>,
+                    ...models.map((model) => (
+                      <SelectItem key={model} textValue={model}>
+                        {model}
+                      </SelectItem>
+                    )),
+                  ];
+
+                  return (
                     <Select
                       size="sm"
-                      label="目标供应商"
-                      selectedKeys={[rule.targetSupplierId || '']}
+                      label="出站模型（可选）"
+                      selectedKeys={rule.outboundModel ? [rule.outboundModel] : []}
                       onSelectionChange={keys => {
                         const key = Array.from(keys)[0] as string;
-                        handleUpdateRule(index, 'targetSupplierId', key);
-                        // 切换供应商时，重置 targetModel 为该供应商的第一个模型（若存在）
-                        const models = getSupplierModels(key);
-                        handleUpdateRule(index, 'targetModel', models[0] || '');
-                        if (models.length === 0) {
-                          handleUpdateRule(index, 'targetModel', '');
-                        }
+                        handleUpdateRule(index, 'outboundModel', key);
                       }}
                       variant="bordered"
                       className="flex-1"
                     >
-                      {getAllowedSuppliers().map(supplier => (
-                        <SelectItem key={supplier.id} textValue={supplier.displayName}>
-                          {supplier.displayName}
-                        </SelectItem>
-                      ))}
+                      {modelItems}
                     </Select>
+                  );
+                })()}
 
-                    <ArrowRight size={16} className="text-tertiary shrink-0" />
-
-                    {(() => {
-                      const models = getSupplierModels(rule.targetSupplierId);
-                      if (models.length === 0) {
-                        return (
-                          <div className="flex-1 text-xs text-tertiary">
-                            目标模型：透传
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <Select
-                          size="sm"
-                          label="目标模型（可选）"
-                          selectedKeys={rule.targetModel ? [rule.targetModel] : []}
-                          onSelectionChange={keys => {
-                            const key = Array.from(keys)[0] as string;
-                            handleUpdateRule(index, 'targetModel', key);
-                          }}
-                          variant="bordered"
-                          className="flex-1"
-                        >
-                          {models.map(model => (
-                            <SelectItem key={model} textValue={model}>
-                              {model}
-                            </SelectItem>
-                          ))}
-                        </Select>
-                      );
-                    })()}
-
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      color="danger"
-                      variant="light"
-                      onPress={() => handleDeleteRule(index)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                  <Input
-                    size="sm"
-                    placeholder="描述（可选）"
-                    value={rule.description || ''}
-                    onValueChange={val => handleUpdateRule(index, 'description', val)}
-                    variant="bordered"
-                  />
-                </div>
-              ))}
+                <Button
+                  isIconOnly
+                  size="sm"
+                  color="danger"
+                  variant="light"
+                  onPress={() => handleDeleteRule(index)}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+              {rule.description && (
+                <div className="text-xs text-tertiary">{rule.description}</div>
+              )}
             </div>
+          ))}
+        </div>
 
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={handleAddRule}
-              startContent={<Plus size={16} />}
-              isDisabled={getAllowedSuppliers().length === 0}
-            >
-              添加映射规则
-            </Button>
+        <Button
+          size="sm"
+          variant="flat"
+          onPress={handleAddRule}
+          startContent={<Plus size={16} />}
+        >
+          添加规则
+        </Button>
 
-            <p className="text-xs text-tertiary">
-              💡 规则按顺序匹配，首个命中的生效；未匹配任何规则时走默认上游；targetModel 为空时透传入站 model
-            </p>
-          </>
-        )}
+        <p className="text-xs text-tertiary">
+          💡 规则按顺序匹配，首个命中的生效；outboundModel 为空时透传入站模型
+        </p>
       </div>
     );
   };
@@ -488,12 +487,6 @@ export const RouteConfigPage: React.FC = () => {
       <div className="space-y-4">
         {routes.map(route => {
           const localService = LOCAL_SERVICES.find(s => s.key === route.localService);
-          const supplier = suppliers.find(s => s.id === route.defaultSupplierId);
-          const transformer = autoSelectTransformer(
-            LOCAL_SERVICES.find(s => s.key === route.localService)?.protocol || 'anthropic',
-            supplier?.protocol || 'anthropic',
-          );
-          const transformerInfo = TRANSFORMER_OPTIONS.find(t => t.key === transformer);
 
           return (
             <Card
@@ -506,7 +499,7 @@ export const RouteConfigPage: React.FC = () => {
             >
               <CardBody className="px-4 py-3">
                 <div className="flex flex-col md:flex-row md:items-center gap-3">
-                  {/* 左侧：路由 */}
+                  {/* 左侧：路由信息 */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: `${localService?.color}15` }}>
@@ -522,58 +515,44 @@ export const RouteConfigPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <ArrowRight size={18} className="text-tertiary shrink-0" />
+                    <ArrowRight size={18} className="text-tertiary shrink-0 hidden md:block" />
 
+                    {/* 显示供应商或模型映射 */}
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {supplier && (() => {
-                        const protocol = LOCAL_SERVICES.find(s => s.protocol === supplier.protocol);
-                        const IconComponent = protocol?.icon;
-                        const color = protocol?.color || '#888';
-                        return (
-                          <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
-                            {IconComponent && <IconComponent size={20} />}
-                          </div>
-                        );
-                      })()}
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-primary truncate">
-                          {supplier?.displayName || supplier?.name || '未选择供应商'}
+                      {route.localService === 'claude' ? (
+                        // Claude: 显示模型映射规则数
+                        <div className="flex items-center gap-2">
+                          <Chip size="sm" color="primary" variant="flat">
+                            {route.modelMappings?.length || 0} 条映射规则
+                          </Chip>
                         </div>
-                        <div className="text-xs text-tertiary truncate">
-                          {supplier?.baseUrl || supplier?.protocol || ''}
-                        </div>
-                      </div>
+                      ) : (
+                        // Codex/Gemini: 显示单一供应商
+                        (() => {
+                          const supplier = suppliers.find(s => s.id === route.singleSupplierId);
+                          const protocol = LOCAL_SERVICES.find(s => s.protocol === supplier?.protocol);
+                          const IconComponent = protocol?.icon;
+                          const color = protocol?.color || '#888';
+                          return (
+                            <>
+                              {IconComponent && (
+                                <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
+                                  <IconComponent size={20} />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-primary truncate">
+                                  {supplier?.displayName || '未选择供应商'}
+                                </div>
+                                <div className="text-xs text-tertiary truncate">
+                                  {supplier?.baseUrl || supplier?.protocol || ''}
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()
+                      )}
                     </div>
-                  </div>
-
-                  {/* 中间：转换器 + 模型映射状态 */}
-                  <div className="flex items-center gap-2">
-                    <Chip
-                      size="sm"
-                      color={route.enabled ? 'primary' : 'default'}
-                      variant="flat"
-                      className="h-6"
-                      classNames={{
-                        base: 'min-w-0',
-                        content: 'px-2 text-xs min-w-0 truncate',
-                      }}
-                      title={transformerInfo?.description}
-                    >
-                      {transformerInfo?.label || transformer}
-                    </Chip>
-                    {route.modelMapping?.enabled && (
-                      <Chip
-                        size="sm"
-                        color="success"
-                        variant="flat"
-                        className="h-6"
-                        classNames={{
-                          content: 'px-2 text-xs',
-                        }}
-                      >
-                        {route.modelMapping.rules.length} 映射规则
-                      </Chip>
-                    )}
                   </div>
 
                   {/* 右侧：操作按钮 */}
@@ -636,121 +615,100 @@ export const RouteConfigPage: React.FC = () => {
         <ModalContent>
           <ModalHeader>添加新路由</ModalHeader>
           <ModalBody className="space-y-4">
-            <div className="p-4 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
-                <p className="text-xs text-secondary">
-                  选择本地服务和默认上游供应商。模型映射规则可按入站 model 选择目标供应商与可选目标模型。
-                </p>
-              </div>
+            {/* 本地服务选择 */}
+            <div>
+              <label className="text-sm font-medium text-primary mb-2 block">
+                本地服务 *
+              </label>
+              <Select
+                selectedKeys={[newRoute.localService || '']}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0] as LocalService;
+                  if (key === 'claude') {
+                    // Claude: 自动添加预设规则
+                    setNewRoute({
+                      localService: key,
+                      modelMappings: CLAUDE_PRESET_PATTERNS.map(p => ({
+                        id: generateId(),
+                        inboundModel: p.inboundModel,
+                        targetSupplierId: '',
+                        outboundModel: undefined,
+                        description: p.description,
+                        enabled: true,
+                      })),
+                      singleSupplierId: undefined,
+                      enabled: true,
+                    });
+                  } else {
+                    // Codex/Gemini: 清空规则，准备选择单一供应商
+                    setNewRoute({
+                      localService: key,
+                      modelMappings: [],
+                      singleSupplierId: '',
+                      enabled: true,
+                    });
+                  }
+                }}
+                radius="lg"
+                variant="bordered"
+              >
+                {LOCAL_SERVICES.map(service => {
+                  const IconComponent = service.icon;
+                  return (
+                    <SelectItem key={service.key} textValue={service.label}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${service.color}15` }}>
+                          <IconComponent size={16} />
+                        </div>
+                        <div>
+                          <div>{service.label}</div>
+                          <div className="text-xs text-tertiary">{service.prefix}</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </Select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* 本地服务 */}
+            <Divider />
+
+            {/* Claude: 模型映射配置 */}
+            {newRoute.localService === 'claude' && (
+              <ModelMappingEditor
+                mappings={newRoute.modelMappings || []}
+                onChange={mappings => setNewRoute(prev => ({ ...prev, modelMappings: mappings }))}
+                routeLocalService={newRoute.localService}
+              />
+            )}
+
+            {/* Codex/Gemini: 单一供应商选择 */}
+            {newRoute.localService !== 'claude' && (
               <div>
                 <label className="text-sm font-medium text-primary mb-2 block">
-                  本地服务 *
+                  上游供应商 *
                 </label>
                 <Select
-                  selectedKeys={[newRoute.localService || '']}
-                  onSelectionChange={keys => {
-                    const key = Array.from(keys)[0] as LocalService;
-                    setNewRoute(prev => ({
-                      ...prev,
-                      localService: key,
-                      defaultSupplierId: '',
-                      modelMapping: undefined,
-                    }));
-                  }}
-                  radius="lg"
-                  variant="bordered"
-                >
-                  {LOCAL_SERVICES.map(service => {
-                    const IconComponent = service.icon;
-                    return (
-                      <SelectItem key={service.key} textValue={service.label}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${service.color}15` }}>
-                            <IconComponent size={16} />
-                          </div>
-                          <div>
-                            <div>{service.label}</div>
-                            <div className="text-xs text-tertiary">{service.prefix}</div>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </Select>
-              </div>
-
-              {/* 箭头 */}
-              <div className="hidden md:flex items-center justify-center pt-6">
-                <ArrowRight size={24} className="text-tertiary" />
-              </div>
-
-              {/* 默认上游供应商 */}
-              <div>
-                <label className="text-sm font-medium text-primary mb-2 block">
-                  默认上游供应商 *
-                </label>
-                <Select
-                  selectedKeys={[newRoute.defaultSupplierId || '']}
+                  selectedKeys={newRoute.singleSupplierId ? [newRoute.singleSupplierId] : []}
                   onSelectionChange={keys => {
                     const key = Array.from(keys)[0] as string;
-                    setNewRoute(prev => ({
-                      ...prev,
-                      defaultSupplierId: key,
-                      modelMapping: undefined,
-                    }));
+                    setNewRoute(prev => ({ ...prev, singleSupplierId: key }));
                   }}
                   radius="lg"
                   variant="bordered"
-                  isDisabled={!newRoute.localService}
                 >
-                  {(() => {
-                    const availableSuppliers = getAvailableSuppliers(newRoute.localService as LocalService);
-                    const items = availableSuppliers.map(supplier => {
-                      const protocol = LOCAL_SERVICES.find(s => s.protocol === supplier.protocol);
-                      const IconComponent = protocol?.icon;
-                      return (
-                        <SelectItem key={supplier.id} textValue={supplier.displayName}>
-                          <div className="flex items-center gap-2">
-                            {IconComponent && (
-                              <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${protocol?.color}15` }}>
-                                <IconComponent size={16} />
-                              </div>
-                            )}
-                            <div>
-                              <div>{supplier.displayName}</div>
-                              <div className="text-xs text-tertiary">{supplier.protocol}</div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      );
-                    });
-
-                    if (availableSuppliers.length === 0 && newRoute.localService) {
-                      items.push(
-                        <SelectItem key="none" textValue="无可用供应商" isDisabled>
-                          无可用供应商
-                        </SelectItem>
-                      );
-                    }
-
-                    return items;
-                  })()}
+                  {getAvailableSuppliers(newRoute.localService!).map(supplier => (
+                    <SelectItem key={supplier.id} textValue={supplier.displayName}>
+                      {supplier.displayName} ({supplier.protocol})
+                    </SelectItem>
+                  ))}
                 </Select>
+                {getAvailableSuppliers(newRoute.localService!).length === 0 && (
+                  <p className="text-xs text-tertiary mt-2">
+                    ⚠️ 仅显示 {newRoute.localService} 协议的供应商
+                  </p>
+                )}
               </div>
-            </div>
-
-            {/* 模型映射配置 */}
-            {newRoute.defaultSupplierId && (
-              <ModelMappingEditor
-                value={newRoute.modelMapping}
-                onChange={val => setNewRoute(prev => ({ ...prev, modelMapping: val }))}
-                routeLocalService={newRoute.localService as LocalService}
-              />
             )}
           </ModalBody>
           <ModalFooter>
@@ -761,7 +719,7 @@ export const RouteConfigPage: React.FC = () => {
               color="primary"
               onPress={handleAddRoute}
               className="shadow-md"
-              isDisabled={!newRoute.localService || !newRoute.defaultSupplierId}
+              isDisabled={!newRoute.localService}
             >
               添加路由
             </Button>
@@ -779,73 +737,63 @@ export const RouteConfigPage: React.FC = () => {
         scrollBehavior="inside"
       >
         <ModalContent>
-          <ModalHeader>编辑路由</ModalHeader>
+          <ModalHeader>编辑路由: {editingRoute?.localService}</ModalHeader>
           <ModalBody className="space-y-4">
             {!editingRoute ? (
               <p className="text-sm text-tertiary">未选择路由</p>
             ) : (
               <>
-                <div className="p-4 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <Info size={16} className="text-brand-primary shrink-0 mt-0.5" />
-                    <p className="text-xs text-secondary">
-                      编辑供应商与模型映射配置；转换器由系统自动选择。
-                    </p>
+                {/* 显示本地服务（不可编辑） */}
+                <div>
+                  <label className="text-sm font-medium text-primary mb-2 block">本地服务</label>
+                  <div className="flex items-center gap-2 p-3 bg-default-100 rounded-lg">
+                    {(() => {
+                      const localService = LOCAL_SERVICES.find(s => s.key === editingRoute.localService);
+                      const IconComponent = localService?.icon;
+                      return IconComponent ? (
+                        <>
+                          <IconComponent size={20} />
+                          <span>{localService?.label} ({localService?.prefix})</span>
+                        </>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-primary mb-2 block">本地服务</label>
-                    <Select selectedKeys={[editingRoute.localService]} isDisabled radius="lg" variant="bordered">
-                      {LOCAL_SERVICES.map(service => (
-                        <SelectItem key={service.key} textValue={service.label}>
-                          {service.label}
-                        </SelectItem>
-                      ))}
-                    </Select>
-                  </div>
+                <Divider />
 
-                  <div className="hidden md:flex items-center justify-center pt-6">
-                    <ArrowRight size={24} className="text-tertiary" />
-                  </div>
+                {/* Claude: 模型映射配置 */}
+                {editingRoute.localService === 'claude' && (
+                  <ModelMappingEditor
+                    mappings={(editRoute.modelMappings || editingRoute.modelMappings || [])}
+                    onChange={mappings => setEditRoute(prev => ({ ...prev, modelMappings: mappings }))}
+                    routeLocalService={editingRoute.localService}
+                  />
+                )}
 
+                {/* Codex/Gemini: 单一供应商选择 */}
+                {editingRoute.localService !== 'claude' && (
                   <div>
-                    <label className="text-sm font-medium text-primary mb-2 block">默认上游供应商 *</label>
+                    <label className="text-sm font-medium text-primary mb-2 block">
+                      上游供应商 *
+                    </label>
                     <Select
-                      selectedKeys={[editRoute.defaultSupplierId || editingRoute.defaultSupplierId]}
+                      selectedKeys={(editRoute.singleSupplierId || editingRoute.singleSupplierId) ? [editRoute.singleSupplierId || editingRoute.singleSupplierId!] : []}
                       onSelectionChange={keys => {
                         const key = Array.from(keys)[0] as string;
-                        setEditRoute(prev => ({ ...prev, defaultSupplierId: key }));
+                        setEditRoute(prev => ({ ...prev, singleSupplierId: key }));
                       }}
                       radius="lg"
                       variant="bordered"
                     >
-                      {getAvailableSuppliers(editingRoute.localService).map(supplier => (
+                      {getAvailableSuppliers(editingRoute.localService!).map(supplier => (
                         <SelectItem key={supplier.id} textValue={supplier.displayName}>
-                          {supplier.displayName}
+                          {supplier.displayName} ({supplier.protocol})
                         </SelectItem>
                       ))}
                     </Select>
                   </div>
-                </div>
-
-                {(() => {
-                  const supplierId = editRoute.defaultSupplierId || editingRoute.defaultSupplierId;
-                  const supplier = suppliers.find(s => s.id === supplierId);
-                  if (!supplier) return null;
-
-                  const effectiveMapping =
-                    editRoute.modelMapping !== undefined ? editRoute.modelMapping : editingRoute.modelMapping;
-
-                  return (
-                    <ModelMappingEditor
-                      value={effectiveMapping}
-                      onChange={val => setEditRoute(prev => ({ ...prev, modelMapping: val }))}
-                      routeLocalService={editingRoute.localService}
-                    />
-                  );
-                })()}
+                )}
               </>
             )}
           </ModalBody>

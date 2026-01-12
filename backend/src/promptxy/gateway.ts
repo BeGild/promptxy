@@ -143,20 +143,38 @@ function validateRouteConstraints(route: Route, supplier: Supplier): string | nu
 function resolveEffectiveModelMapping(
   inboundModel: string | undefined,
   route: Route,
-): { supplierId: string; model: string | undefined; ruleId?: string } {
-  if (!inboundModel) {
-    return { supplierId: route.defaultSupplierId, model: inboundModel };
+  suppliers: Supplier[],
+): { supplier: Supplier; model: string | undefined; transformer: TransformerType } | null {
+  // Codex/Gemini: 使用单一供应商配置
+  if (route.localService === 'codex' || route.localService === 'gemini') {
+    if (!route.singleSupplierId) return null;
+    const supplier = suppliers.find(s => s.id === route.singleSupplierId);
+    if (!supplier || !supplier.enabled) return null;
+    return {
+      supplier,
+      model: inboundModel,
+      transformer: 'none',
+    };
   }
 
-  const mappingResult = resolveModelMapping(inboundModel, route.modelMapping);
+  // Claude: 使用模型映射规则
+  if (!inboundModel) return null;
+
+  const mappingResult = resolveModelMapping(inboundModel, route.modelMappings);
   if (!mappingResult.matched) {
-    return { supplierId: route.defaultSupplierId, model: inboundModel };
+    return null; // 未匹配任何规则，不再使用默认供应商
   }
+
+  const supplier = suppliers.find(s => s.id === mappingResult.targetSupplierId);
+  if (!supplier || !supplier.enabled) return null;
+
+  // 使用规则指定的转换器，或自动推导
+  const transformer = mappingResult.transformer ?? deriveTransformer(route.localService, supplier.protocol);
 
   return {
-    supplierId: mappingResult.targetSupplierId,
+    supplier,
     model: mappingResult.targetModel ?? inboundModel,
-    ruleId: mappingResult.rule?.id,
+    transformer,
   };
 }
 
@@ -173,7 +191,7 @@ function resolveRouteByPath(
     r => r.localService === local.localService && r.enabled,
   );
   if (enabledRoutes.length === 0) {
-    // 允许返回一个“占位 route”，上层能给出明确的 503 提示
+    // 允许返回一个"占位 route"，上层能给出明确的 503 提示
     return {
       client: local.client,
       localService: local.localService,
@@ -190,7 +208,6 @@ function resolveRouteByPath(
       route: {
         id: 'missing',
         localService: local.localService,
-        defaultSupplierId: 'missing',
         enabled: false,
       },
     };
@@ -198,40 +215,37 @@ function resolveRouteByPath(
 
   const route = enabledRoutes[0]!;
 
-  // 根据 modelMapping（如启用）选择目标 supplier + 可选 targetModel
+  // 根据模型映射或单一供应商选择目标 supplier + 可选 targetModel
   const inboundModel = jsonBody && typeof jsonBody === 'object' ? ((jsonBody as any).model as string | undefined) : undefined;
-  const effective = resolveEffectiveModelMapping(inboundModel, route);
+  const effective = resolveEffectiveModelMapping(inboundModel, route, suppliers);
 
-  const supplier = suppliers.find(s => s.id === effective.supplierId);
-
-  // 供应商缺失/禁用：返回占位信息，由上层返回 503
-  if (!supplier || !supplier.enabled) {
+  // 无匹配的供应商/规则
+  if (!effective || !effective.supplier) {
     return {
       client: local.client,
       localService: local.localService,
       pathPrefix: local.pathPrefix,
       upstreamBaseUrl: '',
-      supplier: (supplier ||
-        ({
-          id: effective.supplierId,
-          name: 'missing',
-          displayName: 'missing',
-          baseUrl: '',
-          protocol: 'anthropic',
-          enabled: false,
-        } as any)) as Supplier,
+      supplier: {
+        id: 'missing',
+        name: 'missing',
+        displayName: 'missing',
+        baseUrl: '',
+        protocol: 'anthropic',
+        enabled: false,
+      } as any,
       route,
     };
   }
 
-  const constraintError = validateRouteConstraints(route, supplier);
+  const constraintError = validateRouteConstraints(route, effective.supplier);
   if (constraintError) {
     return {
       client: local.client,
       localService: local.localService,
       pathPrefix: local.pathPrefix,
       upstreamBaseUrl: '',
-      supplier,
+      supplier: effective.supplier,
       route,
     };
   }
@@ -240,8 +254,8 @@ function resolveRouteByPath(
     client: local.client,
     localService: local.localService,
     pathPrefix: local.pathPrefix,
-    upstreamBaseUrl: supplier.baseUrl,
-    supplier,
+    upstreamBaseUrl: effective.supplier.baseUrl,
+    supplier: effective.supplier,
     route,
   };
 }
@@ -472,7 +486,7 @@ export function createGateway(
     let upstreamResponse: Response | undefined;
     let error: string | undefined;
     let method: string = req.method || 'unknown';
-    let transformerChain: string[] = [];
+    let transformerChain: TransformerType[] = [];
     let transformTrace: any | undefined;
     let transformedBody: string | undefined;
     // 协议转换后的变量（在 try 块外定义，以便在 catch 块中访问）
@@ -718,7 +732,7 @@ export function createGateway(
           error: reason ? 'route_invalid' : 'supplier_unavailable',
           message:
             reason ||
-            `路由已启用但供应商不可用（不存在或已禁用）：defaultSupplierId=${matchedRoute.route.defaultSupplierId}`,
+            `路由已启用但供应商不可用（不存在或已禁用）：routeId=${matchedRoute.route.id}`,
           routeId: matchedRoute.route.id,
           supplierId: matchedRoute.supplier.id,
           path: url.pathname,
@@ -864,22 +878,18 @@ export function createGateway(
       effectiveBody = jsonBody;
       let needsResponseTransform = false;
 
-      // 注意：route 选择阶段已根据 modelMapping 计算 effective supplierId + effective model。
+      // 注意：route 选择阶段已根据 modelMapping 计算 effective supplier + effective model。
       // 这里仅保证请求体 model 写回 effective model（targetModel 为空时保持透传）。
       if (jsonBody && typeof jsonBody === 'object' && 'model' in (jsonBody as any)) {
         const inboundModel = (jsonBody as any).model as string | undefined;
-        const effective = resolveEffectiveModelMapping(inboundModel, matchedRoute.route);
-        (jsonBody as any).model = effective.model;
-        if (config.debug && effective.ruleId) {
-          logger.debug(
-            `[ModelMapping] ${inboundModel ?? ''} → supplier=${effective.supplierId}` +
-              (effective.model !== inboundModel ? ` model=${effective.model}` : '') +
-              ` (rule: ${effective.ruleId})`,
-          );
+        const effective = resolveEffectiveModelMapping(inboundModel, matchedRoute.route, config.suppliers);
+        if (effective) {
+          (jsonBody as any).model = effective.model;
+          transformerChain = [effective.transformer];
         }
       }
 
-      const derivedTransformer = deriveTransformer(matchedRoute.localService, matchedRoute.supplier.protocol);
+      const derivedTransformer = transformerChain.length > 0 ? transformerChain[0] : deriveTransformer(matchedRoute.localService, matchedRoute.supplier.protocol);
 
       // ========== 协议转换（仅 Claude 入口跨协议时）==========
       if (matchedRoute.localService === 'claude' && derivedTransformer !== 'none') {

@@ -183,24 +183,22 @@ export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'non
 export interface ModelMappingRule {
   /** 规则唯一ID */
   id: string;
-  /** 通配符模式，如 "claude-*-sonnet-*" */
-  pattern: string;
-  /** 命中后选择的目标供应商 */
+  /** 入站模型通配符模式，如 "claude-*-sonnet-*" */
+  inboundModel: string;
+  /** 目标供应商ID */
   targetSupplierId: string;
-  /** 可选；缺失时透传入站 model */
-  targetModel?: string;
+  /**
+   * 可选的出站模型；缺失时透传入站 model
+   */
+  outboundModel?: string;
+  /**
+   * 转换器类型（可选）；未指定时由系统自动推导
+   */
+  transformer?: TransformerType;
   /** 可选描述 */
   description?: string;
-}
-
-/**
- * 模型映射配置
- */
-export interface ModelMapping {
-  /** 是否启用模型映射 */
-  enabled: boolean;
-  /** 映射规则列表（按顺序匹配，第一个命中的生效） */
-  rules: ModelMappingRule[];
+  /** 是否启用该规则 */
+  enabled?: boolean;
 }
 
 /**
@@ -209,9 +207,15 @@ export interface ModelMapping {
 export interface Route {
   id: string;
   localService: LocalService; // 本地服务（/claude, /codex, /gemini）
-  defaultSupplierId: string; // 默认上游供应商ID（未命中规则时使用）
-  /** 模型映射配置：可按入站 model 选择 supplier + 可选 targetModel；targetModel 为空则透传 */
-  modelMapping?: ModelMapping;
+  /**
+   * 模型映射规则列表（仅 claude 路由使用）
+   * 按顺序匹配，第一个命中的生效
+   */
+  modelMappings?: ModelMappingRule[];
+  /**
+   * 单一供应商ID（codex/gemini 路由使用，简化配置）
+   */
+  singleSupplierId?: string;
   enabled: boolean;
 }
 
