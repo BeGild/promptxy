@@ -64,9 +64,9 @@ const LOCAL_SERVICES: Array<{
 
 // Claude 预设模型模式
 const CLAUDE_PRESET_PATTERNS = [
-  { inboundModel: 'claude-*-haiku-*', description: 'Haiku 系列' },
-  { inboundModel: 'claude-*-sonnet-*', description: 'Sonnet 系列' },
-  { inboundModel: 'claude-*-opus-*', description: 'Opus 系列' },
+  { inboundModel: '*-haiku-*', description: 'Haiku 系列' },
+  { inboundModel: '*-sonnet-*', description: 'Sonnet 系列' },
+  { inboundModel: '*-opus-*', description: 'Opus 系列' },
 ];
 
 // 生成唯一 ID

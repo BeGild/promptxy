@@ -71,8 +71,8 @@ describe('Gateway Integration Tests', () => {
       ],
       routes: [
         { id: 'r-claude', localService: 'claude', defaultSupplierId: 'claude-up', enabled: true },
-        { id: 'r-codex', localService: 'codex', defaultSupplierId: 'codex-up', enabled: true },
-        { id: 'r-gemini', localService: 'gemini', defaultSupplierId: 'gemini-up', enabled: true },
+        { id: 'r-codex', localService: 'codex', singleSupplierId: 'codex-up', enabled: true },
+        { id: 'r-gemini', localService: 'gemini', singleSupplierId: 'gemini-up', enabled: true },
       ],
       rules: [
         createTestRule('rule-claude', 'claude', 'system', [{ type: 'append', text: ' [OK]' }]),

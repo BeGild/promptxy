@@ -1221,7 +1221,7 @@ function assertRouteModelMappingValid(
       throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${supplierId}`);
     }
 
-    assertTargetModelAllowed(`${ruleLabel}.targetModel`, supplier, (rule as any).targetModel);
+    assertTargetModelAllowed(`${ruleLabel}.outboundModel`, supplier, (rule as any).outboundModel);
   }
 }
 

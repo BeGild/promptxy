@@ -173,17 +173,18 @@ function resolveEffectiveModelMapping(
 
   return {
     supplier,
-    model: mappingResult.targetModel ?? inboundModel,
+    model: mappingResult.outboundModel ?? inboundModel,
     transformer,
   };
 }
 
+/**
+ * 第一阶段：仅根据路径匹配路由，不涉及模型映射
+ */
 function resolveRouteByPath(
   pathname: string,
   routes: Route[],
-  suppliers: Supplier[],
-  jsonBody: any,
-): RouteInfo | null {
+): { route: Route; client: PromptxyClient; localService: LocalService; pathPrefix: string } | null {
   const local = matchLocalService(pathname);
   if (!local) return null;
 
@@ -191,32 +192,35 @@ function resolveRouteByPath(
     r => r.localService === local.localService && r.enabled,
   );
   if (enabledRoutes.length === 0) {
-    // 允许返回一个"占位 route"，上层能给出明确的 503 提示
-    return {
-      client: local.client,
-      localService: local.localService,
-      pathPrefix: local.pathPrefix,
-      upstreamBaseUrl: '',
-      supplier: {
-        id: 'missing',
-        name: 'missing',
-        displayName: 'missing',
-        baseUrl: '',
-        protocol: 'anthropic',
-        enabled: false,
-      } as any,
-      route: {
-        id: 'missing',
-        localService: local.localService,
-        enabled: false,
-      },
-    };
+    return null;
   }
 
   const route = enabledRoutes[0]!;
 
-  // 根据模型映射或单一供应商选择目标 supplier + 可选 targetModel
+  return {
+    route,
+    client: local.client,
+    localService: local.localService,
+    pathPrefix: local.pathPrefix,
+  };
+}
+
+/**
+ * 第二阶段：根据请求体中的模型进行模型映射，构建完整的 RouteInfo
+ */
+function resolveSupplierByModel(
+  pathname: string,
+  route: Route,
+  suppliers: Supplier[],
+  jsonBody: any,
+): RouteInfo | null {
+  const local = matchLocalService(pathname);
+  if (!local) return null;
+
+  // 从请求体获取模型名称
   const inboundModel = jsonBody && typeof jsonBody === 'object' ? ((jsonBody as any).model as string | undefined) : undefined;
+
+  // 解析有效的供应商映射
   const effective = resolveEffectiveModelMapping(inboundModel, route, suppliers);
 
   // 无匹配的供应商/规则
@@ -705,53 +709,13 @@ export function createGateway(
 
       // ========== Gateway代理路由 ==========
 
-      // 根据路径查找本地服务与启用路由（Route → Supplier）
-      route = resolveRouteByPath(url.pathname, config.routes, config.suppliers, jsonBody);
-      if (!route) {
-        jsonError(res, 404, { error: 'Unknown gateway prefix', path: url.pathname });
-        return;
-      }
-
-      // TypeScript 类型守卫：从这里开始 route 一定不是 null
-      const matchedRoute: RouteInfo = route;
-
-      // 未配置启用路由：明确提示用户去配置
-      if (!matchedRoute.route.enabled) {
+      // 第一阶段：根据路径查找路由（不涉及请求体）
+      const routeMatch = resolveRouteByPath(url.pathname, config.routes);
+      if (!routeMatch) {
         jsonError(res, 503, {
           error: 'route_not_configured',
-          message: `未配置启用路由：${matchedRoute.pathPrefix} 请在路由配置页面启用一个上游供应商`,
+          message: `未配置启用路由，请在路由配置页面启用一个路由`,
           path: url.pathname,
-        });
-        return;
-      }
-
-      // 供应商缺失/被禁用/路由不合法：明确提示
-      if (!matchedRoute.supplier.enabled || !matchedRoute.upstreamBaseUrl) {
-        const reason = validateRouteConstraints(matchedRoute.route, matchedRoute.supplier);
-        jsonError(res, reason ? 400 : 503, {
-          error: reason ? 'route_invalid' : 'supplier_unavailable',
-          message:
-            reason ||
-            `路由已启用但供应商不可用（不存在或已禁用）：routeId=${matchedRoute.route.id}`,
-          routeId: matchedRoute.route.id,
-          supplierId: matchedRoute.supplier.id,
-          path: url.pathname,
-        });
-        return;
-      }
-
-      upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
-
-      // ========== 路径过滤：Claude→OpenAI(codex transformer) 仅支持 /v1/messages ==========
-      if (
-        matchedRoute.localService === 'claude' &&
-        transformerChain[0] === 'codex' &&
-        upstreamPath !== '/v1/messages'
-      ) {
-        jsonError(res, 404, {
-          error: 'not_found',
-          message: 'Codex 供应商仅支持 /v1/messages 端点',
-          path: upstreamPath,
         });
         return;
       }
@@ -801,36 +765,65 @@ export function createGateway(
       }
 
       if (jsonBody && typeof jsonBody === 'object') {
-        if (matchedRoute.client === 'claude') {
+        if (routeMatch.client === 'claude') {
           const result = mutateClaudeBody({
             body: jsonBody,
             method: method,
-            path: upstreamPath,
+            path: stripPrefix(url.pathname, routeMatch.pathPrefix),
             rules: config.rules,
           });
           jsonBody = result.body;
           matches = result.matches;
-        } else if (matchedRoute.client === 'codex') {
+        } else if (routeMatch.client === 'codex') {
           const result = mutateCodexBody({
             body: jsonBody,
             method: method,
-            path: upstreamPath,
+            path: stripPrefix(url.pathname, routeMatch.pathPrefix),
             rules: config.rules,
           });
           jsonBody = result.body;
           matches = result.matches;
           warnings.push(...result.warnings);
-        } else if (matchedRoute.client === 'gemini') {
+        } else if (routeMatch.client === 'gemini') {
           const result = mutateGeminiBody({
             body: jsonBody,
             method: method,
-            path: upstreamPath,
+            path: stripPrefix(url.pathname, routeMatch.pathPrefix),
             rules: config.rules,
           });
           jsonBody = result.body;
           matches = result.matches;
         }
       }
+
+      // ========== 第二阶段：根据模型解析供应商 ==========
+      // 在读取请求体后，根据模型名称进行模型映射，确定目标供应商
+      let matchedRoute: RouteInfo;
+      const supplierMatch = resolveSupplierByModel(url.pathname, routeMatch.route, config.suppliers, jsonBody);
+      if (!supplierMatch) {
+        jsonError(res, 500, {
+          error: 'route_resolution_failed',
+          message: '路由解析失败',
+          path: url.pathname,
+        });
+        return;
+      }
+      matchedRoute = supplierMatch;
+      route = matchedRoute; // 同时更新 route 变量，以便错误处理时使用
+
+      // 检查供应商是否可用
+      if (!matchedRoute.supplier.enabled || !matchedRoute.upstreamBaseUrl) {
+        jsonError(res, 503, {
+          error: 'supplier_unavailable',
+          message: `路由已启用但供应商不可用（不存在或已禁用）：routeId=${matchedRoute.route.id}`,
+          routeId: matchedRoute.route.id,
+          supplierId: matchedRoute.supplier.id,
+          path: url.pathname,
+        });
+        return;
+      }
+
+      upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
 
       // ========== Warmup 请求过滤：跳过无意义的预热请求 ==========
       // 参考项目：claude-relay-service

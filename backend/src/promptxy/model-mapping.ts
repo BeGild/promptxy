@@ -3,11 +3,12 @@ import type { ModelMappingRule, TransformerType } from './types.js';
 /**
  * 将通配符模式转换为正则表达式
  * 支持 * 匹配任意字符（0个或多个）
+ * 使用非贪婪匹配以支持多个 * 模式
  */
 function wildcardToRegex(pattern: string): RegExp {
   const escaped = pattern
     .replace(/[.+^${}()|[\]\\]/g, '\\$&') // 转义特殊字符
-    .replace(/\*/g, '.*'); // * → .*
+    .replace(/\*/g, '.*?'); // * → .*?（非贪婪匹配）
   return new RegExp(`^${escaped}$`, 'i');
 }
 
@@ -25,7 +26,7 @@ export type ModelMappingResult =
   | {
       matched: true;
       targetSupplierId: string;
-      targetModel?: string;
+      outboundModel?: string;
       transformer?: TransformerType;
       rule: ModelMappingRule;
     }
@@ -55,7 +56,7 @@ export function resolveModelMapping(
       return {
         matched: true,
         targetSupplierId: rule.targetSupplierId,
-        targetModel: rule.outboundModel,
+        outboundModel: rule.outboundModel,
         transformer: rule.transformer,
         rule,
       };

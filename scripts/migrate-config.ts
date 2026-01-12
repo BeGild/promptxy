@@ -20,9 +20,9 @@ interface ClaudeModelMap {
 
 interface ModelMappingRule {
   id: string;
-  pattern: string;
+  inboundModel: string;
   targetSupplierId: string;
-  targetModel?: string;
+  outboundModel?: string;
   description?: string;
 }
 
@@ -60,27 +60,27 @@ function migrateClaudeModelMap(
 
   rules.push({
     id: buildRuleId(routeId, 'sonnet'),
-    pattern: 'claude-*-sonnet-*',
+    inboundModel: '*-sonnet-*',
     targetSupplierId: defaultSupplierId,
-    targetModel: sonnetTarget,
+    outboundModel: sonnetTarget,
     description: '从 claudeModelMap.sonnet 迁移',
   });
 
   const haikuTarget = (claudeModelMap.haiku || '').trim();
   rules.push({
     id: buildRuleId(routeId, 'haiku'),
-    pattern: 'claude-*-haiku-*',
+    inboundModel: '*-haiku-*',
     targetSupplierId: defaultSupplierId,
-    targetModel: haikuTarget || sonnetTarget,
+    outboundModel: haikuTarget || sonnetTarget,
     description: haikuTarget ? '从 claudeModelMap.haiku 迁移' : '兼容旧行为：haiku 回落 sonnet',
   });
 
   const opusTarget = (claudeModelMap.opus || '').trim();
   rules.push({
     id: buildRuleId(routeId, 'opus'),
-    pattern: 'claude-*-opus-*',
+    inboundModel: '*-opus-*',
     targetSupplierId: defaultSupplierId,
-    targetModel: opusTarget || sonnetTarget,
+    outboundModel: opusTarget || sonnetTarget,
     description: opusTarget ? '从 claudeModelMap.opus 迁移' : '兼容旧行为：opus 回落 sonnet',
   });
 
@@ -127,15 +127,15 @@ function migrateRoute(route: AnyRoute): AnyRoute {
     console.log(`✅ 迁移路由 ${routeId} 的 claudeModelMap → modelMapping`);
   }
 
-  // 4) legacy: modelMapping.rules[].target -> targetModel，并补齐 targetSupplierId
+  // 4) legacy: modelMapping.rules[].target -> outboundModel，并补齐 targetSupplierId
   if (migrated.modelMapping && typeof migrated.modelMapping === 'object') {
     const mapping = migrated.modelMapping as any;
     if (Array.isArray(mapping.rules)) {
       for (const rule of mapping.rules as any[]) {
         if (!rule || typeof rule !== 'object') continue;
 
-        if (rule.target && !rule.targetModel) {
-          rule.targetModel = rule.target;
+        if (rule.target && !rule.outboundModel) {
+          rule.outboundModel = rule.target;
           delete rule.target;
         }
 
@@ -202,12 +202,12 @@ function migrateConfig(configPath: string): void {
   routesToMigrate.forEach((route, index) => {
     const oldMap = (route as any).claudeModelMap as ClaudeModelMap;
     console.log(`${index + 1}. 路由 ${route.id}:`);
-    console.log(`   - sonnet: ${oldMap.sonnet} → claude-*-sonnet-*`);
+    console.log(`   - sonnet: ${oldMap.sonnet} → *-sonnet-*`);
     if (oldMap.haiku) {
-      console.log(`   - haiku:  ${oldMap.haiku} → claude-*-haiku-*`);
+      console.log(`   - haiku:  ${oldMap.haiku} → *-haiku-*`);
     }
     if (oldMap.opus) {
-      console.log(`   - opus:   ${oldMap.opus} → claude-*-opus-*`);
+      console.log(`   - opus:   ${oldMap.opus} → *-opus-*`);
     }
     console.log('');
   });

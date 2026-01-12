@@ -758,15 +758,15 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
       changed = true;
     }
 
-    // legacy: modelMapping.rules[].target -> targetModel（目标供应商补齐为 defaultSupplierId）
+    // legacy: modelMapping.rules[].target -> outboundModel（目标供应商补齐为 defaultSupplierId）
     if (route.modelMapping && typeof route.modelMapping === 'object') {
       const mapping: any = route.modelMapping;
       if (Array.isArray(mapping.rules)) {
         for (const rule of mapping.rules as any[]) {
           if (!rule || typeof rule !== 'object') continue;
 
-          if (rule.target && !rule.targetModel) {
-            rule.targetModel = rule.target;
+          if (rule.target && !rule.outboundModel) {
+            rule.outboundModel = rule.target;
             delete rule.target;
             changed = true;
           }

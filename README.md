@@ -220,16 +220,16 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
 
 ## 🧩 按模型粒度映射到供应商 + 模型
 
-当你将 `/claude/*` 路由对接到 OpenAI/Codex 协议供应商时，Claude Code 发送的 `model` 往往是 `claude-*-sonnet-* / claude-*-opus-* / claude-*-haiku-*`，上游通常无法识别该模型名。
+当你将 `/claude/*` 路由对接到 OpenAI/Codex 协议供应商时，Claude Code 发送的 `model` 往往是 `*-sonnet-*` / `*-opus-*` / `*-haiku-*`，上游通常无法识别该模型名。
 
-PromptXY 通过“模型映射规则”解决该问题：
+PromptXY 通过"模型映射规则"解决该问题：
 
 1. **路由默认上游**：在「路由配置」中为 `/claude` 路由选择 `defaultSupplierId`（未命中规则时使用）。
-2. **规则级选择**：为每条规则配置：`pattern` / `targetSupplierId` / `targetModel?`。
-   - `targetModel` 未填写：透传入站 `model` 到目标供应商。
+2. **规则级选择**：为每条规则配置：`inboundModel` / `targetSupplierId` / `outboundModel?`。
+   - `outboundModel` 未填写：透传入站 `model` 到目标供应商。
 3. **运行时行为**：
    - 未命中任何规则：走 `defaultSupplierId`，并原样透传 `model`
-   - 命中规则：走 `targetSupplierId`；若存在 `targetModel` 则覆盖 `model`，否则透传
+   - 命中规则：走 `targetSupplierId`；若存在 `outboundModel` 则覆盖 `model`，否则透传
 
 > 提示：若目标供应商配置了 `supportedModels` 且非空，UI 会提供目标模型下拉选择。
 
@@ -240,10 +240,10 @@ PromptXY 通过“模型映射规则”解决该问题：
 ### Claude → OpenAI 示例
 
 - `defaultSupplierId=openai-official`
-- 规则：`pattern=claude-*-sonnet-*` → `targetSupplierId=openai-official` / `targetModel=gpt-4o-mini`
-- 规则：`pattern=claude-*-haiku-*` → `targetSupplierId=openai-official` / `targetModel` 留空（透传入站 model）
+- 规则：`inboundModel=*-sonnet-*` → `targetSupplierId=openai-official` / `outboundModel=gpt-4o-mini`
+- 规则：`inboundModel=*-haiku-*` → `targetSupplierId=openai-official` / `outboundModel` 留空（透传入站 model）
 
-> 若你希望 haiku/opus “回落到 sonnet 的目标模型”，请显式把 `targetModel` 也设置为同一个上游模型。
+> 若你希望 haiku/opus “回落到 sonnet 的目标模型”，请显式把 `outboundModel` 也设置为同一个上游模型。
 
 > 如果你希望不同入站模型落到不同供应商，也可以把 `targetSupplierId` 配成不同供应商 id。
 
@@ -270,7 +270,7 @@ PromptXY 通过“模型映射规则”解决该问题：
 
 常见原因：
 - `targetSupplierId` 不存在
-- `targetModel` 提供但不在目标供应商 `supportedModels` 中（当 `supportedModels` 非空时）
+- `outboundModel` 提供但不在目标供应商 `supportedModels` 中（当 `supportedModels` 非空时）
 
 解决：
 - 检查供应商列表和 `supportedModels`
@@ -288,7 +288,7 @@ tsx scripts/migrate-config.ts ~/.config/promptxy/config.json
 - `supplierId` → `defaultSupplierId`
 - 移除 `transformer`
 - `claudeModelMap` → `modelMapping.rules[]`（补齐 `targetSupplierId`）
-- `modelMapping.rules[].target` → `targetModel`
+- `modelMapping.rules[].target` → `outboundModel`
 
 ## 📚 文档
 
@@ -370,9 +370,9 @@ PromptXY 提供两个版本：
         "rules": [
           {
             "id": "r1",
-            "pattern": "claude-*-sonnet-*",
+            "inboundModel": "*-sonnet-*",
             "targetSupplierId": "openai-official",
-            "targetModel": "gpt-4o-mini"
+            "outboundModel": "gpt-4o-mini"
           }
         ]
       },
@@ -399,7 +399,7 @@ PromptXY 提供两个版本：
 
 常见原因：
 - `targetSupplierId` 不存在
-- `targetModel` 提供但不在目标供应商 `supportedModels` 中（当 `supportedModels` 非空时）
+- `outboundModel` 提供但不在目标供应商 `supportedModels` 中（当 `supportedModels` 非空时）
 
 解决：
 - 检查供应商列表和 `supportedModels`
@@ -417,7 +417,7 @@ tsx scripts/migrate-config.ts ~/.config/promptxy/config.json
 - `supplierId` → `defaultSupplierId`
 - 移除 `transformer`
 - `claudeModelMap` → `modelMapping.rules[]`（补齐 `targetSupplierId`）
-- `modelMapping.rules[].target` → `targetModel`
+- `modelMapping.rules[].target` → `outboundModel`
 
 ### OpenAI ModelSpec（reasoning effort）
 
