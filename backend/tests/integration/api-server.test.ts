@@ -46,9 +46,9 @@ describe('API Server - Routes', () => {
         },
       ],
       routes: [
-        { id: 'r-claude-1', localService: 'claude', supplierId: 'claude-up', transformer: 'none', enabled: true },
-        { id: 'r-codex-1', localService: 'codex', supplierId: 'codex-up', transformer: 'none', enabled: true },
-        { id: 'r-gemini-1', localService: 'gemini', supplierId: 'gemini-up', transformer: 'none', enabled: true },
+        { id: 'r-claude-1', localService: 'claude', defaultSupplierId: 'claude-up', enabled: true },
+        { id: 'r-codex-1', localService: 'codex', defaultSupplierId: 'codex-up', enabled: true },
+        { id: 'r-gemini-1', localService: 'gemini', defaultSupplierId: 'gemini-up', enabled: true },
       ],
       rules: [],
       storage: { maxHistory: 1000 },
@@ -71,20 +71,25 @@ describe('API Server - Routes', () => {
     expect(Array.isArray(res.body.routes)).toBe(true);
   });
 
-  it('创建 claude→openai 路由时应自动选择 transformer=codex，并确保同 localService 仅一条 enabled', async () => {
+  it('创建 claude→openai 路由时应保存 modelMappings，并确保同 localService 仅一条 enabled', async () => {
     const createRes = await client.post('/_promptxy/routes', {
       route: {
         localService: 'claude',
-        supplierId: 'codex-up',
-        transformer: 'none', // 后端会忽略并自动选择
-        claudeModelMap: { sonnet: 'gpt-5.2-codex-high' },
+        modelMappings: [
+          {
+            id: 'm-sonnet',
+            inboundModel: '*-sonnet-*',
+            targetSupplierId: 'codex-up',
+            outboundModel: 'gpt-5.2-codex-high',
+            enabled: true,
+          },
+        ],
         enabled: true,
       },
     });
 
     expect(createRes.status).toBe(200);
     expect(createRes.body.success).toBe(true);
-    expect(createRes.body.route.transformer).toBe('codex');
 
     const list = await client.get('/_promptxy/routes');
     const claudeRoutes = list.body.routes.filter((r: any) => r.localService === 'claude');
@@ -96,8 +101,7 @@ describe('API Server - Routes', () => {
     const createRes = await client.post('/_promptxy/routes', {
       route: {
         localService: 'codex',
-        supplierId: 'gemini-up',
-        transformer: 'none',
+        defaultSupplierId: 'gemini-up',
         enabled: true,
       },
     });

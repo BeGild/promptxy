@@ -463,24 +463,48 @@ export type LocalService = 'claude' | 'codex' | 'gemini';
 export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'none';
 
 /**
+ * 模型映射规则
+ * 将入站模型映射到指定供应商和可选的出站模型
+ */
+export interface ModelMappingRule {
+  /** 规则唯一ID */
+  id: string;
+  /** 入站模型通配符模式，如 "claude-*-sonnet-*" */
+  inboundModel: string;
+  /** 目标供应商ID */
+  targetSupplierId: string;
+  /**
+   * 可选的出站模型；缺失时透传入站 model。
+   * 若目标 supplier 配置了 supportedModels 且非空，前端应优先提供下拉选择。
+   */
+  outboundModel?: string;
+  /**
+   * 转换器类型（可选）；未指定时由系统根据入站协议和供应商协议自动推导
+   */
+  transformer?: TransformerType;
+  /** 可选描述 */
+  description?: string;
+  /** 是否启用该规则 */
+  enabled?: boolean;
+}
+
+/**
  * 路由配置
- * 将本地服务路径映射到供应商，支持协议转换
+ * 将本地服务路径映射到供应商，支持协议转换和模型级映射
  */
 export interface Route {
   id: string; // 路由唯一标识
   localService: LocalService; // 本地服务（/claude, /codex, /gemini）
-  supplierId: string; // 关联的供应商ID
-  transformer: TransformerType; // 转换器类型（自动选择）
   /**
-   * Claude Code 模型档位映射（仅 localService=claude 且跨协议转换时生效）
-   * - sonnet 必填
-   * - haiku/opus 可选，未配置则回落 sonnet
+   * 模型映射规则列表（仅 claude 路由使用）
+   * 按顺序匹配，第一个命中的生效
    */
-  claudeModelMap?: {
-    sonnet: string;
-    haiku?: string;
-    opus?: string;
-  };
+  modelMappings?: ModelMappingRule[];
+  /**
+   * 单一供应商ID（codex/gemini 路由使用，简化配置）
+   * 这些路由不支持协议转换，只需指定一个同协议的供应商
+   */
+  singleSupplierId?: string;
   enabled: boolean; // 是否启用
 }
 

@@ -16,6 +16,7 @@ import {
   validateSupplierAuth,
   validateGatewayAuth,
 } from './transformers/index.js';
+import { parseOpenAIModelSpec } from './model-mapping.js';
 
 type PartialConfig = Partial<PromptxyConfig> & {
   listen?: Partial<PromptxyConfig['listen']>;
@@ -69,22 +70,27 @@ const DEFAULT_CONFIG: PromptxyConfig = {
     {
       id: 'route-claude-default',
       localService: 'claude',
-      supplierId: 'claude-anthropic',
-      transformer: 'none',
+      modelMappings: [
+        {
+          id: 'claude-default-mapping',
+          inboundModel: '*',
+          targetSupplierId: 'claude-anthropic',
+          outboundModel: undefined,
+          enabled: true,
+        },
+      ],
       enabled: true,
     },
     {
       id: 'route-codex-default',
       localService: 'codex',
-      supplierId: 'openai-official',
-      transformer: 'none',
+      singleSupplierId: 'openai-official',
       enabled: true,
     },
     {
       id: 'route-gemini-default',
       localService: 'gemini',
-      supplierId: 'gemini-google',
-      transformer: 'none',
+      singleSupplierId: 'gemini-google',
       enabled: true,
     },
   ],
@@ -352,6 +358,63 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
   // 验证路径冲突
   assertSupplierPathConflicts(config.suppliers);
 
+  const supplierById = new Map<string, Supplier>();
+  for (const supplier of config.suppliers) {
+    supplierById.set(supplier.id, supplier);
+  }
+
+  const requireSupplierProtocol = (
+    localService: string,
+  ): 'openai' | 'gemini' | null => {
+    if (localService === 'codex') return 'openai';
+    if (localService === 'gemini') return 'gemini';
+    return null;
+  };
+
+  const assertSupplierProtocolForRoute = (
+    label: string,
+    localService: string,
+    supplier: Supplier,
+  ): void => {
+    const required = requireSupplierProtocol(localService);
+    if (!required) return;
+    if (supplier.protocol !== required) {
+      throw new Error(`${label} 不允许选择协议 ${supplier.protocol} 的供应商（必须为 ${required}）`);
+    }
+  };
+
+  const assertTargetModelForSupplier = (
+    label: string,
+    supplier: Supplier,
+    targetModel: string | undefined,
+  ): void => {
+    if (targetModel === undefined) return;
+    if (typeof targetModel !== 'string' || !targetModel.trim()) {
+      throw new Error(`${label}.targetModel must be a non-empty string when provided`);
+    }
+
+    const supported = Array.isArray((supplier as any).supportedModels)
+      ? ((supplier as any).supportedModels as string[])
+      : [];
+
+    // 若 supplier.supportedModels 为空：不做强校验（允许自由输入/透传语义）
+    if (supported.length === 0) return;
+
+    // 允许直接命中 supportedModels
+    if (supported.includes(targetModel)) return;
+
+    // OpenAI: 允许使用 modelSpec（例如 gpt-5.2-codex-high）
+    // - 若 supportedModels 仅保存 base model（例如 gpt-5.2-codex），也视为合法
+    if (supplier.protocol === 'openai') {
+      const parsed = parseOpenAIModelSpec(targetModel, (supplier as any).reasoningEfforts);
+      if (parsed && supported.includes(parsed.model)) {
+        return;
+      }
+    }
+
+    throw new Error(`${label}.targetModel 必须从该供应商的 supportedModels 中选择`);
+  };
+
   // 路由配置验证
   if (!config.routes || !Array.isArray(config.routes)) {
     throw new Error(`config.routes must be an array`);
@@ -370,47 +433,60 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
     if (!route.localService || typeof route.localService !== 'string') {
       throw new Error(`${label}.localService must be a non-empty string`);
     }
-    if (!route.supplierId || typeof route.supplierId !== 'string') {
-      throw new Error(`${label}.supplierId must be a non-empty string`);
-    }
-    if (!route.transformer || typeof route.transformer !== 'string') {
-      throw new Error(`${label}.transformer must be a non-empty string`);
-    }
     if (typeof route.enabled !== 'boolean') {
       throw new Error(`${label}.enabled must be a boolean`);
     }
 
-    // Claude 跨协议转换：claudeModelMap 用于运行时映射；缺失时运行时返回 400 提示配置
-    // 这里仅做“存在时的结构校验”，避免老配置导致服务无法启动。
-    if (route.localService === 'claude' && route.transformer !== 'none' && (route as any).claudeModelMap !== undefined) {
-      const supplier = config.suppliers.find(s => s.id === route.supplierId);
-      if (!supplier) {
-        throw new Error(`${label}.supplierId references a missing supplier: ${route.supplierId}`);
+    // Claude: 验证 modelMappings
+    if (route.localService === 'claude') {
+      if (route.modelMappings !== undefined) {
+        if (!Array.isArray(route.modelMappings)) {
+          throw new Error(`${label}.modelMappings must be an array`);
+        }
+
+        for (let j = 0; j < route.modelMappings.length; j++) {
+          const rule = route.modelMappings[j];
+          const ruleLabel = `${label}.modelMappings[${j}]`;
+
+          if (!rule || typeof rule !== 'object') {
+            throw new Error(`${ruleLabel} must be an object`);
+          }
+          if (!rule.id || typeof rule.id !== 'string') {
+            throw new Error(`${ruleLabel}.id must be a non-empty string`);
+          }
+          if (!rule.inboundModel || typeof rule.inboundModel !== 'string') {
+            throw new Error(`${ruleLabel}.inboundModel must be a non-empty string`);
+          }
+          if (!rule.targetSupplierId || typeof rule.targetSupplierId !== 'string') {
+            throw new Error(`${ruleLabel}.targetSupplierId must be a non-empty string`);
+          }
+          if (rule.enabled !== undefined && typeof rule.enabled !== 'boolean') {
+            throw new Error(`${ruleLabel}.enabled must be a boolean when provided`);
+          }
+          if (rule.description !== undefined && typeof rule.description !== 'string') {
+            throw new Error(`${ruleLabel}.description must be a string when provided`);
+          }
+
+          const targetSupplier = supplierById.get(rule.targetSupplierId);
+          if (!targetSupplier) {
+            throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${rule.targetSupplierId}`);
+          }
+          // Claude 支持所有协议的供应商转换
+          assertTargetModelForSupplier(ruleLabel, targetSupplier, rule.outboundModel);
+        }
+      }
+    }
+    // Codex/Gemini: 验证 singleSupplierId
+    else {
+      if (!route.singleSupplierId || typeof route.singleSupplierId !== 'string') {
+        throw new Error(`${label}.singleSupplierId must be a non-empty string`);
       }
 
-      const map = (route as any).claudeModelMap;
-      if (!map || typeof map !== 'object') {
-        throw new Error(`${label}.claudeModelMap must be an object when provided`);
+      const targetSupplier = supplierById.get(route.singleSupplierId);
+      if (!targetSupplier) {
+        throw new Error(`${label}.singleSupplierId 引用的供应商不存在：${route.singleSupplierId}`);
       }
-
-      const supportedModels = Array.isArray((supplier as any).supportedModels)
-        ? (supplier as any).supportedModels
-        : [];
-      const validateMappedModel = (tier: string, value: unknown) => {
-        if (value === undefined) return;
-        if (typeof value !== 'string' || !value.trim()) {
-          throw new Error(`${label}.claudeModelMap.${tier} must be a non-empty string when provided`);
-        }
-        if (supportedModels.length > 0 && !supportedModels.includes(value)) {
-          throw new Error(
-            `${label}.claudeModelMap.${tier} must be one of supplier.supportedModels (supplierId=${supplier.id})`,
-          );
-        }
-      };
-
-      validateMappedModel('sonnet', map.sonnet);
-      validateMappedModel('haiku', map.haiku);
-      validateMappedModel('opus', map.opus);
+      assertSupplierProtocolForRoute(`${label}.singleSupplierId`, route.localService, targetSupplier);
     }
   }
 
@@ -669,12 +745,39 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
   let changed = false;
   const next = (routes as Route[]).map(r => ({ ...r }));
 
-  // 1) legacy: claude→openai 的 transformer=openai 迁移为 transformer=codex（对应 /responses）
-  for (const route of next) {
-    if (route.localService !== 'claude') continue;
-    if (route.transformer !== 'openai') continue;
-    route.transformer = 'codex';
-    changed = true;
+  // 1) legacy: supplierId -> defaultSupplierId；移除 transformer（改为运行时推断）
+  for (const route of next as any[]) {
+    if (route.supplierId && !route.defaultSupplierId) {
+      route.defaultSupplierId = route.supplierId;
+      delete route.supplierId;
+      changed = true;
+    }
+
+    if ('transformer' in route) {
+      delete route.transformer;
+      changed = true;
+    }
+
+    // legacy: modelMapping.rules[].target -> outboundModel（目标供应商补齐为 defaultSupplierId）
+    if (route.modelMapping && typeof route.modelMapping === 'object') {
+      const mapping: any = route.modelMapping;
+      if (Array.isArray(mapping.rules)) {
+        for (const rule of mapping.rules as any[]) {
+          if (!rule || typeof rule !== 'object') continue;
+
+          if (rule.target && !rule.outboundModel) {
+            rule.outboundModel = rule.target;
+            delete rule.target;
+            changed = true;
+          }
+
+          if (!rule.targetSupplierId && route.defaultSupplierId) {
+            rule.targetSupplierId = route.defaultSupplierId;
+            changed = true;
+          }
+        }
+      }
+    }
   }
 
   // 2) 同一 localService 只允许一个 enabled
@@ -713,20 +816,31 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
     if (!supplier) return;
 
     const id = `route-${localService}-default`;
-    const transformer =
-      localService === 'codex' ? 'none' : localService === 'gemini' ? 'none'
-      : supplier.protocol === 'anthropic' ? 'none'
-      : supplier.protocol === 'openai' ? 'codex'
-      : supplier.protocol === 'gemini' ? 'gemini'
-      : 'none';
 
-    next.push({
-      id,
-      localService,
-      supplierId: supplier.id,
-      transformer,
-      enabled: !enabledSeen.has(localService),
-    });
+    // 根据本地服务类型创建不同的路由结构
+    if (localService === 'claude') {
+      next.push({
+        id,
+        localService,
+        modelMappings: [
+          {
+            id: `${id}-mapping`,
+            inboundModel: '*',
+            targetSupplierId: supplier.id,
+            outboundModel: undefined,
+            enabled: true,
+          },
+        ],
+        enabled: !enabledSeen.has(localService),
+      });
+    } else {
+      next.push({
+        id,
+        localService,
+        singleSupplierId: supplier.id,
+        enabled: !enabledSeen.has(localService),
+      });
+    }
     enabledSeen.add(localService);
     changed = true;
   };

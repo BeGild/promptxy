@@ -218,17 +218,34 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
 
 > 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/codex`、`/gemini`）。
 
-## 🧩 Claude → Codex 模型映射（必配）
+## 🧩 按模型粒度映射到供应商 + 模型
 
-当你将 `/claude/*` 路由对接到 OpenAI/Codex 协议供应商（`transformer=codex`）时，Claude Code 发送的 `model` 往往是 `claude-*-sonnet-* / claude-*-opus-* / claude-*-haiku-*`，上游通常无法识别该模型名。
+当你将 `/claude/*` 路由对接到 OpenAI/Codex 协议供应商时，Claude Code 发送的 `model` 往往是 `*-sonnet-*` / `*-opus-*` / `*-haiku-*`，上游通常无法识别该模型名。
 
-PromptXY 通过“模型映射”解决该问题：
+PromptXY 通过"模型映射规则"解决该问题：
 
-1. **供应商侧**：在「供应商管理」中为上游供应商配置 `supportedModels`（UI 为 Chips：回车添加、× 删除）。
-2. **路由侧**：在「路由配置」中编辑 `/claude` 路由，为 `sonnet` 选择一个上游模型（必选），`haiku/opus` 可选（未配置则回落到 `sonnet`）。
-3. **运行时默认**：
-   - Claude `model` 识别不到档位时，默认当作 `sonnet`
-   - `haiku/opus` 未配置映射时，默认使用 `sonnet` 的映射
+1. **路由默认上游**：在「路由配置」中为 `/claude` 路由选择 `defaultSupplierId`（未命中规则时使用）。
+2. **规则级选择**：为每条规则配置：`inboundModel` / `targetSupplierId` / `outboundModel?`。
+   - `outboundModel` 未填写：透传入站 `model` 到目标供应商。
+3. **运行时行为**：
+   - 未命中任何规则：走 `defaultSupplierId`，并原样透传 `model`
+   - 命中规则：走 `targetSupplierId`；若存在 `outboundModel` 则覆盖 `model`，否则透传
+
+> 提示：若目标供应商配置了 `supportedModels` 且非空，UI 会提供目标模型下拉选择。
+
+> 入口约束：`/codex` 仅允许选择 `protocol=openai` 的供应商，`/gemini` 仅允许选择 `protocol=gemini` 的供应商。
+
+> transformer 不再作为配置字段保存，运行时会根据入口与目标供应商协议自动推断。
+
+### Claude → OpenAI 示例
+
+- `defaultSupplierId=openai-official`
+- 规则：`inboundModel=*-sonnet-*` → `targetSupplierId=openai-official` / `outboundModel=gpt-4o-mini`
+- 规则：`inboundModel=*-haiku-*` → `targetSupplierId=openai-official` / `outboundModel` 留空（透传入站 model）
+
+> 若你希望 haiku/opus “回落到 sonnet 的目标模型”，请显式把 `outboundModel` 也设置为同一个上游模型。
+
+> 如果你希望不同入站模型落到不同供应商，也可以把 `targetSupplierId` 配成不同供应商 id。
 
 ### OpenAI ModelSpec（reasoning effort）
 
@@ -241,13 +258,37 @@ PromptXY 通过“模型映射”解决该问题：
 
 ## 🛠️ 常见问题排查
 
-### 1) 400: claude_model_mapping_missing
+### 1) 400: route_invalid / 路由协议不合法
 
-含义：`/claude` 路由跨协议转换时缺少模型映射（至少需要 `sonnet`）。
+含义：`/codex` 或 `/gemini` 入口选择了不匹配协议的供应商，或某条模型映射规则选择了不匹配协议的 `targetSupplierId`。
 
 解决：
-- 在「供应商管理」为该上游供应商补齐 `supportedModels`
-- 在「路由配置」编辑 `/claude` 路由，选择 `sonnet` 对应的上游模型
+- `/codex` 仅选择 `protocol=openai` 的供应商
+- `/gemini` 仅选择 `protocol=gemini` 的供应商
+
+### 2) 400: 模型映射配置无效
+
+常见原因：
+- `targetSupplierId` 不存在
+- `outboundModel` 提供但不在目标供应商 `supportedModels` 中（当 `supportedModels` 非空时）
+
+解决：
+- 检查供应商列表和 `supportedModels`
+- 修正规则字段
+
+### 3) 迁移旧配置
+
+执行迁移脚本（会自动备份原文件）：
+
+```bash
+tsx scripts/migrate-config.ts ~/.config/promptxy/config.json
+```
+
+该脚本会：
+- `supplierId` → `defaultSupplierId`
+- 移除 `transformer`
+- `claudeModelMap` → `modelMapping.rules[]`（补齐 `targetSupplierId`）
+- `modelMapping.rules[].target` → `outboundModel`
 
 ## 📚 文档
 
@@ -258,7 +299,196 @@ PromptXY 通过“模型映射”解决该问题：
 
 ## 📝 配置文件
 
-配置文件位置: `~/.promptxy/config.json` 或项目根目录 `promptxy.config.json`
+配置文件位置: `~/.config/promptxy/config.json` 或项目根目录 `promptxy.config.json`
+
+> 💡 **详细配置说明请参考** [配置参考文档](docs/configuration.md)
+
+### 版本说明
+
+PromptXY 提供两个版本：
+
+- **简化版**：通过 npm 全局安装，轻量级代理，使用 `upstreams` 配置
+- **完整版**：从源码运行，包含 Web UI 管理界面，使用 `suppliers` 配置
+
+### 最小配置示例
+
+**简化版（npm 包）**：
+
+```json
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  },
+  "upstreams": {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com"
+  },
+  "rules": [],
+  "debug": false
+}
+```
+
+**完整版（带 Web UI）**：
+
+```json
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  },
+  "suppliers": [
+    {
+      "id": "claude-anthropic",
+      "name": "claude-anthropic",
+      "displayName": "Claude (Anthropic)",
+      "baseUrl": "https://api.anthropic.com",
+      "protocol": "anthropic",
+      "enabled": true,
+      "auth": { "type": "none" },
+      "supportedModels": []
+    },
+    {
+      "id": "openai-official",
+      "name": "openai-official",
+      "displayName": "OpenAI Official",
+      "baseUrl": "https://api.openai.com",
+      "protocol": "openai",
+      "enabled": true,
+      "auth": { "type": "none" },
+      "supportedModels": ["gpt-4o-mini"]
+    }
+  ],
+  "routes": [
+    {
+      "id": "route-claude-default",
+      "localService": "claude",
+      "defaultSupplierId": "openai-official",
+      "modelMapping": {
+        "enabled": true,
+        "rules": [
+          {
+            "id": "r1",
+            "inboundModel": "*-sonnet-*",
+            "targetSupplierId": "openai-official",
+            "outboundModel": "gpt-4o-mini"
+          }
+        ]
+      },
+      "enabled": true
+    }
+  ],
+  "rules": [],
+  "storage": { "maxHistory": 1000 },
+  "debug": false
+}
+```
+
+## 🛠️ 常见问题排查
+
+### 1) 400: route_invalid / 路由协议不合法
+
+含义：`/codex` 或 `/gemini` 入口选择了不匹配协议的供应商，或某条模型映射规则选择了不匹配协议的 `targetSupplierId`。
+
+解决：
+- `/codex` 仅选择 `protocol=openai` 的供应商
+- `/gemini` 仅选择 `protocol=gemini` 的供应商
+
+### 2) 400: 模型映射配置无效
+
+常见原因：
+- `targetSupplierId` 不存在
+- `outboundModel` 提供但不在目标供应商 `supportedModels` 中（当 `supportedModels` 非空时）
+
+解决：
+- 检查供应商列表和 `supportedModels`
+- 修正规则字段
+
+### 3) 迁移旧配置
+
+执行迁移脚本（会自动备份原文件）：
+
+```bash
+tsx scripts/migrate-config.ts ~/.config/promptxy/config.json
+```
+
+该脚本会：
+- `supplierId` → `defaultSupplierId`
+- 移除 `transformer`
+- `claudeModelMap` → `modelMapping.rules[]`（补齐 `targetSupplierId`）
+- `modelMapping.rules[].target` → `outboundModel`
+
+### OpenAI ModelSpec（reasoning effort）
+
+对于 OpenAI/Codex 上游请求，你可以在 `supportedModels` 中使用形如 `<base>-<effort>` 的 modelSpec（例如 `gpt-5.2-codex-high`）：
+
+- 当 `<effort>` 命中内置列表（`low/medium/high/xhigh`）时，PromptXY 会在出站时自动拆解为：
+  - `model=<base>`
+  - `reasoning.effort=<effort>`
+- 未命中时不报错，直接透传 modelSpec（便于未来扩展更多档位）。
+
+## 📚 文档
+
+- **[配置参考](docs/configuration.md)** - 完整的配置文件说明，包括所有配置项和环境变量
+- **[使用指南](docs/usage.md)** - CLI 配置详解、规则引擎语法和常见用例
+- **[架构设计](docs/architecture.md)** - 项目架构、技术栈和数据流设计
+- **[项目背景](docs/origin_and_requirements.md)** - 项目初衷、需求溯源和设计决策
+
+## 📝 配置文件
+
+配置文件位置: `~/.config/promptxy/config.json` 或项目根目录 `promptxy.config.json`
+
+> 💡 **详细配置说明请参考** [配置参考文档](docs/configuration.md)
+
+### 版本说明
+
+PromptXY 提供两个版本：
+
+- **简化版**：通过 npm 全局安装，轻量级代理，使用 `upstreams` 配置
+- **完整版**：从源码运行，包含 Web UI 管理界面，使用 `suppliers` 配置
+
+### 最小配置示例
+
+**简化版（npm 包）**：
+
+```json
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  },
+  "upstreams": {
+    "anthropic": "https://api.anthropic.com",
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com"
+  },
+  "rules": [],
+  "debug": false
+}
+```
+
+**完整版（带 Web UI）**：
+
+```json
+{
+  "listen": {
+    "host": "127.0.0.1",
+    "port": 7070
+  }
+}
+```
+
+## 📚 文档
+
+- **[配置参考](docs/configuration.md)** - 完整的配置文件说明，包括所有配置项和环境变量
+- **[使用指南](docs/usage.md)** - CLI 配置详解、规则引擎语法和常见用例
+- **[架构设计](docs/architecture.md)** - 项目架构、技术栈和数据流设计
+- **[项目背景](docs/origin_and_requirements.md)** - 项目初衷、需求溯源和设计决策
+
+## 📝 配置文件
+
+配置文件位置: `~/.config/promptxy/config.json` 或项目根目录 `promptxy.config.json`
 
 > 💡 **详细配置说明请参考** [配置参考文档](docs/configuration.md)
 

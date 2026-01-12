@@ -42,9 +42,20 @@ export function useConfigStatus(): ConfigStatus {
       return list.find(r => r.enabled);
     };
 
-    status['/claude'] = resolveSupplierName(enabledRoute('claude')?.supplierId);
-    status['/codex'] = resolveSupplierName(enabledRoute('codex')?.supplierId);
-    status['/gemini'] = resolveSupplierName(enabledRoute('gemini')?.supplierId);
+    const resolveRouteSupplierId = (route: Route | undefined): string | undefined => {
+      if (!route) return undefined;
+      if (route.localService === 'claude') {
+        // Claude: 使用第一个映射规则的供应商
+        return route.modelMappings?.[0]?.targetSupplierId;
+      } else {
+        // Codex/Gemini: 使用单一供应商
+        return route.singleSupplierId;
+      }
+    };
+
+    status['/claude'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('claude')));
+    status['/codex'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('codex')));
+    status['/gemini'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('gemini')));
 
     return status;
   }, [routes, suppliers]);

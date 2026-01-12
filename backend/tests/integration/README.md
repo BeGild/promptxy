@@ -139,7 +139,7 @@ config.debug = true;
 2. 检查测试数据库：
 
 ```bash
-ls ~/.promptxy-test/
+ls ~/.config/promptxy-test/
 ```
 
 3. 查看 Vitest 输出：

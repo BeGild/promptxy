@@ -1,40 +1,75 @@
-export type ClaudeModelTier = 'haiku' | 'sonnet' | 'opus';
+import type { ModelMappingRule, TransformerType } from './types.js';
 
-export function detectClaudeModelTier(model: unknown): ClaudeModelTier {
-  if (typeof model !== 'string') return 'sonnet';
-  const lower = model.toLowerCase();
-  // 优先级：opus > haiku > sonnet（识别不到默认 sonnet）
-  if (lower.includes('opus')) return 'opus';
-  if (lower.includes('haiku')) return 'haiku';
-  return 'sonnet';
+/**
+ * 将通配符模式转换为正则表达式
+ * 支持 * 匹配任意字符（0个或多个）
+ * 使用非贪婪匹配以支持多个 * 模式
+ */
+function wildcardToRegex(pattern: string): RegExp {
+  const escaped = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // 转义特殊字符
+    .replace(/\*/g, '.*?'); // * → .*?（非贪婪匹配）
+  return new RegExp(`^${escaped}$`, 'i');
 }
 
-export type ClaudeModelMap = {
-  sonnet: string;
-  haiku?: string;
-  opus?: string;
-};
-
-export function resolveClaudeMappedModelSpec(
-  claudeModelMap: unknown,
-  tier: ClaudeModelTier,
-): { ok: true; modelSpec: string } | { ok: false; error: string } {
-  if (!claudeModelMap || typeof claudeModelMap !== 'object') {
-    return { ok: false, error: 'Claude 路由跨协议转换时必须配置 claudeModelMap（至少 sonnet）' };
-  }
-  const map = claudeModelMap as Record<string, unknown>;
-  const sonnet = map.sonnet;
-  if (typeof sonnet !== 'string' || !sonnet.trim()) {
-    return { ok: false, error: 'Claude 路由跨协议转换时必须配置 claudeModelMap.sonnet' };
-  }
-
-  const tierValue = map[tier];
-  if (typeof tierValue === 'string' && tierValue.trim()) {
-    return { ok: true, modelSpec: tierValue };
-  }
-
-  return { ok: true, modelSpec: sonnet };
+/**
+ * 匹配模型名称（通配符模式）
+ */
+function matchModel(model: string, inboundModel: string): boolean {
+  return wildcardToRegex(inboundModel).test(model);
 }
+
+/**
+ * 解析模型映射结果
+ */
+export type ModelMappingResult =
+  | {
+      matched: true;
+      targetSupplierId: string;
+      outboundModel?: string;
+      transformer?: TransformerType;
+      rule: ModelMappingRule;
+    }
+  | { matched: false };
+
+/**
+ * 解析模型映射
+ * @param inboundModel 入站模型名称
+ * @param rules 模型映射规则数组
+ * @returns 映射结果；matched=false 表示未匹配任何规则
+ */
+export function resolveModelMapping(
+  inboundModel: string | undefined,
+  rules: ModelMappingRule[] | undefined,
+): ModelMappingResult {
+  // 无规则或无入站模型：不匹配
+  if (!rules || rules.length === 0 || !inboundModel) {
+    return { matched: false };
+  }
+
+  // 按顺序匹配规则
+  for (const rule of rules) {
+    // 跳过未启用的规则
+    if (rule.enabled === false) continue;
+
+    if (matchModel(inboundModel, rule.inboundModel)) {
+      return {
+        matched: true,
+        targetSupplierId: rule.targetSupplierId,
+        outboundModel: rule.outboundModel,
+        transformer: rule.transformer,
+        rule,
+      };
+    }
+  }
+
+  // 未命中任何规则
+  return { matched: false };
+}
+
+// ============================================================================
+// OpenAI reasoning effort 解析（保留原有功能）
+// ============================================================================
 
 export const DEFAULT_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh'] as const;
 

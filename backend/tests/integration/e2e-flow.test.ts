@@ -52,9 +52,15 @@ describe('E2E Flow', () => {
         {
           id: 'r-claude-to-codex',
           localService: 'claude',
-          supplierId: 'codex-up',
-          transformer: 'codex',
-          claudeModelMap: { sonnet: 'gpt-4o-mini' },
+          modelMappings: [
+            {
+              id: 'm-sonnet',
+              inboundModel: '*-sonnet-*',
+              targetSupplierId: 'codex-up',
+              outboundModel: 'gpt-4o-mini',
+              enabled: true,
+            },
+          ],
           enabled: true,
         },
       ],
