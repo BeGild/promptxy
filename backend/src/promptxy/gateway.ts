@@ -122,6 +122,17 @@ function deriveTransformer(
   return 'none';
 }
 
+/**
+ * 根据供应商协议获取客户端类型
+ * 用于前端显示正确的图标
+ */
+function getSupplierClient(protocol: Supplier['protocol']): PromptxyClient {
+  if (protocol === 'anthropic') return 'claude';
+  if (protocol === 'openai') return 'codex';
+  if (protocol === 'gemini') return 'gemini';
+  return 'claude'; // 默认
+}
+
 function validateRouteConstraints(route: Route, supplier: Supplier): string | null {
   // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
@@ -1149,6 +1160,7 @@ export function createGateway(
             supplierId: matchedRoute.supplier.id,
             supplierName: matchedRoute.supplier.name,
             supplierBaseUrl: matchedRoute.supplier.baseUrl,
+            supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
           };
@@ -1216,6 +1228,7 @@ export function createGateway(
       const savedSupplierId = matchedRoute.supplier.id;
       const savedSupplierName = matchedRoute.supplier.name;
       const savedSupplierBaseUrl = matchedRoute.supplier.baseUrl;
+      const savedSupplierProtocol = matchedRoute.supplier.protocol;
       const savedRouteId = matchedRoute.route.id;
 
       // 监听响应流结束，保存包含响应体的记录
@@ -1284,6 +1297,7 @@ export function createGateway(
           supplierId: savedSupplierId,
           supplierName: savedSupplierName,
           supplierBaseUrl: savedSupplierBaseUrl,
+          supplierClient: getSupplierClient(savedSupplierProtocol),
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
         };
@@ -1347,6 +1361,7 @@ export function createGateway(
             supplierId: route?.supplier?.id,
             supplierName: route?.supplier?.name,
             supplierBaseUrl: route?.supplier?.baseUrl,
+            supplierClient: route?.supplier?.protocol ? getSupplierClient(route.supplier.protocol) : undefined,
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
           };
