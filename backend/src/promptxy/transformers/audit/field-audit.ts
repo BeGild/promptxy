@@ -81,6 +81,8 @@ export type FieldAudit = {
     missingUpstreamCompleted?: boolean;
     /** tool_result 是否被 stringify */
     outputWasStringified?: boolean;
+    /** tool_result.content 缺失时是否进行了兜底填充 */
+    toolResultContentMissingFilled?: boolean;
     /** stop_reason 策略 */
     toolStopReasonStrategy?: 'end_turn' | 'tool_use';
     /** custom_tool_call 映射策略 */

@@ -200,11 +200,18 @@ function renderInput(
         // tool_result -> function_call_output
         let output: string | CodexContentItem[];
 
-        // v1 保守策略：非 string 统一 stringify
-        if (typeof block.content === 'string') {
-          output = block.content;
+        const content = (block as any).content;
+        if (content === undefined || content === null) {
+          output = JSON.stringify({
+            error: 'tool_result.content missing',
+            tool_use_id: block.tool_use_id || '',
+            is_error: true,
+          });
+          audit.setMetadata('toolResultContentMissingFilled', true);
+        } else if (typeof content === 'string') {
+          output = content;
         } else {
-          output = JSON.stringify(block.content);
+          output = JSON.stringify(content);
           audit.setMetadata('outputWasStringified', true);
         }
 

@@ -14,6 +14,7 @@ function createMockAudit(): FieldAuditCollector {
     addDefaulted: () => {},
     addDiff: () => {},
     setMetadata: () => {},
+    addMissingRequiredTargetPaths: () => {},
   };
 }
 
@@ -395,6 +396,43 @@ describe('Codex Render', () => {
       if (outputItem.type === 'function_call_output') {
         expect(typeof outputItem.output).toBe('string');
         expect(outputItem.output).toBe('{"result":"data","value":42}');
+      }
+    });
+
+    it('should fill output when tool_result.content is missing', () => {
+      const messages = [
+        {
+          role: 'user' as const,
+          content: {
+            blocks: [
+              {
+                type: 'tool_result',
+                tool_use_id: 'toolu_missing',
+                // content intentionally missing
+              } as any,
+            ],
+          },
+        },
+      ];
+
+      const result = renderCodexRequest(
+        {
+          model: 'codex-gpt-5',
+          system: { text: '' },
+          messages,
+          tools: [],
+          stream: true,
+        },
+        {},
+        createMockAudit()
+      );
+
+      const outputItem = result.input[0];
+      expect(outputItem.type).toBe('function_call_output');
+      if (outputItem.type === 'function_call_output') {
+        expect(outputItem.call_id).toBe('toolu_missing');
+        expect(typeof outputItem.output).toBe('string');
+        expect((outputItem.output as string)).toContain('tool_result.content missing');
       }
     });
   });

@@ -67,7 +67,11 @@ export function validateCodexRequest(
     }
   }
 
-  // 2. call_id 对称性校验
+  // 2. item 级 required（防守性：避免漏到上游 400）
+  const itemErrors = validateInputItemRequiredFields(request.input, audit);
+  errors.push(...itemErrors);
+
+  // 3. call_id 对称性校验
   const callIdErrors = validateCallIdSymmetry(request.input, audit);
   errors.push(...callIdErrors);
 
@@ -87,6 +91,50 @@ export function validateCodexRequest(
  * 4. 每个 call 必须有对应的 output（对称性）
  * 5. 不允许"孤儿" output（找不到对应 call）
  */
+function validateInputItemRequiredFields(
+  input: CodexResponseItem[],
+  audit: FieldAuditCollector,
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  input.forEach((item, index) => {
+    const path = `/input/${index}`;
+
+    if (item.type === 'function_call') {
+      if (!item.name || item.name === '') {
+        errors.push({
+          type: 'missing_required',
+          path,
+          message: `function_call at ${path} has missing or empty name`,
+        });
+        audit.addMissingRequiredTargetPaths([`${path}/name` as any]);
+      }
+      if (item.arguments === undefined || item.arguments === null || item.arguments === '') {
+        errors.push({
+          type: 'missing_required',
+          path,
+          message: `function_call at ${path} has missing or empty arguments`,
+        });
+        audit.addMissingRequiredTargetPaths([`${path}/arguments` as any]);
+      }
+    }
+
+    if (item.type === 'function_call_output') {
+      const output = (item as any).output;
+      if (output === undefined || output === null) {
+        errors.push({
+          type: 'missing_required',
+          path,
+          message: `function_call_output at ${path} has missing output (upstream requires input[${index}].output)`,
+        });
+        audit.addMissingRequiredTargetPaths([`${path}/output` as any]);
+      }
+    }
+  });
+
+  return errors;
+}
+
 function validateCallIdSymmetry(
   input: CodexResponseItem[],
   audit: FieldAuditCollector,
