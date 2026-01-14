@@ -135,10 +135,19 @@ export type ClaudeMessageStartEvent = {
   type: 'message_start';
   message: {
     id: string;
+    /** 兼容旧实现：Claude SSE message 对象可带 type */
+    type?: 'message';
     role: 'assistant';
     content: Array<{ type: ClaudeContentBlockType }>;
     model: string;
     stop_reason: string | null;
+    /** 兼容旧实现：stop_sequence 常为 null */
+    stop_sequence?: string | null;
+    /** 兼容旧实现：初始化时带 0/0 usage */
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
+    };
   };
 };
 
@@ -189,6 +198,7 @@ export type ClaudeMessageDeltaEvent = {
     stop_sequence?: number;
   };
   usage?: {
+    input_tokens?: number;
     output_tokens: number;
     cached_tokens?: number;
     reasoning_tokens?: number;

@@ -268,6 +268,8 @@ describe('Codex SSE Transform', () => {
 
       const usageEvent = messageDeltaEvents[messageDeltaEvents.length - 1];
       expect(usageEvent.usage).toBeDefined();
+      // 修复验证：input_tokens 必须包含在 message_delta 中，以便 Claude 客户端能够获取上下文信息
+      expect(usageEvent.usage?.input_tokens).toBe(100);
       expect(usageEvent.usage?.output_tokens).toBe(200);
       expect(usageEvent.usage?.cached_tokens).toBe(50);
       expect(usageEvent.usage?.reasoning_tokens).toBe(75);

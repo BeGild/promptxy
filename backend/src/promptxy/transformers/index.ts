@@ -7,6 +7,11 @@
 import { TransformerEngine } from './engine/index.js';
 import { Transform } from 'node:stream';
 import { createGeminiSSEToClaudeStreamTransformer } from './protocols/gemini/sse/index.js';
+import { parseSSEChunk, serializeSSEEvent } from './sse/index.js';
+import { createCodexSSEToClaudeStreamTransformer } from './protocols/codex/sse/to-claude.js';
+import { FieldAuditCollector } from './audit/field-audit.js';
+import type { CodexSSEEvent } from './protocols/codex/types.js';
+import type { ClaudeSSEEvent } from './protocols/claude/types.js';
 
 // ============================================================
 // Public API（供 gateway/preview 调用）
@@ -130,65 +135,69 @@ export function createSSETransformStream(transformerName: string) {
     });
   }
 
-  // Codex → Claude SSE 转换流
+  // Codex → Claude SSE 转换流（统一使用 protocols/codex/sse/to-claude.ts 状态机）
   let buffer = '';
-  let messageStarted = false;
-  let textBlockStarted = false;
-  let messageStopped = false;
-  let pingSent = false;
+  let streamEnded = false;
+
+  const audit = new FieldAuditCollector();
+  const transformer = createCodexSSEToClaudeStreamTransformer({ customToolCallStrategy: 'wrap_object' }, audit);
+
+  function pushCodexEvent(stream: Transform, event: CodexSSEEvent) {
+    const res = transformer.pushEvent(event);
+    emitClaudeEvents(stream, res.events);
+    if (res.streamEnd) {
+      streamEnded = true;
+    }
+  }
+
+  function finalizeTransformer(stream: Transform) {
+    const res = transformer.finalize();
+    emitClaudeEvents(stream, res.events);
+    streamEnded = true;
+  }
+
+  function emitClaudeEvents(stream: Transform, events: ClaudeSSEEvent[]) {
+    for (const event of events) {
+      stream.push(serializeSSEEvent({ event: event.type, data: JSON.stringify(event) }));
+    }
+  }
+
+  function processEventBlock(stream: Transform, eventBlock: string) {
+    if (streamEnded) return;
+
+    // 复用通用 SSE 解析：正确处理多行 data:
+    const sseEvents = parseSSEChunk(eventBlock + '\n\n');
+    for (const sseEvent of sseEvents) {
+      const data = sseEvent.data.trim();
+      if (!data) continue;
+      if (data === '[DONE]') {
+        streamEnded = true;
+        return;
+      }
+
+      try {
+        const event = JSON.parse(data) as CodexSSEEvent;
+        pushCodexEvent(stream, event);
+      } catch {
+        // 解析失败：忽略（上游可能发送非 JSON 的 data 行）
+      }
+    }
+  }
 
   return new Transform({
     transform(chunk: Buffer, encoding: BufferEncoding, callback) {
       try {
-        buffer += chunk.toString('utf-8');
+        buffer += chunk.toString('utf-8').replace(/\r\n/g, '\n');
 
-        // 按空行分割 SSE 事件
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 保留最后一个可能不完整的块
+        while (!streamEnded) {
+          const idx = buffer.indexOf('\n\n');
+          if (idx < 0) break;
 
-        for (const line of lines) {
-          if (line.trim() === '') continue;
-          if (!line.trim().startsWith('data:')) continue;
+          const eventBlock = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
 
-          const dataContent = line.trim().slice(5).trim();
-          if (dataContent === '[DONE]') {
-            // 流结束
-            if (!messageStopped && messageStarted) {
-              this.push('event: message_stop\ndata: {"type":"message_stop"}\n\n');
-              messageStopped = true;
-            }
-            continue;
-          }
-
-          try {
-            const codexEvent = JSON.parse(dataContent);
-            const claudeEvents = transformCodexEventToClaude(codexEvent, {
-              messageStarted,
-              textBlockStarted,
-              pingSent,
-            });
-
-            // 更新状态
-            messageStarted = claudeEvents.messageStarted;
-            textBlockStarted = claudeEvents.textBlockStarted;
-            pingSent = claudeEvents.pingSent;
-
-            // 检查是否已经发送了 message_stop
-            for (const event of claudeEvents.events) {
-              if ((event as any).type === 'message_stop') {
-                messageStopped = true;
-              }
-            }
-
-            // 发送转换后的事件（使用 event: 前缀）
-            for (const event of claudeEvents.events) {
-              const eventType = (event as any).type;
-              this.push(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
-            }
-          } catch (parseError) {
-            // JSON 解析失败，可能是分块传输，继续累积
-            // 不做处理，等待下一个 chunk
-          }
+          if (eventBlock.trim() === '') continue;
+          processEventBlock(this, eventBlock);
         }
 
         callback();
@@ -198,207 +207,24 @@ export function createSSETransformStream(transformerName: string) {
     },
 
     flush(callback) {
-      // 处理缓冲区中剩余的数据
-      if (buffer.trim()) {
-        try {
-          const dataContent = buffer.trim().startsWith('data:')
-            ? buffer.trim().slice(5).trim()
-            : buffer.trim();
-
-          if (dataContent && dataContent !== '[DONE]') {
-            const codexEvent = JSON.parse(dataContent);
-            const claudeEvents = transformCodexEventToClaude(codexEvent, {
-              messageStarted,
-              textBlockStarted,
-              pingSent,
-            });
-
-            // 检查是否已经发送了 message_stop
-            for (const event of claudeEvents.events) {
-              if ((event as any).type === 'message_stop') {
-                messageStopped = true;
-              }
-            }
-
-            for (const event of claudeEvents.events) {
-              const eventType = (event as any).type;
-              this.push(`event: ${eventType}\ndata: ${JSON.stringify(event)}\n\n`);
-            }
-          }
-        } catch {
-          // 忽略解析错误
+      try {
+        if (!streamEnded && buffer.trim()) {
+          processEventBlock(this, buffer);
+          buffer = '';
         }
-      }
 
-      // 仅在未发送 message_stop 时才发送
-      if (messageStarted && !messageStopped) {
-        this.push('event: message_stop\ndata: {"type":"message_stop"}\n\n');
-      }
+        // 若 upstream 没有显式结束，也让状态机补齐 message_stop
+        if (!streamEnded) {
+          finalizeTransformer(this);
+        }
 
-      callback();
+        callback();
+      } catch (error) {
+        callback(error as Error);
+      }
     },
   });
 }
-
-/**
- * 转换单个 Codex 事件为 Claude SSE 事件数组
- */
-interface TransformState {
-  messageStarted: boolean;
-  textBlockStarted: boolean;
-  pingSent: boolean;
-}
-
-interface TransformResult {
-  events: Array<Record<string, unknown>>;
-  messageStarted: boolean;
-  textBlockStarted: boolean;
-  pingSent: boolean;
-}
-
-function transformCodexEventToClaude(
-  codexEvent: Record<string, unknown>,
-  state: TransformState,
-): TransformResult {
-  const events: Array<Record<string, unknown>> = [];
-  let newState = { ...state };
-
-  // 初始化 message_start, content_block_start 和 ping
-  if (!state.messageStarted) {
-    const messageId = `msg-${Date.now().toString(36)}${Math.random().toString(36).substr(2, 9)}`;
-
-    // message_start 事件
-    events.push({
-      type: 'message_start',
-      message: {
-        id: messageId,
-        type: 'message',
-        role: 'assistant',
-        model: '',  // TODO: 从原始请求获取模型名
-        content: [],
-        stop_reason: null,
-        stop_sequence: null,
-        usage: {
-          input_tokens: 0,
-          output_tokens: 0,
-        },
-      },
-    });
-
-    // content_block_start 事件
-    events.push({
-      type: 'content_block_start',
-      index: 0,
-      content_block: { type: 'text', text: '' },
-    });
-
-    // ping 事件
-    events.push({
-      type: 'ping',
-    });
-
-    newState.messageStarted = true;
-    newState.textBlockStarted = true;
-    newState.pingSent = true;
-  }
-
-  const eventType = (codexEvent as any).type;
-
-  switch (eventType) {
-    case 'response.created':
-      // 已在初始化时处理
-      break;
-
-    case 'response.output_text.delta': {
-      const delta = (codexEvent as any).delta || '';
-      events.push({
-        type: 'content_block_delta',
-        index: 0,
-        delta: { type: 'text_delta', text: delta },
-      });
-      break;
-    }
-
-    case 'response.output_item.done': {
-      const item = (codexEvent as any).item;
-      if (item && (item.type === 'function_call' || item.type === 'custom_tool_call')) {
-        // 工具调用：生成 tool_use 相关事件
-        const toolIndex = 1; // 0 是文本块
-        let argumentsJson: string;
-
-        if (item.type === 'function_call') {
-          argumentsJson = item.arguments || '{}';
-        } else {
-          // custom_tool_call: input 是 string，需要包装
-          argumentsJson = JSON.stringify({ input: item.input || '' });
-        }
-
-        events.push({
-          type: 'content_block_start',
-          index: toolIndex,
-          content_block: {
-            type: 'tool_use',
-            id: item.call_id,
-            name: item.name,
-            input: {},
-          },
-        });
-        events.push({
-          type: 'content_block_delta',
-          index: toolIndex,
-          delta: {
-            type: 'input_json_delta',
-            partial_json: argumentsJson,
-          },
-        });
-        events.push({
-          type: 'content_block_stop',
-          index: toolIndex,
-        });
-        events.push({
-          type: 'message_delta',
-          delta: { stop_reason: 'tool_use', stop_sequence: null },
-          usage: { output_tokens: 0 },
-        });
-      }
-      break;
-    }
-
-    case 'response.completed':
-      // 流正常结束
-      events.push({
-        type: 'content_block_stop',
-        index: 0,
-      });
-      events.push({
-        type: 'message_delta',
-        delta: { stop_reason: 'end_turn', stop_sequence: null },
-        usage: { output_tokens: 0 },
-      });
-      events.push({
-        type: 'message_stop',
-      });
-      break;
-
-    case 'response.failed':
-      // 错误情况
-      events.push({
-        type: 'error',
-        error: {
-          type: 'api_error',
-          message: (codexEvent as any).error?.message || 'Upstream request failed',
-        },
-      });
-      break;
-
-    default:
-      // 其他事件类型忽略（如 response.output_item.added）
-      break;
-  }
-
-  return { events, ...newState };
-}
-
 /**
  * 选择转换链（兼容旧 API）
  */

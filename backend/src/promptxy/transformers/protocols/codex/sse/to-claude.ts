@@ -104,76 +104,112 @@ export type SSETransformResult = {
 };
 
 /**
+ * 流式增量转换器（用于 Node Transform 流式 pipe：event-by-event）
+ */
+export type CodexSSEToClaudeStreamTransformer = {
+  pushEvent: (event: CodexSSEEvent) => { events: ClaudeSSEEvent[]; streamEnd: boolean };
+  finalize: () => { events: ClaudeSSEEvent[]; streamEnd: boolean };
+};
+
+export function createCodexSSEToClaudeStreamTransformer(
+  config: SSETransformConfig,
+  audit: FieldAuditCollector,
+): CodexSSEToClaudeStreamTransformer {
+  const state = createInitialState();
+  let ended = false;
+
+  function closeStreamEvents(): ClaudeSSEEvent[] {
+    const events: ClaudeSSEEvent[] = [];
+
+    if (state.textBlockStarted) {
+      events.push(createContentBlockStopEvent(0));
+      state.textBlockStarted = false;
+    }
+
+    if (state.reasoningBlockStarted) {
+      events.push(createContentBlockStopEvent(state.currentReasoningIndex));
+      state.reasoningBlockStarted = false;
+    }
+
+    if (!state.messageStopped) {
+      events.push(createMessageStopEvent());
+      state.messageStopped = true;
+    }
+
+    return events;
+  }
+
+  function pushEvent(event: CodexSSEEvent): { events: ClaudeSSEEvent[]; streamEnd: boolean } {
+    if (ended) return { events: [], streamEnd: true };
+
+    const events = transformSingleEvent(event, state, config, audit);
+
+    if (event.type === 'response.completed') {
+      state.completedReceived = true;
+    }
+
+    if (isStreamEndEvent(event)) {
+      events.push(...closeStreamEvents());
+      ended = true;
+      return { events, streamEnd: true };
+    }
+
+    return { events, streamEnd: false };
+  }
+
+  function finalize(): { events: ClaudeSSEEvent[]; streamEnd: boolean } {
+    if (ended) return { events: [], streamEnd: true };
+
+    if (!state.messageStarted) {
+      ended = true;
+      return { events: [], streamEnd: true };
+    }
+
+    const events = closeStreamEvents();
+
+    // finalize 说明上游已经结束但没有显式 response.completed/failed
+    if (!state.completedReceived) {
+      audit.setMetadata('missingUpstreamCompleted', true);
+    }
+
+    ended = true;
+    return { events, streamEnd: true };
+  }
+
+  return { pushEvent, finalize };
+}
+
+/**
  * 转换 Codex SSE 事件为 Claude SSE 事件序列
  *
- * 映射规则（参考 design.md 第 7.4 节）：
- *
- * **初始化**
- * - 首次看到任何事件时：发送 message_start + content_block_start(index=0, type=text)
- *
- * **文本增量**
- * - response.output_text.delta → content_block_delta(index=0, delta.type=text_delta)
- *
- * **工具调用**
- * - response.output_item.done 且 item.type=function_call/custom_tool_call:
- *   - content_block_start(index=toolIndex, type=tool_use, name, id)
- *   - content_block_delta(index=toolIndex, delta.type=input_json_delta, partial_json=arguments)
- *   - content_block_stop(index=toolIndex)
- *   - message_delta(stop_reason=end_turn)
- *
- * **结束**
- * - response.completed → content_block_stop(index=0) + message_stop
- * - 若缺失 completed → 补齐 message_stop 并标记 missingUpstreamCompleted=true
+ * 说明：保留原有“批量转换” API，但内部复用增量状态机，避免与 gateway 流式实现漂移。
  */
 export function transformCodexSSEToClaude(
   codexEvents: CodexSSEEvent[],
   config: SSETransformConfig,
   audit: FieldAuditCollector,
 ): SSETransformResult {
-  const claudeEvents: ClaudeSSEEvent[] = [];
+  const transformer = createCodexSSEToClaudeStreamTransformer(config, audit);
 
-  // 使用闭包维护状态
-  const state = createInitialState();
+  const events: ClaudeSSEEvent[] = [];
+  let streamEnd = false;
 
   for (const codexEvent of codexEvents) {
-    const transformed = transformSingleEvent(codexEvent, state, config, audit);
-    claudeEvents.push(...transformed);
-
-    // 更新 completed 状态
-    if (codexEvent.type === 'response.completed') {
-      state.completedReceived = true;
-    }
-
-    // 检查是否流结束（在处理完事件后检查）
-    if (isStreamEndEvent(codexEvent)) {
-      state.messageStopped = true;
-      // 不要 break，让循环继续处理后续逻辑
+    const res = transformer.pushEvent(codexEvent);
+    events.push(...res.events);
+    if (res.streamEnd) {
+      streamEnd = true;
     }
   }
 
-  // 处理流结束
-  if (state.completedReceived || state.messageStopped) {
-    // 正常结束，补齐 content_block_stop 和 message_stop
-    if (state.textBlockStarted) {
-      claudeEvents.push(createContentBlockStopEvent(0));
-    }
-    // 如果有 reasoning block，也需要停止
-    if (state.reasoningBlockStarted) {
-      claudeEvents.push(createContentBlockStopEvent(state.currentReasoningIndex));
-    }
-    claudeEvents.push(createMessageStopEvent());
-  } else if (!state.completedReceived && !state.messageStopped) {
-    // 缺失 completed 的情况，补齐 message_stop
-    claudeEvents.push(createMessageStopEvent());
-    audit.setMetadata('missingUpstreamCompleted', true);
+  if (!streamEnd) {
+    const fin = transformer.finalize();
+    events.push(...fin.events);
+    streamEnd = fin.streamEnd;
   }
 
-  return {
-    events: claudeEvents,
-    streamEnd: state.messageStopped || state.completedReceived,
-  };
+  return { events, streamEnd };
 }
-
 /**
  * 转换单个 Codex 事件
  */
@@ -186,9 +222,18 @@ function transformSingleEvent(
   const claudeEvents: ClaudeSSEEvent[] = [];
 
   // 初始化 message_start
+  // 注意：message_start.message.id 需要尽可能稳定，优先使用 response.created.id
   if (!state.messageStarted) {
-    claudeEvents.push(createMessageStartEvent());
+    if (event.type === 'response.created' && (event as any).id) {
+      claudeEvents.push(createMessageStartEvent((event as any).id));
+    } else {
+      claudeEvents.push(createMessageStartEvent());
+    }
+
     claudeEvents.push(createContentBlockStartEvent(0, 'text'));
+    // 兼容旧实现：在 message_start + content_block_start 后立即发送一次 ping
+    claudeEvents.push({ type: 'ping' });
+
     state.messageStarted = true;
     state.textBlockStarted = true;
   }
@@ -285,7 +330,10 @@ function transformSingleEvent(
         }
 
         // 映射 Codex usage 到 Claude usage
+        // 注意：input_tokens 必须包含在 message_delta 中，以便 Claude 客户端能够获取上下文信息
+        // 参考: refence/cc-switch/src-tauri/src/proxy/usage/parser.rs:104-110
         const usage = {
+          input_tokens: inputTokens,
           output_tokens: codexUsage.output_tokens || 0,
           cached_tokens: cachedTokens,
           reasoning_tokens: codexUsage.output_tokens_details?.reasoning_tokens,
@@ -381,15 +429,21 @@ function transformToolCall(
 
 // ===== Claude SSE 事件工厂函数 =====
 
-function createMessageStartEvent(): ClaudeMessageStartEvent {
+function createMessageStartEvent(messageId?: string): ClaudeMessageStartEvent {
   return {
     type: 'message_start',
     message: {
-      id: '',
+      id: messageId ?? '',
+      type: 'message',
       role: 'assistant',
       content: [],
       model: '',
       stop_reason: null,
+      stop_sequence: null,
+      usage: {
+        input_tokens: 0,
+        output_tokens: 0,
+      },
     },
   };
 }
@@ -463,7 +517,7 @@ function createMessageDeltaEvent(
 
 function createMessageDeltaEventWithUsage(
   delta: { stop_reason?: string; stop_sequence?: number },
-  usage: { output_tokens: number; cached_tokens?: number; reasoning_tokens?: number },
+  usage: { input_tokens: number; output_tokens: number; cached_tokens?: number; reasoning_tokens?: number },
 ): ClaudeMessageDeltaEvent {
   return {
     type: 'message_delta',

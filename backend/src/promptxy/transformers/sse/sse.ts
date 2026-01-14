@@ -99,7 +99,8 @@ export function serializeSSEEvent(event: SSEEvent): string {
 
   lines.push(''); // 空行表示事件结束
 
-  return lines.join('\n');
+  // 关键修复：SSE 规范要求每个事件以 \n\n 结尾（事件之间的分隔符）
+  return lines.join('\n') + '\n';
 }
 
 /**
