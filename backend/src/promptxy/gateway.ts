@@ -72,6 +72,7 @@ import {
 } from './api-handlers.js';
 import { createProtocolTransformer } from './transformers/index.js';
 import { createSSETransformStream, isSSEResponse } from './transformers/index.js';
+import { countClaudeTokens } from './utils/token-counter.js';
 import { authenticateRequest, clearAuthHeaders } from './transformers/auth.js';
 import { parseOpenAIModelSpec, resolveModelMapping } from './model-mapping.js';
 import { parseSSEToEvents, isSSEContent } from './utils/sse-parser.js';
@@ -906,6 +907,14 @@ export function createGateway(
 
       const derivedTransformer = transformerChain.length > 0 ? transformerChain[0] : deriveTransformer(matchedRoute.localService, matchedRoute.supplier.protocol);
 
+      // ========== 保存原始 Claude 请求体（用于后续计算 input_tokens）==========
+      // 仅在 Claude → 跨协议转换时需要，用于流式响应的 usage 兜底
+      let originalClaudeBody: any | undefined;
+      if (matchedRoute.localService === 'claude' && derivedTransformer !== 'none' && matchedRoute.client === 'claude') {
+        // 深拷贝保存原始 Claude 请求体（在协议转换之前）
+        originalClaudeBody = jsonBody && typeof jsonBody === 'object' ? JSON.parse(JSON.stringify(jsonBody)) : undefined;
+      }
+
       // ========== 协议转换（仅 Claude 入口跨协议时）==========
       if (matchedRoute.localService === 'claude' && derivedTransformer !== 'none') {
         if (jsonBody && typeof jsonBody === 'object') {
@@ -1211,7 +1220,31 @@ export function createGateway(
 
       const responseBodyChunks: Buffer[] = [];
       const upstreamStream = Readable.fromWeb(upstreamResponse.body as any);
-      const transformStream = createSSETransformStream(transformerChain[0]);
+
+      // 计算 input_tokens 并注入 SSE transformer（用于上游无 usage 时的兜底）
+      let estimatedInputTokens: number | undefined;
+      if (originalClaudeBody) {
+        try {
+          let capabilities;
+          if (matchedRoute.supplier.protocol === 'openai') {
+            capabilities = await detectOpenAICountTokensSupport(matchedRoute.supplier);
+          }
+
+          const tokenResult = await countClaudeTokens({
+            messages: originalClaudeBody.messages || [],
+            system: originalClaudeBody.system,
+            tools: originalClaudeBody.tools,
+            capabilities,
+            baseUrl: matchedRoute.upstreamBaseUrl,
+            auth: matchedRoute.supplier.auth?.type === 'none' ? undefined : matchedRoute.supplier.auth,
+          });
+          estimatedInputTokens = tokenResult.input_tokens;
+        } catch (err) {
+          // 计算失败时保持 undefined，由 transformer 在兜底时设为 0 并记录 audit
+        }
+      }
+
+      const transformStream = createSSETransformStream(transformerChain[0], { estimatedInputTokens });
       const outboundStream =
         isSSE && needsResponseTransform && transformerChain.length > 0
           ? upstreamStream.pipe(transformStream as any)

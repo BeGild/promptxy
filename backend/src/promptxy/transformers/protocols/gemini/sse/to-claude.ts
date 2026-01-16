@@ -452,15 +452,29 @@ function createContentBlockStopEvent(
 }
 
 function createMessageDeltaEvent(
-  delta: { stop_reason?: string; usage?: { output_tokens: number } },
+  delta: {
+    stop_reason?: string;
+    usage?: { output_tokens: number };
+  },
 ): ClaudeMessageDeltaEvent {
-  return {
+  const event: ClaudeMessageDeltaEvent = {
     type: 'message_delta',
     delta: {
       stop_reason: delta.stop_reason,
     },
-    usage: delta.usage,
   };
+
+  if (delta.usage) {
+    // Gemini 只提供 output_tokens，其他字段补 0
+    event.usage = {
+      input_tokens: 0,
+      output_tokens: delta.usage.output_tokens,
+      cache_read_input_tokens: 0,
+      cache_creation_input_tokens: 0,
+    };
+  }
+
+  return event;
 }
 
 function createMessageStopEvent(): ClaudeMessageStopEvent {

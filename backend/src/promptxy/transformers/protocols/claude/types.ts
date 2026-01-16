@@ -198,10 +198,10 @@ export type ClaudeMessageDeltaEvent = {
     stop_sequence?: number;
   };
   usage?: {
-    input_tokens?: number;
+    input_tokens: number;
     output_tokens: number;
-    cached_tokens?: number;
-    reasoning_tokens?: number;
+    cache_read_input_tokens: number;
+    cache_creation_input_tokens: number;
   };
 };
 

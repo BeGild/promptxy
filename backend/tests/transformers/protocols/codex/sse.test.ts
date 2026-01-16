@@ -268,11 +268,12 @@ describe('Codex SSE Transform', () => {
 
       const usageEvent = messageDeltaEvents[messageDeltaEvents.length - 1];
       expect(usageEvent.usage).toBeDefined();
-      // 修复验证：input_tokens 必须包含在 message_delta 中，以便 Claude 客户端能够获取上下文信息
+      // 官方四字段：input_tokens/output_tokens/cache_read_input_tokens/cache_creation_input_tokens
       expect(usageEvent.usage?.input_tokens).toBe(100);
       expect(usageEvent.usage?.output_tokens).toBe(200);
-      expect(usageEvent.usage?.cached_tokens).toBe(50);
-      expect(usageEvent.usage?.reasoning_tokens).toBe(75);
+      expect(usageEvent.usage?.cache_read_input_tokens).toBe(50);
+      expect(usageEvent.usage?.cache_creation_input_tokens).toBe(0);
+      // reasoning_tokens 仅用于审计，不进入 Claude usage
     });
 
     it('should handle response without usage gracefully', () => {
@@ -297,6 +298,49 @@ describe('Codex SSE Transform', () => {
       // 应该正常完成，不抛出错误
       expect(result.streamEnd).toBe(true);
       expect(result.events.length).toBeGreaterThan(0);
+
+      // 应该生成兜底 usage（output_tokens 估算）
+      const messageDeltaEvents = result.events.filter(e =>
+        e.type === 'message_delta' && e.usage !== undefined
+      );
+      expect(messageDeltaEvents.length).toBeGreaterThan(0);
+
+      const usageEvent = messageDeltaEvents[messageDeltaEvents.length - 1];
+      expect(usageEvent.usage?.output_tokens).toBeGreaterThan(0);
+      // input_tokens 如果没有注入 estimatedInputTokens，应该为 0 并记录 audit
+      expect(usageEvent.usage?.input_tokens).toBe(0);
+    });
+
+    it('should generate fallback usage when response.completed is missing', () => {
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_123',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_text.delta',
+          delta: 'Hello world!',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(codexEvents, { customToolCallStrategy: 'wrap_object' }, createMockAudit());
+
+      // 应该正常完成并生成兜底 usage
+      // finalize() 会被调用，返回 streamEnd: true
+      expect(result.streamEnd).toBe(true);
+
+      // 应该有 usage（由 finalize 生成）
+      const messageDeltaEvents = result.events.filter(e =>
+        e.type === 'message_delta' && e.usage !== undefined
+      );
+      expect(messageDeltaEvents.length).toBeGreaterThan(0);
+
+      const usageEvent = messageDeltaEvents[messageDeltaEvents.length - 1];
+      expect(usageEvent.usage?.output_tokens).toBe(Math.ceil('Hello world!'.length / 3));
+      expect(usageEvent.usage?.input_tokens).toBe(0);
+      expect(usageEvent.usage?.cache_read_input_tokens).toBe(0);
+      expect(usageEvent.usage?.cache_creation_input_tokens).toBe(0);
     });
   });
 

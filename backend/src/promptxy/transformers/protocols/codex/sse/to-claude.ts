@@ -40,6 +40,20 @@ type State = {
   currentReasoningIndex: number;
   /** reasoning summary index */
   reasoningSummaryIndex: number;
+
+  /** 最终 usage 是否已输出（防止重复输出 message_delta） */
+  finalUsageEmitted: boolean;
+  /** 来自上游 response.completed 的 usage（已映射为 Claude 官方字段） */
+  upstreamUsage?: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_input_tokens: number;
+    cache_creation_input_tokens: number;
+  };
+  /** 请求侧注入的 input_tokens（用于上游缺失 usage 时兜底） */
+  estimatedInputTokens?: number;
+  /** 累计已发送到 Claude 的 delta 字符数（用于估算 output_tokens） */
+  outputCharCount: number;
 };
 
 /**
@@ -55,6 +69,11 @@ function createInitialState(): State {
     reasoningBlockStarted: false,
     currentReasoningIndex: 0,
     reasoningSummaryIndex: 0,
+
+    finalUsageEmitted: false,
+    upstreamUsage: undefined,
+    estimatedInputTokens: undefined,
+    outputCharCount: 0,
   };
 }
 
@@ -111,14 +130,21 @@ export type CodexSSEToClaudeStreamTransformer = {
   finalize: () => { events: ClaudeSSEEvent[]; streamEnd: boolean };
 };
 
+export type SSETransformContext = {
+  /** 请求侧注入的 input_tokens（上游缺失 usage 时兜底） */
+  estimatedInputTokens?: number;
+};
+
 export function createCodexSSEToClaudeStreamTransformer(
   config: SSETransformConfig,
   audit: FieldAuditCollector,
+  context?: SSETransformContext,
 ): CodexSSEToClaudeStreamTransformer {
   const state = createInitialState();
+  state.estimatedInputTokens = context?.estimatedInputTokens;
   let ended = false;
 
-  function closeStreamEvents(): ClaudeSSEEvent[] {
+  function closeOpenBlocks(): ClaudeSSEEvent[] {
     const events: ClaudeSSEEvent[] = [];
 
     if (state.textBlockStarted) {
@@ -131,11 +157,57 @@ export function createCodexSSEToClaudeStreamTransformer(
       state.reasoningBlockStarted = false;
     }
 
-    if (!state.messageStopped) {
-      events.push(createMessageStopEvent());
-      state.messageStopped = true;
+    return events;
+  }
+
+  function closeMessage(): ClaudeSSEEvent[] {
+    if (state.messageStopped) return [];
+    state.messageStopped = true;
+    return [createMessageStopEvent()];
+  }
+
+  function estimateTokensFromChars(chars: number): number {
+    return Math.ceil(chars / 3);
+  }
+
+  function buildFinalUsage(): {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_input_tokens: number;
+    cache_creation_input_tokens: number;
+  } {
+    if (state.upstreamUsage) return state.upstreamUsage;
+
+    if (state.estimatedInputTokens === undefined) {
+      audit.setMetadata('missingEstimatedInputTokens', true);
     }
 
+    return {
+      input_tokens: state.estimatedInputTokens ?? 0,
+      output_tokens: estimateTokensFromChars(state.outputCharCount),
+      cache_read_input_tokens: 0,
+      cache_creation_input_tokens: 0,
+    };
+  }
+
+  function maybeEmitFinalUsageDelta(): ClaudeSSEEvent[] {
+    if (state.finalUsageEmitted) return [];
+    state.finalUsageEmitted = true;
+    return [
+      createMessageDeltaEventWithUsage(
+        {
+          stop_reason: 'end_turn',
+        },
+        buildFinalUsage(),
+      ),
+    ];
+  }
+
+  function closeStreamEvents(): ClaudeSSEEvent[] {
+    const events: ClaudeSSEEvent[] = [];
+    events.push(...closeOpenBlocks());
+    events.push(...maybeEmitFinalUsageDelta());
+    events.push(...closeMessage());
     return events;
   }
 
@@ -245,8 +317,10 @@ function transformSingleEvent(
 
     case 'response.output_text.delta': {
       // 文本增量
+      const delta = (event as any).delta || '';
+      state.outputCharCount += delta.length;
       claudeEvents.push(createContentBlockDeltaEvent(0, 'text_delta', {
-        text: (event as any).delta || '',
+        text: delta,
       }));
       break;
     }
@@ -267,6 +341,7 @@ function transformSingleEvent(
           state.currentToolIndex,
           config,
           audit,
+          state,
         );
         claudeEvents.push(...toolEvents);
         state.currentToolIndex++;
@@ -279,6 +354,7 @@ function transformSingleEvent(
       // 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:147-175
       const reasoningEvent = event as any;
       const delta = reasoningEvent.delta || '';
+      state.outputCharCount += delta.length;
 
       // 如果还没有开始 reasoning block，先创建
       if (!state.reasoningBlockStarted) {
@@ -298,6 +374,7 @@ function transformSingleEvent(
       // 推理摘要增量（与 reasoning_text.delta 类似处理）
       const reasoningEvent = event as any;
       const delta = reasoningEvent.delta || '';
+      state.outputCharCount += delta.length;
 
       // 如果还没有开始 reasoning block，先创建
       if (!state.reasoningBlockStarted) {
@@ -329,22 +406,22 @@ function transformSingleEvent(
           console.log(`[Cache Metrics] Stream Hit: ${cachedTokens}/${inputTokens} tokens (${cacheHitRate.toFixed(1)}%)`);
         }
 
-        // 映射 Codex usage 到 Claude usage
-        // 注意：input_tokens 必须包含在 message_delta 中，以便 Claude 客户端能够获取上下文信息
-        // 参考: refence/cc-switch/src-tauri/src/proxy/usage/parser.rs:104-110
-        const usage = {
+        // 对齐 Claude 官方 usage 字段
+        state.upstreamUsage = {
           input_tokens: inputTokens,
           output_tokens: codexUsage.output_tokens || 0,
-          cached_tokens: cachedTokens,
-          reasoning_tokens: codexUsage.output_tokens_details?.reasoning_tokens,
+          cache_read_input_tokens: cachedTokens,
+          cache_creation_input_tokens: 0,
         };
 
-        // 生成 message_delta 事件包含 usage
-        claudeEvents.push(createMessageDeltaEventWithUsage({
-          stop_reason: 'end_turn',
-        }, usage));
+        // reasoning_tokens 仅用于审计，不进入 Claude SSE usage
+        const reasoningTokens = codexUsage.output_tokens_details?.reasoning_tokens;
+        if (typeof reasoningTokens === 'number' && reasoningTokens > 0) {
+          audit.setMetadata('upstream_reasoning_tokens', reasoningTokens);
+        }
       }
-      // 流结束标记，在主循环处理
+
+      // 结束时的 message_delta(usage) 由 closeStreamEvents/finalize 统一补发
       break;
     }
 
@@ -374,6 +451,7 @@ function transformToolCall(
   toolIndex: number,
   config: SSETransformConfig,
   audit: FieldAuditCollector,
+  state: State,
 ): ClaudeSSEEvent[] {
   const events: ClaudeSSEEvent[] = [];
 
@@ -407,6 +485,8 @@ function transformToolCall(
   }));
 
   // content_block_delta (input_json_delta)
+  // 该 JSON 会被 Claude 客户端消费，计入输出估算
+  state.outputCharCount += inputJson.length;
   events.push(
     createContentBlockDeltaEvent(toolIndex, 'input_json_delta', {
       partial_json: inputJson,
@@ -517,7 +597,12 @@ function createMessageDeltaEvent(
 
 function createMessageDeltaEventWithUsage(
   delta: { stop_reason?: string; stop_sequence?: number },
-  usage: { input_tokens: number; output_tokens: number; cached_tokens?: number; reasoning_tokens?: number },
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_input_tokens: number;
+    cache_creation_input_tokens: number;
+  },
 ): ClaudeMessageDeltaEvent {
   return {
     type: 'message_delta',

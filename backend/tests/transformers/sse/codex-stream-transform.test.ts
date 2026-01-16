@@ -49,9 +49,11 @@ describe('createSSETransformStream (codex)', () => {
     expect(out).toContain('"type":"message_start"');
     expect(out).toContain('"id":"resp_123"');
 
-    // completion usage 必须包含 input_tokens/cached_tokens/reasoning_tokens
+    // completion usage 必须包含官方四字段
     expect(out).toContain('"usage":{"input_tokens":100');
-    expect(out).toContain('"cached_tokens":50');
-    expect(out).toContain('"reasoning_tokens":75');
+    expect(out).toContain('"cache_read_input_tokens":50');
+    expect(out).toContain('"cache_creation_input_tokens":0');
+    // reasoning_tokens 不进入 Claude usage（仅审计用）
+    expect(out).not.toContain('"reasoning_tokens"');
   });
 });

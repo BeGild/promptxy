@@ -30,11 +30,19 @@ export function createProtocolTransformer(config?: {
 }
 
 /**
+ * SSE 转换流上下文参数
+ */
+export type SSETransformStreamOptions = {
+  /** 请求侧注入的 input_tokens（用于上游缺失 usage 时兜底） */
+  estimatedInputTokens?: number;
+};
+
+/**
  * 创建 SSE 转换流
  *
  * 将 Codex SSE 转换为 Claude SSE
  */
-export function createSSETransformStream(transformerName: string) {
+export function createSSETransformStream(transformerName: string, options?: SSETransformStreamOptions) {
   // 仅支持 codex 转换器
   if (transformerName === 'gemini') {
     // Gemini SSE → Claude SSE 转换流（增量）
@@ -140,7 +148,11 @@ export function createSSETransformStream(transformerName: string) {
   let streamEnded = false;
 
   const audit = new FieldAuditCollector();
-  const transformer = createCodexSSEToClaudeStreamTransformer({ customToolCallStrategy: 'wrap_object' }, audit);
+  const transformer = createCodexSSEToClaudeStreamTransformer(
+    { customToolCallStrategy: 'wrap_object' },
+    audit,
+    { estimatedInputTokens: options?.estimatedInputTokens },
+  );
 
   function pushCodexEvent(stream: Transform, event: CodexSSEEvent) {
     const res = transformer.pushEvent(event);
