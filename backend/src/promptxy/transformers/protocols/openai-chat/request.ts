@@ -22,7 +22,22 @@ export function transformClaudeToOpenAIChatRequest(body: any): ChatCompletionReq
 
   // 1. 处理 system（作为第一个消息）
   if (body.system) {
-    const systemText = typeof body.system === 'string' ? body.system : JSON.stringify(body.system);
+    let systemText = '';
+    if (typeof body.system === 'string') {
+      systemText = body.system;
+    } else if (Array.isArray(body.system)) {
+      // Claude 新格式：system 是 content block 数组
+      // 提取所有 text 类型的 block 内容并合并
+      const textParts: string[] = [];
+      for (const block of body.system) {
+        if (block && typeof block === 'object' && block.type === 'text' && block.text) {
+          textParts.push(block.text);
+        }
+      }
+      systemText = textParts.join('\n\n');
+    } else {
+      systemText = JSON.stringify(body.system);
+    }
     messages.push({
       role: 'system',
       content: systemText,
@@ -39,66 +54,117 @@ export function transformClaudeToOpenAIChatRequest(body: any): ChatCompletionReq
 
       // 处理用户/助手消息
       if (role === 'user' || role === 'assistant') {
-        const chatMsg: ChatMessage = { role, content: '' };
+        // 先检查是否包含 tool_result 类型的 block（仅在 user 消息中）
+        const hasToolResult = role === 'user' && Array.isArray(content) &&
+          content.some((block: any) => block && typeof block === 'object' && block.type === 'tool_result');
 
-        // 处理 content（可能是字符串或数组）
-        if (typeof content === 'string') {
-          chatMsg.content = content;
-        } else if (Array.isArray(content)) {
-          const textParts: string[] = [];
-          const imageParts: Array<{ type: 'image_url'; image_url: { url: string } }> = [];
-          const toolCalls: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }> = [];
-
+        if (hasToolResult) {
+          // user 消息中包含 tool_result：为每个 tool_result 创建独立的 tool 消息
           for (const block of content) {
             if (!block || typeof block !== 'object') continue;
 
-            if (block.type === 'text' && block.text) {
-              textParts.push(block.text);
-            } else if (block.type === 'tool_use' && role === 'assistant') {
-              // assistant 的 tool_use → tool_calls
-              toolCalls.push({
-                id: block.id || '',
-                type: 'function',
-                function: {
-                  name: block.name || '',
-                  arguments: JSON.stringify(block.input || {}),
-                },
-              });
-            } else if (block.type === 'image' && block.source) {
-              // image block → image_url
-              const source = block.source;
-              if (source.type === 'url' && source.url) {
-                imageParts.push({
-                  type: 'image_url',
-                  image_url: { url: source.url },
-                });
+            if (block.type === 'tool_result') {
+              // tool_result → OpenAI tool message
+              const toolMsg: ChatMessage = {
+                role: 'tool',
+                content: '',
+                tool_call_id: block.tool_use_id || '',
+              };
+
+              // 处理 tool_result 的 content
+              const resultContent = block.content;
+              if (typeof resultContent === 'string') {
+                toolMsg.content = resultContent;
+              } else if (Array.isArray(resultContent)) {
+                // content 是数组，提取所有 text 部分
+                const textParts: string[] = [];
+                for (const item of resultContent) {
+                  if (item && typeof item === 'object' && item.type === 'text' && item.text) {
+                    textParts.push(item.text);
+                  }
+                }
+                toolMsg.content = textParts.join('\n');
+              } else {
+                toolMsg.content = JSON.stringify(resultContent ?? {});
               }
-            }
-          }
 
-          // 构建内容：如果有 text 或 image，使用数组格式
-          if (textParts.length > 0 || imageParts.length > 0) {
-            const contentParts: any[] = [];
-            if (textParts.length > 0) {
-              contentParts.push({ type: 'text', text: textParts.join('\n') });
-            }
-            contentParts.push(...imageParts);
-            chatMsg.content = contentParts.length === 1 && contentParts[0].type === 'text'
-              ? contentParts[0].text
-              : contentParts;
-          } else {
-            chatMsg.content = '';
-          }
+              if (block.name) {
+                (toolMsg as any).name = block.name;
+              }
 
-          // 设置 tool_calls（如果有）
-          if (toolCalls.length > 0) {
-            (chatMsg as any).tool_calls = toolCalls;
+              messages.push(toolMsg);
+            } else if (block.type === 'text' && block.text) {
+              // 非 tool_result 的 text block 创建 user 消息
+              messages.push({
+                role: 'user',
+                content: block.text,
+              });
+            }
+            // 忽略其他类型的 block（如 cache_control）
           }
         } else {
-          chatMsg.content = String(content ?? '');
-        }
+          // 正常处理 user/assistant 消息
+          const chatMsg: ChatMessage = { role, content: '' };
 
-        messages.push(chatMsg);
+          // 处理 content（可能是字符串或数组）
+          if (typeof content === 'string') {
+            chatMsg.content = content;
+          } else if (Array.isArray(content)) {
+            const textParts: string[] = [];
+            const imageParts: Array<{ type: 'image_url'; image_url: { url: string } }> = [];
+            const toolCalls: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }> = [];
+
+            for (const block of content) {
+              if (!block || typeof block !== 'object') continue;
+
+              if (block.type === 'text' && block.text) {
+                textParts.push(block.text);
+              } else if (block.type === 'tool_use' && role === 'assistant') {
+                // assistant 的 tool_use → tool_calls
+                toolCalls.push({
+                  id: block.id || '',
+                  type: 'function',
+                  function: {
+                    name: block.name || '',
+                    arguments: JSON.stringify(block.input || {}),
+                  },
+                });
+              } else if (block.type === 'image' && block.source) {
+                // image block → image_url
+                const source = block.source;
+                if (source.type === 'url' && source.url) {
+                  imageParts.push({
+                    type: 'image_url',
+                    image_url: { url: source.url },
+                  });
+                }
+              }
+            }
+
+            // 构建内容：如果有 text 或 image，使用数组格式
+            if (textParts.length > 0 || imageParts.length > 0) {
+              const contentParts: any[] = [];
+              if (textParts.length > 0) {
+                contentParts.push({ type: 'text', text: textParts.join('\n') });
+              }
+              contentParts.push(...imageParts);
+              chatMsg.content = contentParts.length === 1 && contentParts[0].type === 'text'
+                ? contentParts[0].text
+                : contentParts;
+            } else {
+              chatMsg.content = '';
+            }
+
+            // 设置 tool_calls（如果有）
+            if (toolCalls.length > 0) {
+              (chatMsg as any).tool_calls = toolCalls;
+            }
+          } else {
+            chatMsg.content = String(content ?? '');
+          }
+
+          messages.push(chatMsg);
+        }
       } else if (role === 'tool') {
         // Claude tool_result → OpenAI tool message
         const toolMsg: ChatMessage = {
