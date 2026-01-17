@@ -25,11 +25,13 @@ import {
   transformClaudeToGeminiRequest,
 } from '../protocols/gemini/request.js';
 import { transformGeminiResponseToClaude } from '../protocols/gemini/response.js';
+import { transformClaudeToOpenAIChatRequest } from '../protocols/openai-chat/request.js';
+import { transformOpenAIChatResponseToClaude } from '../protocols/openai-chat/response.js';
 
 /**
  * 协议对类型
  */
-export type ProtocolPair = 'claude-to-codex' | 'claude-to-gemini' | 'codex-to-claude' | 'gemini-to-claude';
+export type ProtocolPair = 'claude-to-codex' | 'claude-to-gemini' | 'claude-to-openai-chat' | 'codex-to-claude' | 'gemini-to-claude' | 'openai-chat-to-claude';
 
 /**
  * 转换请求
@@ -123,6 +125,9 @@ export class TransformerEngine {
     const transformerName = req.supplier.transformer?.default?.[0] || 'none';
     if (transformerName === 'gemini') {
       return this.transformClaudeToGemini(req);
+    }
+    if (transformerName === 'openai-chat') {
+      return this.transformClaudeToOpenAIChat(req);
     }
     if (transformerName !== 'codex') {
       throw new Error(`Unsupported transformer: ${transformerName}`);
@@ -266,8 +271,56 @@ export class TransformerEngine {
   }
 
   /**
-   * 转换响应（Codex → Claude）
-   * 暂时简化实现，直接返回原始响应
+   * 执行转换（Claude → OpenAI Chat Completions）
+   */
+  private async transformClaudeToOpenAIChat(req: TransformRequest): Promise<TransformResponse> {
+    const startTime = Date.now();
+
+    const body = req.request.body as ClaudeMessagesRequest;
+
+    // 复用 Claude parse（用于收集 sourcePaths & 统一 system/messages 规范化语义）
+    const auditCollector = new FieldAuditCollector();
+    const sourcePaths = collectJsonPointers(body);
+    auditCollector.addSourcePaths(sourcePaths);
+    const parsed = parseClaudeRequest(body);
+
+    // 构造 OpenAI Chat 请求体
+    const chatRequest = transformClaudeToOpenAIChatRequest(body);
+
+    // 收集 targetPaths
+    const targetPaths = collectJsonPointers(chatRequest as any);
+    auditCollector.addTargetPaths(targetPaths);
+
+    const duration = Date.now() - startTime;
+    const trace: TransformTrace = {
+      protocolPair: 'claude-to-openai-chat',
+      steps: [
+        { name: 'parse', duration: 0, success: true },
+        { name: 'transform', duration, success: true },
+      ],
+      audit: auditCollector.getAudit(),
+      success: true,
+    };
+
+    const mappedHeaders = mapHeadersForOpenAIChat(req.request.headers, { stream: parsed.stream });
+
+    return {
+      request: {
+        method: 'POST',
+        path: '/chat/completions',
+        headers: {
+          ...mappedHeaders,
+          'content-type': 'application/json',
+        },
+        body: chatRequest as any,
+      },
+      needsResponseTransform: true,
+      trace,
+    };
+  }
+
+  /**
+   * 转换响应（上游协议 → Claude）
    */
   async transformResponse(
     supplier: {
@@ -287,6 +340,10 @@ export class TransformerEngine {
 
     if (transformerName === 'codex') {
       return transformCodexResponseToClaude(response);
+    }
+
+    if (transformerName === 'openai-chat') {
+      return transformOpenAIChatResponseToClaude(response);
     }
 
     return response;
@@ -459,6 +516,39 @@ function mapHeadersForGemini(
 
   if (options.stream) {
     // Gemini v1beta SSE：显式声明 event-stream 更稳定
+    mapped['accept'] = 'text/event-stream';
+  }
+
+  return mapped;
+}
+
+/**
+ * 映射请求头：Claude SDK → OpenAI Chat
+ *
+ * - 移除 Claude SDK/网关相关头（anthropic-* / x-stainless-* 等）
+ * - 保留通用头（user-agent 等）
+ * - stream 时尽量明确 accept
+ */
+function mapHeadersForOpenAIChat(
+  headers: Record<string, string>,
+  options: { stream: boolean },
+): Record<string, string> {
+  const mapped: Record<string, string> = {};
+
+  const removePrefixes = [
+    'anthropic-',
+    'x-stainless-',
+    'x-api-key',
+    'x-app',
+  ];
+
+  for (const [key, value] of Object.entries(headers)) {
+    const keyLower = key.toLowerCase();
+    if (removePrefixes.some(prefix => keyLower.startsWith(prefix))) continue;
+    mapped[keyLower] = value;
+  }
+
+  if (options.stream) {
     mapped['accept'] = 'text/event-stream';
   }
 

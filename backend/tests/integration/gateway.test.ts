@@ -12,6 +12,7 @@ import {
   createTestRule,
   createMockUpstream,
 } from './test-utils.js';
+import { assertSupplier } from '../../src/promptxy/config.js';
 
 describe('Gateway Integration Tests', () => {
   let upstreamServer: any;
@@ -53,7 +54,7 @@ describe('Gateway Integration Tests', () => {
           name: 'codex-up',
           displayName: 'codex-up',
           baseUrl: upstreamBaseUrl,
-          protocol: 'openai',
+          protocol: 'openai-codex',
           enabled: true,
           auth: { type: 'none' },
           supportedModels: [],
@@ -142,5 +143,21 @@ describe('Gateway Integration Tests', () => {
     const upstreamBody = JSON.parse(captured.bodyText);
     expect(upstreamBody.model).toBe('gpt-5.2-codex');
     expect(upstreamBody.reasoning?.effort).toBe('high');
+  });
+});
+
+describe('Supplier Protocol Validation', () => {
+  it('应拒绝旧 openai 协议字符串', () => {
+    expect(() =>
+      assertSupplier('s', {
+        id: 's',
+        name: 's',
+        displayName: 's',
+        baseUrl: 'https://api.openai.com/v1',
+        protocol: 'openai',
+        enabled: true,
+        supportedModels: [],
+      } as any),
+    ).toThrow(/protocol/);
   });
 });

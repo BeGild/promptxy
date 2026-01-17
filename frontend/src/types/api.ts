@@ -95,7 +95,7 @@ export interface RuleOperationResponse {
 /**
  * 供应商协议类型
  */
-export type SupplierProtocol = 'anthropic' | 'openai' | 'gemini';
+export type SupplierProtocol = 'anthropic' | 'openai-codex' | 'openai-chat' | 'gemini';
 
 /**
  * 供应商认证配置

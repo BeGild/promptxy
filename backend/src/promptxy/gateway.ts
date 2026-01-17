@@ -118,7 +118,8 @@ function deriveTransformer(
   if (localService === 'gemini') return 'none';
 
   if (supplierProtocol === 'anthropic') return 'none';
-  if (supplierProtocol === 'openai') return 'codex';
+  if (supplierProtocol === 'openai-codex') return 'codex';
+  if (supplierProtocol === 'openai-chat') return 'openai-chat';
   if (supplierProtocol === 'gemini') return 'gemini';
 
   return 'none';
@@ -130,7 +131,8 @@ function deriveTransformer(
  */
 function getSupplierClient(protocol: Supplier['protocol']): PromptxyClient {
   if (protocol === 'anthropic') return 'claude';
-  if (protocol === 'openai') return 'codex';
+  if (protocol === 'openai-codex') return 'codex';
+  if (protocol === 'openai-chat') return 'codex'; // 复用 codex 图标
   if (protocol === 'gemini') return 'gemini';
   return 'claude'; // 默认
 }
@@ -138,7 +140,7 @@ function getSupplierClient(protocol: Supplier['protocol']): PromptxyClient {
 function validateRouteConstraints(route: Route, supplier: Supplier): string | null {
   // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
-    if (supplier.protocol !== 'openai') return 'Codex 入口仅允许对接 openai 协议供应商';
+    if (supplier.protocol !== 'openai-codex') return 'Codex 入口仅允许对接 openai-codex 协议供应商';
   }
   if (route.localService === 'gemini') {
     if (supplier.protocol !== 'gemini') return 'Gemini 入口仅允许对接 gemini 协议供应商';
@@ -954,7 +956,7 @@ export function createGateway(
           try {
             let capabilities;
 
-            if (matchedRoute.supplier.protocol === 'openai') {
+            if (matchedRoute.supplier.protocol === 'openai-codex' || matchedRoute.supplier.protocol === 'openai-chat') {
               capabilities = await detectOpenAICountTokensSupport(matchedRoute.supplier);
             }
 
@@ -1018,7 +1020,7 @@ export function createGateway(
 
       // ========== OpenAI/Codex：modelSpec 解析 reasoning.effort（透明转发与 Claude→Codex 均适用）==========
       if (
-        matchedRoute.supplier.protocol === 'openai' &&
+        (matchedRoute.supplier.protocol === 'openai-codex' || matchedRoute.supplier.protocol === 'openai-chat') &&
         effectiveBody &&
         typeof effectiveBody === 'object'
       ) {
@@ -1254,7 +1256,7 @@ export function createGateway(
       if (originalClaudeBody) {
         try {
           let capabilities;
-          if (matchedRoute.supplier.protocol === 'openai') {
+          if (matchedRoute.supplier.protocol === 'openai-codex' || matchedRoute.supplier.protocol === 'openai-chat') {
             capabilities = await detectOpenAICountTokensSupport(matchedRoute.supplier);
           }
 

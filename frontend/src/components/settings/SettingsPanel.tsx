@@ -69,9 +69,15 @@ const SUPPLIER_PROTOCOLS: Array<{
     color: '#D4935D',
   },
   {
-    key: 'openai',
-    label: 'OpenAI',
+    key: 'openai-codex',
+    label: 'OpenAI Codex',
     description: '/responses 协议',
+    color: '#10A37F',
+  },
+  {
+    key: 'openai-chat',
+    label: 'OpenAI Chat',
+    description: '/chat/completions 协议',
     color: '#10A37F',
   },
   {
@@ -87,7 +93,8 @@ const getSupplierIcon = (protocol: SupplierProtocol) => {
   switch (protocol) {
     case 'anthropic':
       return AnthropicIcon;
-    case 'openai':
+    case 'openai-codex':
+    case 'openai-chat':
       return OpenAIIcon;
     case 'gemini':
       return GeminiIcon;

@@ -1,5 +1,5 @@
 /**
- * PromptXY 端到端流程测试：Claude Code → /claude → 协议转换器(codex) → 上游 /responses
+ * PromptXY 端到端流程测试：Claude Code → /claude → 协议转换器(codex/gemini/openai-chat) → 上游
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -42,7 +42,17 @@ describe('E2E Flow', () => {
           name: 'codex-up',
           displayName: 'codex-up',
           baseUrl: upstreamBaseUrl,
-          protocol: 'openai',
+          protocol: 'openai-codex',
+          enabled: true,
+          auth: { type: 'none' },
+          supportedModels: ['gpt-4o-mini'],
+        },
+        {
+          id: 'openai-chat-up',
+          name: 'openai-chat-up',
+          displayName: 'openai-chat-up',
+          baseUrl: upstreamBaseUrl,
+          protocol: 'openai-chat',
           enabled: true,
           auth: { type: 'none' },
           supportedModels: ['gpt-4o-mini'],

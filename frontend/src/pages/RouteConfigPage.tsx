@@ -32,7 +32,7 @@ const LOCAL_SERVICES: Array<{
   key: LocalService;
   label: string;
   prefix: string;
-  protocol: 'anthropic' | 'openai' | 'gemini';
+  protocol: 'anthropic' | 'openai-codex' | 'openai-chat' | 'gemini';
   color: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }> = [
@@ -48,7 +48,7 @@ const LOCAL_SERVICES: Array<{
     key: 'codex',
     label: 'Codex',
     prefix: '/codex',
-    protocol: 'openai',
+    protocol: 'openai-codex',
     color: '#10A37F',
     icon: OpenAIIcon,
   },

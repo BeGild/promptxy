@@ -46,11 +46,21 @@ const DEFAULT_CONFIG: PromptxyConfig = {
       supportedModels: [],
     },
     {
-      id: 'openai-official',
-      name: 'openai-official',
-      displayName: 'OpenAI Official',
-      baseUrl: 'https://api.openai.com',
-      protocol: 'openai',
+      id: 'openai-codex-official',
+      name: 'openai-codex-official',
+      displayName: 'OpenaiCodex',
+      baseUrl: 'https://api.openai.com/v1',
+      protocol: 'openai-codex',
+      enabled: true,
+      auth: { type: 'none' },
+      supportedModels: [],
+    },
+    {
+      id: 'openai-chat-official',
+      name: 'openai-chat-official',
+      displayName: 'Openai',
+      baseUrl: 'https://api.openai.com/v1',
+      protocol: 'openai-chat',
       enabled: true,
       auth: { type: 'none' },
       supportedModels: [],
@@ -84,7 +94,7 @@ const DEFAULT_CONFIG: PromptxyConfig = {
     {
       id: 'route-codex-default',
       localService: 'codex',
-      singleSupplierId: 'openai-official',
+      singleSupplierId: 'openai-codex-official',
       enabled: true,
     },
     {
@@ -212,7 +222,7 @@ export function assertSupplier(label: string, supplier: Supplier): void {
     throw new Error(`${label}.protocol must be a non-empty string`);
   }
 
-  const validProtocols = ['anthropic', 'openai', 'gemini'];
+  const validProtocols = ['anthropic', 'openai-codex', 'openai-chat', 'gemini'];
   if (!validProtocols.includes(supplier.protocol)) {
     throw new Error(`${label}.protocol must be one of: ${validProtocols.join(', ')}`);
   }
@@ -365,8 +375,8 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
 
   const requireSupplierProtocol = (
     localService: string,
-  ): 'openai' | 'gemini' | null => {
-    if (localService === 'codex') return 'openai';
+  ): 'openai-codex' | 'gemini' | null => {
+    if (localService === 'codex') return 'openai-codex';
     if (localService === 'gemini') return 'gemini';
     return null;
   };
@@ -405,7 +415,7 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
 
     // OpenAI: 允许使用 modelSpec（例如 gpt-5.2-codex-high）
     // - 若 supportedModels 仅保存 base model（例如 gpt-5.2-codex），也视为合法
-    if (supplier.protocol === 'openai') {
+    if (supplier.protocol === 'openai-codex' || supplier.protocol === 'openai-chat') {
       const parsed = parseOpenAIModelSpec(targetModel, (supplier as any).reasoningEfforts);
       if (parsed && supported.includes(parsed.model)) {
         return;
@@ -798,7 +808,7 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
 
     const pickSupplier = () => {
       if (localService === 'codex') {
-        return suppliers.find(s => s.enabled && s.protocol === 'openai') ?? suppliers.find(s => s.protocol === 'openai');
+        return suppliers.find(s => s.enabled && s.protocol === 'openai-codex') ?? suppliers.find(s => s.protocol === 'openai-codex');
       }
       if (localService === 'gemini') {
         return suppliers.find(s => s.enabled && s.protocol === 'gemini') ?? suppliers.find(s => s.protocol === 'gemini');

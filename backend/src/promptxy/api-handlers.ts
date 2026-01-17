@@ -1229,8 +1229,8 @@ function assertRouteProtocolConstraint(
   localService: LocalService,
   supplierProtocol: Supplier['protocol'],
 ): void {
-  if (localService === 'codex' && supplierProtocol !== 'openai') {
-    throw new Error('Codex 入口仅允许对接 openai 协议供应商');
+  if (localService === 'codex' && supplierProtocol !== 'openai-codex') {
+    throw new Error('Codex 入口仅允许对接 openai-codex 协议供应商');
   }
   if (localService === 'gemini' && supplierProtocol !== 'gemini') {
     throw new Error('Gemini 入口仅允许对接 gemini 协议供应商');
@@ -1244,7 +1244,8 @@ function deriveTransformer(
   if (localService === 'codex') return 'none';
   if (localService === 'gemini') return 'none';
   if (supplierProtocol === 'anthropic') return 'none';
-  if (supplierProtocol === 'openai') return 'codex';
+  if (supplierProtocol === 'openai-codex') return 'codex';
+  if (supplierProtocol === 'openai-chat') return 'openai-chat';
   if (supplierProtocol === 'gemini') return 'gemini';
   return 'none';
 }

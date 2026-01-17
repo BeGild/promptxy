@@ -9,9 +9,11 @@ import { Transform } from 'node:stream';
 import { createGeminiSSEToClaudeStreamTransformer } from './protocols/gemini/sse/index.js';
 import { parseSSEChunk, serializeSSEEvent } from './sse/index.js';
 import { createCodexSSEToClaudeStreamTransformer } from './protocols/codex/sse/to-claude.js';
+import { createOpenAIChatToClaudeSSETransformer } from './protocols/openai-chat/sse/to-claude.js';
 import { FieldAuditCollector } from './audit/field-audit.js';
 import type { CodexSSEEvent } from './protocols/codex/types.js';
 import type { ClaudeSSEEvent } from './protocols/claude/types.js';
+import type { ChatSSEEvent } from './protocols/openai-chat/types.js';
 
 // ============================================================
 // Public API（供 gateway/preview 调用）
@@ -43,9 +45,94 @@ export type SSETransformStreamOptions = {
  * 将 Codex SSE 转换为 Claude SSE
  */
 export function createSSETransformStream(transformerName: string, options?: SSETransformStreamOptions) {
-  // 仅支持 codex 转换器
+  // OpenAI Chat SSE → Claude SSE 转换流
+  if (transformerName === 'openai-chat') {
+    let buffer = '';
+    let streamEnded = false;
+
+    const transformer = createOpenAIChatToClaudeSSETransformer(
+      {},
+      { estimatedInputTokens: options?.estimatedInputTokens },
+    );
+
+    function pushOpenAIChatEvent(stream: Transform, event: ChatSSEEvent) {
+      const res = transformer.pushEvent(event);
+      emitClaudeEvents(stream, res.events);
+      if (res.streamEnd) {
+        streamEnded = true;
+      }
+    }
+
+    function finalizeTransformer(stream: Transform) {
+      const res = transformer.finalize();
+      emitClaudeEvents(stream, res.events);
+      streamEnded = true;
+    }
+
+    function processEventBlock(stream: Transform, eventBlock: string) {
+      if (streamEnded) return;
+
+      const sseEvents = parseSSEChunk(eventBlock + '\n\n');
+      for (const sseEvent of sseEvents) {
+        const data = sseEvent.data.trim();
+        if (!data) continue;
+        if (data === '[DONE]') {
+          finalizeTransformer(stream);
+          return;
+        }
+
+        try {
+          const event = JSON.parse(data) as ChatSSEEvent;
+          pushOpenAIChatEvent(stream, event);
+        } catch {
+          // 解析失败：忽略
+        }
+      }
+    }
+
+    return new Transform({
+      transform(chunk: Buffer, encoding: BufferEncoding, callback) {
+        try {
+          buffer += chunk.toString('utf-8').replace(/\r\n/g, '\n');
+
+          while (!streamEnded) {
+            const idx = buffer.indexOf('\n\n');
+            if (idx < 0) break;
+
+            const eventBlock = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+
+            if (eventBlock.trim() === '') continue;
+            processEventBlock(this, eventBlock);
+          }
+
+          callback();
+        } catch (error) {
+          callback(error as Error);
+        }
+      },
+
+      flush(callback) {
+        try {
+          if (!streamEnded && buffer.trim()) {
+            processEventBlock(this, buffer);
+            buffer = '';
+          }
+
+          if (!streamEnded) {
+            finalizeTransformer(this);
+          }
+
+          callback();
+        } catch (error) {
+          callback(error as Error);
+        }
+      },
+    });
+  }
+
+  // Gemini SSE → Claude SSE 转换流（增量）
   if (transformerName === 'gemini') {
-    // Gemini SSE → Claude SSE 转换流（增量）
     let buffer = '';
     let streamEnded = false;
 
@@ -133,8 +220,8 @@ export function createSSETransformStream(transformerName: string, options?: SSET
     });
   }
 
+  // 其他转换器透传（不包括 codex，codex 在下面处理）
   if (transformerName !== 'codex') {
-    // 其他转换器透传
     return new Transform({
       transform(chunk: Buffer, encoding: BufferEncoding, callback) {
         this.push(chunk);

@@ -52,7 +52,7 @@ describe('Config Module', () => {
     expect(config.listen.host).toBe('127.0.0.1');
     expect(config.listen.port).toBe(7070);
 
-    expect(config.suppliers).toHaveLength(3);
+    expect(config.suppliers).toHaveLength(4);
     expect(config.routes).toHaveLength(3);
 
     // 默认路由应为三条入口各一条 enabled
@@ -86,7 +86,7 @@ describe('Config Module', () => {
     expect(config.debug).toBe(true);
 
     // 未显式提供时应使用默认 suppliers/routes
-    expect(config.suppliers).toHaveLength(3);
+    expect(config.suppliers).toHaveLength(4);
     expect(config.routes).toHaveLength(3);
   });
 

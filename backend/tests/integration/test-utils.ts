@@ -172,6 +172,28 @@ export function createMockUpstream(): {
       return;
     }
 
+    // /chat/completions 返回标准的 OpenAI Chat Completions 响应
+    if (req.url?.startsWith('/chat/completions')) {
+      res.statusCode = 200;
+      res.setHeader('content-type', 'application/json');
+      res.end(
+        JSON.stringify({
+          id: 'chatcmpl-test',
+          object: 'chat.completion',
+          created: Date.now(),
+          model: 'gpt-test',
+          choices: [
+            {
+              index: 0,
+              message: { role: 'assistant', content: 'ok' },
+              finish_reason: 'stop',
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
     // 默认：回显 JSON
     res.statusCode = 200;
     res.setHeader('content-type', 'application/json');

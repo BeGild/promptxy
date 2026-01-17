@@ -19,7 +19,7 @@ export async function detectOpenAICountTokensSupport(
   supplier: Supplier,
 ): Promise<UpstreamCapabilities> {
   try {
-    if (supplier.protocol !== 'openai') {
+    if (supplier.protocol !== 'openai-codex' && supplier.protocol !== 'openai-chat') {
       return {
         supportsCountTokens: false,
         source: 'fallback',

@@ -146,7 +146,7 @@ export interface Supplier {
   name: string; // 唯一名称标识符（用于内部引用）
   displayName: string; // 显示名称
   baseUrl: string; // 上游地址
-  protocol: 'anthropic' | 'openai' | 'gemini'; // 上游协议类型
+  protocol: 'anthropic' | 'openai-codex' | 'openai-chat' | 'gemini'; // 上游协议类型
   enabled: boolean; // 是否启用
   auth?: SupplierAuth; // 上游认证配置（支持 none/bearer/header）
   supportedModels: string[]; // 供应商支持的上游模型列表（用于路由映射与校验）
@@ -460,7 +460,7 @@ export type LocalService = 'claude' | 'codex' | 'gemini';
 /**
  * 转换器类型
  */
-export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'none';
+export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'openai-chat' | 'gemini' | 'none';
 
 /**
  * 模型映射规则
