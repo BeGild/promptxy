@@ -2,6 +2,7 @@ import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { mutateClaudeBody, handleClaudeCountTokens } from './adapters/claude.js';
 import { mutateCodexBody } from './adapters/codex.js';
@@ -1081,6 +1082,15 @@ export function createGateway(
         }
       }
 
+      const upstreamAbortController = new AbortController();
+      const abortUpstream = (): void => {
+        if (upstreamAbortController.signal.aborted) return;
+        upstreamAbortController.abort();
+      };
+      req.once('aborted', abortUpstream);
+      req.once('close', abortUpstream);
+      res.once('close', abortUpstream);
+
       upstreamResponse = await fetch(upstreamUrl, {
         method: req.method,
         headers,
@@ -1090,7 +1100,11 @@ export function createGateway(
             : bodyBuffer?.toString()
           : undefined,
         redirect: 'manual',
+        signal: upstreamAbortController.signal,
       });
+
+      // 上游 fetch 已成功建连后，仍可能因为中间层/客户端断开触发 aborted/close；
+      // abortUpstream 负责在这种情况下尽早中止读取上游，减少 undici terminated 概率。
 
       const upstreamContentType = upstreamResponse.headers.get('content-type') || '';
       const isSSE = isSSEResponse(upstreamContentType);
@@ -1221,6 +1235,20 @@ export function createGateway(
       const responseBodyChunks: Buffer[] = [];
       const upstreamStream = Readable.fromWeb(upstreamResponse.body as any);
 
+      const isExpectedStreamTermination = (err: any): boolean => {
+        const message = (err?.message ?? String(err ?? '')).toLowerCase();
+        const code = err?.code ?? err?.cause?.code;
+        const name = err?.name;
+        return (
+          name === 'AbortError' ||
+          code === 'UND_ERR_SOCKET' ||
+          code === 'ERR_STREAM_PREMATURE_CLOSE' ||
+          code === 'ECONNRESET' ||
+          code === 'EPIPE' ||
+          message.includes('terminated')
+        );
+      };
+
       // 计算 input_tokens 并注入 SSE transformer（用于上游无 usage 时的兜底）
       let estimatedInputTokens: number | undefined;
       if (originalClaudeBody) {
@@ -1239,25 +1267,12 @@ export function createGateway(
             auth: matchedRoute.supplier.auth?.type === 'none' ? undefined : matchedRoute.supplier.auth,
           });
           estimatedInputTokens = tokenResult.input_tokens;
-        } catch (err) {
+        } catch {
           // 计算失败时保持 undefined，由 transformer 在兜底时设为 0 并记录 audit
         }
       }
 
-      const transformStream = createSSETransformStream(transformerChain[0], { estimatedInputTokens });
-      const outboundStream =
-        isSSE && needsResponseTransform && transformerChain.length > 0
-          ? upstreamStream.pipe(transformStream as any)
-          : upstreamStream;
-
-      (outboundStream as any).on('data', (chunk: Buffer) => {
-        responseBodyChunks.push(chunk);
-      });
-
-      (outboundStream as any).pipe(res);
-
-      // 记录请求到数据库（在响应流结束后）
-      const duration = Date.now() - startTime;
+      // 记录请求到数据库（在响应流结束/中断后，保证至少写入一条记录，不因未处理 error 导致进程崩溃）
       const savedRequestId = generateRequestId();
       requestId = savedRequestId;
 
@@ -1267,7 +1282,7 @@ export function createGateway(
 
       // 保存请求路径和客户端信息
       const savedClient = matchedRoute.client;
-      const savedPath = upstreamPath;
+      const savedPath = upstreamPath ?? url.pathname;
       const savedJsonBody = effectiveBody;
       const savedSupplierId = matchedRoute.supplier.id;
       const savedSupplierName = matchedRoute.supplier.name;
@@ -1275,45 +1290,41 @@ export function createGateway(
       const savedSupplierProtocol = matchedRoute.supplier.protocol;
       const savedRouteId = matchedRoute.route.id;
 
-      // 监听响应流结束，保存包含响应体的记录
-      outboundStream.on('end', async () => {
+      let finalized = false;
+      const finalizeRequestRecord = async (finalError: any | undefined): Promise<void> => {
+        if (finalized) return;
+        finalized = true;
+
         // 检查路径是否需要过滤
         const filteredPaths = await getFilteredPaths();
         if (shouldFilterPath(savedPath, filteredPaths)) {
-          // 跳过记录，但仍然广播事件
-          broadcastRequest({
-            id: savedRequestId,
-            timestamp: Date.now(),
-            client: matchedRoute.client,
-            path: upstreamPath || savedPath,
-            method: method,
-            matchedRules: matches.map(m => m.ruleId),
-          });
           return;
         }
 
+        const duration = Date.now() - startTime;
         const responseBodyBuffer = Buffer.concat(responseBodyChunks);
-        let responseBodyStr: string | undefined;
 
-        // 完整保存响应体，不截断
+        let responseBodyStr: string | undefined;
         const contentType = upstreamContentType;
         if (contentType.includes('application/json')) {
           try {
-            const jsonBody = JSON.parse(responseBodyBuffer.toString('utf-8'));
-            responseBodyStr = JSON.stringify(jsonBody);
+            const parsed = JSON.parse(responseBodyBuffer.toString('utf-8'));
+            responseBodyStr = JSON.stringify(parsed);
           } catch {
             responseBodyStr = responseBodyBuffer.toString('utf-8');
           }
         } else {
-          // 非 JSON 响应：检测并解析 SSE
           const rawResponse = responseBodyBuffer.toString('utf-8');
           if (isSSEContent(rawResponse)) {
-            // SSE 响应：解析为事件数组
             responseBodyStr = parseSSEToEvents(rawResponse) as any;
           } else {
             responseBodyStr = rawResponse;
           }
         }
+
+        const errorMessage = finalError
+          ? `partial=true; ${finalError?.message ?? String(finalError)}`
+          : undefined;
 
         const record: RequestRecord = {
           id: savedRequestId,
@@ -1335,7 +1346,7 @@ export function createGateway(
           durationMs: duration,
           responseHeaders: responseHeadersStr,
           responseBody: responseBodyStr,
-          error: undefined,
+          error: errorMessage,
           // 路由 / 供应商 / 转换信息
           routeId: savedRouteId,
           supplierId: savedSupplierId,
@@ -1346,13 +1357,12 @@ export function createGateway(
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
         };
 
-        // 保存到数据库
         try {
           await insertRequestRecord(record);
         } catch (err: any) {
           logger.error(`[promptxy] Failed to save request record: ${err?.message}`);
         }
-      });
+      };
 
       // SSE 广播
       const sseData: SSERequestEvent = {
@@ -1364,6 +1374,33 @@ export function createGateway(
         matchedRules: matches.map(m => m.ruleId),
       };
       broadcastRequest(sseData);
+
+      const shouldTransformSSE = isSSE && needsResponseTransform && transformerChain.length > 0;
+      const transformStream = shouldTransformSSE
+        ? createSSETransformStream(transformerChain[0], { estimatedInputTokens })
+        : undefined;
+
+      const outboundStream = (shouldTransformSSE ? transformStream : upstreamStream) as any;
+      outboundStream.on('data', (chunk: any) => {
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        responseBodyChunks.push(buf);
+      });
+
+      try {
+        if (shouldTransformSSE && transformStream) {
+          await pipeline(upstreamStream as any, transformStream as any, res as any);
+        } else {
+          await pipeline(upstreamStream as any, res as any);
+        }
+        await finalizeRequestRecord(undefined);
+      } catch (err: any) {
+        if (isExpectedStreamTermination(err) || res.destroyed) {
+          logger.debug(`[promptxy] SSE stream terminated: ${err?.message ?? String(err)}`);
+        } else {
+          logger.error(`[promptxy] SSE stream error: ${err?.message ?? String(err)}`);
+        }
+        await finalizeRequestRecord(err);
+      }
     } catch (errorCaught: any) {
       error = errorCaught?.message ?? String(errorCaught);
       jsonError(res, 500, {
