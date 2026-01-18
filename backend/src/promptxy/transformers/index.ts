@@ -270,7 +270,9 @@ export function createSSETransformStream(transformerName: string, options?: SSET
       const data = sseEvent.data.trim();
       if (!data) continue;
       if (data === '[DONE]') {
-        streamEnded = true;
+        // 某些上游/代理会用 [DONE] 作为 SSE 终止信号。
+        // 但 Claude 侧需要 message_stop 才能结束等待，因此这里必须 finalize 状态机补齐收尾事件。
+        finalizeTransformer(stream);
         return;
       }
 

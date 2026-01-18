@@ -1,7 +1,7 @@
 import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Readable } from 'node:stream';
+import { Readable, PassThrough } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { mutateClaudeBody, handleClaudeCountTokens } from './adapters/claude.js';
@@ -1090,8 +1090,12 @@ export function createGateway(
         upstreamAbortController.abort();
       };
       req.once('aborted', abortUpstream);
-      req.once('close', abortUpstream);
-      res.once('close', abortUpstream);
+      // 注意：req/res 的 close 在“正常完成”时也可能触发。
+      // 只在响应未正常结束时才 abort 上游，避免放大 undici 的 terminated 边界问题。
+      res.once('close', () => {
+        if ((res as any).writableEnded || (res as any).writableFinished) return;
+        abortUpstream();
+      });
 
       upstreamResponse = await fetch(upstreamUrl, {
         method: req.method,
@@ -1235,7 +1239,10 @@ export function createGateway(
       }
 
       const responseBodyChunks: Buffer[] = [];
-      const upstreamStream = Readable.fromWeb(upstreamResponse.body as any);
+      // 注意：不要在这里立刻 Readable.fromWeb(upstreamResponse.body)。
+      // B2 分支会直接使用 WebStream reader pump；若先 fromWeb，会锁住 stream 导致 getReader() 失败/阻塞。
+      const upstreamBody = upstreamResponse.body as any;
+      let upstreamStream: Readable | undefined;
 
       const isExpectedStreamTermination = (err: any): boolean => {
         const message = (err?.message ?? String(err ?? '')).toLowerCase();
@@ -1247,7 +1254,9 @@ export function createGateway(
           code === 'ERR_STREAM_PREMATURE_CLOSE' ||
           code === 'ECONNRESET' ||
           code === 'EPIPE' ||
-          message.includes('terminated')
+          message.includes('terminated') ||
+          message.includes('premature close') ||
+          message.includes('prematurely')
         );
       };
 
@@ -1382,6 +1391,10 @@ export function createGateway(
         ? createSSETransformStream(transformerChain[0], { estimatedInputTokens })
         : undefined;
 
+      if (!shouldTransformSSE) {
+        upstreamStream = Readable.fromWeb(upstreamBody);
+      }
+
       const outboundStream = (shouldTransformSSE ? transformStream : upstreamStream) as any;
       outboundStream.on('data', (chunk: any) => {
         const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
@@ -1390,8 +1403,87 @@ export function createGateway(
 
       try {
         if (shouldTransformSSE && transformStream) {
-          await pipeline(upstreamStream as any, transformStream as any, res as any);
+          // B2 兜底：直接用 WebStream reader pump 到 PassThrough，而不是依赖 Readable.fromWeb 的 error/close 语义。
+          // 线上某些场景（undici/代理）会在 reader.read() 处抛出 terminated/premature close，但 Node Readable 未必触发 error，
+          // 导致 Transform 无法 flush/finalize，从而缺失 message_stop。
+          const safeUpstream = new PassThrough();
+          let upstreamFinalError: any | undefined;
+          let safeEnded = false;
+
+          const currentUpstreamResponse = upstreamResponse;
+
+          const endSafeUpstream = () => {
+            if (safeEnded) return;
+            safeEnded = true;
+            try {
+              safeUpstream.end();
+            } catch {
+              // ignore
+            }
+          };
+
+          const pumpWebBodyToNode = async (): Promise<void> => {
+            const body = currentUpstreamResponse?.body as any;
+            const reader = body?.getReader?.();
+            if (!reader) {
+              endSafeUpstream();
+              return;
+            }
+
+            try {
+              while (true) {
+                // 如果客户端已断开/上游已被 abort，尽快结束
+                if (upstreamAbortController.signal.aborted || res.destroyed) {
+                  upstreamFinalError = upstreamFinalError ?? new Error('terminated');
+                  break;
+                }
+
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (!value) continue;
+
+                const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+                if (!safeUpstream.write(buf)) {
+                  await new Promise<void>(resolve => safeUpstream.once('drain', () => resolve()));
+                }
+              }
+            } catch (err: any) {
+              if (isExpectedStreamTermination(err) || upstreamAbortController.signal.aborted || res.destroyed) {
+                upstreamFinalError = upstreamFinalError ?? err;
+              } else {
+                safeUpstream.destroy(err);
+                return;
+              }
+            } finally {
+              try {
+                reader.releaseLock?.();
+              } catch {
+                // ignore
+              }
+              endSafeUpstream();
+            }
+          };
+
+          // pump 过程不抛出到外层，避免未处理的 rejection；pipeline 是否失败由 safeUpstream 状态决定
+          const pumpPromise = pumpWebBodyToNode().catch(() => {});
+
+          try {
+            await pipeline(safeUpstream as any, transformStream as any, res as any);
+            await pumpPromise;
+            await finalizeRequestRecord(upstreamFinalError);
+          } catch (err: any) {
+            // 若 pipeline 失败，确保尽快中止上游读取并结束 safeUpstream
+            abortUpstream();
+            endSafeUpstream();
+            await pumpPromise;
+            await finalizeRequestRecord(upstreamFinalError ?? err);
+          }
+
+          return;
         } else {
+          if (!upstreamStream) {
+            throw new Error('missing upstream stream');
+          }
           await pipeline(upstreamStream as any, res as any);
         }
         await finalizeRequestRecord(undefined);

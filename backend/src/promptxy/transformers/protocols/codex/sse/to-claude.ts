@@ -30,10 +30,14 @@ type State = {
   textBlockStarted: boolean;
   /** 当前 tool index（从 1 开始，0 预留给文本和 thinking） */
   currentToolIndex: number;
+  /** 是否发生过 tool call（用于决定最终 stop_reason） */
+  hasToolCall: boolean;
   /** 是否已发送 message_stop */
   messageStopped: boolean;
   /** 是否已收到 response.completed */
   completedReceived: boolean;
+  /** 上游 response.completed 中携带的 stop_reason（若存在） */
+  upstreamStopReasonRaw?: string;
   /** 是否已开始 reasoning (thinking) block */
   reasoningBlockStarted: boolean;
   /** 当前 reasoning index */
@@ -64,8 +68,10 @@ function createInitialState(): State {
     messageStarted: false,
     textBlockStarted: false,
     currentToolIndex: 1,
+    hasToolCall: false,
     messageStopped: false,
     completedReceived: false,
+    upstreamStopReasonRaw: undefined,
     reasoningBlockStarted: false,
     currentReasoningIndex: 0,
     reasoningSummaryIndex: 0,
@@ -144,6 +150,27 @@ export function createCodexSSEToClaudeStreamTransformer(
   state.estimatedInputTokens = context?.estimatedInputTokens;
   let ended = false;
 
+  function normalizeClaudeStopReason(raw: unknown): string | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const s = raw.trim();
+    if (!s) return undefined;
+    if (s === 'tool_use' || s === 'end_turn' || s === 'max_tokens') return s;
+    return undefined;
+  }
+
+  function buildFinalStopReason(): string {
+    const upstream = normalizeClaudeStopReason(state.upstreamStopReasonRaw);
+    if (upstream) return upstream;
+
+    // 上游字段若不是 Claude stop_reason（例如 tool_calls/stop/length），按映射兜底。
+    if (typeof state.upstreamStopReasonRaw === 'string' && state.upstreamStopReasonRaw.trim()) {
+      return mapStopReason(state.upstreamStopReasonRaw.trim());
+    }
+
+    // 与 refence/CLIProxyAPI 对齐：是否发生过 tool call 决定 tool_use / end_turn。
+    return state.hasToolCall ? 'tool_use' : 'end_turn';
+  }
+
   function closeOpenBlocks(): ClaudeSSEEvent[] {
     const events: ClaudeSSEEvent[] = [];
 
@@ -196,7 +223,7 @@ export function createCodexSSEToClaudeStreamTransformer(
     return [
       createMessageDeltaEventWithUsage(
         {
-          stop_reason: 'end_turn',
+          stop_reason: buildFinalStopReason(),
         },
         buildFinalUsage(),
       ),
@@ -336,6 +363,7 @@ function transformSingleEvent(
         item.type === 'custom_tool_call'
       ) {
         // 工具调用
+        state.hasToolCall = true;
         const toolEvents = transformToolCall(
           item,
           state.currentToolIndex,
@@ -394,6 +422,15 @@ function transformSingleEvent(
       // 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:285-289
       const completedEvent = event as any;
       const codexUsage = completedEvent.usage;
+
+      // 尝试读取上游 stop_reason（不同实现可能放在不同位置；若不存在则由 hasToolCall 决定）
+      const upstreamStopReasonCandidate =
+        completedEvent?.response?.stop_reason ??
+        completedEvent?.stop_reason ??
+        completedEvent?.response?.metadata?.stop_reason;
+      if (typeof upstreamStopReasonCandidate === 'string' && upstreamStopReasonCandidate.trim()) {
+        state.upstreamStopReasonRaw = upstreamStopReasonCandidate.trim();
+      }
 
       if (codexUsage) {
         const cachedTokens = codexUsage.input_tokens_details?.cached_tokens || 0;
@@ -495,14 +532,6 @@ function transformToolCall(
 
   // content_block_stop
   events.push(createContentBlockStopEvent(toolIndex));
-
-  // message_delta (触发 tool loop)
-  // 工具调用场景下，stop_reason 固定为 tool_use
-  events.push(
-    createMessageDeltaEvent({
-      stop_reason: 'tool_use',
-    }),
-  );
 
   return events;
 }
