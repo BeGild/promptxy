@@ -533,6 +533,14 @@ function transformToolCall(
   // content_block_stop
   events.push(createContentBlockStopEvent(toolIndex));
 
+  // message_delta (触发 tool loop)
+  // 工具调用场景下，stop_reason 固定为 tool_use
+  events.push(
+    createMessageDeltaEvent({
+      stop_reason: 'tool_use',
+    }),
+  );
+
   return events;
 }
 
