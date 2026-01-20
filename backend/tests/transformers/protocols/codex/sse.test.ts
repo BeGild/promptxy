@@ -53,6 +53,37 @@ describe('Codex SSE Transform', () => {
       expect(toolCallDelta.delta.stop_reason).toBe('tool_use');
     });
 
+    it('应在 tool call 完成后立即发送 message_delta(stop_reason=tool_use)', () => {
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'test-123',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.done',
+          item: {
+            type: 'function_call',
+            call_id: 'call_123',
+            name: 'TestTool',
+            arguments: '{"arg":"value"}',
+          },
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(codexEvents, { customToolCallStrategy: 'wrap_object' }, createMockAudit());
+
+      // 验证 content_block_stop 存在
+      const blockStopEvent = result.events.find(e => e.type === 'content_block_stop');
+      expect(blockStopEvent).toBeDefined();
+
+      // 验证在 content_block_stop 之后立即发送了 message_delta
+      const blockStopIndex = result.events.findIndex(e => e.type === 'content_block_stop');
+      const nextEvent = result.events[blockStopIndex + 1];
+      expect(nextEvent?.type).toBe('message_delta');
+      expect((nextEvent as any).delta?.stop_reason).toBe('tool_use');
+    });
+
     it('should use end_turn for normal completion', () => {
       const codexEvents: CodexSSEEvent[] = [
         {
