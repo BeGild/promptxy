@@ -53,7 +53,7 @@ describe('Codex SSE Transform', () => {
       expect(toolCallDelta.delta.stop_reason).toBe('tool_use');
     });
 
-    it('应在 tool call 完成后立即发送 message_delta(stop_reason=tool_use)', () => {
+    it('应在 response.completed 时发送 message_delta(stop_reason=tool_use) (对齐 Go 参考)', () => {
       const codexEvents: CodexSSEEvent[] = [
         {
           type: 'response.created',
@@ -69,6 +69,10 @@ describe('Codex SSE Transform', () => {
             arguments: '{"arg":"value"}',
           },
         },
+        {
+          type: 'response.completed',
+          id: 'test-123',
+        },
       ];
 
       const result = transformCodexSSEToClaude(codexEvents, { customToolCallStrategy: 'wrap_object' }, createMockAudit());
@@ -77,11 +81,13 @@ describe('Codex SSE Transform', () => {
       const blockStopEvent = result.events.find(e => e.type === 'content_block_stop');
       expect(blockStopEvent).toBeDefined();
 
-      // 验证在 content_block_stop 之后立即发送了 message_delta
-      const blockStopIndex = result.events.findIndex(e => e.type === 'content_block_stop');
-      const nextEvent = result.events[blockStopIndex + 1];
-      expect(nextEvent?.type).toBe('message_delta');
-      expect((nextEvent as any).delta?.stop_reason).toBe('tool_use');
+      // 验证 message_delta 在 response.completed 后发送
+      const messageDeltaEvents = result.events.filter(e => e.type === 'message_delta');
+      expect(messageDeltaEvents.length).toBeGreaterThan(0);
+
+      // 最后一个 message_delta 应该有 stop_reason='tool_use'
+      const lastDelta = messageDeltaEvents[messageDeltaEvents.length - 1];
+      expect(lastDelta.delta?.stop_reason).toBe('tool_use');
     });
 
     it('should use end_turn for normal completion', () => {

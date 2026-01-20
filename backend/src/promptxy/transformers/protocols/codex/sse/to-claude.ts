@@ -533,13 +533,9 @@ function transformToolCall(
   // content_block_stop
   events.push(createContentBlockStopEvent(toolIndex));
 
-  // message_delta (触发 tool loop)
-  // 工具调用场景下，stop_reason 固定为 tool_use
-  events.push(
-    createMessageDeltaEvent({
-      stop_reason: 'tool_use',
-    }),
-  );
+  // 对齐 Go 参考实现：message_delta 在 response.completed 时统一发送
+  // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:101-116
+  // 工具调用的 stop_reason 将由 buildFinalStopReason() 根据 hasToolCall 状态决定
 
   return events;
 }
