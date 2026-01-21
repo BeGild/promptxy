@@ -32,6 +32,10 @@ type State = {
   currentToolIndex: number;
   /** 是否发生过 tool call（用于决定最终 stop_reason） */
   hasToolCall: boolean;
+  /** 当前正在处理的 tool call 的 index（用于 function_call_arguments.delta） */
+  currentActiveToolIndex?: number;
+  /** 当前 tool call 是否已发送 content_block_start（用于防守） */
+  currentToolCallStarted: boolean;
   /** 是否已发送 message_stop */
   messageStopped: boolean;
   /** 是否已收到 response.completed */
@@ -69,6 +73,8 @@ function createInitialState(): State {
     textBlockStarted: false,
     currentToolIndex: 1,
     hasToolCall: false,
+    currentActiveToolIndex: undefined,
+    currentToolCallStarted: false,
     messageStopped: false,
     completedReceived: false,
     upstreamStopReasonRaw: undefined,
@@ -352,26 +358,75 @@ function transformSingleEvent(
       break;
     }
 
+    case 'response.output_item.added': {
+      // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:117-144
+      const item = (event as any).item;
+
+      if (item.type === 'function_call' || item.type === 'custom_tool_call') {
+        // 标记 tool call 状态
+        state.hasToolCall = true;
+        state.currentActiveToolIndex = state.currentToolIndex;
+        state.currentToolCallStarted = true;
+
+        // 关闭 text block（如果存在）
+        if (state.textBlockStarted) {
+          claudeEvents.push(createContentBlockStopEvent(0));
+          state.textBlockStarted = false;
+        }
+
+        // content_block_start (tool_use)
+        claudeEvents.push(createContentBlockStartEvent(state.currentToolIndex, 'tool_use', {
+          id: item.call_id,
+          name: item.name,
+        }));
+
+        // content_block_delta (空字符串，关键！)
+        claudeEvents.push(createContentBlockDeltaEvent(state.currentToolIndex, 'input_json_delta', {
+          partial_json: '',
+        }));
+      }
+      break;
+    }
+
+    case 'response.function_call_arguments.delta': {
+      // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:155-162
+      // 确保有活跃的 tool call
+      if (state.currentActiveToolIndex === undefined) {
+        audit.setMetadata('unexpectedFunctionCallDelta', true);
+        break;
+      }
+
+      const delta = (event as any).delta || '';
+      state.outputCharCount += delta.length;
+
+      claudeEvents.push(createContentBlockDeltaEvent(
+        state.currentActiveToolIndex,
+        'input_json_delta',
+        { partial_json: delta }
+      ));
+      break;
+    }
+
     case 'response.output_item.done': {
+      // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:145-154
       const item = (event as any).item;
 
       if (item.type === 'message') {
-        // message 类型，可以作为文本输出的一部分
-        // 已经处理过 text delta，这里不需要额外处理
+        // message 类型，关闭 text block（如果存在）
+        if (state.textBlockStarted) {
+          claudeEvents.push(createContentBlockStopEvent(0));
+          state.textBlockStarted = false;
+        }
       } else if (
         item.type === 'function_call' ||
         item.type === 'custom_tool_call'
       ) {
-        // 工具调用
-        state.hasToolCall = true;
-        const toolEvents = transformToolCall(
-          item,
-          state.currentToolIndex,
-          config,
-          audit,
-          state,
-        );
-        claudeEvents.push(...toolEvents);
+        // 工具调用：仅发送 content_block_stop
+        claudeEvents.push(createContentBlockStopEvent(state.currentToolIndex));
+
+        // 重置状态
+        state.currentActiveToolIndex = undefined;
+        state.currentToolCallStarted = false;
         state.currentToolIndex++;
       }
       break;
@@ -478,66 +533,6 @@ function transformSingleEvent(
   }
 
   return claudeEvents;
-}
-
-/**
- * 转换工具调用事件
- */
-function transformToolCall(
-  item: any,
-  toolIndex: number,
-  config: SSETransformConfig,
-  audit: FieldAuditCollector,
-  state: State,
-): ClaudeSSEEvent[] {
-  const events: ClaudeSSEEvent[] = [];
-
-  let inputJson: string;
-
-  if (item.type === 'function_call') {
-    // function_call: arguments 已经是 JSON string
-    inputJson = item.arguments || '{}';
-  } else {
-    // custom_tool_call: input 是 string
-    // 根据策略决定如何处理
-    if (config.customToolCallStrategy === 'wrap_object') {
-      inputJson = JSON.stringify({ input: item.input || '' });
-      audit.setMetadata('customToolCallStrategy', 'wrap_object');
-    } else {
-      // error 策略：抛出错误
-      events.push({
-        type: 'error',
-        error: {
-          message: `custom_tool_call.input is string, cannot map to Claude tool_use.input (object required)`,
-        },
-      });
-      return events;
-    }
-  }
-
-  // content_block_start
-  events.push(createContentBlockStartEvent(toolIndex, 'tool_use', {
-    id: item.call_id,
-    name: item.name,
-  }));
-
-  // content_block_delta (input_json_delta)
-  // 该 JSON 会被 Claude 客户端消费，计入输出估算
-  state.outputCharCount += inputJson.length;
-  events.push(
-    createContentBlockDeltaEvent(toolIndex, 'input_json_delta', {
-      partial_json: inputJson,
-    }),
-  );
-
-  // content_block_stop
-  events.push(createContentBlockStopEvent(toolIndex));
-
-  // 对齐 Go 参考实现：message_delta 在 response.completed 时统一发送
-  // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:101-116
-  // 工具调用的 stop_reason 将由 buildFinalStopReason() 根据 hasToolCall 状态决定
-
-  return events;
 }
 
 // ===== Claude SSE 事件工厂函数 =====

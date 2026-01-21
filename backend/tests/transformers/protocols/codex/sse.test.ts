@@ -28,6 +28,19 @@ describe('Codex SSE Transform', () => {
           status: 'in_progress',
         },
         {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_123',
+            name: 'test_tool',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.function_call_arguments.delta',
+          delta: '{}',
+        },
+        {
           type: 'response.output_item.done',
           item: {
             type: 'function_call',
@@ -59,6 +72,19 @@ describe('Codex SSE Transform', () => {
           type: 'response.created',
           id: 'test-123',
           status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_123',
+            name: 'TestTool',
+            arguments: '{"arg":"value"}',
+          },
+        },
+        {
+          type: 'response.function_call_arguments.delta',
+          delta: '{"arg":"value"}',
         },
         {
           type: 'response.output_item.done',

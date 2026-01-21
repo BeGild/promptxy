@@ -188,6 +188,7 @@ export type CodexSSEEventType =
   | 'response.output_text.delta'
   | 'response.output_item.added'
   | 'response.output_item.done'
+  | 'response.function_call_arguments.delta'
   | 'response.reasoning_text.delta'
   | 'response.reasoning_summary_text.delta'
   | 'response.failed'
@@ -284,6 +285,17 @@ export type CodexOutputItemDoneEvent = {
 };
 
 /**
+ * response.function_call_arguments.delta 事件
+ * Tool use 参数增量事件，逐个发送参数片段
+ * 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:155-162
+ */
+export type CodexFunctionCallArgumentsDeltaEvent = {
+  type: 'response.function_call_arguments.delta';
+  delta: string; // JSON 字符串增量
+  output_index?: number;
+};
+
+/**
  * response.failed 事件
  */
 export type CodexResponseFailedEvent = {
@@ -326,5 +338,6 @@ export type CodexSSEEvent =
   | CodexReasoningSummaryTextDeltaEvent
   | CodexOutputItemAddedEvent
   | CodexOutputItemDoneEvent
+  | CodexFunctionCallArgumentsDeltaEvent
   | CodexResponseFailedEvent
   | CodexResponseCompletedEvent;
