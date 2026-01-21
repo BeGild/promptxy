@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { thinkingBudgetToEffort, extractReasoningEffort } from '../../../src/promptxy/transformers/protocols/codex/reasoning';
+import { thinkingBudgetToEffort, extractReasoningEffort } from '../../../src/promptxy/transformers/protocols/codex/reasoning.js';
 
 describe('thinkingBudgetToEffort', () => {
   it('对于不使用 thinking levels 的模型返回 undefined', () => {

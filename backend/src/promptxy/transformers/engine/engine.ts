@@ -101,6 +101,8 @@ export type TransformConfig = {
   instructionsTemplate?: string;
   /** reasoning effort */
   reasoningEffort?: string;
+  /** thinking 配置 */
+  thinkingConfig?: { type: string; budget_tokens?: number };
   /** SSE 转换配置 */
   sseConfig?: {
     stopReasonStrategy: 'end_turn' | 'tool_use';
@@ -394,6 +396,7 @@ export class TransformerEngine {
     const renderConfig: RenderConfig = {
       instructionsTemplate: this.config.instructionsTemplate,
       reasoningEffort: this.config.reasoningEffort,
+      thinkingConfig: this.config.thinkingConfig,
     };
 
     // 从 parsed 中提取 renderCodexRequest 所需参数

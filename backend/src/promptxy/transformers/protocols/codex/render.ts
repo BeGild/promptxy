@@ -19,6 +19,7 @@ import type { FieldAuditCollector } from '../../audit/field-audit.js';
 import type { JsonPointer } from '../../audit/json-pointer.js';
 import type { ShortNameMap } from './tool-name.js';
 import { buildShortNameMap } from './tool-name.js';
+import { extractReasoningEffort } from './reasoning.js';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -40,6 +41,8 @@ export type RenderConfig = {
   instructionsTemplate?: string;
   /** reasoning effort（从 modelSpec 解析） */
   reasoningEffort?: string;
+  /** thinking 配置 */
+  thinkingConfig?: { type: string; budget_tokens?: number };
 };
 
 /**
@@ -91,9 +94,17 @@ export function renderCodexRequest(
   // 4. tools -> tools[] (传递 shortNameMap)
   const renderedTools = renderTools(tools, shortNameMap, audit);
 
-  // 5. reasoning（从配置，只有当有 reasoningEffort 时才设置）
-  const reasoning = config.reasoningEffort
-    ? { effort: config.reasoningEffort, summary: { enable: true } }
+  // 5. reasoning（从配置，优先使用 thinkingConfig，否则使用 reasoningEffort）
+  let reasoningEffort = config.reasoningEffort;
+
+  // 如果有 thinking 配置，使用它来提取 effort
+  if (config.thinkingConfig) {
+    const model = params.model;
+    reasoningEffort = extractReasoningEffort(model, config.thinkingConfig);
+  }
+
+  const reasoning = reasoningEffort
+    ? { effort: reasoningEffort, summary: { enable: true } }
     : undefined;
 
   // 5. include（只有当 reasoning 存在时才包含 reasoning.encrypted_content）
