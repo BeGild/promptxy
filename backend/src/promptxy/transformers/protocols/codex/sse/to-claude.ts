@@ -145,6 +145,8 @@ export type CodexSSEToClaudeStreamTransformer = {
 export type SSETransformContext = {
   /** 请求侧注入的 input_tokens（上游缺失 usage 时兜底） */
   estimatedInputTokens?: number;
+  /** tool name 反向映射（short -> original） */
+  reverseShortNameMap?: Record<string, string>;
 };
 
 export function createCodexSSEToClaudeStreamTransformer(
@@ -154,6 +156,8 @@ export function createCodexSSEToClaudeStreamTransformer(
 ): CodexSSEToClaudeStreamTransformer {
   const state = createInitialState();
   state.estimatedInputTokens = context?.estimatedInputTokens;
+  // 存储反向映射供后续使用
+  const reverseShortNameMap = context?.reverseShortNameMap;
   let ended = false;
 
   function normalizeClaudeStopReason(raw: unknown): string | undefined {
@@ -247,7 +251,7 @@ export function createCodexSSEToClaudeStreamTransformer(
   function pushEvent(event: CodexSSEEvent): { events: ClaudeSSEEvent[]; streamEnd: boolean } {
     if (ended) return { events: [], streamEnd: true };
 
-    const events = transformSingleEvent(event, state, config, audit);
+    const events = transformSingleEvent(event, state, config, audit, reverseShortNameMap);
 
     if (event.type === 'response.completed') {
       state.completedReceived = true;
@@ -287,14 +291,15 @@ export function createCodexSSEToClaudeStreamTransformer(
 /**
  * 转换 Codex SSE 事件为 Claude SSE 事件序列
  *
- * 说明：保留原有“批量转换” API，但内部复用增量状态机，避免与 gateway 流式实现漂移。
+ * 说明：保留原有"批量转换" API，但内部复用增量状态机，避免与 gateway 流式实现漂移。
  */
 export function transformCodexSSEToClaude(
   codexEvents: CodexSSEEvent[],
   config: SSETransformConfig,
   audit: FieldAuditCollector,
+  context?: SSETransformContext,
 ): SSETransformResult {
-  const transformer = createCodexSSEToClaudeStreamTransformer(config, audit);
+  const transformer = createCodexSSEToClaudeStreamTransformer(config, audit, context);
 
   const events: ClaudeSSEEvent[] = [];
   let streamEnd = false;
@@ -323,6 +328,7 @@ function transformSingleEvent(
   state: State,
   config: SSETransformConfig,
   audit: FieldAuditCollector,
+  reverseShortNameMap?: Record<string, string>,
 ): ClaudeSSEEvent[] {
   const claudeEvents: ClaudeSSEEvent[] = [];
 
@@ -374,10 +380,14 @@ function transformSingleEvent(
           state.textBlockStarted = false;
         }
 
+        // 恢复原始 tool name（如果有反向映射）
+        // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:126-134
+        const originalName = reverseShortNameMap?.[item.name] || item.name;
+
         // content_block_start (tool_use)
         claudeEvents.push(createContentBlockStartEvent(state.currentToolIndex, 'tool_use', {
           id: item.call_id,
-          name: item.name,
+          name: originalName,
         }));
 
         // content_block_delta (空字符串，关键！)

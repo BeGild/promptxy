@@ -515,4 +515,281 @@ describe('Codex SSE Transform', () => {
       expect(errorEvents[0].error.message).toBe('Upstream request failed');
     });
   });
+
+  describe('tool name 恢复', () => {
+    it('应恢复被缩短的 tool name', () => {
+      const reverseMap: Record<string, string> = {
+        'mcp__tool': 'mcp__very_long_server__tool_name',
+        'short_tool': 'short_tool',
+      };
+
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_123',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_123',
+            name: 'mcp__tool',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.completed',
+          id: 'resp_123',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(
+        codexEvents,
+        { customToolCallStrategy: 'wrap_object' },
+        createMockAudit(),
+        { reverseShortNameMap: reverseMap },
+      );
+
+      const blockStartEvent = result.events.find(e => e.type === 'content_block_start' && e.content_block?.type === 'tool_use');
+      expect(blockStartEvent).toBeDefined();
+      expect((blockStartEvent as any).content_block.name).toBe('mcp__very_long_server__tool_name');
+    });
+
+    it('对未缩短的名称应保持不变', () => {
+      const reverseMap: Record<string, string> = {
+        'normal_tool': 'normal_tool',
+      };
+
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_456',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_456',
+            name: 'normal_tool',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.completed',
+          id: 'resp_456',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(
+        codexEvents,
+        { customToolCallStrategy: 'wrap_object' },
+        createMockAudit(),
+        { reverseShortNameMap: reverseMap },
+      );
+
+      const blockStartEvent = result.events.find(e => e.type === 'content_block_start' && e.content_block?.type === 'tool_use');
+      expect(blockStartEvent).toBeDefined();
+      expect((blockStartEvent as any).content_block.name).toBe('normal_tool');
+    });
+
+    it('应处理空的反向映射', () => {
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_789',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_789',
+            name: 'any_tool',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.completed',
+          id: 'resp_789',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(
+        codexEvents,
+        { customToolCallStrategy: 'wrap_object' },
+        createMockAudit(),
+        { reverseShortNameMap: undefined },
+      );
+
+      const blockStartEvent = result.events.find(e => e.type === 'content_block_start' && e.content_block?.type === 'tool_use');
+      expect(blockStartEvent).toBeDefined();
+      expect((blockStartEvent as any).content_block.name).toBe('any_tool');
+    });
+
+    it('应在完整的工具调用流程中恢复名称', () => {
+      const reverseMap: Record<string, string> = {
+        'mcp__calc': 'mcp__math_calculator__calculate',
+      };
+
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_123',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_123',
+            name: 'mcp__calc',
+            arguments: '{"x": 42}',
+          },
+        },
+        {
+          type: 'response.function_call_arguments.delta',
+          delta: '{"x": 42}',
+        },
+        {
+          type: 'response.output_item.done',
+          item: {
+            type: 'function_call',
+            call_id: 'call_123',
+            name: 'mcp__calc',
+            arguments: '{"x": 42}',
+          },
+        },
+        {
+          type: 'response.completed',
+          id: 'resp_123',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(
+        codexEvents,
+        { customToolCallStrategy: 'wrap_object' },
+        createMockAudit(),
+        { reverseShortNameMap: reverseMap },
+      );
+
+      // 查找 content_block_start 事件
+      const blockStartEvents = result.events.filter(e => e.type === 'content_block_start');
+      const toolBlockStart = blockStartEvents.find(e => e.content_block?.type === 'tool_use');
+
+      expect(toolBlockStart).toBeDefined();
+      expect(toolBlockStart.content_block.name).toBe('mcp__math_calculator__calculate');
+      expect(toolBlockStart.content_block.id).toBe('call_123');
+    });
+
+    it('应支持多个工具调用中的名称恢复', () => {
+      const reverseMap: Record<string, string> = {
+        'tool_a': 'very_long_server_name__tool_a',
+        'tool_b': 'very_long_server_name__tool_b',
+      };
+
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_456',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_1',
+            name: 'tool_a',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.output_item.done',
+          item: {
+            type: 'function_call',
+            call_id: 'call_1',
+            name: 'tool_a',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'function_call',
+            call_id: 'call_2',
+            name: 'tool_b',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.output_item.done',
+          item: {
+            type: 'function_call',
+            call_id: 'call_2',
+            name: 'tool_b',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.completed',
+          id: 'resp_456',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(
+        codexEvents,
+        { customToolCallStrategy: 'wrap_object' },
+        createMockAudit(),
+        { reverseShortNameMap: reverseMap },
+      );
+
+      // 查找所有 tool_use 的 content_block_start 事件
+      const toolBlockStartEvents = result.events.filter(
+        e => e.type === 'content_block_start' && e.content_block?.type === 'tool_use'
+      );
+
+      expect(toolBlockStartEvents.length).toBe(2);
+      expect(toolBlockStartEvents[0].content_block.name).toBe('very_long_server_name__tool_a');
+      expect(toolBlockStartEvents[1].content_block.name).toBe('very_long_server_name__tool_b');
+    });
+
+    it('应对 custom_tool_call 类型也应用名称恢复', () => {
+      const reverseMap: Record<string, string> = {
+        'custom__tool': 'custom__very_long_custom_tool',
+      };
+
+      const codexEvents: CodexSSEEvent[] = [
+        {
+          type: 'response.created',
+          id: 'resp_custom',
+          status: 'in_progress',
+        },
+        {
+          type: 'response.output_item.added',
+          item: {
+            type: 'custom_tool_call',
+            call_id: 'call_custom',
+            name: 'custom__tool',
+            arguments: '{}',
+          },
+        },
+        {
+          type: 'response.completed',
+          id: 'resp_custom',
+        },
+      ];
+
+      const result = transformCodexSSEToClaude(
+        codexEvents,
+        { customToolCallStrategy: 'wrap_object' },
+        createMockAudit(),
+        { reverseShortNameMap: reverseMap },
+      );
+
+      const blockStartEvent = result.events.find(e => e.type === 'content_block_start' && e.content_block?.type === 'tool_use');
+      expect(blockStartEvent).toBeDefined();
+      expect((blockStartEvent as any).content_block.name).toBe('custom__very_long_custom_tool');
+    });
+  });
 });
