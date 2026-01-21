@@ -17,6 +17,8 @@ import type {
 } from './types.js';
 import type { FieldAuditCollector } from '../../audit/field-audit.js';
 import type { JsonPointer } from '../../audit/json-pointer.js';
+import type { ShortNameMap } from './tool-name.js';
+import { buildShortNameMap } from './tool-name.js';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -75,13 +77,17 @@ export function renderCodexRequest(
   // 1. instructions = template + system
   const instructions = renderInstructions(system.text, config.instructionsTemplate, audit);
 
-  // 2. messages -> input[]
-  const input = renderInput(messages, audit);
+  // 2. 构建 tool name 缩短映射
+  const toolNames = tools.map(t => t.name);
+  const shortNameMap = buildShortNameMap(toolNames);
 
-  // 3. tools -> tools[]
-  const renderedTools = renderTools(tools, audit);
+  // 3. messages -> input[] (传递 shortNameMap)
+  const input = renderInput(messages, shortNameMap, audit);
 
-  // 4. reasoning（从配置，只有当有 reasoningEffort 时才设置）
+  // 4. tools -> tools[] (传递 shortNameMap)
+  const renderedTools = renderTools(tools, shortNameMap, audit);
+
+  // 5. reasoning（从配置，只有当有 reasoningEffort 时才设置）
   const reasoning = config.reasoningEffort
     ? { effort: config.reasoningEffort, summary: { enable: true } }
     : undefined;
@@ -161,6 +167,7 @@ function renderInput(
     role: string;
     content: { blocks: Array<{ type: string; [key: string]: any }> };
   }>,
+  shortNameMap: ShortNameMap,
   audit: FieldAuditCollector,
 ): CodexResponseItem[] {
   const input: CodexResponseItem[] = [];
@@ -188,10 +195,13 @@ function renderInput(
         itemIndex++;
       } else if (block.type === 'tool_use') {
         // tool_use -> function_call
+        // 应用名称缩短
+        const shortName = shortNameMap[block.name] || block.name;
+
         const fnCallItem: CodexFunctionCallItem = {
           type: 'function_call',
           call_id: block.id || '',
-          name: block.name || '',
+          name: shortName,
           arguments: JSON.stringify(block.input || {}),
         };
         input.push(fnCallItem);
@@ -255,12 +265,16 @@ function renderTools(
     description?: string;
     inputSchema: Record<string, unknown>;
   }>,
+  shortNameMap: ShortNameMap,
   audit: FieldAuditCollector,
 ): any[] {
   return tools.map((tool, idx) => {
     const basePath = `/tools/${idx}`;
 
-    // 修复上游对部分“输出/回填字段”的严格校验：此类字段不应出现在 function 入参 schema 中
+    // 应用缩短后的名称
+    const shortName = shortNameMap[tool.name];
+
+    // 修复上游对部分"输出/回填字段"的严格校验：此类字段不应出现在 function 入参 schema 中
     // 目前已知：AskUserQuestion.input_schema.properties.answers 会导致 OpenAI 上游报
     // Invalid schema ... Extra required key 'answers' supplied
     const normalizedInputSchema = normalizeToolInputSchemaForCodex(
@@ -275,7 +289,7 @@ function renderTools(
 
     const codexTool: CodexResponsesApiTool = {
       type: 'function',
-      name: tool.name,
+      name: shortName,
       description: tool.description,
       strict: true,
       parameters: prunedSchema as any,

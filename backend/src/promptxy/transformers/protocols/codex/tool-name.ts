@@ -22,7 +22,8 @@ function baseCandidate(name: string): string {
   // 策略：保留 mcp__ 和最后的 tool_name 部分
   if (name.startsWith('mcp__')) {
     const lastDoubleUnderscoreIdx = name.lastIndexOf('__');
-    if (lastDoubleUnderscoreIdx > 5) {  // 必须在 mcp__ 之后
+    if (lastDoubleUnderscoreIdx > 5) {
+      // 必须在 mcp__ 之后
       const toolPart = name.substring(lastDoubleUnderscoreIdx + 2);
       const candidate = 'mcp__' + toolPart;
       if (candidate.length > LIMIT) {

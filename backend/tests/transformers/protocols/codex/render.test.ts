@@ -543,4 +543,188 @@ describe('Codex Render', () => {
       expect(result.include).toContain('reasoning.encrypted_content');
     });
   });
+
+  describe('Tool Name 缩短', () => {
+    it('应缩短超过 64 字符的 tool name', () => {
+      const longToolName = 'mcp__very_long_server_name_with_many_characters__extremely_long_tool_name_that_exceeds_limit';
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [],
+          tools: [{
+            name: longToolName,
+            description: 'A tool with a very long name',
+            inputSchema: { type: 'object', properties: {} },
+          }],
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      expect(result.tools[0].name.length).toBeLessThanOrEqual(64);
+      expect(result.tools[0].name).toMatch(/^mcp__/);
+    });
+
+    it('应在 tool_use 中使用缩短后的名称', () => {
+      const longToolName = 'a'.repeat(100);
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [{
+            role: 'assistant',
+            content: {
+              blocks: [{
+                type: 'tool_use',
+                id: 'call_123',
+                name: longToolName,
+                input: { arg: 'value' },
+              }],
+            },
+          }],
+          tools: [{
+            name: longToolName,
+            description: 'A tool',
+            inputSchema: { type: 'object', properties: {} },
+          }],
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      // 检查 input 中的 function_call 使用了缩短后的名称
+      const fnCall = result.input.find(item => item.type === 'function_call');
+      expect(fnCall).toBeDefined();
+      if (fnCall && fnCall.type === 'function_call') {
+        expect(fnCall.name.length).toBeLessThanOrEqual(64);
+      }
+    });
+
+    it('应保持短名称不变', () => {
+      const shortNames = ['short', 'tool_name', 'TestTool'];
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [],
+          tools: shortNames.map(name => ({
+            name,
+            description: `Tool ${name}`,
+            inputSchema: { type: 'object', properties: {} },
+          })),
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      expect(result.tools.map(t => t.name)).toEqual(shortNames);
+    });
+
+    it('应正确处理 mcp__ 前缀的 tool name 缩短', () => {
+      const mcpToolName = 'mcp__my_very_long_server_name_that_exceeds_limit__get_weather_info';
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [],
+          tools: [{
+            name: mcpToolName,
+            description: 'MCP tool with long server name',
+            inputSchema: { type: 'object', properties: {} },
+          }],
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      // 应该保留 mcp__ 前缀和最后的 tool name 部分
+      expect(result.tools[0].name).toMatch(/^mcp__get_weather_info/);
+      expect(result.tools[0].name.length).toBeLessThanOrEqual(64);
+    });
+
+    it('应确保多个 tool name 缩短后的唯一性', () => {
+      const toolNames = [
+        'mcp__server_a__very_long_tool_name_that_might_conflict',
+        'mcp__server_b__very_long_tool_name_that_might_conflict',
+      ];
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [],
+          tools: toolNames.map(name => ({
+            name,
+            description: `Tool ${name}`,
+            inputSchema: { type: 'object', properties: {} },
+          })),
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      // 两个工具的名称应该不同
+      expect(result.tools[0].name).not.toBe(result.tools[1].name);
+      // 两个名称都应该在 64 字符限制内
+      expect(result.tools[0].name.length).toBeLessThanOrEqual(64);
+      expect(result.tools[1].name.length).toBeLessThanOrEqual(64);
+    });
+
+    it('应在 tools 和 tool_use 中使用一致的短名称', () => {
+      const longToolName = 'mcp__long_server_name__tool_name_that_is_also_long';
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [{
+            role: 'assistant',
+            content: {
+              blocks: [{
+                type: 'tool_use',
+                id: 'call_123',
+                name: longToolName,
+                input: { arg: 'value' },
+              }],
+            },
+          }],
+          tools: [{
+            name: longToolName,
+            description: 'A tool',
+            inputSchema: { type: 'object', properties: {} },
+          }],
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      // tools 数组中的短名称
+      const toolShortName = result.tools[0].name;
+      // input 中的短名称
+      const fnCall = result.input.find(item => item.type === 'function_call');
+
+      expect(fnCall).toBeDefined();
+      if (fnCall && fnCall.type === 'function_call') {
+        // 两者应该使用相同的短名称
+        expect(fnCall.name).toBe(toolShortName);
+      }
+    });
+  });
 });
