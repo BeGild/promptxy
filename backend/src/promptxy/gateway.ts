@@ -523,6 +523,7 @@ export function createGateway(
     let effectiveUpstreamPath: string;
     let effectiveHeaders: Record<string, string>;
     let effectiveBody: any;
+    let shortNameMap: Record<string, string> | undefined;
 
     try {
       if (!req.url || !req.method) {
@@ -1016,6 +1017,7 @@ export function createGateway(
         effectiveHeaders = transformResult.request.headers;
         effectiveBody = transformResult.request.body;
         transformedBody = JSON.stringify(transformResult.request.body);
+        shortNameMap = transformResult.shortNameMap;
       }
 
       // ========== OpenAI/Codex：modelSpec 解析 reasoning.effort（透明转发与 Claude→Codex 均适用）==========
@@ -1388,7 +1390,10 @@ export function createGateway(
 
       const shouldTransformSSE = isSSE && needsResponseTransform && transformerChain.length > 0;
       const transformStream = shouldTransformSSE
-        ? createSSETransformStream(transformerChain[0], { estimatedInputTokens })
+        ? createSSETransformStream(transformerChain[0], {
+            estimatedInputTokens,
+            shortNameMap,
+          })
         : undefined;
 
       if (!shouldTransformSSE) {

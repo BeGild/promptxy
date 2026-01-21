@@ -36,6 +36,7 @@ export type {
 export {
   renderCodexRequest,
   type RenderConfig,
+  type RenderResult,
 } from './render.js';
 
 export {

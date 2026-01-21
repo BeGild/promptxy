@@ -55,7 +55,7 @@ describe('Codex Render', () => {
       );
 
       // 验证 input 包含 image
-      const messageItems = result.input.filter(item => item.type === 'message');
+      const messageItems = result.request.input.filter(item => item.type === 'message');
       expect(messageItems.length).toBeGreaterThan(0);
 
       // 查找包含 input_image 的消息
@@ -106,7 +106,7 @@ describe('Codex Render', () => {
       );
 
       // 验证 input 包含 base64 图片
-      const messageItems = result.input.filter(item => item.type === 'message');
+      const messageItems = result.request.input.filter(item => item.type === 'message');
       const imageMessage = messageItems.find((item: any) =>
         item.content.some((c: any) => c.type === 'input_image')
       );
@@ -152,7 +152,7 @@ describe('Codex Render', () => {
       );
 
       // 应该有两个包含图片的消息项
-      const messageItems = result.input.filter(item => item.type === 'message');
+      const messageItems = result.request.input.filter(item => item.type === 'message');
       const imageMessages = messageItems.filter((item: any) =>
         item.content.some((c: any) => c.type === 'input_image')
       );
@@ -198,15 +198,15 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      // 验证所有 block 都被正确转换
-      const messageItems = result.input.filter((item: any) => item.type === 'message');
-      expect(messageItems.length).toBe(3); // 3 个独立的 message items
+      // 验证所有 block 都被正确转换（包括特殊指令消息）
+      const messageItems = result.request.input.filter((item: any) => item.type === 'message');
+      expect(messageItems.length).toBe(4); // 3 个原始 message items + 1 个特殊指令消息
 
       // 验证文本和图片都存在
       const textItems = messageItems.filter((item: any) =>
         item.content.some((c: any) => c.type === 'input_text' || c.type === 'output_text')
       );
-      expect(textItems.length).toBe(2);
+      expect(textItems.length).toBe(3); // 2 个原始文本 + 1 个特殊指令消息
 
       const imageItems = messageItems.filter((item: any) =>
         item.content.some((c: any) => c.type === 'input_image')
@@ -243,8 +243,10 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      expect(result.input.length).toBe(1);
-      const firstItem = result.input[0];
+      // 由于特殊指令消息被添加，input 长度为 2
+      expect(result.request.input.length).toBe(2);
+      // 第二项是原始消息
+      const firstItem = result.request.input[1];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
         expect(firstItem.role).toBe('user');
@@ -280,7 +282,8 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      const firstItem = result.input[0];
+      // 由于特殊指令消息被添加到开头，实际的 assistant 消息在 index 1
+      const firstItem = result.request.input[1];
       if (firstItem.type === 'message') {
         expect(firstItem.content[0].type).toBe('output_text');
       }
@@ -317,7 +320,8 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      const toolItem = result.input[0];
+      // 由于特殊指令消息被添加到开头，实际的 function_call 在 index 1
+      const toolItem = result.request.input[1];
       expect(toolItem.type).toBe('function_call');
       if (toolItem.type === 'function_call') {
         expect(toolItem.call_id).toBe('toolu_123');
@@ -356,7 +360,8 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      const outputItem = result.input[0];
+      // 由于特殊指令消息被添加到 input 开头，实际的 tool_result 在 index 1
+      const outputItem = result.request.input[1];
       expect(outputItem.type).toBe('function_call_output');
       if (outputItem.type === 'function_call_output') {
         expect(outputItem.call_id).toBe('toolu_123');
@@ -392,7 +397,8 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      const outputItem = result.input[0];
+      // 由于特殊指令消息被添加到 input 开头，实际的 tool_result 在 index 1
+      const outputItem = result.request.input[1];
       if (outputItem.type === 'function_call_output') {
         expect(typeof outputItem.output).toBe('string');
         expect(outputItem.output).toBe('{"result":"data","value":42}');
@@ -427,7 +433,8 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      const outputItem = result.input[0];
+      // 由于特殊指令消息被添加到 input 开头，实际的 tool_result 在 index 1
+      const outputItem = result.request.input[1];
       expect(outputItem.type).toBe('function_call_output');
       if (outputItem.type === 'function_call_output') {
         expect(outputItem.call_id).toBe('toolu_missing');
@@ -467,8 +474,8 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      expect(result.tools.length).toBe(1);
-      const codexTool = result.tools[0];
+      expect(result.request.tools.length).toBe(1);
+      const codexTool = result.request.tools[0];
       expect(codexTool.type).toBe('function');
       expect(codexTool.name).toBe('get_weather');
       expect(codexTool.description).toBe('Get weather information');
@@ -494,10 +501,10 @@ describe('Codex Render', () => {
         audit
       );
 
-      expect(result.tools[0]).toEqual({
+      expect(result.request.tools[0]).toEqual({
         type: 'web_search',
       });
-      expect(result.tools[0].name).toBeUndefined();
+      expect(result.request.tools[0].name).toBeUndefined();
     });
   });
 
@@ -530,13 +537,13 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      expect(result.model).toBe('codex-gpt-5');
-      expect(result.instructions).toBeDefined();
-      expect(result.input).toBeDefined();
-      expect(result.tools).toBeDefined();
-      expect(result.stream).toBe(true);
-      expect(result.store).toBe(false);
-      expect(result.prompt_cache_key).toBe('session_123');
+      expect(result.request.model).toBe('codex-gpt-5');
+      expect(result.request.instructions).toBeDefined();
+      expect(result.request.input).toBeDefined();
+      expect(result.request.tools).toBeDefined();
+      expect(result.request.stream).toBe(true);
+      expect(result.request.store).toBe(false);
+      expect(result.request.prompt_cache_key).toBe('session_123');
     });
 
     it('should include reasoning configuration when specified', () => {
@@ -563,9 +570,9 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      expect(result.reasoning).toBeDefined();
-      expect(result.reasoning?.effort).toBe('medium');
-      expect(result.include).toContain('reasoning.encrypted_content');
+      expect(result.request.reasoning).toBeDefined();
+      expect(result.request.reasoning?.effort).toBe('medium');
+      expect(result.request.include).toContain('reasoning.encrypted_content');
     });
   });
 
@@ -590,8 +597,8 @@ describe('Codex Render', () => {
         audit
       );
 
-      expect(result.tools[0].name.length).toBeLessThanOrEqual(64);
-      expect(result.tools[0].name).toMatch(/^mcp__/);
+      expect(result.request.tools[0].name.length).toBeLessThanOrEqual(64);
+      expect(result.request.tools[0].name).toMatch(/^mcp__/);
     });
 
     it('应在 tool_use 中使用缩短后的名称', () => {
@@ -625,7 +632,7 @@ describe('Codex Render', () => {
       );
 
       // 检查 input 中的 function_call 使用了缩短后的名称
-      const fnCall = result.input.find(item => item.type === 'function_call');
+      const fnCall = result.request.input.find(item => item.type === 'function_call');
       expect(fnCall).toBeDefined();
       if (fnCall && fnCall.type === 'function_call') {
         expect(fnCall.name.length).toBeLessThanOrEqual(64);
@@ -652,7 +659,7 @@ describe('Codex Render', () => {
         audit
       );
 
-      expect(result.tools.map(t => t.name)).toEqual(shortNames);
+      expect(result.request.tools.map(t => t.name)).toEqual(shortNames);
     });
 
     it('应正确处理 mcp__ 前缀的 tool name 缩短', () => {
@@ -676,8 +683,8 @@ describe('Codex Render', () => {
       );
 
       // 应该保留 mcp__ 前缀和最后的 tool name 部分
-      expect(result.tools[0].name).toMatch(/^mcp__get_weather_info/);
-      expect(result.tools[0].name.length).toBeLessThanOrEqual(64);
+      expect(result.request.tools[0].name).toMatch(/^mcp__get_weather_info/);
+      expect(result.request.tools[0].name.length).toBeLessThanOrEqual(64);
     });
 
     it('应确保多个 tool name 缩短后的唯一性', () => {
@@ -704,10 +711,10 @@ describe('Codex Render', () => {
       );
 
       // 两个工具的名称应该不同
-      expect(result.tools[0].name).not.toBe(result.tools[1].name);
+      expect(result.request.tools[0].name).not.toBe(result.request.tools[1].name);
       // 两个名称都应该在 64 字符限制内
-      expect(result.tools[0].name.length).toBeLessThanOrEqual(64);
-      expect(result.tools[1].name.length).toBeLessThanOrEqual(64);
+      expect(result.request.tools[0].name.length).toBeLessThanOrEqual(64);
+      expect(result.request.tools[1].name.length).toBeLessThanOrEqual(64);
     });
 
     it('应在 tools 和 tool_use 中使用一致的短名称', () => {
@@ -741,9 +748,9 @@ describe('Codex Render', () => {
       );
 
       // tools 数组中的短名称
-      const toolShortName = result.tools[0].name;
+      const toolShortName = result.request.tools[0].name;
       // input 中的短名称
-      const fnCall = result.input.find(item => item.type === 'function_call');
+      const fnCall = result.request.input.find(item => item.type === 'function_call');
 
       expect(fnCall).toBeDefined();
       if (fnCall && fnCall.type === 'function_call') {
@@ -770,8 +777,8 @@ describe('Codex Render', () => {
       );
 
       // 验证特殊指令被添加
-      expect(result.input.length).toBe(1);
-      const firstItem = result.input[0];
+      expect(result.request.input.length).toBe(1);
+      const firstItem = result.request.input[0];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
         expect(firstItem.role).toBe('user');
@@ -808,8 +815,8 @@ describe('Codex Render', () => {
       );
 
       // 验证 input 的第一条消息是特殊指令
-      expect(result.input.length).toBe(2);
-      const firstItem = result.input[0];
+      expect(result.request.input.length).toBe(2);
+      const firstItem = result.request.input[0];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
         expect(firstItem.role).toBe('user');
@@ -818,7 +825,7 @@ describe('Codex Render', () => {
       }
 
       // 第二条消息是原始用户消息
-      const secondItem = result.input[1];
+      const secondItem = result.request.input[1];
       expect(secondItem.type).toBe('message');
       if (secondItem.type === 'message') {
         expect(secondItem.content[0].text).toBe('Hello, how are you?');
@@ -864,8 +871,8 @@ describe('Codex Render', () => {
       );
 
       // 应该只有 2 条消息（不会重复添加）
-      expect(result.input.length).toBe(2);
-      const firstItem = result.input[0];
+      expect(result.request.input.length).toBe(2);
+      const firstItem = result.request.input[0];
       if (firstItem.type === 'message') {
         expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
       }
@@ -901,15 +908,15 @@ describe('Codex Render', () => {
       );
 
       // 第一条应该是特殊指令
-      expect(result.input.length).toBe(2);
-      const firstItem = result.input[0];
+      expect(result.request.input.length).toBe(2);
+      const firstItem = result.request.input[0];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
         expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
       }
 
       // 第二条应该是 tool_use
-      const secondItem = result.input[1];
+      const secondItem = result.request.input[1];
       expect(secondItem.type).toBe('function_call');
     });
   });

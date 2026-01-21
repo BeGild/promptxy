@@ -65,6 +65,8 @@ export type TransformResponse = {
   };
   needsResponseTransform: boolean;
   trace: TransformTrace;
+  /** tool name 缩短映射（original -> short），用于响应转换器 */
+  shortNameMap?: Record<string, string>;
 };
 
 /**
@@ -179,8 +181,11 @@ export class TransformerEngine {
       throw result.errors[0];
     }
 
-    // 返回转换后的请求
-    const codexRequest = result.data as CodexResponsesApiRequest;
+    // 返回转换后的请求（包含 shortNameMap）
+    const { request: codexRequest, shortNameMap } = result.data as {
+      request: CodexResponsesApiRequest;
+      shortNameMap: Record<string, string>;
+    };
 
     // 映射请求头：移除 Claude SDK 特定请求头，添加 Codex 特定请求头
     const mappedHeaders = mapHeadersForCodex(req.request.headers);
@@ -200,6 +205,7 @@ export class TransformerEngine {
       },
       needsResponseTransform: true,
       trace,
+      shortNameMap,
     };
   }
 
@@ -400,7 +406,7 @@ export class TransformerEngine {
     };
 
     // 从 parsed 中提取 renderCodexRequest 所需参数
-    const codexRequest = renderCodexRequest({
+    const renderResult = renderCodexRequest({
       model: parsed.model,
       system: parsed.system,
       messages: parsed.messages,
@@ -411,7 +417,7 @@ export class TransformerEngine {
     }, renderConfig, audit);
 
     // 收集目标路径
-    const targetPaths = collectJsonPointers(codexRequest);
+    const targetPaths = collectJsonPointers(renderResult.request);
     audit.addTargetPaths(targetPaths);
 
     // 计算未映射路径
@@ -421,7 +427,7 @@ export class TransformerEngine {
     audit.addUnmappedSourcePaths(unmapped);
 
     return {
-      data: codexRequest,
+      data: { ...renderResult, parsed: input.parsed, input: input.input },
       audit: audit.getAudit(),
     };
   }

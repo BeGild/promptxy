@@ -46,6 +46,16 @@ export type RenderConfig = {
 };
 
 /**
+ * renderCodexRequest 返回值类型
+ */
+export type RenderResult = {
+  /** 渲染后的请求 */
+  request: CodexResponsesApiRequest;
+  /** tool name 缩短映射（original -> short），用于响应转换器反向查找 */
+  shortNameMap: ShortNameMap;
+};
+
+/**
  * 渲染 Codex /v1/responses 请求
  */
 export function renderCodexRequest(
@@ -74,7 +84,7 @@ export function renderCodexRequest(
   },
   config: RenderConfig,
   audit: FieldAuditCollector,
-): CodexResponsesApiRequest {
+): RenderResult {
   const { model, system, messages, tools, stream, sessionId, promptCacheRetention } = params;
 
   // 1. instructions = template + system
@@ -138,7 +148,7 @@ export function renderCodexRequest(
     });
   }
 
-  return request;
+  return { request, shortNameMap };
 }
 
 /**

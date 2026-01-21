@@ -37,6 +37,8 @@ export function createProtocolTransformer(config?: {
 export type SSETransformStreamOptions = {
   /** 请求侧注入的 input_tokens（用于上游缺失 usage 时兜底） */
   estimatedInputTokens?: number;
+  /** tool name 缩短映射（original -> short），用于构建反向映射 */
+  shortNameMap?: Record<string, string>;
 };
 
 /**
@@ -235,10 +237,21 @@ export function createSSETransformStream(transformerName: string, options?: SSET
   let streamEnded = false;
 
   const audit = new FieldAuditCollector();
+
+  // 构建 reverseShortNameMap（short -> original）
+  const reverseShortNameMap: Record<string, string> | undefined = options?.shortNameMap
+    ? Object.fromEntries(
+        Object.entries(options.shortNameMap).map(([original, short]) => [short, original])
+      )
+    : undefined;
+
   const transformer = createCodexSSEToClaudeStreamTransformer(
     { customToolCallStrategy: 'wrap_object' },
     audit,
-    { estimatedInputTokens: options?.estimatedInputTokens },
+    {
+      estimatedInputTokens: options?.estimatedInputTokens,
+      reverseShortNameMap,
+    },
   );
 
   function pushCodexEvent(stream: Transform, event: CodexSSEEvent) {
