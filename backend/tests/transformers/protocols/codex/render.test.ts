@@ -474,6 +474,31 @@ describe('Codex Render', () => {
       expect(codexTool.description).toBe('Get weather information');
       expect(codexTool.strict).toBe(true);
     });
+
+    it('应将 web_search_20250305 转换为 web_search 类型', () => {
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'gpt-4',
+          system: { text: 'You are a helpful assistant.' },
+          messages: [],
+          tools: [{
+            name: 'web_search_20250305',
+            description: 'Web search tool',
+            inputSchema: { type: 'object', properties: {} },
+          }],
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      expect(result.tools[0]).toEqual({
+        type: 'web_search',
+      });
+      expect(result.tools[0].name).toBeUndefined();
+    });
   });
 
   describe('Basic Structure', () => {

@@ -271,6 +271,19 @@ function renderTools(
   return tools.map((tool, idx) => {
     const basePath = `/tools/${idx}`;
 
+    // 特殊处理：Claude web_search 工具转换为 Codex web_search
+    // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_request.go:190-195
+    if (tool.name === 'web_search_20250305') {
+      audit.addDefaulted({
+        path: `${basePath}/type`,
+        source: 'special_handling',
+        reason: 'Convert Claude web_search_20250305 to Codex web_search type',
+      });
+      return {
+        type: 'web_search',
+      };
+    }
+
     // 应用缩短后的名称
     const shortName = shortNameMap[tool.name];
 
