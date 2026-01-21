@@ -752,4 +752,165 @@ describe('Codex Render', () => {
       }
     });
   });
+
+  describe('特殊前置指令消息', () => {
+    it('应在空 input 时添加特殊指令作为第一条消息', () => {
+      const audit = createMockAudit();
+
+      const result = renderCodexRequest(
+        {
+          model: 'codex-gpt-5',
+          system: { text: 'You are helpful.' },
+          messages: [],
+          tools: [],
+          stream: true,
+        },
+        {},
+        audit
+      );
+
+      // 验证特殊指令被添加
+      expect(result.input.length).toBe(1);
+      const firstItem = result.input[0];
+      expect(firstItem.type).toBe('message');
+      if (firstItem.type === 'message') {
+        expect(firstItem.role).toBe('user');
+        expect(firstItem.content[0].type).toBe('input_text');
+        expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
+      }
+    });
+
+    it('应在非空 input 时在开头添加特殊指令', () => {
+      const messages = [
+        {
+          role: 'user' as const,
+          content: {
+            blocks: [
+              {
+                type: 'text',
+                text: 'Hello, how are you?',
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = renderCodexRequest(
+        {
+          model: 'codex-gpt-5',
+          system: { text: 'You are helpful.' },
+          messages,
+          tools: [],
+          stream: true,
+        },
+        {},
+        createMockAudit()
+      );
+
+      // 验证 input 的第一条消息是特殊指令
+      expect(result.input.length).toBe(2);
+      const firstItem = result.input[0];
+      expect(firstItem.type).toBe('message');
+      if (firstItem.type === 'message') {
+        expect(firstItem.role).toBe('user');
+        expect(firstItem.content[0].type).toBe('input_text');
+        expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
+      }
+
+      // 第二条消息是原始用户消息
+      const secondItem = result.input[1];
+      expect(secondItem.type).toBe('message');
+      if (secondItem.type === 'message') {
+        expect(secondItem.content[0].text).toBe('Hello, how are you?');
+      }
+    });
+
+    it('当第一条消息已经是特殊指令时不应重复添加', () => {
+      const messages = [
+        {
+          role: 'user' as const,
+          content: {
+            blocks: [
+              {
+                type: 'text',
+                text: 'EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!',
+              },
+            ],
+          },
+        },
+        {
+          role: 'user' as const,
+          content: {
+            blocks: [
+              {
+                type: 'text',
+                text: 'Hello',
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = renderCodexRequest(
+        {
+          model: 'codex-gpt-5',
+          system: { text: 'You are helpful.' },
+          messages,
+          tools: [],
+          stream: true,
+        },
+        {},
+        createMockAudit()
+      );
+
+      // 应该只有 2 条消息（不会重复添加）
+      expect(result.input.length).toBe(2);
+      const firstItem = result.input[0];
+      if (firstItem.type === 'message') {
+        expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
+      }
+    });
+
+    it('应在包含 tool_use 的 input 中添加特殊指令', () => {
+      const messages = [
+        {
+          role: 'assistant' as const,
+          content: {
+            blocks: [
+              {
+                type: 'tool_use',
+                id: 'toolu_123',
+                name: 'get_weather',
+                input: { location: 'San Francisco' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = renderCodexRequest(
+        {
+          model: 'codex-gpt-5',
+          system: { text: '' },
+          messages,
+          tools: [{ name: 'get_weather', description: 'Get weather', inputSchema: { type: 'object', properties: {} } }],
+          stream: true,
+        },
+        {},
+        createMockAudit()
+      );
+
+      // 第一条应该是特殊指令
+      expect(result.input.length).toBe(2);
+      const firstItem = result.input[0];
+      expect(firstItem.type).toBe('message');
+      if (firstItem.type === 'message') {
+        expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
+      }
+
+      // 第二条应该是 tool_use
+      const secondItem = result.input[1];
+      expect(secondItem.type).toBe('function_call');
+    });
+  });
 });

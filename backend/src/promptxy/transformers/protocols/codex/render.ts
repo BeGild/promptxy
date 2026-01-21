@@ -84,6 +84,10 @@ export function renderCodexRequest(
   // 3. messages -> input[] (传递 shortNameMap)
   const input = renderInput(messages, shortNameMap, audit);
 
+  // 3.5. 添加特殊前置指令消息
+  // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_request.go:244-260
+  const finalInput = addSpecialInstructionMessage(input, audit);
+
   // 4. tools -> tools[] (传递 shortNameMap)
   const renderedTools = renderTools(tools, shortNameMap, audit);
 
@@ -101,7 +105,7 @@ export function renderCodexRequest(
   const request: CodexResponsesApiRequest = {
     model,
     instructions,
-    input,
+    input: finalInput,
     tools: renderedTools,
     tool_choice: 'auto',
     parallel_tool_calls: true,
@@ -252,6 +256,67 @@ function renderInput(
   }
 
   return input;
+}
+
+/**
+ * 添加特殊前置指令消息
+ *
+ * 在 input 开头添加特殊消息，确保上游忽略系统指令并按照我们的指令执行
+ *
+ * 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_request.go:244-260
+ */
+function addSpecialInstructionMessage(
+  input: CodexResponseItem[],
+  audit: FieldAuditCollector,
+): CodexResponseItem[] {
+  if (input.length === 0) {
+    // 空 input，添加特殊指令作为第一条消息
+    audit.addDefaulted({
+      path: '/input/0',
+      source: 'special_instruction',
+      reason: 'Add special instruction message as first input',
+    });
+
+    return [{
+      type: 'message',
+      role: 'user',
+      content: [{
+        type: 'input_text',
+        text: 'EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!',
+      }],
+    }];
+  }
+
+  // 检查第一条消息是否已经是我们的特殊指令
+  const firstItem = input[0];
+  if (
+    firstItem.type === 'message' &&
+    firstItem.role === 'user' &&
+    firstItem.content[0]?.type === 'input_text' &&
+    firstItem.content[0].text === 'EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!'
+  ) {
+    // 已经存在，不重复添加
+    return input;
+  }
+
+  // 在开头添加特殊指令
+  audit.addDefaulted({
+    path: '/input/0',
+    source: 'special_instruction',
+    reason: 'Prepend special instruction message to input',
+  });
+
+  return [
+    {
+      type: 'message',
+      role: 'user',
+      content: [{
+        type: 'input_text',
+        text: 'EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!',
+      }],
+    },
+    ...input,
+  ];
 }
 
 /**
