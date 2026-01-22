@@ -35,7 +35,7 @@ export type FieldDiff = {
 /**
  * 默认值来源
  */
-export type DefaultSource = 'template' | 'route' | 'supplier' | 'inferred' | 'fallback';
+export type DefaultSource = 'template' | 'route' | 'supplier' | 'inferred' | 'fallback' | 'special_instruction' | 'special_handling';
 
 /**
  * 默认值记录

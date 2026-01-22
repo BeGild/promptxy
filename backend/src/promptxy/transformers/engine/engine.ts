@@ -439,7 +439,9 @@ export class TransformerEngine {
     input: any,
     audit: FieldAuditCollector,
   ): StageResult<any> {
-    const errors = validateCodexRequest(input, audit);
+    // input 是 { request, shortNameMap, parsed, input } 结构
+    // 需要提取 request 部分（CodexResponsesApiRequest）
+    const errors = validateCodexRequest(input.request, audit);
 
     if (errors.length > 0) {
       return {
