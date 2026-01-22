@@ -342,9 +342,6 @@ function transformSingleEvent(
     }
 
     claudeEvents.push(createContentBlockStartEvent(0, 'text'));
-    // 兼容旧实现：在 message_start + content_block_start 后立即发送一次 ping
-    claudeEvents.push({ type: 'ping' });
-
     state.messageStarted = true;
     state.textBlockStarted = true;
   }

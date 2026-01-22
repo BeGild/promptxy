@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { createSSETransformStream } from '../../../src/promptxy/transformers/index.js';
 
 describe('createSSETransformStream (codex)', () => {
-  it('should convert Codex SSE to Claude SSE with stable id, ping, and completion usage', async () => {
+  it('should convert Codex SSE to Claude SSE with stable id and completion usage', async () => {
     const t = createSSETransformStream('codex');
 
     let out = '';
@@ -42,7 +42,6 @@ describe('createSSETransformStream (codex)', () => {
     });
 
     expect(out).toContain('event: message_start');
-    expect(out).toContain('event: ping');
     expect(out).toContain('event: message_stop');
 
     // message_start.message.id 应来自 response.created.id
