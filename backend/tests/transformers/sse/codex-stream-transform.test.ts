@@ -49,7 +49,8 @@ describe('createSSETransformStream (codex)', () => {
     expect(out).toContain('"id":"resp_123"');
 
     // completion usage 必须包含官方四字段
-    expect(out).toContain('"usage":{"input_tokens":100');
+    // 对齐 CLIProxyAPI：input_tokens 扣除 cached_tokens
+    expect(out).toContain('"usage":{"input_tokens":50');
     expect(out).toContain('"cache_read_input_tokens":50');
     expect(out).toContain('"cache_creation_input_tokens":0');
     // reasoning_tokens 不进入 Claude usage（仅审计用）

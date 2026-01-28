@@ -339,6 +339,10 @@ export class TransformerEngine {
     },
     response: unknown,
     contentType?: string,
+    options?: {
+      /** original -> short map from request transform (used to restore names in non-stream responses) */
+      shortNameMap?: Record<string, string>;
+    },
   ): Promise<unknown> {
     const transformerName = supplier.transformer?.default?.[0] || 'none';
 
@@ -347,7 +351,10 @@ export class TransformerEngine {
     }
 
     if (transformerName === 'codex') {
-      return transformCodexResponseToClaude(response);
+      const reverseShortNameMap = options?.shortNameMap
+        ? Object.fromEntries(Object.entries(options.shortNameMap).map(([orig, short]) => [short, orig]))
+        : undefined;
+      return transformCodexResponseToClaude(response, { reverseShortNameMap });
     }
 
     if (transformerName === 'openai-chat') {
@@ -399,10 +406,26 @@ export class TransformerEngine {
   ): StageResult<any> {
     const { parsed } = input;
 
+    const headers = (input?.input?.request?.headers || {}) as Record<string, string>;
+    const getHeader = (name: string): string | undefined => {
+      const target = name.toLowerCase();
+      for (const [k, v] of Object.entries(headers)) {
+        if (k.toLowerCase() === target) return v;
+      }
+      return undefined;
+    };
+
+    // CLIProxyAPI stores a special key "__cpa_user_agent" in the request JSON.
+    // We support it as an optional hint; otherwise fallback to HTTP User-Agent.
+    const rawBody = input?.input?.request?.body as any;
+    const injectedUA = typeof rawBody?.__cpa_user_agent === 'string' ? rawBody.__cpa_user_agent : undefined;
+    const userAgent = injectedUA || getHeader('user-agent');
+
     const renderConfig: RenderConfig = {
       instructionsTemplate: this.config.instructionsTemplate,
       reasoningEffort: this.config.reasoningEffort,
       thinkingConfig: this.config.thinkingConfig,
+      userAgent,
     };
 
     // 从 parsed 中提取 renderCodexRequest 所需参数

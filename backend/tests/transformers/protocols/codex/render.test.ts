@@ -151,13 +151,13 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      // 应该有两个包含图片的消息项
+      // CLIProxyAPI 行为：同一条 Claude message 内的多个 image block 会被打包到同一个 message.content[]
       const messageItems = result.request.input.filter(item => item.type === 'message');
       const imageMessages = messageItems.filter((item: any) =>
         item.content.some((c: any) => c.type === 'input_image')
       );
 
-      expect(imageMessages.length).toBe(2);
+      expect(imageMessages.length).toBe(1);
     });
 
     it('should handle mixed text and image blocks', () => {
@@ -200,13 +200,15 @@ describe('Codex Render', () => {
 
       // 验证所有 block 都被正确转换（包括特殊指令消息）
       const messageItems = result.request.input.filter((item: any) => item.type === 'message');
-      expect(messageItems.length).toBe(4); // 3 个原始 message items + 1 个特殊指令消息
+      // 0: special, 1: developer(system), 2: packed user message (text+image+text)
+      expect(messageItems.length).toBe(3);
 
       // 验证文本和图片都存在
       const textItems = messageItems.filter((item: any) =>
         item.content.some((c: any) => c.type === 'input_text' || c.type === 'output_text')
       );
-      expect(textItems.length).toBe(3); // 2 个原始文本 + 1 个特殊指令消息
+      // special + developer + packed user message
+      expect(textItems.length).toBe(3);
 
       const imageItems = messageItems.filter((item: any) =>
         item.content.some((c: any) => c.type === 'input_image')
@@ -243,10 +245,10 @@ describe('Codex Render', () => {
         createMockAudit()
       );
 
-      // 由于特殊指令消息被添加，input 长度为 2
-      expect(result.request.input.length).toBe(2);
-      // 第二项是原始消息
-      const firstItem = result.request.input[1];
+      // 由于特殊指令消息 + system developer 注入，input 长度为 3
+      expect(result.request.input.length).toBe(3);
+      // 第三项是原始消息（0: special, 1: developer(system), 2: user message）
+      const firstItem = result.request.input[2];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
         expect(firstItem.role).toBe('user');
@@ -405,7 +407,7 @@ describe('Codex Render', () => {
       }
     });
 
-    it('should fill output when tool_result.content is missing', () => {
+    it('should still emit output field when tool_result.content is missing (CLIProxyAPI compatible)', () => {
       const messages = [
         {
           role: 'user' as const,
@@ -439,7 +441,8 @@ describe('Codex Render', () => {
       if (outputItem.type === 'function_call_output') {
         expect(outputItem.call_id).toBe('toolu_missing');
         expect(typeof outputItem.output).toBe('string');
-        expect((outputItem.output as string)).toContain('tool_result.content missing');
+        // CLIProxyAPI behavior: missing content becomes empty string (output must exist, but can be empty)
+        expect(outputItem.output).toBe('');
       }
     });
   });
@@ -479,7 +482,8 @@ describe('Codex Render', () => {
       expect(codexTool.type).toBe('function');
       expect(codexTool.name).toBe('get_weather');
       expect(codexTool.description).toBe('Get weather information');
-      expect(codexTool.strict).toBe(true);
+      // 对齐 CLIProxyAPI：strict=false（避免严格 schema 引发上游拒绝）
+      expect(codexTool.strict).toBe(false);
     });
 
     it('应将 web_search_20250305 转换为 web_search 类型', () => {
@@ -544,6 +548,9 @@ describe('Codex Render', () => {
       expect(result.request.stream).toBe(true);
       expect(result.request.store).toBe(false);
       expect(result.request.prompt_cache_key).toBe('session_123');
+      // 对齐 CLIProxyAPI：默认始终带 reasoning + include
+      expect(result.request.reasoning).toBeDefined();
+      expect(result.request.include).toContain('reasoning.encrypted_content');
     });
 
     it('should include reasoning configuration when specified', () => {
@@ -573,6 +580,7 @@ describe('Codex Render', () => {
       expect(result.request.reasoning).toBeDefined();
       expect(result.request.reasoning?.effort).toBe('medium');
       expect(result.request.include).toContain('reasoning.encrypted_content');
+      expect(result.request.reasoning?.summary).toBe('auto');
     });
   });
 
@@ -776,8 +784,8 @@ describe('Codex Render', () => {
         audit
       );
 
-      // 验证特殊指令被添加
-      expect(result.request.input.length).toBe(1);
+      // system 注入会生成 developer message，因此总共 2 条（0: special, 1: developer(system)）
+      expect(result.request.input.length).toBe(2);
       const firstItem = result.request.input[0];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
@@ -815,7 +823,8 @@ describe('Codex Render', () => {
       );
 
       // 验证 input 的第一条消息是特殊指令
-      expect(result.request.input.length).toBe(2);
+      // 0: special, 1: developer(system), 2: user message
+      expect(result.request.input.length).toBe(3);
       const firstItem = result.request.input[0];
       expect(firstItem.type).toBe('message');
       if (firstItem.type === 'message') {
@@ -824,11 +833,11 @@ describe('Codex Render', () => {
         expect(firstItem.content[0].text).toBe('EXECUTE ACCORDING TO THE FOLLOWING INSTRUCTIONS!!!');
       }
 
-      // 第二条消息是原始用户消息
-      const secondItem = result.request.input[1];
-      expect(secondItem.type).toBe('message');
-      if (secondItem.type === 'message') {
-        expect(secondItem.content[0].text).toBe('Hello, how are you?');
+      // 第三条消息是原始用户消息（第二条是 developer(system)）
+      const thirdItem = result.request.input[2];
+      expect(thirdItem.type).toBe('message');
+      if (thirdItem.type === 'message') {
+        expect(thirdItem.content[0].text).toBe('Hello, how are you?');
       }
     });
 
@@ -861,7 +870,8 @@ describe('Codex Render', () => {
       const result = renderCodexRequest(
         {
           model: 'codex-gpt-5',
-          system: { text: 'You are helpful.' },
+          // 不注入 system，确保第一条 input 就是特殊指令，以验证“不重复添加”
+          system: { text: '' },
           messages,
           tools: [],
           stream: true,

@@ -388,16 +388,25 @@ function transformTools(tools: ClaudeTool[]): GeminiTool {
   const functionDeclarations: GeminiFunctionDeclaration[] = [];
 
   for (const tool of tools) {
-    const declaration: GeminiFunctionDeclaration = {
-      name: tool.name,
-    };
-
-    if (tool.description) {
-      declaration.description = tool.description;
+    // Claude tools may include built-ins with a type discriminator (e.g. web_search_20250305),
+    // which do not map to Gemini functionDeclarations.
+    const name = (tool as any)?.name;
+    if (typeof name !== 'string' || !name) {
+      continue;
     }
 
-    if (tool.input_schema) {
-      const sanitizeResult = sanitizeSchema(tool.input_schema);
+    const declaration: GeminiFunctionDeclaration = {
+      name,
+    };
+
+    const description = (tool as any)?.description;
+    if (typeof description === 'string' && description) {
+      declaration.description = description;
+    }
+
+    const inputSchema = (tool as any)?.input_schema;
+    if (inputSchema && typeof inputSchema === 'object' && !Array.isArray(inputSchema)) {
+      const sanitizeResult = sanitizeSchema(inputSchema as Record<string, unknown>);
       declaration.parameters = sanitizeResult.schema;
       // TODO: 记录审计结果到 trace
     }

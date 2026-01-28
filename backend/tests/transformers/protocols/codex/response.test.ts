@@ -8,6 +8,76 @@ import { describe, it, expect } from 'vitest';
 import { transformCodexResponseToClaude } from '../../../../src/promptxy/transformers/protocols/codex/response.js';
 
 describe('Codex Response Transform', () => {
+  describe('Responses Format (non-stream)', () => {
+    it('should transform OpenAI Responses object to Claude message response', () => {
+      const responsesObj = {
+        id: 'resp_123',
+        model: 'gpt-5.2-codex',
+        output: [
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'Hello from responses' }],
+          },
+        ],
+        usage: {
+          input_tokens: 10,
+          input_tokens_details: { cached_tokens: 4 },
+          output_tokens: 3,
+          total_tokens: 13,
+        },
+      };
+
+      const result = transformCodexResponseToClaude(responsesObj) as any;
+      expect(result.type).toBe('message');
+      expect(result.role).toBe('assistant');
+      expect(result.id).toBe('resp_123');
+      expect(result.model).toBe('gpt-5.2-codex');
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content[0].type).toBe('text');
+      expect(result.content[0].text).toBe('Hello from responses');
+
+      // usage input_tokens should subtract cached_tokens (CLIProxyAPI/codex-rs TokenUsage semantics)
+      expect(result.usage).toBeDefined();
+      expect(result.usage.input_tokens).toBe(6);
+      expect(result.usage.cache_read_input_tokens).toBe(4);
+      expect(result.usage.output_tokens).toBe(3);
+    });
+
+    it('should transform response.completed wrapper shape (codex-rs style)', () => {
+      const wrapper = {
+        type: 'response.completed',
+        response: {
+          id: 'resp_1',
+          model: 'gpt-5.2-codex',
+          output: [
+            {
+              type: 'function_call',
+              call_id: 'call_1',
+              name: 'short_tool',
+              arguments: '{"a":1}',
+            },
+          ],
+          usage: {
+            input_tokens: 1,
+            input_tokens_details: { cached_tokens: 0 },
+            output_tokens: 2,
+            total_tokens: 3,
+          },
+        },
+      };
+
+      const result = transformCodexResponseToClaude(wrapper, {
+        reverseShortNameMap: { short_tool: 'mcp__very_long_server__tool_name' },
+      }) as any;
+
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content[0].type).toBe('tool_use');
+      expect(result.content[0].id).toBe('call_1');
+      expect(result.content[0].name).toBe('mcp__very_long_server__tool_name');
+      expect(result.content[0].input).toEqual({ a: 1 });
+    });
+  });
   describe('Stop Reason Mapping', () => {
     it('should map tool_calls to tool_use', () => {
       const openaiResponse = {

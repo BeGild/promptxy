@@ -286,7 +286,7 @@ describe('Codex SSE Transform', () => {
       // 查找 content_block_stop 事件
       const thinkingStopEvents = result.events.filter(e =>
         e.type === 'content_block_stop' &&
-        e.index > 0  // 非 text block（index 0）
+        e.index >= 0  // reasoning 可能是第一块（index 0）
       );
       expect(thinkingStopEvents.length).toBeGreaterThan(0);
     });
@@ -332,7 +332,8 @@ describe('Codex SSE Transform', () => {
       const usageEvent = messageDeltaEvents[messageDeltaEvents.length - 1];
       expect(usageEvent.usage).toBeDefined();
       // 官方四字段：input_tokens/output_tokens/cache_read_input_tokens/cache_creation_input_tokens
-      expect(usageEvent.usage?.input_tokens).toBe(100);
+      // 对齐 CLIProxyAPI：input_tokens 扣除 cached_tokens
+      expect(usageEvent.usage?.input_tokens).toBe(50);
       expect(usageEvent.usage?.output_tokens).toBe(200);
       expect(usageEvent.usage?.cache_read_input_tokens).toBe(50);
       expect(usageEvent.usage?.cache_creation_input_tokens).toBe(0);
@@ -484,9 +485,10 @@ describe('Codex SSE Transform', () => {
       // 模拟流结束（没有 completed 事件）
       const result = transformCodexSSEToClaude(codexEvents, { customToolCallStrategy: 'wrap_object' }, createMockAudit());
 
-      // 由于没有 completed，streamEnd 应该是 false（因为 isStreamEndEvent 不会匹配）
-      // 但在我们的实现中，如果没有任何事件匹配，我们需要手动处理
+      // transformCodexSSEToClaude 会在批量转换末尾自动 finalize，因此即使缺失 completed 也会补齐收尾事件
       expect(result.events.length).toBeGreaterThan(0);
+      const messageStopEvents = result.events.filter(e => e.type === 'message_stop');
+      expect(messageStopEvents.length).toBe(1);
     });
   });
 

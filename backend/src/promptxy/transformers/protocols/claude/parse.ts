@@ -95,6 +95,8 @@ export function parseClaudeRequest(request: ClaudeMessagesRequest): {
     content: NormalizedMessageContent;
   }>;
   tools: Array<{
+    /** Claude builtin tool discriminator (e.g. web_search_20250305) */
+    type?: string;
     name: string;
     description?: string;
     inputSchema: Record<string, unknown>;
@@ -116,11 +118,27 @@ export function parseClaudeRequest(request: ClaudeMessagesRequest): {
     ),
   }));
 
-  const tools = (request.tools || []).map(tool => ({
-    name: tool.name,
-    description: tool.description,
-    inputSchema: tool.input_schema,
-  }));
+  const tools = (request.tools || []).map(tool => {
+    const anyTool = tool as any;
+
+    // Built-in tools may only have a `type` discriminator (no name/input_schema).
+    // We preserve `type` so the renderer can map it to Codex-native tools.
+    if (typeof anyTool?.type === 'string' && anyTool.type) {
+      return {
+        type: anyTool.type as string,
+        name: anyTool.name ?? '',
+        description: anyTool.description,
+        inputSchema: (anyTool.input_schema ?? {}) as Record<string, unknown>,
+      };
+    }
+
+    return {
+      type: undefined,
+      name: anyTool.name as string,
+      description: anyTool.description,
+      inputSchema: (anyTool.input_schema ?? {}) as Record<string, unknown>,
+    };
+  });
 
   // 从 metadata 中提取自定义缓存保留策略
   // 客户端可以通过 metadata.prompt_cache_retention 指定

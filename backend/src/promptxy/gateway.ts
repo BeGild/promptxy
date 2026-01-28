@@ -1155,6 +1155,7 @@ export function createGateway(
           },
           parsed,
           upstreamContentType,
+          { shortNameMap },
         );
 
         const bodyStr = JSON.stringify(transformed);

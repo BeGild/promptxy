@@ -30,6 +30,14 @@ function logCacheMetrics(cachedTokens: number, inputTokens: number): {
 
 import type { ClaudeContentBlock } from '../claude/types.js';
 
+type TransformOptions = {
+  /**
+   * short -> original mapping (used to restore tool names after request-side shortening)
+   * For streaming, this is handled in the SSE transformer; for non-stream we need it here.
+   */
+  reverseShortNameMap?: Record<string, string>;
+};
+
 /**
  * 映射 Codex finish_reason 到 Claude stop_reason
  *
@@ -91,7 +99,166 @@ function safeJsonParse(input: string | undefined): Record<string, unknown> {
   }
 }
 
-export function transformCodexResponseToClaude(response: unknown): unknown {
+function normalizeStopReasonLikeClaude(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const s = raw.trim();
+  if (!s) return undefined;
+  if (s === 'tool_use' || s === 'end_turn' || s === 'max_tokens') return s;
+  return undefined;
+}
+
+function extractResponsesUsage(usage: any): {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens: number;
+  cache_creation_input_tokens: number;
+} | undefined {
+  if (!usage || typeof usage !== 'object') return undefined;
+
+  const inputTokens = typeof usage.input_tokens === 'number' ? usage.input_tokens : 0;
+  const outputTokens = typeof usage.output_tokens === 'number' ? usage.output_tokens : 0;
+  const cachedTokens = typeof usage?.input_tokens_details?.cached_tokens === 'number'
+    ? usage.input_tokens_details.cached_tokens
+    : 0;
+
+  // Align with CLIProxyAPI/codex-rs TokenUsage semantics:
+  // - input_tokens: subtract cached_tokens
+  // - cache_read_input_tokens: cached_tokens
+  const adjustedInputTokens = Math.max(inputTokens - cachedTokens, 0);
+
+  return {
+    input_tokens: adjustedInputTokens,
+    output_tokens: outputTokens,
+    cache_read_input_tokens: cachedTokens,
+    cache_creation_input_tokens: 0,
+  };
+}
+
+function transformResponsesNonStreamToClaude(response: any, options?: TransformOptions): any | undefined {
+  // Support both:
+  // - OpenAI SSE-like wrapper: { type:"response.completed", response:{...} }
+  // - Direct Responses object: { id, model, output, usage, ... }
+  const responseData = (response?.type === 'response.completed' && response?.response && typeof response.response === 'object')
+    ? response.response
+    : response;
+
+  if (!responseData || typeof responseData !== 'object') return undefined;
+
+  // Heuristic: must have output[] to be Responses format
+  if (!Array.isArray((responseData as any).output)) return undefined;
+
+  const out: any = {
+    id: (responseData as any).id,
+    type: 'message',
+    role: 'assistant',
+    model: (responseData as any).model || '',
+    content: [] as ClaudeContentBlock[],
+    stop_reason: null,
+    stop_sequence: null,
+  };
+
+  const usage = extractResponsesUsage((responseData as any).usage);
+  if (usage) {
+    out.usage = usage;
+  }
+
+  let hasToolCall = false;
+
+  for (const item of (responseData as any).output as any[]) {
+    if (!item || typeof item !== 'object') continue;
+    const t = (item as any).type;
+
+    if (t === 'reasoning') {
+      // Prefer summary[] (string parts), fallback to content.
+      let thinking = '';
+      const summary = (item as any).summary;
+      if (Array.isArray(summary)) {
+        thinking = summary.map((p: any) => (typeof p?.text === 'string' ? p.text : String(p ?? ''))).join('');
+      } else if (typeof summary === 'string') {
+        thinking = summary;
+      }
+      if (!thinking) {
+        const content = (item as any).content;
+        if (Array.isArray(content)) {
+          thinking = content.map((p: any) => (typeof p?.text === 'string' ? p.text : String(p ?? ''))).join('');
+        } else if (typeof content === 'string') {
+          thinking = content;
+        }
+      }
+      if (thinking) {
+        out.content.push({ type: 'thinking', thinking } as any);
+      }
+      continue;
+    }
+
+    if (t === 'message') {
+      const content = (item as any).content;
+      if (Array.isArray(content)) {
+        for (const part of content) {
+          if (!part || typeof part !== 'object') continue;
+          if ((part as any).type === 'output_text' && typeof (part as any).text === 'string' && (part as any).text) {
+            out.content.push({ type: 'text', text: (part as any).text } as any);
+          }
+        }
+      } else if (typeof content === 'string' && content) {
+        out.content.push({ type: 'text', text: content } as any);
+      }
+      continue;
+    }
+
+    if (t === 'function_call' || t === 'custom_tool_call') {
+      hasToolCall = true;
+      let name = (item as any).name || '';
+      if (options?.reverseShortNameMap && name in options.reverseShortNameMap) {
+        name = options.reverseShortNameMap[name];
+      }
+
+      let input: Record<string, unknown> = {};
+      const argsStr = typeof (item as any).arguments === 'string' ? (item as any).arguments
+        : typeof (item as any).input === 'string' ? (item as any).input
+        : undefined;
+      if (argsStr) {
+        input = safeJsonParse(argsStr);
+      }
+
+      out.content.push({
+        type: 'tool_use',
+        id: (item as any).call_id || '',
+        name,
+        input,
+      } as any);
+      continue;
+    }
+  }
+
+  // stop_reason:
+  // - if responseData.stop_reason is already Claude style, use it
+  // - else map common OpenAI-ish reasons
+  const rawStop = (responseData as any).stop_reason;
+  const normalized = normalizeStopReasonLikeClaude(rawStop);
+  if (normalized) {
+    out.stop_reason = normalized;
+  } else if (typeof rawStop === 'string' && rawStop.trim()) {
+    out.stop_reason = mapStopReason(rawStop.trim());
+  } else if (hasToolCall) {
+    out.stop_reason = 'tool_use';
+  } else {
+    out.stop_reason = 'end_turn';
+  }
+
+  const stopSequence = (responseData as any).stop_sequence;
+  if (stopSequence !== undefined) {
+    out.stop_sequence = stopSequence;
+  }
+
+  if (out.content.length === 0) {
+    out.content = '';
+  }
+
+  return out;
+}
+
+export function transformCodexResponseToClaude(response: unknown, options?: TransformOptions): unknown {
   if (!response || typeof response !== 'object') return response;
 
   // 检测错误响应并透传：避免将错误消息错误地转换为空的 assistant 消息
@@ -105,6 +272,12 @@ export function transformCodexResponseToClaude(response: unknown): unknown {
   // 有错误字段但没有 choices 字段 → 判定为错误响应，直接透传
   if (hasErrorField && !hasChoices) {
     return response;
+  }
+
+  // First try Responses format (official /responses non-stream or SSE-aggregated wrapper).
+  const responsesOut = transformResponsesNonStreamToClaude(response as any, options);
+  if (responsesOut) {
+    return responsesOut;
   }
 
   const r = response as OpenAIChatCompletionResponse;
@@ -154,8 +327,9 @@ export function transformCodexResponseToClaude(response: unknown): unknown {
     // 记录缓存指标
     logCacheMetrics(cachedTokens, inputTokens);
 
+    const adjustedInputTokens = Math.max(inputTokens - cachedTokens, 0);
     out.usage = {
-      input_tokens: inputTokens,
+      input_tokens: adjustedInputTokens,
       output_tokens: r.usage.completion_tokens,
       // Claude 格式的缓存指标：cache_read_input_tokens 表示从缓存读取的 token 数
       cache_read_input_tokens: cachedTokens,
@@ -171,4 +345,3 @@ export function transformCodexResponseToClaude(response: unknown): unknown {
 
   return out;
 }
-

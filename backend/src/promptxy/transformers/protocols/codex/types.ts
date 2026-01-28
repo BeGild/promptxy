@@ -21,7 +21,8 @@ export type CodexResponseItem =
  */
 export type CodexMessageItem = {
   type: 'message';
-  role: 'user' | 'assistant' | 'system';
+  // OpenAI/Codex Responses accepts "developer" role; CLIProxyAPI uses it for Claude system injection.
+  role: 'user' | 'assistant' | 'system' | 'developer';
   content: CodexContentItem[];
 };
 
@@ -140,7 +141,8 @@ export type CodexResponsesApiTool = {
  */
 export type CodexReasoning = {
   effort?: string;
-  summary?: {
+  // CLIProxyAPI uses summary="auto" (string). Keep object form for older internal callers.
+  summary?: 'auto' | {
     enable?: boolean;
     max_length?: number;
   };
@@ -185,11 +187,15 @@ export type CodexResponsesApiRequest = {
  */
 export type CodexSSEEventType =
   | 'response.created'
+  | 'response.content_part.added'
+  | 'response.content_part.done'
   | 'response.output_text.delta'
   | 'response.output_item.added'
   | 'response.output_item.done'
   | 'response.function_call_arguments.delta'
   | 'response.reasoning_text.delta'
+  | 'response.reasoning_summary_part.added'
+  | 'response.reasoning_summary_part.done'
   | 'response.reasoning_summary_text.delta'
   | 'response.failed'
   | 'response.completed';
@@ -212,6 +218,20 @@ export type CodexOutputTextDeltaEvent = {
 };
 
 /**
+ * response.content_part.added / done
+ * OpenAI Responses 形态会显式发送 content part 的开始/结束事件（CLIProxyAPI 参考实现依赖它来 start/stop text block）。
+ */
+export type CodexContentPartAddedEvent = {
+  type: 'response.content_part.added';
+  [key: string]: unknown;
+};
+
+export type CodexContentPartDoneEvent = {
+  type: 'response.content_part.done';
+  [key: string]: unknown;
+};
+
+/**
  * response.reasoning_text.delta 事件
  * 参考: refence/codex/codex-rs/codex-api/src/sse/responses.rs:231-241
  */
@@ -229,6 +249,16 @@ export type CodexReasoningSummaryTextDeltaEvent = {
   type: 'response.reasoning_summary_text.delta';
   delta: string;
   summary_index?: number;
+};
+
+export type CodexReasoningSummaryPartAddedEvent = {
+  type: 'response.reasoning_summary_part.added';
+  [key: string]: unknown;
+};
+
+export type CodexReasoningSummaryPartDoneEvent = {
+  type: 'response.reasoning_summary_part.done';
+  [key: string]: unknown;
 };
 
 /**
@@ -333,8 +363,12 @@ export type CodexResponseCompletedEvent = {
  */
 export type CodexSSEEvent =
   | CodexResponseCreatedEvent
+  | CodexContentPartAddedEvent
+  | CodexContentPartDoneEvent
   | CodexOutputTextDeltaEvent
   | CodexReasoningTextDeltaEvent
+  | CodexReasoningSummaryPartAddedEvent
+  | CodexReasoningSummaryPartDoneEvent
   | CodexReasoningSummaryTextDeltaEvent
   | CodexOutputItemAddedEvent
   | CodexOutputItemDoneEvent

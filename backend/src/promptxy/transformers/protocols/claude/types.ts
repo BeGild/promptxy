@@ -36,6 +36,14 @@ export type ClaudeImageBlock = {
   source: {
     type: 'url';
     url: string;
+  } | {
+    // Anthropic image blocks also support base64 payloads.
+    // CLIProxyAPI reference accepts {data|base64, media_type|mime_type} and converts to data:<mime>;base64,...
+    type: 'base64';
+    media_type?: string;
+    mime_type?: string;
+    data?: string;
+    base64?: string;
   };
 };
 
@@ -70,7 +78,7 @@ export type ClaudeMessage = {
 /**
  * Tool Definition
  */
-export type ClaudeTool = {
+export type ClaudeFunctionTool = {
   name: string;
   description?: string;
   input_schema: {
@@ -80,6 +88,15 @@ export type ClaudeTool = {
     [key: string]: unknown;
   };
 };
+
+// Built-in tools may be represented with a type discriminator (no name/input_schema).
+// CLIProxyAPI special-cases "web_search_20250305".
+export type ClaudeWebSearchTool = {
+  type: 'web_search_20250305';
+  [key: string]: unknown;
+};
+
+export type ClaudeTool = ClaudeFunctionTool | ClaudeWebSearchTool;
 
 /**
  * Claude Messages API 请求体

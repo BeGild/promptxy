@@ -26,28 +26,30 @@ import { isStreamEndEvent } from './parse.js';
 type State = {
   /** 是否已发送 message_start */
   messageStarted: boolean;
-  /** 是否已开始文本 block */
-  textBlockStarted: boolean;
-  /** 当前 tool index（从 1 开始，0 预留给文本和 thinking） */
-  currentToolIndex: number;
+  /** message_start.message.id（尽量稳定） */
+  messageId?: string;
+  /** message_start.message.model（尽量来自上游） */
+  model?: string;
+
+  /**
+   * 当前内容块 index（对齐 CLIProxyAPI：单调递增的 BlockIndex，text/thinking/tool 共用一套 index）
+   * - 打开任意 block 时使用当前 blockIndex
+   * - 关闭时发送 content_block_stop，并 blockIndex++
+   */
+  blockIndex: number;
+
+  /** 当前是否有活跃的内容块（与 blockIndex 对应） */
+  activeBlockType?: 'text' | 'thinking' | 'tool';
+
   /** 是否发生过 tool call（用于决定最终 stop_reason） */
   hasToolCall: boolean;
-  /** 当前正在处理的 tool call 的 index（用于 function_call_arguments.delta） */
-  currentActiveToolIndex?: number;
-  /** 当前 tool call 是否已发送 content_block_start（用于防守） */
-  currentToolCallStarted: boolean;
+
   /** 是否已发送 message_stop */
   messageStopped: boolean;
   /** 是否已收到 response.completed */
   completedReceived: boolean;
   /** 上游 response.completed 中携带的 stop_reason（若存在） */
   upstreamStopReasonRaw?: string;
-  /** 是否已开始 reasoning (thinking) block */
-  reasoningBlockStarted: boolean;
-  /** 当前 reasoning index */
-  currentReasoningIndex: number;
-  /** reasoning summary index */
-  reasoningSummaryIndex: number;
 
   /** 最终 usage 是否已输出（防止重复输出 message_delta） */
   finalUsageEmitted: boolean;
@@ -70,17 +72,16 @@ type State = {
 function createInitialState(): State {
   return {
     messageStarted: false,
-    textBlockStarted: false,
-    currentToolIndex: 1,
+    messageId: undefined,
+    model: undefined,
+
+    blockIndex: 0,
+    activeBlockType: undefined,
+
     hasToolCall: false,
-    currentActiveToolIndex: undefined,
-    currentToolCallStarted: false,
     messageStopped: false,
     completedReceived: false,
     upstreamStopReasonRaw: undefined,
-    reasoningBlockStarted: false,
-    currentReasoningIndex: 0,
-    reasoningSummaryIndex: 0,
 
     finalUsageEmitted: false,
     upstreamUsage: undefined,
@@ -160,6 +161,24 @@ export function createCodexSSEToClaudeStreamTransformer(
   const reverseShortNameMap = context?.reverseShortNameMap;
   let ended = false;
 
+  function getResponseObject(event: any): any | undefined {
+    const r = event?.response;
+    return r && typeof r === 'object' ? r : undefined;
+  }
+
+  function maybeCaptureMessageMetadata(event: any) {
+    const resp = getResponseObject(event);
+    const id = (resp?.id ?? event?.id) as unknown;
+    if (typeof id === 'string' && id && !state.messageId) {
+      state.messageId = id;
+    }
+
+    const model = (resp?.model ?? event?.model) as unknown;
+    if (typeof model === 'string' && model && !state.model) {
+      state.model = model;
+    }
+  }
+
   function normalizeClaudeStopReason(raw: unknown): string | undefined {
     if (typeof raw !== 'string') return undefined;
     const s = raw.trim();
@@ -181,17 +200,13 @@ export function createCodexSSEToClaudeStreamTransformer(
     return state.hasToolCall ? 'tool_use' : 'end_turn';
   }
 
-  function closeOpenBlocks(): ClaudeSSEEvent[] {
+  function closeOpenBlockIfAny(): ClaudeSSEEvent[] {
     const events: ClaudeSSEEvent[] = [];
 
-    if (state.textBlockStarted) {
-      events.push(createContentBlockStopEvent(0));
-      state.textBlockStarted = false;
-    }
-
-    if (state.reasoningBlockStarted) {
-      events.push(createContentBlockStopEvent(state.currentReasoningIndex));
-      state.reasoningBlockStarted = false;
+    if (state.activeBlockType) {
+      events.push(createContentBlockStopEvent(state.blockIndex));
+      state.activeBlockType = undefined;
+      state.blockIndex++;
     }
 
     return events;
@@ -240,10 +255,12 @@ export function createCodexSSEToClaudeStreamTransformer(
     ];
   }
 
-  function closeStreamEvents(): ClaudeSSEEvent[] {
+  function closeStreamEvents(options?: { emitUsage: boolean }): ClaudeSSEEvent[] {
     const events: ClaudeSSEEvent[] = [];
-    events.push(...closeOpenBlocks());
-    events.push(...maybeEmitFinalUsageDelta());
+    events.push(...closeOpenBlockIfAny());
+    if (options?.emitUsage !== false) {
+      events.push(...maybeEmitFinalUsageDelta());
+    }
     events.push(...closeMessage());
     return events;
   }
@@ -251,14 +268,24 @@ export function createCodexSSEToClaudeStreamTransformer(
   function pushEvent(event: CodexSSEEvent): { events: ClaudeSSEEvent[]; streamEnd: boolean } {
     if (ended) return { events: [], streamEnd: true };
 
+    // 尽早捕获 id/model（兼容 flat 与 response.* 嵌套形态）
+    maybeCaptureMessageMetadata(event as any);
+
     const events = transformSingleEvent(event, state, config, audit, reverseShortNameMap);
 
     if (event.type === 'response.completed') {
       state.completedReceived = true;
     }
 
+    if (event.type === 'response.failed') {
+      // 失败场景：对齐参考实现，发 error 后补齐 message_stop（不强制补 usage）
+      events.push(...closeStreamEvents({ emitUsage: false }));
+      ended = true;
+      return { events, streamEnd: true };
+    }
+
     if (isStreamEndEvent(event)) {
-      events.push(...closeStreamEvents());
+      events.push(...closeStreamEvents({ emitUsage: true }));
       ended = true;
       return { events, streamEnd: true };
     }
@@ -332,18 +359,25 @@ function transformSingleEvent(
 ): ClaudeSSEEvent[] {
   const claudeEvents: ClaudeSSEEvent[] = [];
 
-  // 初始化 message_start
-  // 注意：message_start.message.id 需要尽可能稳定，优先使用 response.created.id
+  // 初始化 message_start（对齐参考：不强制提前创建 text block）
   if (!state.messageStarted) {
-    if (event.type === 'response.created' && (event as any).id) {
-      claudeEvents.push(createMessageStartEvent((event as any).id));
-    } else {
-      claudeEvents.push(createMessageStartEvent());
-    }
-
-    claudeEvents.push(createContentBlockStartEvent(0, 'text'));
+    claudeEvents.push(createMessageStartEvent(state.messageId, state.model));
     state.messageStarted = true;
-    state.textBlockStarted = true;
+  }
+
+  function ensureTextBlockOpen() {
+    if (state.activeBlockType === 'text') return;
+    // 确保不会与 tool/thinking block 重叠
+    claudeEvents.push(...closeOpenBlockIfAnyForTransform(state, audit));
+    claudeEvents.push(createContentBlockStartEvent(state.blockIndex, 'text'));
+    state.activeBlockType = 'text';
+  }
+
+  function ensureThinkingBlockOpen() {
+    if (state.activeBlockType === 'thinking') return;
+    claudeEvents.push(...closeOpenBlockIfAnyForTransform(state, audit));
+    claudeEvents.push(createContentBlockStartEvent(state.blockIndex, 'thinking'));
+    state.activeBlockType = 'thinking';
   }
 
   switch (event.type) {
@@ -351,13 +385,30 @@ function transformSingleEvent(
       // 已在初始化时处理
       break;
 
+    case 'response.content_part.added': {
+      // 对齐 CLIProxyAPI：显式开始 text block
+      ensureTextBlockOpen();
+      break;
+    }
+
     case 'response.output_text.delta': {
       // 文本增量
       const delta = (event as any).delta || '';
       state.outputCharCount += delta.length;
-      claudeEvents.push(createContentBlockDeltaEvent(0, 'text_delta', {
+      ensureTextBlockOpen();
+      claudeEvents.push(createContentBlockDeltaEvent(state.blockIndex, 'text_delta', {
         text: delta,
       }));
+      break;
+    }
+
+    case 'response.content_part.done': {
+      // 对齐 CLIProxyAPI：显式关闭 text block
+      if (state.activeBlockType === 'text') {
+        claudeEvents.push(createContentBlockStopEvent(state.blockIndex));
+        state.activeBlockType = undefined;
+        state.blockIndex++;
+      }
       break;
     }
 
@@ -366,39 +417,32 @@ function transformSingleEvent(
       const item = (event as any).item;
 
       if (item.type === 'function_call' || item.type === 'custom_tool_call') {
-        // 标记 tool call 状态
         state.hasToolCall = true;
-        state.currentActiveToolIndex = state.currentToolIndex;
-        state.currentToolCallStarted = true;
-
-        // 关闭 text block（如果存在）
-        if (state.textBlockStarted) {
-          claudeEvents.push(createContentBlockStopEvent(0));
-          state.textBlockStarted = false;
-        }
+        claudeEvents.push(...closeOpenBlockIfAnyForTransform(state, audit));
 
         // 恢复原始 tool name（如果有反向映射）
         // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:126-134
         const originalName = reverseShortNameMap?.[item.name] || item.name;
 
         // content_block_start (tool_use)
-        claudeEvents.push(createContentBlockStartEvent(state.currentToolIndex, 'tool_use', {
+        claudeEvents.push(createContentBlockStartEvent(state.blockIndex, 'tool_use', {
           id: item.call_id,
           name: originalName,
         }));
 
         // content_block_delta (空字符串，关键！)
-        claudeEvents.push(createContentBlockDeltaEvent(state.currentToolIndex, 'input_json_delta', {
+        claudeEvents.push(createContentBlockDeltaEvent(state.blockIndex, 'input_json_delta', {
           partial_json: '',
         }));
+
+        state.activeBlockType = 'tool';
       }
       break;
     }
 
     case 'response.function_call_arguments.delta': {
       // 参考: refence/CLIProxyAPI/internal/translator/codex/claude/codex_claude_response.go:155-162
-      // 确保有活跃的 tool call
-      if (state.currentActiveToolIndex === undefined) {
+      if (state.activeBlockType !== 'tool') {
         audit.setMetadata('unexpectedFunctionCallDelta', true);
         break;
       }
@@ -407,7 +451,7 @@ function transformSingleEvent(
       state.outputCharCount += delta.length;
 
       claudeEvents.push(createContentBlockDeltaEvent(
-        state.currentActiveToolIndex,
+        state.blockIndex,
         'input_json_delta',
         { partial_json: delta }
       ));
@@ -419,22 +463,22 @@ function transformSingleEvent(
       const item = (event as any).item;
 
       if (item.type === 'message') {
-        // message 类型，关闭 text block（如果存在）
-        if (state.textBlockStarted) {
-          claudeEvents.push(createContentBlockStopEvent(0));
-          state.textBlockStarted = false;
+        // message 类型：如仍有 text block 未关闭，关闭它
+        if (state.activeBlockType === 'text') {
+          claudeEvents.push(createContentBlockStopEvent(state.blockIndex));
+          state.activeBlockType = undefined;
+          state.blockIndex++;
         }
       } else if (
         item.type === 'function_call' ||
         item.type === 'custom_tool_call'
       ) {
-        // 工具调用：仅发送 content_block_stop
-        claudeEvents.push(createContentBlockStopEvent(state.currentToolIndex));
-
-        // 重置状态
-        state.currentActiveToolIndex = undefined;
-        state.currentToolCallStarted = false;
-        state.currentToolIndex++;
+        // 工具调用：发送 content_block_stop 并推进 blockIndex
+        if (state.activeBlockType === 'tool') {
+          claudeEvents.push(createContentBlockStopEvent(state.blockIndex));
+          state.activeBlockType = undefined;
+          state.blockIndex++;
+        }
       }
       break;
     }
@@ -445,18 +489,16 @@ function transformSingleEvent(
       const reasoningEvent = event as any;
       const delta = reasoningEvent.delta || '';
       state.outputCharCount += delta.length;
-
-      // 如果还没有开始 reasoning block，先创建
-      if (!state.reasoningBlockStarted) {
-        // reasoning block 使用独立的 index（从 1 开始，因为 0 是 text）
-        state.currentReasoningIndex = state.currentToolIndex;
-        claudeEvents.push(createContentBlockStartEvent(state.currentReasoningIndex, 'thinking'));
-        state.reasoningBlockStarted = true;
-      }
-
-      claudeEvents.push(createContentBlockDeltaEvent(state.currentReasoningIndex, 'thinking_delta', {
+      ensureThinkingBlockOpen();
+      claudeEvents.push(createContentBlockDeltaEvent(state.blockIndex, 'thinking_delta', {
         thinking: delta,
       }));
+      break;
+    }
+
+    case 'response.reasoning_summary_part.added': {
+      // 对齐 CLIProxyAPI：显式开始 thinking block（summary）
+      ensureThinkingBlockOpen();
       break;
     }
 
@@ -465,31 +507,36 @@ function transformSingleEvent(
       const reasoningEvent = event as any;
       const delta = reasoningEvent.delta || '';
       state.outputCharCount += delta.length;
-
-      // 如果还没有开始 reasoning block，先创建
-      if (!state.reasoningBlockStarted) {
-        state.currentReasoningIndex = state.currentToolIndex;
-        claudeEvents.push(createContentBlockStartEvent(state.currentReasoningIndex, 'thinking'));
-        state.reasoningBlockStarted = true;
-      }
-
-      claudeEvents.push(createContentBlockDeltaEvent(state.currentReasoningIndex, 'thinking_delta', {
+      ensureThinkingBlockOpen();
+      claudeEvents.push(createContentBlockDeltaEvent(state.blockIndex, 'thinking_delta', {
         thinking: delta,
       }));
       break;
     }
 
+    case 'response.reasoning_summary_part.done': {
+      // 对齐 CLIProxyAPI：显式关闭 thinking block（summary）
+      if (state.activeBlockType === 'thinking') {
+        claudeEvents.push(createContentBlockStopEvent(state.blockIndex));
+        state.activeBlockType = undefined;
+        state.blockIndex++;
+      }
+      break;
+    }
+
     case 'response.completed': {
       // 从 response.completed 中提取 usage 信息
-      // 参考: refence/cc-switch/src-tauri/src/proxy/providers/streaming.rs:285-289
       const completedEvent = event as any;
-      const codexUsage = completedEvent.usage;
+      const resp = completedEvent?.response && typeof completedEvent.response === 'object'
+        ? completedEvent.response
+        : undefined;
+      const codexUsage = resp?.usage ?? completedEvent.usage;
 
       // 尝试读取上游 stop_reason（不同实现可能放在不同位置；若不存在则由 hasToolCall 决定）
       const upstreamStopReasonCandidate =
-        completedEvent?.response?.stop_reason ??
+        resp?.stop_reason ??
         completedEvent?.stop_reason ??
-        completedEvent?.response?.metadata?.stop_reason;
+        resp?.metadata?.stop_reason;
       if (typeof upstreamStopReasonCandidate === 'string' && upstreamStopReasonCandidate.trim()) {
         state.upstreamStopReasonRaw = upstreamStopReasonCandidate.trim();
       }
@@ -497,17 +544,12 @@ function transformSingleEvent(
       if (codexUsage) {
         const cachedTokens = codexUsage.input_tokens_details?.cached_tokens || 0;
         const inputTokens = codexUsage.input_tokens || 0;
-
-        // 记录缓存指标（流式响应）
-        if (cachedTokens > 0) {
-          const cacheHitRate = inputTokens > 0 ? (cachedTokens / inputTokens) * 100 : 0;
-          // eslint-disable-next-line no-console
-          console.log(`[Cache Metrics] Stream Hit: ${cachedTokens}/${inputTokens} tokens (${cacheHitRate.toFixed(1)}%)`);
-        }
+        const adjustedInputTokens = Math.max(inputTokens - cachedTokens, 0);
 
         // 对齐 Claude 官方 usage 字段
         state.upstreamUsage = {
-          input_tokens: inputTokens,
+          // 对齐 CLIProxyAPI：input_tokens 扣除 cached_tokens，cache_read_input_tokens 单独反映命中
+          input_tokens: adjustedInputTokens,
           output_tokens: codexUsage.output_tokens || 0,
           cache_read_input_tokens: cachedTokens,
           cache_creation_input_tokens: 0,
@@ -542,9 +584,20 @@ function transformSingleEvent(
   return claudeEvents;
 }
 
+function closeOpenBlockIfAnyForTransform(state: State, audit: FieldAuditCollector): ClaudeSSEEvent[] {
+  if (!state.activeBlockType) return [];
+  audit.setMetadata('closedOverlappingBlock', true);
+  const events: ClaudeSSEEvent[] = [
+    createContentBlockStopEvent(state.blockIndex),
+  ];
+  state.activeBlockType = undefined;
+  state.blockIndex++;
+  return events;
+}
+
 // ===== Claude SSE 事件工厂函数 =====
 
-function createMessageStartEvent(messageId?: string): ClaudeMessageStartEvent {
+function createMessageStartEvent(messageId?: string, model?: string): ClaudeMessageStartEvent {
   return {
     type: 'message_start',
     message: {
@@ -552,7 +605,7 @@ function createMessageStartEvent(messageId?: string): ClaudeMessageStartEvent {
       type: 'message',
       role: 'assistant',
       content: [],
-      model: '',
+      model: model ?? '',
       stop_reason: null,
       stop_sequence: null,
       usage: {
