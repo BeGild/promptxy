@@ -21,11 +21,12 @@ import {
   Divider,
   Input,
 } from '@heroui/react';
-import { ArrowRight, Plus, Trash2, Info, Edit2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Info } from 'lucide-react';
 import { useSuppliers } from '@/hooks';
 import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
 import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
 import type { Supplier, LocalService, TransformerType, Route, ModelMappingRule } from '@/types/api';
+import { RouteFlowCard } from '@/components/routes';
 
 // 本地服务选项
 const LOCAL_SERVICES: Array<{
@@ -485,108 +486,16 @@ export const RouteConfigPage: React.FC = () => {
 
       {/* 路由配置列表 */}
       <div className="space-y-4">
-        {routes.map(route => {
-          const localService = LOCAL_SERVICES.find(s => s.key === route.localService);
-
-          return (
-            <Card
-              key={route.id}
-              className={`border transition-all ${
-                route.enabled
-                  ? 'border-brand-primary/30 dark:border-brand-primary/20 bg-elevated'
-                  : 'border-subtle opacity-60'
-              }`}
-            >
-              <CardBody className="px-4 py-3">
-                <div className="flex flex-col md:flex-row md:items-center gap-3">
-                  {/* 左侧：路由信息 */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-8 h-8 flex items-center justify-center" style={{ backgroundColor: `${localService?.color}15` }}>
-                        {localService && <localService.icon size={20} />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-primary">
-                          {localService?.label}
-                        </div>
-                        <div className="text-xs text-tertiary font-mono">
-                          {localService?.prefix}
-                        </div>
-                      </div>
-                    </div>
-
-                    <ArrowRight size={18} className="text-tertiary shrink-0 hidden md:block" />
-
-                    {/* 显示供应商或模型映射 */}
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {route.localService === 'claude' ? (
-                        // Claude: 显示模型映射规则数
-                        <div className="flex items-center gap-2">
-                          <Chip size="sm" color="primary" variant="flat">
-                            {route.modelMappings?.length || 0} 条映射规则
-                          </Chip>
-                        </div>
-                      ) : (
-                        // Codex/Gemini: 显示单一供应商
-                        (() => {
-                          const supplier = suppliers.find(s => s.id === route.singleSupplierId);
-                          const protocol = LOCAL_SERVICES.find(s => s.protocol === supplier?.protocol);
-                          const IconComponent = protocol?.icon;
-                          const color = protocol?.color || '#888';
-                          return (
-                            <>
-                              {IconComponent && (
-                                <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}15` }}>
-                                  <IconComponent size={20} />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <div className="text-sm font-medium text-primary truncate">
-                                  {supplier?.displayName || '未选择供应商'}
-                                </div>
-                                <div className="text-xs text-tertiary truncate">
-                                  {supplier?.baseUrl || supplier?.protocol || ''}
-                                </div>
-                              </div>
-                            </>
-                          );
-                        })()
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 右侧：操作按钮 */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      isIconOnly
-                      variant="light"
-                      onPress={() => handleOpenEditModal(route)}
-                      size="sm"
-                      title="编辑路由"
-                    >
-                      <Edit2 size={16} />
-                    </Button>
-                    <Switch
-                      isSelected={route.enabled}
-                      onValueChange={() => handleToggleRoute(route)}
-                      size="sm"
-                      aria-label="启用路由"
-                    />
-                    <Button
-                      isIconOnly
-                      color="danger"
-                      variant="light"
-                      onPress={() => handleDeleteRoute(route.id)}
-                      size="sm"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-          );
-        })}
+        {routes.map(route => (
+          <RouteFlowCard
+            key={route.id}
+            route={route}
+            suppliers={suppliers}
+            onToggle={handleToggleRoute}
+            onEdit={handleOpenEditModal}
+            onDelete={handleDeleteRoute}
+          />
+        ))}
 
         {routes.length === 0 && (
           <Card className="border border-dashed border-subtle">
