@@ -1,5 +1,5 @@
-import { loadRecord } from '../loader';
-import type { TransformTraceResult } from '../types';
+import { loadRecord } from '../loader.js';
+import type { TransformTraceResult } from '../types.js';
 
 export function getTrace(requestId: string): TransformTraceResult {
   const record = loadRecord(requestId);
@@ -11,7 +11,7 @@ export function getTrace(requestId: string): TransformTraceResult {
   const transformChain: TransformTraceResult['transformChain'] = [];
 
   if (record.transformerChain) {
-    const steps = record.transformerChain.split(',').map(s => s.trim());
+    const steps = record.transformerChain.split(',').map((s: string) => s.trim());
     for (const step of steps) {
       if (step) {
         transformChain.push({

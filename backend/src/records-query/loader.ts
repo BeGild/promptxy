@@ -6,9 +6,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import type { RawRecord, ParsedRecord } from './types';
+import type { RawRecord, ParsedRecord } from './types.js';
 
 const RECORDS_DIR = path.join(process.env.HOME || '', '.local', 'promptxy', 'requests');
+
+// 最大加载记录数，防止内存溢出
+const MAX_LOAD_RECORDS = 1000;
 
 export function extractConversationId(body: unknown): string | undefined {
   if (typeof body !== 'object' || body === null) {
@@ -90,14 +93,15 @@ export function loadRecord(recordId: string): ParsedRecord | null {
   }
 }
 
-export function loadRecords(): ParsedRecord[] {
+export function loadRecords(limit = MAX_LOAD_RECORDS): ParsedRecord[] {
   if (!fs.existsSync(RECORDS_DIR)) {
     return [];
   }
 
   const files = fs.readdirSync(RECORDS_DIR)
     .filter(f => f.endsWith('.yaml'))
-    .sort((a, b) => b.localeCompare(a));
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, limit);
 
   const records: ParsedRecord[] = [];
 

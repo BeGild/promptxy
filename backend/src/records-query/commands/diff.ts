@@ -1,6 +1,6 @@
-import { loadRecord } from '../loader';
-import { compareStructures, getValueByPath } from '../analyzer';
-import type { DiffResult } from '../types';
+import { loadRecord } from '../loader.js';
+import { compareStructures, getValueByPath } from '../analyzer.js';
+import type { DiffResult } from '../types.js';
 
 export function diffRequests(
   id1: string,

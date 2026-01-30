@@ -1,6 +1,6 @@
-import { loadRecord } from '../loader';
-import { getValueByPath, getFieldType } from '../analyzer';
-import type { GetOptions } from '../types';
+import { loadRecord } from '../loader.js';
+import { getValueByPath, getFieldType } from '../analyzer.js';
+import type { GetOptions } from '../types.js';
 
 function truncateValue(value: unknown, options: GetOptions): unknown {
   const { truncate = 500, arrayLimit = 10, format = 'json' } = options;

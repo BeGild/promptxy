@@ -1,5 +1,5 @@
-import { loadRecords } from '../loader';
-import type { RequestsListResult, ListRequestsOptions, RequestSummary } from '../types';
+import { loadRecords } from '../loader.js';
+import type { RequestsListResult, ListRequestsOptions, RequestSummary, ParsedRecord } from '../types.js';
 
 export function listRequests(options: ListRequestsOptions): RequestsListResult {
   const { conversationId, limit = 100 } = options;
@@ -10,7 +10,7 @@ export function listRequests(options: ListRequestsOptions): RequestsListResult {
     .sort((a, b) => a.timestamp - b.timestamp)
     .slice(0, limit);
 
-  const requests: RequestSummary[] = filtered.map((r, index) => ({
+  const requests: RequestSummary[] = filtered.map((r: ParsedRecord, index: number) => ({
     id: r.id,
     index,
     timestamp: r.timestamp,

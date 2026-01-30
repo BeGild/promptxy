@@ -3,7 +3,7 @@
  * 分析记录结构，支持路径查询和差异对比
  */
 
-import type { FieldStructure, FieldType } from './types';
+import type { FieldStructure, FieldType } from './types.js';
 
 const MAX_STRING_PREVIEW = 100;
 

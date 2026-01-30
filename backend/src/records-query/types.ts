@@ -36,7 +36,7 @@ export interface RawRecord {
 }
 
 // 解析后的记录类型
-export interface ParsedRecord extends Omit<RawRecord, 'originalBody' | 'modifiedBody' | 'transformedBody' | 'responseBody'> {
+export interface ParsedRecord extends Omit<RawRecord, 'originalBody' | 'modifiedBody' | 'transformedBody' | 'responseBody' | 'matchedRules'> {
   originalBody: unknown;
   modifiedBody: unknown;
   transformedBody?: unknown;
@@ -108,9 +108,9 @@ export interface DiffResult {
   request1: string;
   request2: string;
   structuralDifferences?: {
-    originalBody?: ReturnType<typeof import('./analyzer').compareStructures>;
-    modifiedBody?: ReturnType<typeof import('./analyzer').compareStructures>;
-    transformedBody?: ReturnType<typeof import('./analyzer').compareStructures>;
+    originalBody?: ReturnType<typeof import('./analyzer.js').compareStructures>;
+    modifiedBody?: ReturnType<typeof import('./analyzer.js').compareStructures>;
+    transformedBody?: ReturnType<typeof import('./analyzer.js').compareStructures>;
   };
   fieldDifferences?: Record<string, {
     from: unknown;

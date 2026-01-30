@@ -2,9 +2,9 @@
  * records-query 命令模块导出
  */
 
-export { listSessions } from './list-sessions';
-export { listRequests } from './list-requests';
-export { getStructure } from './structure';
-export { diffRequests } from './diff';
-export { getValue } from './get';
-export { getTrace } from './trace';
+export { listSessions } from './list-sessions.js';
+export { listRequests } from './list-requests.js';
+export { getStructure } from './structure.js';
+export { diffRequests } from './diff.js';
+export { getValue } from './get.js';
+export { getTrace } from './trace.js';

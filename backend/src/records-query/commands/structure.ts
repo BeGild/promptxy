@@ -1,6 +1,6 @@
-import { loadRecord } from '../loader';
-import { analyzeStructure } from '../analyzer';
-import type { StructureResult } from '../types';
+import { loadRecord } from '../loader.js';
+import { analyzeStructure } from '../analyzer.js';
+import type { StructureResult } from '../types.js';
 
 export function getStructure(
   requestId: string,

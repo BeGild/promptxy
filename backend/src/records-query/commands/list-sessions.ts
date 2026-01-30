@@ -1,12 +1,12 @@
-import { loadRecords } from '../loader';
-import type { SessionsListResult, ListSessionsOptions, ParsedRecord, SessionSummary } from '../types';
+import { loadRecords } from '../loader.js';
+import type { SessionsListResult, ListSessionsOptions, ParsedRecord, SessionSummary } from '../types.js';
 
 function parseFilter(filterStr: string): Record<string, string> {
   const result: Record<string, string> = {};
   if (!filterStr) return result;
   const pairs = filterStr.split(',');
   for (const pair of pairs) {
-    const [key, value] = pair.split('=').map(s => s.trim());
+    const [key, value] = pair.split('=').map((s: string) => s.trim());
     if (key && value !== undefined) {
       result[key] = value;
     }
@@ -56,7 +56,7 @@ export function listSessions(options: ListSessionsOptions = {}): SessionsListRes
       const sorted = records.sort((a, b) => a.timestamp - b.timestamp);
       const first = sorted[0];
       const last = sorted[sorted.length - 1];
-      const models = [...new Set(records.map(r => r.model).filter(Boolean))];
+      const models = [...new Set(records.map((r: ParsedRecord) => r.model).filter(Boolean))];
       const hasError = records.some(r => !!r.error || (r.responseStatus && r.responseStatus >= 400));
 
       return {

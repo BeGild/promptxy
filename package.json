@@ -51,7 +51,8 @@
     "format:backend": "cd backend && npm run format",
     "lint:frontend": "cd frontend && npm run lint",
     "lint:frontend:fix": "cd frontend && npm run lint:fix",
-    "format:frontend": "cd frontend && npm run format"
+    "format:frontend": "cd frontend && npm run format",
+    "records": "node dist/records-query/cli.js"
   },
   "dependencies": {
     "@musistudio/llms": "^1.0.51",
