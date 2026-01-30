@@ -237,19 +237,21 @@ gemini "hello"
 
 ```json
 {
-  "id": "规则唯一标识",
+  "uuid": "规则唯一标识",
+  "name": "规则显示名称",
   "when": {
     "client": "claude", // 必需：claude | codex | gemini
     "field": "system", // 必需：system | instructions
     "method": "POST", // 可选：HTTP 方法
-    "pathRegex": "^/v1/messages", // 可选：路径正则
+    "pathRegex": "^/v1/messages", // 可选：路径正则（不支持 g 标志）
     "modelRegex": "sonnet" // 可选：模型名称正则
   },
   "ops": [
     // 操作数组，按顺序执行
     { "type": "append", "text": "..." }
   ],
-  "stop": false // 可选：是否在此规则后停止处理
+  "stop": false, // 可选：是否在此规则后停止处理
+  "enabled": true // 可选：是否启用
 }
 ```
 
@@ -312,11 +314,15 @@ gemini "hello"
 { "type": "insert_before", "regex": "^You are", "text": "IMPORTANT: " }
 ```
 
+**注意**：`insert_before` 的匹配是基于**整个文本**。如果 `regex` 匹配了整段文本，则会在文本开头插入。
+
 #### 7. insert_after - 在匹配后插入
 
 ```json
 { "type": "insert_after", "regex": "^You are", "text": " Always be helpful." }
 ```
+
+**注意**：`insert_after` 的匹配是基于**整个文本**。如果 `regex` 匹配了整段文本，则会在文本末尾插入。这与 `replace` 操作（基于匹配内容的局部替换）的行为不同。
 
 ### 匹配条件详解
 
@@ -340,6 +346,7 @@ gemini "hello"
 
 - 正则表达式，匹配请求路径
 - 示例：`"^/v1/messages"` 匹配 Claude 的消息接口
+- **注意**：`pathRegex` 不支持 `g`（全局）标志，仅支持 `i`（忽略大小写）标志
 
 #### modelRegex (可选)
 
@@ -363,17 +370,20 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "claude-chinese",
+      "uuid": "claude-chinese",
+      "name": "claude-chinese",
       "when": { "client": "claude", "field": "system" },
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     },
     {
-      "id": "codex-chinese",
+      "uuid": "codex-chinese",
+      "name": "codex-chinese",
       "when": { "client": "codex", "field": "instructions" },
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     },
     {
-      "id": "gemini-chinese",
+      "uuid": "gemini-chinese",
+      "name": "gemini-chinese",
       "when": { "client": "gemini", "field": "system" },
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     }
@@ -387,7 +397,8 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "remove-file-limit",
+      "uuid": "remove-file-limit",
+      "name": "remove-file-limit",
       "when": { "client": "claude", "field": "system" },
       "ops": [
         {
@@ -407,7 +418,8 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "insert-after-intro",
+      "uuid": "insert-after-intro",
+      "name": "insert-after-intro",
       "when": { "client": "codex", "field": "instructions" },
       "ops": [
         {
@@ -427,7 +439,8 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "replace-terminology",
+      "uuid": "replace-terminology",
+      "name": "replace-terminology",
       "when": { "client": "claude", "field": "system" },
       "ops": [
         {
@@ -447,7 +460,8 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "sonnet-specific",
+      "uuid": "sonnet-specific",
+      "name": "sonnet-specific",
       "when": {
         "client": "claude",
         "field": "system",
@@ -456,7 +470,8 @@ gemini "hello"
       "ops": [{ "type": "append", "text": "\nOptimize for code quality." }]
     },
     {
-      "id": "opus-specific",
+      "uuid": "opus-specific",
+      "name": "opus-specific",
       "when": {
         "client": "claude",
         "field": "system",
@@ -474,7 +489,8 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "comprehensive-customization",
+      "uuid": "comprehensive-customization",
+      "name": "comprehensive-customization",
       "when": { "client": "claude", "field": "system" },
       "ops": [
         { "type": "prepend", "text": "CUSTOM RULES:\n" },
@@ -493,7 +509,8 @@ gemini "hello"
 {
   "rules": [
     {
-      "id": "messages-only",
+      "uuid": "messages-only",
+      "name": "messages-only",
       "when": {
         "client": "claude",
         "field": "system",

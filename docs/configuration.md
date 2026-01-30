@@ -277,7 +277,7 @@ type TransformerStep = string | {
     client: string;          // 必需：claude | codex | gemini
     field: string;           // 必需：system | instructions
     method?: string;         // 可选：HTTP 方法
-    pathRegex?: string;      // 可选：路径正则
+    pathRegex?: string;      // 可选：路径正则（不支持 g 标志）
     modelRegex?: string;     // 可选：模型正则
   };
   ops: Array<Operation>;     // 必需：操作数组
@@ -290,18 +290,22 @@ type TransformerStep = string | {
 
 ```typescript
 {
-  id: string;                // 必需：规则唯一标识
+  uuid: string;              // 必需：规则唯一标识
+  name: string;              // 必需：规则显示名称
   when: {                    // 必需：匹配条件
     client: string;          // 必需：claude | codex | gemini
     field: string;           // 必需：system | instructions
     method?: string;         // 可选：HTTP 方法
-    pathRegex?: string;      // 可选：路径正则
-    modelRegex?: string;     // 可选：模型正则
+    pathRegex?: string;      // 可选：路径正则（不支持 g 标志）（不支持 g 标志）
+    modelRegex?: string;     // 可选：模型名称正则
   };
   ops: Array<Operation>;     // 必需：操作数组
   stop?: boolean;            // 可选：是否停止后续规则
+  enabled?: boolean;         // 可选：是否启用
 }
 ```
+
+**注意**：后端校验要求规则必须包含 `uuid` 和 `name` 字段。
 
 #### 规则示例（完整版）
 
@@ -456,7 +460,7 @@ PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
 
 - `match`：精确字符串匹配（不能与 `regex` 同时使用）
 - `regex`：正则表达式匹配
-- `flags`：正则标志（如 `i` 忽略大小写，`g` 全局替换）
+- `flags`：正则标志（如 `i` 忽略大小写；注意 `replace` 操作仅替换第一个匹配，不支持 `g` 全局标志）
 - `replacement`：替换后的文本
 
 **使用场景**：修改特定词汇或规则
@@ -505,6 +509,8 @@ PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
 
 **使用场景**：在特定位置前添加指令
 
+**注意**：`insert_before` 的匹配是基于**整个文本**。如果 `regex` 匹配了整段文本，则会在文本开头插入。
+
 ---
 
 ### insert_after
@@ -522,6 +528,8 @@ PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
 - `flags`：可选，正则标志
 
 **使用场景**：在特定位置后添加指令
+
+**注意**：`insert_after` 的匹配是基于**整个文本**。如果 `regex` 匹配了整段文本，则会在文本末尾插入。这与 `replace` 操作（基于匹配内容的局部替换）的行为不同。
 
 ---
 
@@ -584,6 +592,8 @@ PROMPTXY_UPSTREAM_ANTHROPIC=https://custom.example.com npm start
 **默认**：无（匹配所有路径）
 
 **说明**：请求路径正则匹配
+
+**注意**：`pathRegex` 不支持 `g`（全局）标志，仅支持 `i`（忽略大小写）标志
 
 **示例**：
 
@@ -945,12 +955,14 @@ PROMPTXY_DEBUG=1 npm run dev
   },
   "rules": [
     {
-      "id": "force-chinese",
+      "uuid": "force-chinese",
+      "name": "force-chinese",
       "when": { "client": "claude", "field": "system" },
       "ops": [{ "type": "append", "text": "\nAlways respond in Chinese." }]
     },
     {
-      "id": "remove-codex-limit",
+      "uuid": "remove-codex-limit",
+      "name": "remove-codex-limit",
       "when": { "client": "codex", "field": "instructions" },
       "ops": [{ "type": "delete", "regex": "be concise", "flags": "i" }]
     }

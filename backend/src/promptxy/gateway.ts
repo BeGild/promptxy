@@ -88,6 +88,45 @@ type RouteInfo = {
   route: Route; // 命中的 route
 };
 
+type RouteResolutionErrorCode =
+  | 'model_missing'
+  | 'model_mapping_no_match'
+  | 'supplier_not_found'
+  | 'supplier_disabled'
+  | 'route_constraint_violation';
+
+type RouteResolveResult =
+  | {
+      ok: true;
+      routeInfo: RouteInfo;
+      effectiveModel: string | undefined;
+      transformer: TransformerType;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: RouteResolutionErrorCode;
+      message: string;
+      routeId: string;
+      supplierId?: string;
+    };
+
+type EffectiveModelMappingResult =
+  | {
+      ok: true;
+      supplier: Supplier;
+      model: string | undefined;
+      transformer: TransformerType;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: Exclude<RouteResolutionErrorCode, 'route_constraint_violation'>;
+      message: string;
+      routeId: string;
+      supplierId?: string;
+    };
+
 // CLIProxyAPI codex executor defaults (strict alignment option).
 // Ref: refence/CLIProxyAPI/internal/runtime/executor/codex_executor.go applyCodexHeaders()
 const CLI_PROXY_CODEX_VERSION = '0.21.0';
@@ -203,13 +242,41 @@ function resolveEffectiveModelMapping(
   inboundModel: string | undefined,
   route: Route,
   suppliers: Supplier[],
-): { supplier: Supplier; model: string | undefined; transformer: TransformerType } | null {
+): EffectiveModelMappingResult {
   // Codex/Gemini: 使用单一供应商配置
   if (route.localService === 'codex' || route.localService === 'gemini') {
-    if (!route.singleSupplierId) return null;
+    if (!route.singleSupplierId) {
+      return {
+        ok: false,
+        status: 503,
+        error: 'supplier_not_found',
+        message: `路由未配置 singleSupplierId：routeId=${route.id}`,
+        routeId: route.id,
+      };
+    }
     const supplier = suppliers.find(s => s.id === route.singleSupplierId);
-    if (!supplier || !supplier.enabled) return null;
+    if (!supplier) {
+      return {
+        ok: false,
+        status: 503,
+        error: 'supplier_not_found',
+        message: `供应商不存在：routeId=${route.id} supplierId=${route.singleSupplierId}`,
+        routeId: route.id,
+        supplierId: route.singleSupplierId,
+      };
+    }
+    if (!supplier.enabled) {
+      return {
+        ok: false,
+        status: 503,
+        error: 'supplier_disabled',
+        message: `供应商已禁用：routeId=${route.id} supplierId=${supplier.id}`,
+        routeId: route.id,
+        supplierId: supplier.id,
+      };
+    }
     return {
+      ok: true,
       supplier,
       model: inboundModel,
       transformer: 'none',
@@ -217,20 +284,54 @@ function resolveEffectiveModelMapping(
   }
 
   // Claude: 使用模型映射规则
-  if (!inboundModel) return null;
+  if (!inboundModel) {
+    return {
+      ok: false,
+      status: 400,
+      error: 'model_missing',
+      message: `缺少 model 字段：routeId=${route.id}`,
+      routeId: route.id,
+    };
+  }
 
   const mappingResult = resolveModelMapping(inboundModel, route.modelMappings);
   if (!mappingResult.matched) {
-    return null; // 未匹配任何规则，不再使用默认供应商
+    return {
+      ok: false,
+      status: 400,
+      error: 'model_mapping_no_match',
+      message: `未命中任何模型映射规则：routeId=${route.id} model=${inboundModel}`,
+      routeId: route.id,
+    };
   }
 
   const supplier = suppliers.find(s => s.id === mappingResult.targetSupplierId);
-  if (!supplier || !supplier.enabled) return null;
+  if (!supplier) {
+    return {
+      ok: false,
+      status: 503,
+      error: 'supplier_not_found',
+      message: `供应商不存在：routeId=${route.id} supplierId=${mappingResult.targetSupplierId}`,
+      routeId: route.id,
+      supplierId: mappingResult.targetSupplierId,
+    };
+  }
+  if (!supplier.enabled) {
+    return {
+      ok: false,
+      status: 503,
+      error: 'supplier_disabled',
+      message: `供应商已禁用：routeId=${route.id} supplierId=${supplier.id}`,
+      routeId: route.id,
+      supplierId: supplier.id,
+    };
+  }
 
   // 使用规则指定的转换器，或自动推导
   const transformer = mappingResult.transformer ?? deriveTransformer(route.localService, supplier.protocol);
 
   return {
+    ok: true,
     supplier,
     model: mappingResult.outboundModel ?? inboundModel,
     transformer,
@@ -272,54 +373,52 @@ function resolveSupplierByModel(
   route: Route,
   suppliers: Supplier[],
   jsonBody: any,
-): RouteInfo | null {
+): RouteResolveResult | null {
   const local = matchLocalService(pathname);
   if (!local) return null;
 
   // 从请求体获取模型名称
-  const inboundModel = jsonBody && typeof jsonBody === 'object' ? ((jsonBody as any).model as string | undefined) : undefined;
+  const inboundModel =
+    jsonBody && typeof jsonBody === 'object'
+      ? ((jsonBody as any).model as string | undefined)
+      : undefined;
 
-  // 解析有效的供应商映射
   const effective = resolveEffectiveModelMapping(inboundModel, route, suppliers);
-
-  // 无匹配的供应商/规则
-  if (!effective || !effective.supplier) {
+  if (!effective.ok) {
     return {
-      client: local.client,
-      localService: local.localService,
-      pathPrefix: local.pathPrefix,
-      upstreamBaseUrl: '',
-      supplier: {
-        id: 'missing',
-        name: 'missing',
-        displayName: 'missing',
-        baseUrl: '',
-        protocol: 'anthropic',
-        enabled: false,
-      } as any,
-      route,
+      ok: false,
+      status: effective.status,
+      error: effective.error,
+      message: effective.message,
+      routeId: effective.routeId,
+      supplierId: effective.supplierId,
     };
   }
 
   const constraintError = validateRouteConstraints(route, effective.supplier);
   if (constraintError) {
     return {
-      client: local.client,
-      localService: local.localService,
-      pathPrefix: local.pathPrefix,
-      upstreamBaseUrl: '',
-      supplier: effective.supplier,
-      route,
+      ok: false,
+      status: 400,
+      error: 'route_constraint_violation',
+      message: constraintError,
+      routeId: route.id,
+      supplierId: effective.supplier.id,
     };
   }
 
   return {
-    client: local.client,
-    localService: local.localService,
-    pathPrefix: local.pathPrefix,
-    upstreamBaseUrl: effective.supplier.baseUrl,
-    supplier: effective.supplier,
-    route,
+    ok: true,
+    routeInfo: {
+      client: local.client,
+      localService: local.localService,
+      pathPrefix: local.pathPrefix,
+      upstreamBaseUrl: effective.supplier.baseUrl,
+      supplier: effective.supplier,
+      route,
+    },
+    effectiveModel: effective.model,
+    transformer: effective.transformer,
   };
 }
 
@@ -835,17 +934,15 @@ export function createGateway(
         }
       }
 
-      if (jsonBody && typeof jsonBody === 'object') {
-        if (routeMatch.client === 'claude') {
-          const result = mutateClaudeBody({
-            body: jsonBody,
-            method: method,
-            path: stripPrefix(url.pathname, routeMatch.pathPrefix),
-            rules: config.rules,
-          });
-          jsonBody = result.body;
-          matches = result.matches;
-        } else if (routeMatch.client === 'codex') {
+      // 规则应用：为了避免在 Claude→跨协议转换场景下被应用两次，
+      // 这里仅对非 Claude 入口进行 mutate。Claude 入口（且 transformer != none）
+      // 会在后续跨协议转换前统一应用规则。
+      if (
+        jsonBody &&
+        typeof jsonBody === 'object' &&
+        !(routeMatch.client === 'claude' && routeMatch.route.localService === 'claude')
+      ) {
+        if (routeMatch.client === 'codex') {
           const result = mutateCodexBody({
             body: jsonBody,
             method: method,
@@ -869,8 +966,12 @@ export function createGateway(
 
       // ========== 第二阶段：根据模型解析供应商 ==========
       // 在读取请求体后，根据模型名称进行模型映射，确定目标供应商
-      let matchedRoute: RouteInfo;
-      const supplierMatch = resolveSupplierByModel(url.pathname, routeMatch.route, config.suppliers, jsonBody);
+      const supplierMatch = resolveSupplierByModel(
+        url.pathname,
+        routeMatch.route,
+        config.suppliers,
+        jsonBody,
+      );
       if (!supplierMatch) {
         jsonError(res, 500, {
           error: 'route_resolution_failed',
@@ -879,29 +980,33 @@ export function createGateway(
         });
         return;
       }
-      matchedRoute = supplierMatch;
-      route = matchedRoute; // 同时更新 route 变量，以便错误处理时使用
 
-      // 检查供应商是否可用
-      if (!matchedRoute.supplier.enabled || !matchedRoute.upstreamBaseUrl) {
-        jsonError(res, 503, {
-          error: 'supplier_unavailable',
-          message: `路由已启用但供应商不可用（不存在或已禁用）：routeId=${matchedRoute.route.id}`,
-          routeId: matchedRoute.route.id,
-          supplierId: matchedRoute.supplier.id,
+      if (!supplierMatch.ok) {
+        jsonError(res, supplierMatch.status, {
+          error: supplierMatch.error,
+          message: supplierMatch.message,
+          routeId: supplierMatch.routeId,
+          supplierId: supplierMatch.supplierId,
           path: url.pathname,
         });
         return;
       }
 
+      const matchedRoute = supplierMatch.routeInfo;
+      route = matchedRoute; // 同时更新 route 变量，以便错误处理时使用
       upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
+
+      const derivedTransformerForProbe = deriveTransformer(
+        matchedRoute.localService,
+        matchedRoute.supplier.protocol,
+      );
 
       // ========== Warmup 请求过滤：跳过无意义的预热请求 ==========
       // 参考项目：claude-relay-service
       // Warmup 请求特征：单条消息 + 无 tools，通常是 Claude Code 的探测请求
       if (
         matchedRoute.localService === 'claude' &&
-        transformerChain[0] === 'codex' &&
+        derivedTransformerForProbe === 'codex' &&
         isWarmupRequest(jsonBody)
       ) {
         if (config.debug) {
@@ -921,7 +1026,7 @@ export function createGateway(
       // 对 codex 供应商无效，直接返回空响应
       if (
         matchedRoute.localService === 'claude' &&
-        transformerChain[0] === 'codex' &&
+        derivedTransformerForProbe === 'codex' &&
         isCountProbeRequest(jsonBody)
       ) {
         if (config.debug) {
@@ -945,12 +1050,8 @@ export function createGateway(
       // 注意：route 选择阶段已根据 modelMapping 计算 effective supplier + effective model。
       // 这里仅保证请求体 model 写回 effective model（targetModel 为空时保持透传）。
       if (jsonBody && typeof jsonBody === 'object' && 'model' in (jsonBody as any)) {
-        const inboundModel = (jsonBody as any).model as string | undefined;
-        const effective = resolveEffectiveModelMapping(inboundModel, matchedRoute.route, config.suppliers);
-        if (effective) {
-          (jsonBody as any).model = effective.model;
-          transformerChain = [effective.transformer];
-        }
+        (jsonBody as any).model = supplierMatch.effectiveModel;
+        transformerChain = [supplierMatch.transformer];
       }
 
       const derivedTransformer = transformerChain.length > 0 ? transformerChain[0] : deriveTransformer(matchedRoute.localService, matchedRoute.supplier.protocol);

@@ -44,6 +44,7 @@ export class OpenAIChatToClaudeSSETransformer {
   private state: State = 'init';
   private messageId: string | null = null;
   private hasContent: boolean = false;
+  private hasTextBlockStarted: boolean = false;
   private contentBuffer: string[] = [];
   private toolCallsBuffer: Map<number, { id?: string; name?: string; arguments: string }> = new Map();
   private config: TransformerConfig;
@@ -96,20 +97,26 @@ export class OpenAIChatToClaudeSSETransformer {
           usage: undefined,
         },
       });
-      events.push({
-        type: 'message_delta',
-        delta: {
-          stop_reason: undefined,
-          stop_sequence: undefined,
-        },
-        usage: undefined,
-      });
     }
 
     if (this.state === 'streaming') {
       // 处理内容增量
       if (delta.content) {
         this.hasContent = true;
+
+        // 第一个文本块：先发送 content_block_start
+        if (!this.hasTextBlockStarted) {
+          this.hasTextBlockStarted = true;
+          events.push({
+            type: 'content_block_start',
+            index: 0,
+            content_block: {
+              type: 'text',
+              text: '',
+            },
+          });
+        }
+
         if (!this.contentBuffer.includes(delta.content)) {
           this.contentBuffer.push(delta.content);
           events.push({
@@ -189,20 +196,23 @@ export class OpenAIChatToClaudeSSETransformer {
       return { events, streamEnd: true };
     }
 
-    // 发送 content_block_stop（如果有内容或工具调用）
-    if (this.hasContent || this.toolCallsBuffer.size > 0) {
+    // 发送 content_block_stop（如果有文本内容）
+    if (this.hasContent) {
       events.push({
         type: 'content_block_stop',
-        index: this.hasContent ? 0 : -1,
+        index: 0,
       });
     }
 
     // 发送工具调用的 content_block_stop
     if (this.toolCallsBuffer.size > 0) {
-      for (let i = 0; i < this.toolCallsBuffer.size; i++) {
+      const baseIndex = this.hasContent ? 1 : 0;
+      // 按索引顺序发送 stop 事件
+      const indices = Array.from(this.toolCallsBuffer.keys()).sort((a, b) => a - b);
+      for (const idx of indices) {
         events.push({
           type: 'content_block_stop',
-          index: this.hasContent ? (i + 1) : i,
+          index: baseIndex + idx,
         });
       }
     }
