@@ -144,6 +144,41 @@ describe('Gateway Integration Tests', () => {
     expect(upstreamBody.model).toBe('gpt-5.2-codex');
     expect(upstreamBody.reasoning?.effort).toBe('high');
   });
+
+  it('应对 openai-codex 上游补齐 CLIProxyAPI 默认出站 headers（UA / Openai-Beta / Session_id / SSE accept 等）', async () => {
+    const response = await client.post(
+      '/codex/responses',
+      {
+        model: 'gpt-4o-mini',
+        instructions: 'hello',
+        prompt_cache_key: 'sess_test_123',
+        input: [{ role: 'user', content: 'hi' }],
+      },
+      // Use empty UA to ensure our "ensureHeader" path uses the CLIProxyAPI default.
+      { 'user-agent': '' },
+    );
+
+    expect(response.status).toBe(200);
+
+    const captured = getCaptured();
+    const h = captured.headers || {};
+
+    // These are strict "Set" behaviors in CLIProxyAPI.
+    expect(h['accept']).toBe('text/event-stream');
+    expect(h['connection']).toBe('keep-alive');
+    expect(h['content-type']).toBe('application/json');
+
+    // These are "EnsureHeader" defaults in CLIProxyAPI.
+    expect(h['openai-beta']).toBe('responses=experimental');
+    expect(h['version']).toBe('0.21.0');
+    expect(h['originator']).toBe('codex_cli_rs');
+    expect(typeof h['user-agent']).toBe('string');
+    expect(h['user-agent']).toContain('codex_cli_rs/');
+
+    // Align Conversation_id / Session_id to prompt_cache_key when present.
+    expect(h['session_id']).toBe('sess_test_123');
+    expect(h['conversation_id']).toBe('sess_test_123');
+  });
 });
 
 describe('Supplier Protocol Validation', () => {

@@ -1,4 +1,5 @@
 import * as http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Readable, PassThrough } from 'node:stream';
@@ -86,6 +87,49 @@ type RouteInfo = {
   supplier: Supplier; // 完整的 supplier 配置（包含 auth）
   route: Route; // 命中的 route
 };
+
+// CLIProxyAPI codex executor defaults (strict alignment option).
+// Ref: refence/CLIProxyAPI/internal/runtime/executor/codex_executor.go applyCodexHeaders()
+const CLI_PROXY_CODEX_VERSION = '0.21.0';
+const CLI_PROXY_CODEX_OPENAI_BETA = 'responses=experimental';
+const CLI_PROXY_CODEX_DEFAULT_ORIGINATOR = 'codex_cli_rs';
+const CLI_PROXY_CODEX_DEFAULT_USER_AGENT =
+  'codex_cli_rs/0.50.0 (Mac OS 26.0.1; arm64) Apple_Terminal/464';
+
+function ensureHeader(headers: Record<string, string>, key: string, value: string): void {
+  const existing = headers[key];
+  if (typeof existing === 'string' && existing.trim() !== '') return;
+  headers[key] = value;
+}
+
+function applyCLIProxyCodexHeaders(
+  headers: Record<string, string>,
+  options: {
+    /** If present, we try to align conversation/session headers to the same ID. */
+    sessionId?: string;
+  },
+): void {
+  // CLIProxyAPI unconditionally sets the content type and SSE accept headers.
+  headers['content-type'] = 'application/json';
+  ensureHeader(headers, 'version', CLI_PROXY_CODEX_VERSION);
+  ensureHeader(headers, 'openai-beta', CLI_PROXY_CODEX_OPENAI_BETA);
+
+  // CLIProxyAPI uses `Session_id` for /responses and keeps SSE defaults for Codex.
+  // We keep it stable when a session id exists (prompt_cache_key, etc.), otherwise generate one.
+  const sid = (options.sessionId || '').trim() || randomUUID();
+  ensureHeader(headers, 'session_id', sid);
+  ensureHeader(headers, 'conversation_id', sid);
+
+  // CLIProxyAPI always forces SSE headers on Codex upstream requests.
+  headers['accept'] = 'text/event-stream';
+  headers['connection'] = 'keep-alive';
+
+  // "Originator" is a Codex CLI header used widely by official clients (codex-rs).
+  // CLIProxyAPI only sets it for non-API-key auth; we cannot reliably infer that here,
+  // so we default it in a best-effort "ensure" manner.
+  ensureHeader(headers, 'originator', CLI_PROXY_CODEX_DEFAULT_ORIGINATOR);
+  ensureHeader(headers, 'user-agent', CLI_PROXY_CODEX_DEFAULT_USER_AGENT);
+}
 
 function matchLocalService(pathname: string): {
   client: PromptxyClient;
@@ -1068,6 +1112,30 @@ export function createGateway(
             );
           }
         }
+      }
+
+      // ========== Codex 出站 Header 对齐（CLIProxyAPI 严格模式）==========
+      // 对 openai-codex 上游补齐 CLIProxyAPI 默认头（UA / Openai-Beta / Session_id / SSE accept 等）
+      if (matchedRoute.supplier.protocol === 'openai-codex') {
+        // Never leak CLIProxyAPI internal helper field to upstream.
+        if (
+          effectiveBody &&
+          typeof effectiveBody === 'object' &&
+          '__cpa_user_agent' in (effectiveBody as any)
+        ) {
+          delete (effectiveBody as any).__cpa_user_agent;
+        }
+
+        const sessionIdCandidate =
+          effectiveBody && typeof effectiveBody === 'object'
+            ? (effectiveBody as any).prompt_cache_key ||
+              (effectiveBody as any).session_id ||
+              (effectiveBody as any).conversation_id
+            : undefined;
+
+        applyCLIProxyCodexHeaders(headers, {
+          sessionId: typeof sessionIdCandidate === 'string' ? sessionIdCandidate : undefined,
+        });
       }
 
       // 保存最终请求头（协议转换后、认证注入后）
