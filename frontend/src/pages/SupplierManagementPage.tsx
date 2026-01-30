@@ -24,7 +24,7 @@ import {
 import { Plus, Edit2, Trash2, Settings, Globe, Lock, Info, Eye, EyeOff } from 'lucide-react';
 import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, useToggleSupplier } from '@/hooks';
 import type { Supplier, SupplierProtocol } from '@/types/api';
-import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
+import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
 
 // 供应商协议选项
 const SUPPLIER_PROTOCOLS: Array<{
@@ -43,7 +43,7 @@ const SUPPLIER_PROTOCOLS: Array<{
     key: 'openai-codex',
     label: 'OpenAI Codex',
     description: '/responses 协议',
-    color: '#10A37F',
+    color: '#2D3748',
   },
   {
     key: 'openai-chat',
@@ -65,6 +65,7 @@ const getSupplierIcon = (protocol: SupplierProtocol) => {
     case 'anthropic':
       return AnthropicIcon;
     case 'openai-codex':
+      return CodexIcon;
     case 'openai-chat':
       return OpenAIIcon;
     case 'gemini':

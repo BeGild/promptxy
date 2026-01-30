@@ -23,7 +23,7 @@ import {
 } from '@heroui/react';
 import { ArrowRight, Plus, Trash2, Info, Edit2 } from 'lucide-react';
 import { useSuppliers } from '@/hooks';
-import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
+import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
 import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
 import type { Supplier, LocalService, TransformerType, Route, ModelMappingRule } from '@/types/api';
 
@@ -49,8 +49,8 @@ const LOCAL_SERVICES: Array<{
     label: 'Codex',
     prefix: '/codex',
     protocol: 'openai-codex',
-    color: '#10A37F',
-    icon: OpenAIIcon,
+    color: '#2D3748',
+    icon: CodexIcon,
   },
   {
     key: 'gemini',

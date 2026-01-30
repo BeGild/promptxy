@@ -19,7 +19,7 @@
 import React from 'react';
 import { Tooltip } from '@heroui/react';
 import { getClientColorStyle, formatClient } from '@/utils';
-import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
+import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
 
 /**
  * 客户端图标配置
@@ -27,7 +27,7 @@ import { AnthropicIcon, OpenAIIcon, GeminiIcon } from '@/components/icons/Suppli
  */
 const CLIENT_ICONS: Record<string, React.ReactNode> = {
   claude: <AnthropicIcon size={20} className="w-full h-full" />,
-  codex: <OpenAIIcon size={20} className="w-full h-full" />,
+  codex: <CodexIcon size={20} className="w-full h-full" />,
   gemini: <GeminiIcon size={20} className="w-full h-full" />,
 };
 

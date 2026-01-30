@@ -11,6 +11,7 @@ import React from 'react';
 import anthropicIcon from '@/assets/supplier-icons/anthropic.svg';
 import openaiIcon from '@/assets/supplier-icons/openai.svg';
 import geminiIcon from '@/assets/supplier-icons/gemini.svg';
+import codexIcon from '@/assets/supplier-icons/codex.svg';
 
 // Anthropic 官方图标
 // 来源: Wikimedia Commons - Anthropic logo (SVG, Public Domain)
@@ -35,6 +36,20 @@ export const OpenAIIcon: React.FC<{ size?: number; className?: string }> = ({
   <img
     src={openaiIcon}
     alt="OpenAI"
+    className={className}
+    style={{ height: size, width: 'auto' }}
+  />
+);
+
+// Codex 官方图标
+// 来源: OpenAI Codex 官方图标
+export const CodexIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 24,
+  className = '',
+}) => (
+  <img
+    src={codexIcon}
+    alt="Codex"
     className={className}
     style={{ height: size, width: 'auto' }}
   />

@@ -68,9 +68,9 @@
     --color-client-claude-bg: #FFF0EB;
     --color-client-claude-light: #FFE5DD;
 
-    --color-client-codex: #10A37F; /* OpenAI Codex - 绿色 */
-    --color-client-codex-bg: #E6F7F2;
-    --color-client-codex-light: #CCEFE6;
+    --color-client-codex: #2D3748; /* OpenAI Codex - 深灰蓝（终端风格） */
+    --color-client-codex-bg: #EDF2F7;
+    --color-client-codex-light: #E2E8F0;
 
     --color-client-gemini: #4285F4; /* Google Gemini - 蓝色 */
     --color-client-gemini-bg: #EBF3FE;
