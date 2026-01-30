@@ -15,56 +15,60 @@ import codexIcon from '@/assets/supplier-icons/codex.svg';
 
 // Anthropic 官方图标
 // 来源: Wikimedia Commons - Anthropic logo (SVG, Public Domain)
-export const AnthropicIcon: React.FC<{ size?: number; className?: string }> = ({
+export const AnthropicIcon: React.FC<{ size?: number; className?: string; style?: React.CSSProperties }> = ({
   size = 24,
   className = '',
+  style,
 }) => (
   <img
     src={anthropicIcon}
     alt="Anthropic"
     className={className}
-    style={{ height: size, width: 'auto' }}
+    style={{ height: size, width: 'auto', ...style }}
   />
 );
 
 // OpenAI 官方图标
 // 来源: Wikimedia Commons - OpenAI Logo (SVG, Public Domain)
-export const OpenAIIcon: React.FC<{ size?: number; className?: string }> = ({
+export const OpenAIIcon: React.FC<{ size?: number; className?: string; style?: React.CSSProperties }> = ({
   size = 24,
   className = '',
+  style,
 }) => (
   <img
     src={openaiIcon}
     alt="OpenAI"
     className={className}
-    style={{ height: size, width: 'auto' }}
+    style={{ height: size, width: 'auto', ...style }}
   />
 );
 
 // Codex 官方图标
 // 来源: OpenAI Codex 官方图标
-export const CodexIcon: React.FC<{ size?: number; className?: string }> = ({
+export const CodexIcon: React.FC<{ size?: number; className?: string; style?: React.CSSProperties }> = ({
   size = 24,
   className = '',
+  style,
 }) => (
   <img
     src={codexIcon}
     alt="Codex"
     className={className}
-    style={{ height: size, width: 'auto' }}
+    style={{ height: size, width: 'auto', ...style }}
   />
 );
 
 // Gemini 官方图标 - 2025新版
 // 来源: Wikimedia Commons - Google Gemini logo 2025.svg (Public Domain)
-export const GeminiIcon: React.FC<{ size?: number; className?: string }> = ({
+export const GeminiIcon: React.FC<{ size?: number; className?: string; style?: React.CSSProperties }> = ({
   size = 24,
   className = '',
+  style,
 }) => (
   <img
     src={geminiIcon}
     alt="Gemini"
     className={className}
-    style={{ height: size, width: 'auto' }}
+    style={{ height: size, width: 'auto', ...style }}
   />
 );
