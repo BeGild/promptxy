@@ -6,7 +6,20 @@ export type TransformPlan = {
 };
 
 export function deriveTransformPlan(routePlan: RoutePlan): TransformPlan {
+  const transformer = String(routePlan.transformer || 'none');
+
+  const normalized: TransformerType = (
+    transformer === 'anthropic' ||
+    transformer === 'openai' ||
+    transformer === 'codex' ||
+    transformer === 'openai-chat' ||
+    transformer === 'gemini' ||
+    transformer === 'none'
+      ? transformer
+      : 'none'
+  ) as TransformerType;
+
   return {
-    transformer: (routePlan.transformer || "none") as TransformerType,
+    transformer: normalized,
   };
 }
