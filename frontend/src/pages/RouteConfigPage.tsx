@@ -26,7 +26,7 @@ import { useSuppliers } from '@/hooks';
 import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
 import { fetchRoutes, createRoute, deleteRoute, toggleRoute, updateRoute } from '@/api/config';
 import type { Supplier, LocalService, TransformerType, Route, ModelMappingRule } from '@/types/api';
-import { RouteFlowCard } from '@/components/routes';
+import { RouteFlowCardV2 } from '@/components/routes';
 
 // 本地服务选项
 const LOCAL_SERVICES: Array<{
@@ -487,7 +487,7 @@ export const RouteConfigPage: React.FC = () => {
       {/* 路由配置列表 */}
       <div className="space-y-4">
         {routes.map(route => (
-          <RouteFlowCard
+          <RouteFlowCardV2
             key={route.id}
             route={route}
             suppliers={suppliers}
