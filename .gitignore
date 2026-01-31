@@ -9,6 +9,12 @@ refence/
 .claude/
 .gemini/
 
+# Worktrees
+.worktrees/
+
+# Tmux-worktree task management
+.tmux-worktree/
+
 # Local config
 promptxy.config.json
 
