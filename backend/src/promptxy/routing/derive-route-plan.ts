@@ -38,8 +38,15 @@ export function deriveRoutePlan(
   const supplier = (deps.suppliers || []).find(s => s.id === supplierId);
 
   const transformer: TransformerType = mapping.matched
-    ? (mapping.transformer ?? (supplier?.protocol === "openai-chat" ? "openai-chat" : "none"))
-    : "none";
+    ? (mapping.transformer ??
+        (supplier?.protocol === 'openai-codex'
+          ? 'codex'
+          : supplier?.protocol === 'openai-chat'
+            ? 'openai-chat'
+            : supplier?.protocol === 'gemini'
+              ? 'gemini'
+              : 'none'))
+    : 'none';
 
   return {
     localService: route.localService,
