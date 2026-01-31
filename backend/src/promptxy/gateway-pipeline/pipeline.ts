@@ -1,4 +1,4 @@
-import type { GatewayContext } from './context';
+import type { GatewayContext } from './context.js';
 
 export type PipelineStep = (ctx: GatewayContext) => Promise<GatewayContext>;
 

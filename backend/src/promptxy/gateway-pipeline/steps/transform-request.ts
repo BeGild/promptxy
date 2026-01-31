@@ -1,11 +1,10 @@
-import type { GatewayContext } from "../context";
-import type { PromptxyConfig, RoutePlan } from "../../types";
-import { deriveTransformPlan } from "../../transform/index.js";
-import { createProtocolTransformer } from "../../transformers/index.js";
+import type { GatewayContext } from "../context.js";
+import type { PromptxyConfig, TransformerType } from "../../types.js";
+import type { RoutePlan } from "../../gateway-contracts.js";
+import type { TransformPlan } from "../../transform/derive-transform-plan.js";
 
 export type TransformRequestDeps = {
-  deriveTransformPlan: typeof deriveTransformPlan;
-  createProtocolTransformer: typeof createProtocolTransformer;
+  deriveTransformPlan: (routePlan: RoutePlan) => TransformPlan;
   config: PromptxyConfig;
 };
 
@@ -23,25 +22,18 @@ export function createTransformRequest(deps: TransformRequestDeps) {
       return ctx;
     }
 
-    const transformPlan = deps.deriveTransformPlan(
-      {
-        localService: routePlan.localService,
-        supplierProtocol: routePlan.supplierProtocol,
-        transformer: routePlan.transformer,
-      },
-      deps.config
-    );
+    const transformPlan = deps.deriveTransformPlan(routePlan);
 
-    if (!transformPlan.shouldTransform) {
+    if (transformPlan.transformer === "none") {
       return ctx;
     }
 
-    // 创建转换器并转换请求体
-    const transformer = deps.createProtocolTransformer(transformPlan.transformer);
-    if (transformer?.transformRequest) {
-      ctx.jsonBody = transformer.transformRequest(jsonBody);
-      ctx.transformTrace = { transformed: true, transformer: transformPlan.transformer };
-    }
+    // 转换逻辑由 gateway.ts 直接处理，此步骤仅做标记
+    // 实际请求体转换保留在 gateway.ts 以保持与现有逻辑兼容
+    ctx.transformTrace = {
+      transformed: true,
+      transformer: transformPlan.transformer
+    };
 
     return ctx;
   };

@@ -1,5 +1,5 @@
-import type { GatewayContext, GatewayError } from "../context";
-import type { Supplier } from "../../types";
+import type { GatewayContext, GatewayError } from "../context.js";
+import type { Supplier } from "../../types.js";
 
 export type ExecuteUpstreamInput = {
   url: string;

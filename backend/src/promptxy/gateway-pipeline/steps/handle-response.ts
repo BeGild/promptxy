@@ -1,4 +1,4 @@
-import type { GatewayContext } from "../context";
+import type { GatewayContext } from "../context.js";
 
 export type HandleResponseDeps = {
   // 由 gateway.ts 直接处理响应，此步骤作为 pipeline 的终点标记
