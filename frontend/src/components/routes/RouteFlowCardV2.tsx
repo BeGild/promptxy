@@ -44,13 +44,13 @@ const InboundBadge: React.FC<{ localService: LocalService }> = ({ localService }
   const { Icon } = config;
 
   return (
-    <div className="flex items-center gap-2">
-      <div className={`w-8 h-8 rounded-md flex items-center justify-center ${SUPPLIER_STYLES[config.protocol]?.bg || 'bg-default-100'}`}>
-        <Icon size={18} className={SUPPLIER_STYLES[config.protocol]?.text || 'text-tertiary'} />
+    <div className="flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${SUPPLIER_STYLES[config.protocol]?.bg || 'bg-default-100'}`}>
+        <Icon size={20} className={SUPPLIER_STYLES[config.protocol]?.text || 'text-tertiary'} />
       </div>
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-primary leading-tight">{config.label}</span>
-        <span className="text-[10px] text-tertiary font-mono leading-tight">{config.prefix}</span>
+        <span className="text-base font-semibold text-primary leading-tight">{config.label}</span>
+        <span className="text-xs text-tertiary font-mono leading-tight">{config.prefix}</span>
       </div>
     </div>
   );
@@ -69,11 +69,11 @@ const FlowIndicator: React.FC<{
 
   return (
     <div className="flex flex-col items-center justify-center px-2">
-      <div className={`flex items-center justify-center w-6 h-6 rounded-full ${hasConversion ? 'bg-warning/10' : 'bg-default-100'}`}>
-        <ArrowRight size={14} className={hasConversion ? 'text-warning' : 'text-tertiary'} />
+      <div className={`flex items-center justify-center w-8 h-8 rounded-full ${hasConversion ? 'bg-warning/10' : 'bg-default-100'}`}>
+        <ArrowRight size={16} className={hasConversion ? 'text-warning' : 'text-tertiary'} />
       </div>
       {hasConversion && (
-        <span className="text-[9px] text-warning font-medium mt-0.5">转换</span>
+        <span className="text-xs text-warning font-medium mt-0.5">转换</span>
       )}
     </div>
   );
@@ -99,7 +99,7 @@ const OutboundList: React.FC<{
         <div className={`px-2 py-1 rounded-md border ${styles.bg} ${styles.border}`}>
           <span className={`text-xs font-medium ${styles.text}`}>{supplier.displayName || supplier.name}</span>
         </div>
-        <Chip size="sm" variant="flat" className="text-[10px] h-5">{supplier.protocol}</Chip>
+        <Chip size="sm" variant="flat" className="text-xs h-6">{supplier.protocol}</Chip>
       </div>
     );
   }
@@ -117,21 +117,21 @@ const OutboundList: React.FC<{
               key={rule.id || idx}
               className="flex items-center gap-1 px-2 py-1 bg-default-100/70 rounded border border-default-200/50"
             >
-              <code className="text-[10px] text-primary font-mono">{rule.inboundModel}</code>
-              <ArrowRight size={10} className="text-tertiary" />
+              <code className="text-xs text-primary font-mono">{rule.inboundModel}</code>
+              <ArrowRight size={14} className="text-tertiary" />
               {rule.outboundModel ? (
-                <span className="text-[10px] text-primary">{rule.outboundModel}</span>
+                <span className="text-xs text-primary">{rule.outboundModel}</span>
               ) : (
-                <Chip size="sm" variant="flat" className="text-[9px] h-4 px-1">透传</Chip>
+                <Chip size="sm" variant="flat" className="text-xs h-5 px-1.5">透传</Chip>
               )}
               {supplier && (
-                <span className={`text-[9px] ${styles?.text || 'text-tertiary'}`}>@{supplier.displayName}</span>
+                <span className={`text-xs ${styles?.text || 'text-tertiary'}`}>@{supplier.displayName}</span>
               )}
             </div>
           );
         })}
         {modelMappings.length > 3 && (
-          <Chip size="sm" variant="flat" className="text-[10px] h-5">+{modelMappings.length - 3}</Chip>
+          <Chip size="sm" variant="flat" className="text-xs h-6">+{modelMappings.length - 3}</Chip>
         )}
       </div>
     );
@@ -167,9 +167,9 @@ export const RouteFlowCardV2: React.FC<RouteFlowCardProps> = ({
           : 'border-default-200 dark:border-default-700 bg-default-100/50 opacity-60'
       }`}
     >
-      <CardBody className="p-3">
+      <CardBody className="p-4">
         {/* 桌面端：水平网格布局 */}
-        <div className="hidden md:grid md:grid-cols-[140px_40px_1fr_auto] md:items-center md:gap-3">
+        <div className="hidden md:grid md:grid-cols-[160px_48px_1fr_auto] md:items-center md:gap-4">
           {/* 入站 */}
           <InboundBadge localService={route.localService} />
 
@@ -186,21 +186,20 @@ export const RouteFlowCardV2: React.FC<RouteFlowCardProps> = ({
           </div>
 
           {/* 操作 */}
-          <div className="flex items-center gap-1 justify-end">
+          <div className="flex items-center gap-2 justify-end">
             <Button
               isIconOnly
               variant="light"
               size="sm"
               onPress={() => onEdit(route)}
-              className="w-7 h-7 min-w-0"
+              className="w-8 h-8 min-w-0"
             >
-              <Edit2 size={14} />
+              <Edit2 size={16} />
             </Button>
             <Switch
               isSelected={route.enabled}
               onValueChange={() => onToggle(route)}
               size="sm"
-              className="scale-90"
             />
             <Button
               isIconOnly
@@ -208,34 +207,34 @@ export const RouteFlowCardV2: React.FC<RouteFlowCardProps> = ({
               variant="light"
               size="sm"
               onPress={() => onDelete(route.id)}
-              className="w-7 h-7 min-w-0"
+              className="w-8 h-8 min-w-0"
             >
-              <Trash2 size={14} />
+              <Trash2 size={16} />
             </Button>
           </div>
         </div>
 
         {/* 移动端：垂直布局 */}
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden space-y-4">
           {/* 第一行：入站 + 箭头 + 操作 */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <InboundBadge localService={route.localService} />
               <FlowIndicator localService={route.localService} targetSupplier={targetSupplier} />
             </div>
-            <div className="flex items-center gap-1">
-              <Button isIconOnly variant="light" size="sm" onPress={() => onEdit(route)} className="w-7 h-7">
-                <Edit2 size={14} />
+            <div className="flex items-center gap-2">
+              <Button isIconOnly variant="light" size="sm" onPress={() => onEdit(route)} className="w-8 h-8">
+                <Edit2 size={16} />
               </Button>
-              <Switch isSelected={route.enabled} onValueChange={() => onToggle(route)} size="sm" className="scale-90" />
-              <Button isIconOnly color="danger" variant="light" size="sm" onPress={() => onDelete(route.id)} className="w-7 h-7">
-                <Trash2 size={14} />
+              <Switch isSelected={route.enabled} onValueChange={() => onToggle(route)} size="sm" />
+              <Button isIconOnly color="danger" variant="light" size="sm" onPress={() => onDelete(route.id)} className="w-8 h-8">
+                <Trash2 size={16} />
               </Button>
             </div>
           </div>
 
           {/* 第二行：出站配置 */}
-          <div className="pl-10">
+          <div className="pl-[52px]">
             <OutboundList
               suppliers={suppliers}
               singleSupplierId={route.singleSupplierId}
