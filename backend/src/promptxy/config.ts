@@ -447,47 +447,63 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
       throw new Error(`${label}.enabled must be a boolean`);
     }
 
-    // Claude: 验证 modelMappings
+    // 字段互斥检查：claude vs codex/gemini 使用不同的字段
     if (route.localService === 'claude') {
-      if (route.modelMappings !== undefined) {
-        if (!Array.isArray(route.modelMappings)) {
-          throw new Error(`${label}.modelMappings must be an array`);
-        }
-
-        for (let j = 0; j < route.modelMappings.length; j++) {
-          const rule = route.modelMappings[j];
-          const ruleLabel = `${label}.modelMappings[${j}]`;
-
-          if (!rule || typeof rule !== 'object') {
-            throw new Error(`${ruleLabel} must be an object`);
-          }
-          if (!rule.id || typeof rule.id !== 'string') {
-            throw new Error(`${ruleLabel}.id must be a non-empty string`);
-          }
-          if (!rule.inboundModel || typeof rule.inboundModel !== 'string') {
-            throw new Error(`${ruleLabel}.inboundModel must be a non-empty string`);
-          }
-          if (!rule.targetSupplierId || typeof rule.targetSupplierId !== 'string') {
-            throw new Error(`${ruleLabel}.targetSupplierId must be a non-empty string`);
-          }
-          if (rule.enabled !== undefined && typeof rule.enabled !== 'boolean') {
-            throw new Error(`${ruleLabel}.enabled must be a boolean when provided`);
-          }
-          if (rule.description !== undefined && typeof rule.description !== 'string') {
-            throw new Error(`${ruleLabel}.description must be a string when provided`);
-          }
-
-          const targetSupplier = supplierById.get(rule.targetSupplierId);
-          if (!targetSupplier) {
-            throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${rule.targetSupplierId}`);
-          }
-          // Claude 支持所有协议的供应商转换
-          assertTargetModelForSupplier(ruleLabel, targetSupplier, rule.outboundModel);
-        }
+      // claude 不应该有 singleSupplierId
+      if ('singleSupplierId' in route && route.singleSupplierId !== undefined) {
+        throw new Error(
+          `${label}.singleSupplierId 不适用于 claude 路由。claude 路由应使用 modelMappings 字段。`
+        );
       }
-    }
-    // Codex/Gemini: 验证 singleSupplierId
-    else {
+
+      // claude 必须有 modelMappings
+      if (!route.modelMappings || route.modelMappings.length === 0) {
+        throw new Error(`${label}.modelMappings 必须是非空数组（claude 路由需要至少一个模型映射）`);
+      }
+
+      if (!Array.isArray(route.modelMappings)) {
+        throw new Error(`${label}.modelMappings must be an array`);
+      }
+
+      for (let j = 0; j < route.modelMappings.length; j++) {
+        const rule = route.modelMappings[j];
+        const ruleLabel = `${label}.modelMappings[${j}]`;
+
+        if (!rule || typeof rule !== 'object') {
+          throw new Error(`${ruleLabel} must be an object`);
+        }
+        if (!rule.id || typeof rule.id !== 'string') {
+          throw new Error(`${ruleLabel}.id must be a non-empty string`);
+        }
+        if (!rule.inboundModel || typeof rule.inboundModel !== 'string') {
+          throw new Error(`${ruleLabel}.inboundModel must be a non-empty string`);
+        }
+        if (!rule.targetSupplierId || typeof rule.targetSupplierId !== 'string') {
+          throw new Error(`${ruleLabel}.targetSupplierId must be a non-empty string`);
+        }
+        if (rule.enabled !== undefined && typeof rule.enabled !== 'boolean') {
+          throw new Error(`${ruleLabel}.enabled must be a boolean when provided`);
+        }
+        if (rule.description !== undefined && typeof rule.description !== 'string') {
+          throw new Error(`${ruleLabel}.description must be a string when provided`);
+        }
+
+        const targetSupplier = supplierById.get(rule.targetSupplierId);
+        if (!targetSupplier) {
+          throw new Error(`${ruleLabel}.targetSupplierId 引用的供应商不存在：${rule.targetSupplierId}`);
+        }
+        // Claude 支持所有协议的供应商转换
+        assertTargetModelForSupplier(ruleLabel, targetSupplier, rule.outboundModel);
+      }
+    } else if (route.localService === 'codex' || route.localService === 'gemini') {
+      // codex/gemini 不应该有 modelMappings
+      if ('modelMappings' in route && route.modelMappings !== undefined && route.modelMappings.length > 0) {
+        throw new Error(
+          `${label}.modelMappings 不适用于 ${route.localService} 路由。${route.localService} 路由应使用 singleSupplierId 字段。`
+        );
+      }
+
+      // codex/gemini 必须有 singleSupplierId
       if (!route.singleSupplierId || typeof route.singleSupplierId !== 'string') {
         throw new Error(`${label}.singleSupplierId must be a non-empty string`);
       }
@@ -497,6 +513,8 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
         throw new Error(`${label}.singleSupplierId 引用的供应商不存在：${route.singleSupplierId}`);
       }
       assertSupplierProtocolForRoute(`${label}.singleSupplierId`, route.localService, targetSupplier);
+    } else {
+      throw new Error(`${label}.localService 必须是 'claude'、'codex' 或 'gemini' 之一`);
     }
   }
 
@@ -755,7 +773,34 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
   let changed = false;
   const next = (routes as Route[]).map(r => ({ ...r }));
 
+  // 0) 破坏性检查：拒绝 legacy 字段（不再自动迁移）
+  for (let i = 0; i < next.length; i++) {
+    const route = next[i] as any;
+    const label = `config.routes[${i}]`;
+
+    const legacyErrors: string[] = [];
+
+    // 检查 legacy 字段
+    if ('modelMapping' in route && typeof route.modelMapping === 'object' && !Array.isArray(route.modelMappings)) {
+      legacyErrors.push('modelMapping（旧格式，请使用 modelMappings 数组）');
+    }
+    if ('supplierId' in route && route.supplierId !== undefined) {
+      legacyErrors.push('supplierId（已废弃）');
+    }
+    if ('defaultSupplierId' in route && route.defaultSupplierId !== undefined) {
+      legacyErrors.push('defaultSupplierId（已废弃）');
+    }
+    if ('transformer' in route && route.transformer !== undefined) {
+      legacyErrors.push('transformer（已废弃，现在由运行时自动推断）');
+    }
+
+    if (legacyErrors.length > 0) {
+      throw new Error(`${label} 包含已废弃的字段：${legacyErrors.join('、')}。请更新配置格式。`);
+    }
+  }
+
   // 1) legacy: supplierId -> defaultSupplierId；移除 transformer（改为运行时推断）
+  // 注意：由于上面的破坏性检查，这里实际上不会再执行到，但保留逻辑以防需要回退
   for (const route of next as any[]) {
     if (route.supplierId && !route.defaultSupplierId) {
       route.defaultSupplierId = route.supplierId;

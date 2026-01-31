@@ -186,4 +186,439 @@ describe('Config Module', () => {
     process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
     expect(getConfigDir()).toBe(TEST_ROOT);
   });
+
+  describe('Routes 配置收敛（破坏性升级）', () => {
+    it('应拒绝 claude route 中的 legacy 字段 modelMapping', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-claude-legacy',
+          localService: 'claude',
+          // 使用旧格式 modelMapping（单个对象而非数组）
+          modelMapping: {
+            rules: [
+              {
+                inboundModel: '*',
+                targetSupplierId: 'claude-anthropic',
+                outboundModel: undefined,
+              },
+            ],
+          },
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'claude-anthropic',
+                name: 'claude-anthropic',
+                displayName: 'Claude (Anthropic)',
+                baseUrl: 'https://api.anthropic.com',
+                protocol: 'anthropic',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*modelMapping/);
+    });
+
+    it('应拒绝 claude route 中的 legacy 字段 supplierId', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-claude-legacy',
+          localService: 'claude',
+          supplierId: 'claude-anthropic', // 旧字段
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'claude-anthropic',
+                name: 'claude-anthropic',
+                displayName: 'Claude (Anthropic)',
+                baseUrl: 'https://api.anthropic.com',
+                protocol: 'anthropic',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*supplierId/);
+    });
+
+    it('应拒绝 claude route 中的 legacy 字段 defaultSupplierId', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-claude-legacy',
+          localService: 'claude',
+          defaultSupplierId: 'claude-anthropic', // 旧字段
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'claude-anthropic',
+                name: 'claude-anthropic',
+                displayName: 'Claude (Anthropic)',
+                baseUrl: 'https://api.anthropic.com',
+                protocol: 'anthropic',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*defaultSupplierId/);
+    });
+
+    it('应拒绝 claude route 中的 legacy 字段 transformer', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-claude-legacy',
+          localService: 'claude',
+          modelMappings: [
+            {
+              id: 'mapping-default',
+              inboundModel: '*',
+              targetSupplierId: 'claude-anthropic',
+              outboundModel: undefined,
+              enabled: true,
+            },
+          ],
+          transformer: 'claude-to-openai-chat', // 旧字段
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'claude-anthropic',
+                name: 'claude-anthropic',
+                displayName: 'Claude (Anthropic)',
+                baseUrl: 'https://api.anthropic.com',
+                protocol: 'anthropic',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*transformer/);
+    });
+
+    it('应拒绝 codex route 中的 modelMappings（只允许 singleSupplierId）', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-codex-invalid',
+          localService: 'codex',
+          // codex 不应该有 modelMappings
+          modelMappings: [
+            {
+              id: 'mapping-default',
+              inboundModel: '*',
+              targetSupplierId: 'openai-codex-official',
+              outboundModel: undefined,
+              enabled: true,
+            },
+          ],
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'openai-codex-official',
+                name: 'openai-codex-official',
+                displayName: 'OpenaiCodex',
+                baseUrl: 'https://api.openai.com/v1',
+                protocol: 'openai-codex',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*modelMappings.*codex.*singleSupplierId/);
+    });
+
+    it('应拒绝 gemini route 中的 modelMappings（只允许 singleSupplierId）', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-gemini-invalid',
+          localService: 'gemini',
+          // gemini 不应该有 modelMappings
+          modelMappings: [
+            {
+              id: 'mapping-default',
+              inboundModel: '*',
+              targetSupplierId: 'gemini-google',
+              outboundModel: undefined,
+              enabled: true,
+            },
+          ],
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'gemini-google',
+                name: 'gemini-google',
+                displayName: 'Gemini (Google)',
+                baseUrl: 'https://generativelanguage.googleapis.com',
+                protocol: 'gemini',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*modelMappings.*gemini.*singleSupplierId/);
+    });
+
+    it('应拒绝 codex route 缺少 singleSupplierId', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-codex-missing-supplier',
+          localService: 'codex',
+          // 缺少 singleSupplierId
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'openai-codex-official',
+                name: 'openai-codex-official',
+                displayName: 'OpenaiCodex',
+                baseUrl: 'https://api.openai.com/v1',
+                protocol: 'openai-codex',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\]\.singleSupplierId.*non-empty string/);
+    });
+
+    it('应拒绝 gemini route 缺少 singleSupplierId', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-gemini-missing-supplier',
+          localService: 'gemini',
+          // 缺少 singleSupplierId
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'gemini-google',
+                name: 'gemini-google',
+                displayName: 'Gemini (Google)',
+                baseUrl: 'https://generativelanguage.googleapis.com',
+                protocol: 'gemini',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\]\.singleSupplierId.*non-empty string/);
+    });
+
+    it('应拒绝 claude route 使用 singleSupplierId（应使用 modelMappings）', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-claude-invalid',
+          localService: 'claude',
+          // claude 不应该有 singleSupplierId
+          singleSupplierId: 'claude-anthropic',
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'claude-anthropic',
+                name: 'claude-anthropic',
+                displayName: 'Claude (Anthropic)',
+                baseUrl: 'https://api.anthropic.com',
+                protocol: 'anthropic',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*singleSupplierId.*claude.*modelMappings/);
+    });
+  });
 });
