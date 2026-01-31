@@ -755,7 +755,34 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
   let changed = false;
   const next = (routes as Route[]).map(r => ({ ...r }));
 
+  // 0) 破坏性检查：拒绝 legacy 字段（不再自动迁移）
+  for (let i = 0; i < next.length; i++) {
+    const route = next[i] as any;
+    const label = `config.routes[${i}]`;
+
+    const legacyErrors: string[] = [];
+
+    // 检查 legacy 字段
+    if ('modelMapping' in route && typeof route.modelMapping === 'object' && !Array.isArray(route.modelMappings)) {
+      legacyErrors.push('modelMapping（旧格式，请使用 modelMappings 数组）');
+    }
+    if ('supplierId' in route && route.supplierId !== undefined) {
+      legacyErrors.push('supplierId（已废弃）');
+    }
+    if ('defaultSupplierId' in route && route.defaultSupplierId !== undefined) {
+      legacyErrors.push('defaultSupplierId（已废弃）');
+    }
+    if ('transformer' in route && route.transformer !== undefined) {
+      legacyErrors.push('transformer（已废弃，现在由运行时自动推断）');
+    }
+
+    if (legacyErrors.length > 0) {
+      throw new Error(`${label} 包含已废弃的字段：${legacyErrors.join('、')}。请更新配置格式。`);
+    }
+  }
+
   // 1) legacy: supplierId -> defaultSupplierId；移除 transformer（改为运行时推断）
+  // 注意：由于上面的破坏性检查，这里实际上不会再执行到，但保留逻辑以防需要回退
   for (const route of next as any[]) {
     if (route.supplierId && !route.defaultSupplierId) {
       route.defaultSupplierId = route.supplierId;
