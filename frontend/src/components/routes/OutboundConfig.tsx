@@ -76,6 +76,8 @@ interface ModelMappingRowProps {
 }
 
 const ModelMappingRow: React.FC<ModelMappingRowProps> = ({ rule, supplier }) => {
+  const SupplierIcon = supplier ? SUPPLIER_ICONS[supplier.protocol] || OpenAIIcon : OpenAIIcon;
+
   return (
     <div className="flex items-center gap-3 py-2.5 px-3 bg-default-50 rounded-lg border border-default-200/60">
       {/* 入站模型 */}
@@ -87,17 +89,11 @@ const ModelMappingRow: React.FC<ModelMappingRowProps> = ({ rule, supplier }) => 
       <ArrowRight size={16} className="text-tertiary shrink-0" />
 
       {/* 供应商图标 */}
-      {supplier ? (
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${SUPPLIER_BG_CLASSES[supplier.protocol] || 'bg-default-200'} border border-white dark:border-white/10`}
-        >
-          <div className={`w-3 h-3 rounded-full ${SUPPLIER_TEXT_CLASSES[supplier.protocol]?.replace('text-', 'bg-') || 'bg-tertiary'}`} />
-        </div>
-      ) : (
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-default-200">
-          <div className="w-3 h-3 rounded-full bg-tertiary" />
-        </div>
-      )}
+      <div
+        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${supplier ? SUPPLIER_BG_CLASSES[supplier.protocol] || 'bg-default-200' : 'bg-default-200'} border border-white dark:border-white/10`}
+      >
+        <SupplierIcon size={16} className={supplier ? SUPPLIER_TEXT_CLASSES[supplier.protocol] || 'text-tertiary' : 'text-tertiary'} />
+      </div>
 
       {/* 出站模型 */}
       {rule.outboundModel ? (
