@@ -20,14 +20,6 @@ import { ArrowRight } from 'lucide-react';
 import type { LocalService, Supplier } from '@/types/api';
 
 const DEFAULT_COLOR = '#888';
-const ARROW_BG_OPACITY = '30'; // 20% 透明度
-
-// 定义本地服务对应的协议
-const LOCAL_SERVICE_PROTOCOLS: Record<LocalService, string[]> = {
-  'claude': ['anthropic'],
-  'codex': ['openai-codex'],
-  'gemini': ['gemini'],
-};
 
 interface LocalServiceConfig {
   key: LocalService;
@@ -50,7 +42,6 @@ const SUPPLIER_COLORS: Record<string, string> = {
 interface FlowArrowProps {
   localService: LocalService;
   targetSupplier?: Supplier;
-  showProtocolConversion?: boolean;
 }
 
 /**
@@ -61,7 +52,6 @@ interface FlowArrowProps {
 export const FlowArrow: React.FC<FlowArrowProps> = ({
   localService,
   targetSupplier,
-  showProtocolConversion = false,
 }) => {
   const localConfig = LOCAL_SERVICE_COLORS.find(s => s.key === localService);
   const inboundColor = localConfig?.color || DEFAULT_COLOR;
@@ -69,32 +59,20 @@ export const FlowArrow: React.FC<FlowArrowProps> = ({
     ? SUPPLIER_COLORS[targetSupplier.protocol] || DEFAULT_COLOR
     : DEFAULT_COLOR;
 
-  // 判断是否有协议转换
-  const hasConversion = showProtocolConversion && targetSupplier &&
-    !LOCAL_SERVICE_PROTOCOLS[localService]?.includes(targetSupplier.protocol);
-
   return (
-    <div className="flex flex-col items-center justify-center h-full px-3">
+    <div className="flex flex-col items-center justify-center px-3" style={{ height: 'var(--route-row-height)' }}>
       <div
-        className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-          hasConversion
-            ? 'bg-warning/20 border-warning/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-            : 'bg-default-100 border-default-200'
-        }`}
-        style={!hasConversion ? {
+        className="flex items-center justify-center w-10 h-10 rounded-full border-2 bg-default-100 border-default-200"
+        style={{
           background: `linear-gradient(135deg, ${inboundColor}25, ${outboundColor}25)`,
-          borderColor: hasConversion ? undefined : `${outboundColor}40`,
-        } : undefined}
+          borderColor: `${outboundColor}40`,
+        }}
       >
         <ArrowRight
           size={20}
-          className={hasConversion ? 'text-warning' : 'text-tertiary'}
-          style={!hasConversion ? { color: outboundColor } : undefined}
+          style={{ color: outboundColor }}
         />
       </div>
-      {hasConversion && (
-        <span className="text-xs font-bold text-warning mt-1">转换</span>
-      )}
     </div>
   );
 };

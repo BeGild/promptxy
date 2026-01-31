@@ -54,15 +54,15 @@ const SingleSupplier: React.FC<SingleSupplierProps> = ({ supplier }) => {
   const IconComponent = SUPPLIER_ICONS[supplier.protocol] || OpenAIIcon;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3" style={{ height: 'var(--route-row-height)' }}>
       <div
-        className={`w-12 h-12 rounded-xl flex items-center justify-center ${SUPPLIER_BG_CLASSES[supplier.protocol] || 'bg-default-200'} border-2 border-white dark:border-white/10 shadow-sm`}
+        className={`w-12 h-12 rounded-xl flex items-center justify-center ${SUPPLIER_BG_CLASSES[supplier.protocol] || 'bg-default-200'} border-2 border-white dark:border-white/10 shadow-sm shrink-0`}
       >
         <IconComponent size={26} className={SUPPLIER_TEXT_CLASSES[supplier.protocol] || 'text-tertiary'} />
       </div>
-      <div className="flex flex-col">
-        <div className="text-base font-bold text-primary">{supplier.displayName || supplier.name}</div>
-        <Chip size="sm" variant="flat" className={`text-xs h-5 w-fit ${SUPPLIER_BG_CLASSES[supplier.protocol] || ''} ${SUPPLIER_TEXT_CLASSES[supplier.protocol] || ''}`}>
+      <div className="flex flex-col justify-center">
+        <div className="text-base font-bold text-primary leading-tight">{supplier.displayName || supplier.name}</div>
+        <Chip size="sm" variant="flat" className={`text-xs h-5 w-fit mt-0.5 ${SUPPLIER_BG_CLASSES[supplier.protocol] || ''} ${SUPPLIER_TEXT_CLASSES[supplier.protocol] || ''}`}>
           {supplier.protocol}
         </Chip>
       </div>
@@ -79,35 +79,39 @@ const ModelMappingRow: React.FC<ModelMappingRowProps> = ({ rule, supplier }) => 
   const SupplierIcon = supplier ? SUPPLIER_ICONS[supplier.protocol] || OpenAIIcon : OpenAIIcon;
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-3 bg-default-50 rounded-lg border border-default-200/60">
-      {/* 入站模型 */}
-      <code className="text-sm font-bold text-primary font-mono bg-white dark:bg-default-100 px-2 py-1 rounded border border-default-200">
+    <div className="grid grid-cols-[140px_24px_32px_140px_1fr] items-center gap-2 px-3 bg-default-50 rounded-lg border border-default-200/60" style={{ height: 'var(--route-row-height)' }}>
+      {/* 入站模型 - 固定宽度 */}
+      <code className="text-sm font-bold text-primary font-mono bg-white dark:bg-default-100 px-2 py-1 rounded border border-default-200 truncate text-center">
         {rule.inboundModel}
       </code>
 
-      {/* 箭头 */}
-      <ArrowRight size={16} className="text-tertiary shrink-0" />
+      {/* 箭头 - 居中 */}
+      <div className="flex items-center justify-center">
+        <ArrowRight size={16} className="text-tertiary" />
+      </div>
 
-      {/* 供应商图标 */}
+      {/* 供应商图标 - 居中 */}
       <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${supplier ? SUPPLIER_BG_CLASSES[supplier.protocol] || 'bg-default-200' : 'bg-default-200'} border border-white dark:border-white/10`}
+        className={`w-8 h-8 rounded-lg flex items-center justify-center ${supplier ? SUPPLIER_BG_CLASSES[supplier.protocol] || 'bg-default-200' : 'bg-default-200'} border border-white dark:border-white/10`}
       >
         <SupplierIcon size={16} className={supplier ? SUPPLIER_TEXT_CLASSES[supplier.protocol] || 'text-tertiary' : 'text-tertiary'} />
       </div>
 
-      {/* 出站模型 */}
-      {rule.outboundModel ? (
-        <code className="text-sm font-bold text-primary font-mono">
-          {rule.outboundModel}
-        </code>
-      ) : (
-        <Chip size="sm" variant="flat" className="text-xs h-6 font-medium bg-default-200 text-tertiary">
-          透传
-        </Chip>
-      )}
+      {/* 出站模型 - 固定宽度 */}
+      <div className="flex items-center">
+        {rule.outboundModel ? (
+          <code className="text-sm font-bold text-primary font-mono truncate w-full text-center">
+            {rule.outboundModel}
+          </code>
+        ) : (
+          <Chip size="sm" variant="flat" className="text-xs h-6 font-medium bg-default-200 text-tertiary w-fit mx-auto">
+            透传
+          </Chip>
+        )}
+      </div>
 
-      {/* 供应商名称 */}
-      <span className={`text-sm font-medium ml-auto ${supplier ? SUPPLIER_TEXT_CLASSES[supplier.protocol] || 'text-tertiary' : 'text-tertiary'}`}>
+      {/* 供应商名称 - 右对齐 */}
+      <span className={`text-sm font-medium text-right truncate ${supplier ? SUPPLIER_TEXT_CLASSES[supplier.protocol] || 'text-tertiary' : 'text-tertiary'}`}>
         @{supplier?.displayName || '未知'}
       </span>
     </div>

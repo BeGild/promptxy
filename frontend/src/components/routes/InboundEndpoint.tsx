@@ -78,15 +78,15 @@ export const InboundEndpoint: React.FC<InboundEndpointProps> = ({ localService }
   const IconComponent = config.icon;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3" style={{ height: 'var(--route-row-height)' }}>
       <div
-        className={`w-12 h-12 rounded-xl flex items-center justify-center ${config.bgColorClass} border-2 border-white dark:border-white/10 shadow-sm`}
+        className={`w-12 h-12 rounded-xl flex items-center justify-center ${config.bgColorClass} border-2 border-white dark:border-white/10 shadow-sm shrink-0`}
       >
         <IconComponent size={26} className={config.textColorClass} />
       </div>
-      <div className="flex flex-col">
-        <div className="text-base font-bold text-primary">{config.label}</div>
-        <div className="text-sm text-tertiary font-mono">{config.prefix}</div>
+      <div className="flex flex-col justify-center">
+        <div className="text-base font-bold text-primary leading-tight">{config.label}</div>
+        <div className="text-sm text-tertiary font-mono leading-tight">{config.prefix}</div>
       </div>
     </div>
   );

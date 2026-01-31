@@ -66,5 +66,8 @@
     --spacing-35: 14px; /* 3.5 = 14px */
     --spacing-15: 6px; /* 1.5 = 6px */
     --spacing-25: 10px; /* 2.5 = 10px */
+
+    /* 路由卡片行高 - 用于 RouteFlowCard 组件内各元素对齐 */
+    --route-row-height: 56px;
   }
 }
