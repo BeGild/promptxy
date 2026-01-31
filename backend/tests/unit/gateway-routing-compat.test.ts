@@ -33,6 +33,16 @@ describe("gateway routing compat", () => {
           auth: { type: "none" },
           supportedModels: [],
         },
+        {
+          id: "gemini-up",
+          name: "gemini-up",
+          displayName: "gemini-up",
+          baseUrl: "http://127.0.0.1:3",
+          protocol: "gemini",
+          enabled: true,
+          auth: { type: "none" },
+          supportedModels: [],
+        },
       ],
       routes: [
         {
@@ -53,6 +63,12 @@ describe("gateway routing compat", () => {
           localService: "codex",
           enabled: true,
           singleSupplierId: "codex-up",
+        },
+        {
+          id: "r-gemini",
+          localService: "gemini",
+          enabled: true,
+          singleSupplierId: "gemini-up",
         },
       ],
       rules: [],
@@ -93,6 +109,18 @@ describe("gateway routing compat", () => {
           supplierId: "codex-up",
           supplierProtocol: "openai-codex",
           targetModel: "gpt-4o-mini",
+          transformer: "none",
+        },
+      },
+      {
+        name: "gemini routes to singleSupplierId with passthrough transformer",
+        pathname: "/gemini/v1/models/gemini-pro:generateContent",
+        body: { model: "gemini-pro" },
+        expect: {
+          localService: "gemini",
+          supplierId: "gemini-up",
+          supplierProtocol: "gemini",
+          targetModel: "gemini-pro",
           transformer: "none",
         },
       },
