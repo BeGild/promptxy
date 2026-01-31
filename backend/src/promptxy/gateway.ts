@@ -1601,12 +1601,6 @@ export function createGateway(
         upstreamStream = Readable.fromWeb(upstreamBody);
       }
 
-      const outboundStream = (shouldTransformSSE ? transformStream : upstreamStream) as any;
-      outboundStream.on('data', (chunk: any) => {
-        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-        responseBodyChunks.push(buf);
-      });
-
       await streamResponse({
         res,
         upstreamResponse,
