@@ -1,4 +1,4 @@
-import type { Supplier } from "../types";
+import type { Supplier } from "../types.js";
 
 export type ExecuteUpstreamInput = {
   url: string;

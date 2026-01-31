@@ -1,5 +1,5 @@
-import type { RoutePlan } from "../gateway-contracts";
-import type { TransformerType } from "../types";
+import type { RoutePlan } from "../gateway-contracts.js";
+import type { TransformerType } from "../types.js";
 
 export type TransformPlan = {
   transformer: TransformerType;

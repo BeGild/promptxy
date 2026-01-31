@@ -1,6 +1,6 @@
-import type { RequestContext, RoutePlan } from "../gateway-contracts";
-import type { Route, Supplier, TransformerType } from "../types";
-import { resolveModelMapping } from "../model-mapping";
+import type { RequestContext, RoutePlan } from "../gateway-contracts.js";
+import type { Route, Supplier, TransformerType } from "../types.js";
+import { resolveModelMapping } from "../model-mapping.js";
 
 export function deriveRoutePlan(
   ctx: RequestContext,
@@ -28,7 +28,7 @@ export function deriveRoutePlan(
       localService: route.localService,
       supplier: supplier?.id || "",
       supplierProtocol: supplier?.protocol || "",
-      targetModel: inboundModel,
+      targetModel: inboundModel ?? "",
       transformer: "none",
     };
   }
@@ -52,7 +52,7 @@ export function deriveRoutePlan(
     localService: route.localService,
     supplier: supplier?.id || "",
     supplierProtocol: supplier?.protocol || "",
-    targetModel: mapping.matched ? mapping.outboundModel ?? inboundModel : inboundModel,
+    targetModel: (mapping.matched ? mapping.outboundModel ?? inboundModel : inboundModel) ?? "",
     transformer,
   };
 }

@@ -1310,6 +1310,10 @@ export function createGateway(
       // 上游 fetch 已成功建连后，仍可能因为中间层/客户端断开触发 aborted/close；
       // abortUpstream 负责在这种情况下尽早中止读取上游，减少 undici terminated 概率。
 
+      if (!upstreamResponse) {
+        throw new Error('missing upstream response');
+      }
+
       const upstreamContentType = upstreamResponse.headers.get('content-type') || '';
       const isSSE = isSSEResponse(upstreamContentType);
 
