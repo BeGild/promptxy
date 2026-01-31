@@ -80,6 +80,7 @@ import { parseOpenAIModelSpec, resolveModelMapping } from './model-mapping.js';
 import { parseSSEToEvents, isSSEContent } from './utils/sse-parser.js';
 import { deriveRoutePlan } from './routing/index.js';
 import type { RequestContext } from './gateway-contracts.js';
+import { deriveTransformPlan } from './transform/index.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -1094,7 +1095,9 @@ export function createGateway(
       // 这里仅保证请求体 model 写回 effective model（targetModel 为空时保持透传）。
       if (jsonBody && typeof jsonBody === 'object' && 'model' in (jsonBody as any)) {
         (jsonBody as any).model = supplierMatch.effectiveModel;
-        transformerChain = [supplierMatch.transformer];
+
+        const transformPlan = deriveTransformPlan(routePlan);
+        transformerChain = [transformPlan.transformer];
       }
 
       const derivedTransformer = transformerChain.length > 0 ? transformerChain[0] : deriveTransformer(matchedRoute.localService, matchedRoute.supplier.protocol);
