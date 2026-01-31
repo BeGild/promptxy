@@ -7,9 +7,9 @@
  * 3. 语义化工具类（如 .card, .btn）
  */
 
-import React, { useState } from 'react';
-import { Card, CardBody, Switch, Button, Chip } from '@heroui/react';
-import { Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import React from 'react';
+import { Card, CardBody, Switch, Button } from '@heroui/react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { InboundEndpoint } from './InboundEndpoint';
 import { FlowArrow } from './FlowArrow';
 import { OutboundConfig } from './OutboundConfig';
@@ -34,8 +34,6 @@ export const RouteFlowCard: React.FC<RouteFlowCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   // 获取主要目标供应商用于流向箭头
   let targetSupplier: Supplier | undefined;
   if (route.singleSupplierId) {
@@ -105,61 +103,6 @@ export const RouteFlowCard: React.FC<RouteFlowCardProps> = ({
               <Trash2 size={16} />
             </Button>
           </div>
-        </div>
-
-        {/* 展开详情 */}
-        {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-default-200">
-            <div className="text-sm font-medium mb-2">详细配置</div>
-            {route.singleSupplierId ? (
-              <div className="space-y-2">
-                {(() => {
-                  const supplier = suppliers.find(s => s.id === route.singleSupplierId);
-                  if (!supplier) return <div className="text-tertiary">未找到供应商</div>;
-                  return (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-tertiary">上游供应商:</span>
-                      <span className="font-medium">{supplier.displayName || supplier.name}</span>
-                      <Chip size="sm" variant="flat">{supplier.protocol}</Chip>
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : route.modelMappings && route.modelMappings.length > 0 ? (
-              <div className="space-y-2">
-                {route.modelMappings.map((rule, index) => {
-                  const supplier = suppliers.find(s => s.id === rule.targetSupplierId);
-                  return (
-                    <div key={rule.id} className="flex items-center gap-3 py-2 px-3 bg-default-100/50 rounded-lg text-sm">
-                      <span className="text-tertiary w-6">{index + 1}.</span>
-                      <code className="bg-default-200 px-2 py-0.5 rounded text-xs">{rule.inboundModel}</code>
-                      <span className="text-tertiary">→</span>
-                      <span className="font-medium">{supplier?.displayName || '未知'}</span>
-                      {rule.outboundModel ? (
-                        <code className="bg-default-200 px-2 py-0.5 rounded text-xs">{rule.outboundModel}</code>
-                      ) : (
-                        <Chip size="sm" variant="flat" className="text-xs">透传</Chip>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-tertiary text-sm">未配置详细信息</div>
-            )}
-          </div>
-        )}
-
-        {/* 展开/收起按钮 */}
-        <div className="mt-3 pt-3 border-t border-default-200 flex justify-center">
-          <Button
-            variant="light"
-            size="sm"
-            onPress={() => setIsExpanded(!isExpanded)}
-            endContent={isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          >
-            {isExpanded ? '收起详情' : '查看详情'}
-          </Button>
         </div>
       </CardBody>
     </Card>
