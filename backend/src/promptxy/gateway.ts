@@ -972,8 +972,6 @@ export function createGateway(
       // ========== 第二阶段：根据模型解析供应商 ==========
       // 在读取请求体后，根据模型名称进行模型映射，确定目标供应商
 
-      // 对照模式：Routing 模块（纯逻辑）产物与当前解析结果应一致。
-      // 注意：这里不影响对外响应，仅用于开发/调试阶段快速发现拆分偏差。
       const routingCtx: RequestContext = {
         path: url.pathname,
         headers: req.headers as any,
@@ -1006,12 +1004,6 @@ export function createGateway(
       }
 
       if (!supplierMatch.ok) {
-        if (config.debug) {
-          logger.debug(
-            `[gateway routing compat] routePlan=${JSON.stringify(routePlan)} supplierMatch=error:${supplierMatch.error}`,
-          );
-        }
-
         jsonError(res, supplierMatch.status, {
           error: supplierMatch.error,
           message: supplierMatch.message,
@@ -1024,20 +1016,6 @@ export function createGateway(
 
       const matchedRoute = supplierMatch.routeInfo;
 
-      if (config.debug) {
-        const ok =
-          routePlan.localService === matchedRoute.localService &&
-          routePlan.supplier === matchedRoute.supplier.id &&
-          routePlan.supplierProtocol === matchedRoute.supplier.protocol &&
-          routePlan.transformer === supplierMatch.transformer &&
-          routePlan.targetModel === supplierMatch.effectiveModel;
-
-        if (!ok) {
-          logger.debug(
-            `[gateway routing compat] mismatch routePlan=${JSON.stringify(routePlan)} supplierId=${matchedRoute.supplier.id} supplierProtocol=${matchedRoute.supplier.protocol} transformer=${supplierMatch.transformer} effectiveModel=${supplierMatch.effectiveModel}`,
-          );
-        }
-      }
 
       route = matchedRoute; // 同时更新 route 变量，以便错误处理时使用
       upstreamPath = stripPrefix(url.pathname, matchedRoute.pathPrefix);
