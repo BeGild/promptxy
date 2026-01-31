@@ -81,6 +81,7 @@ import { parseSSEToEvents, isSSEContent } from './utils/sse-parser.js';
 import { deriveRoutePlan } from './routing/index.js';
 import type { RequestContext } from './gateway-contracts.js';
 import { deriveTransformPlan } from './transform/index.js';
+import { executeUpstream } from './proxying/index.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -1314,16 +1315,17 @@ export function createGateway(
         abortUpstream();
       });
 
-      upstreamResponse = await fetch(upstreamUrl, {
-        method: req.method,
+      upstreamResponse = await executeUpstream({
+        url: upstreamUrl,
+        method: req.method || method,
         headers,
         body: expectsBody
           ? effectiveBody
             ? Buffer.from(JSON.stringify(effectiveBody)).toString()
             : bodyBuffer?.toString()
           : undefined,
-        redirect: 'manual',
         signal: upstreamAbortController.signal,
+        supplier: matchedRoute.supplier,
       });
 
       // 上游 fetch 已成功建连后，仍可能因为中间层/客户端断开触发 aborted/close；
