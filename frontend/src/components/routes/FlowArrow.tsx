@@ -74,22 +74,26 @@ export const FlowArrow: React.FC<FlowArrowProps> = ({
     !LOCAL_SERVICE_PROTOCOLS[localService]?.includes(targetSupplier.protocol);
 
   return (
-    <div className="flex flex-col items-center gap-1 px-2">
+    <div className="flex flex-col items-center justify-center h-full px-3">
       <div
-        className="flex items-center justify-center w-8 h-8 rounded-full"
-        style={{
-          background: `linear-gradient(90deg, ${inboundColor}${ARROW_BG_OPACITY}, ${outboundColor}${ARROW_BG_OPACITY})`,
-        }}
+        className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+          hasConversion
+            ? 'bg-warning/20 border-warning/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+            : 'bg-default-100 border-default-200'
+        }`}
+        style={!hasConversion ? {
+          background: `linear-gradient(135deg, ${inboundColor}25, ${outboundColor}25)`,
+          borderColor: hasConversion ? undefined : `${outboundColor}40`,
+        } : undefined}
       >
         <ArrowRight
-          size={18}
-          style={{
-            color: hasConversion ? outboundColor : DEFAULT_COLOR,
-          }}
+          size={20}
+          className={hasConversion ? 'text-warning' : 'text-tertiary'}
+          style={!hasConversion ? { color: outboundColor } : undefined}
         />
       </div>
       {hasConversion && (
-        <span className="text-[10px] text-tertiary opacity-70">转换</span>
+        <span className="text-xs font-bold text-warning mt-1">转换</span>
       )}
     </div>
   );

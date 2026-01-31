@@ -37,7 +37,7 @@ const LOCAL_SERVICES: LocalServiceConfig[] = [
     prefix: '/claude',
     protocol: 'anthropic',
     color: '#D4935D',
-    bgColorClass: 'bg-[#D4935D]/20',
+    bgColorClass: 'bg-[#D4935D]/25',
     textColorClass: 'text-[#D4935D]',
     icon: AnthropicIcon,
   },
@@ -47,7 +47,7 @@ const LOCAL_SERVICES: LocalServiceConfig[] = [
     prefix: '/codex',
     protocol: 'openai-codex',
     color: '#2D3748',
-    bgColorClass: 'bg-[#2D3748]/20',
+    bgColorClass: 'bg-[#2D3748]/25',
     textColorClass: 'text-[#2D3748]',
     icon: CodexIcon,
   },
@@ -57,7 +57,7 @@ const LOCAL_SERVICES: LocalServiceConfig[] = [
     prefix: '/gemini',
     protocol: 'gemini',
     color: '#4285F4',
-    bgColorClass: 'bg-[#4285F4]/20',
+    bgColorClass: 'bg-[#4285F4]/25',
     textColorClass: 'text-[#4285F4]',
     icon: GeminiIcon,
   },
@@ -80,14 +80,13 @@ export const InboundEndpoint: React.FC<InboundEndpointProps> = ({ localService }
   return (
     <div className="flex items-center gap-3">
       <div
-        className={`w-10 h-10 rounded-lg flex items-center justify-center ${config.bgColorClass}`}
+        className={`w-12 h-12 rounded-xl flex items-center justify-center ${config.bgColorClass} border-2 border-white dark:border-white/10 shadow-sm`}
       >
-        <IconComponent size={24} className={config.textColorClass} />
+        <IconComponent size={26} className={config.textColorClass} />
       </div>
-      <div>
-        <div className="font-semibold text-primary">{config.label}</div>
-        <div className="text-xs text-tertiary font-mono">{config.prefix}</div>
-        <div className="text-xs text-tertiary opacity-70">{config.protocol}</div>
+      <div className="flex flex-col">
+        <div className="text-base font-bold text-primary">{config.label}</div>
+        <div className="text-sm text-tertiary font-mono">{config.prefix}</div>
       </div>
     </div>
   );

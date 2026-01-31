@@ -51,14 +51,14 @@ export const RouteFlowCard: React.FC<RouteFlowCardProps> = ({
       }`}
     >
       <CardBody className="p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
           {/* 左侧：入站端点 */}
           <div className="shrink-0">
             <InboundEndpoint localService={route.localService} />
           </div>
 
           {/* 中间：流向箭头 */}
-          <div className="flex items-start justify-center lg:pt-3">
+          <div className="flex items-center justify-center">
             <FlowArrow
               localService={route.localService}
               targetSupplier={targetSupplier}
@@ -76,7 +76,7 @@ export const RouteFlowCard: React.FC<RouteFlowCardProps> = ({
           </div>
 
           {/* 操作按钮 */}
-          <div className="flex items-center gap-2 shrink-0 lg:pt-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               isIconOnly
               variant="light"
