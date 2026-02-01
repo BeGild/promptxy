@@ -80,6 +80,16 @@ import {
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
+import {
+  handleGetSyncConfig,
+  handleUpdateSyncConfig,
+  handleSyncTrigger,
+  handleSyncPrice,
+  handleSyncModels,
+  handleGetSyncStatus,
+  handleGetSyncLogs,
+  handleSyncPreview,
+} from './sync/sync-handlers.js';
 import { createProtocolTransformer } from './transformers/index.js';
 import { createSSETransformStream, isSSEResponse } from './transformers/index.js';
 import { countClaudeTokens } from './utils/token-counter.js';
@@ -923,6 +933,55 @@ export function createGateway(
         // 获取今日统计
         if (method === 'GET' && url.pathname === '/_promptxy/stats/today') {
           await handleGetStatsToday(req, res);
+          return;
+        }
+
+        // ========== 同步服务 API ==========
+        // 获取同步配置
+        if (method === 'GET' && url.pathname === '/_promptxy/sync/config') {
+          await handleGetSyncConfig(req, res, config);
+          return;
+        }
+
+        // 更新同步配置
+        if (method === 'PUT' && url.pathname === '/_promptxy/sync/config') {
+          await handleUpdateSyncConfig(req, res, config);
+          return;
+        }
+
+        // 手动触发同步
+        if (method === 'POST' && url.pathname === '/_promptxy/sync/trigger') {
+          await handleSyncTrigger(req, res);
+          return;
+        }
+
+        // 同步价格
+        if (method === 'POST' && url.pathname === '/_promptxy/sync/price') {
+          await handleSyncPrice(req, res);
+          return;
+        }
+
+        // 同步模型列表
+        if (method === 'POST' && url.pathname === '/_promptxy/sync/models') {
+          await handleSyncModels(req, res);
+          return;
+        }
+
+        // 获取同步状态
+        if (method === 'GET' && url.pathname === '/_promptxy/sync/status') {
+          await handleGetSyncStatus(req, res);
+          return;
+        }
+
+        // 获取同步日志
+        if (method === 'GET' && url.pathname === '/_promptxy/sync/logs') {
+          await handleGetSyncLogs(req, res, url);
+          return;
+        }
+
+        // 预览同步数据
+        if (method === 'GET' && url.pathname === '/_promptxy/sync/preview') {
+          await handleSyncPreview(req, res, url);
           return;
         }
 
