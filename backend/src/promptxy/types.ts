@@ -174,6 +174,7 @@ export type PromptxyConfig = {
     // autoCleanup 和 cleanupInterval 已废弃，清理现在在 insertRequestRecord 中自动触发
   };
   debug: boolean;
+  sync?: SyncConfig; // 同步配置
 };
 
 // ============================================================================

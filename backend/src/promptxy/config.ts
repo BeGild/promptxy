@@ -8,6 +8,7 @@ import {
   PathMapping,
   LegacyPromptxyRule,
   Route,
+  SyncConfig,
 } from './types.js';
 import { randomUUID } from 'node:crypto';
 import { calculateDefaultPort, findAvailablePort } from './port-utils.js';
@@ -27,6 +28,7 @@ type PartialConfig = Partial<PromptxyConfig> & {
     // autoCleanup 和 cleanupInterval 已废弃，清理现在在 insertRequestRecord 中自动触发
   };
   rules?: PromptxyRule[];
+  sync?: SyncConfig;
 };
 
 const DEFAULT_CONFIG: PromptxyConfig = {
@@ -109,6 +111,18 @@ const DEFAULT_CONFIG: PromptxyConfig = {
     maxHistory: 1000,
   },
   debug: false,
+  sync: {
+    enabled: false, // 默认不启用自动同步
+    intervalHours: 24, // 每24小时同步一次
+    syncTime: '03:00', // 凌晨3点执行
+    maxRetries: 3, // 最多重试3次
+    retryDelayMs: 5000, // 重试延迟5秒
+    useProxy: false, // 默认不使用代理
+    sources: {
+      prices: 'models.dev',
+      models: 'models.dev',
+    },
+  },
 };
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -598,6 +612,7 @@ function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyCon
       maxHistory: incoming.storage?.maxHistory ?? base.storage.maxHistory,
     },
     debug: incoming.debug ?? base.debug,
+    sync: incoming.sync ?? base.sync,
   };
 }
 
