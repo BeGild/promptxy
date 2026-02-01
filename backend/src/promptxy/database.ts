@@ -3,7 +3,23 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
 import * as yaml from 'js-yaml';
-import { RequestRecord, RequestListResponse, PathsResponse, ParsedSSEEvent } from './types.js';
+import {
+  RequestRecord,
+  RequestListResponse,
+  PathsResponse,
+  ParsedSSEEvent,
+  StatsMetrics,
+  StatsTotal,
+  StatsDaily,
+  StatsHourly,
+  StatsSupplier,
+  StatsModel,
+  StatsRoute,
+  StatsToday,
+  StatsCache as ExtendedStatsCache,
+  emptyStatsMetrics,
+} from './types.js';
+import { getPricingService } from './pricing.js';
 
 // ============================================================
 // 类型定义
@@ -83,11 +99,25 @@ function parseHeaders(
 }
 
 /**
- * 统计缓存结构
+ * 统计缓存结构（扩展版）
  */
 interface StatsCache {
+  // 现有字段
   byClient: Record<string, number>;
   lastCleanup: number;
+
+  // 新增统计字段
+  total: StatsTotal;
+  daily: Record<string, StatsDaily>;
+  hourly: Record<string, StatsHourly>;
+  supplier: Record<string, StatsSupplier>;
+  model: Record<string, StatsModel>;
+  route: Record<string, StatsRoute>;
+  today: StatsToday;
+
+  // 缓存元数据
+  lastFlush: number;
+  dirty: boolean;
 }
 
 // ============================================================
@@ -185,6 +215,7 @@ class FileSystemStorage {
   private timestampIndexPath: string;
   private pathsIndexPath: string;
   private statsCachePath: string;
+  private statsDetailedCachePath: string; // 新增：详细统计缓存路径
 
   // 索引落盘串行化（避免并发 flush 造成 tmp 文件竞态）
   private flushPromise: Promise<void> | null = null;
@@ -201,11 +232,27 @@ class FileSystemStorage {
   // LRU 缓存
   private detailCache: LRUCache<string, RequestRecord>;
 
-  // 统计缓存
+  // 统计缓存（扩展版）
   private statsCache: StatsCache = {
     byClient: {},
     lastCleanup: 0,
+    total: { ...emptyStatsMetrics(), updatedAt: 0 },
+    daily: {},
+    hourly: {},
+    supplier: {},
+    model: {},
+    route: {},
+    today: {
+      date: '',
+      hourly: {},
+      ...emptyStatsMetrics(),
+    },
+    lastFlush: 0,
+    dirty: false,
   };
+
+  // 定时刷新任务
+  private statsFlushTimer: NodeJS.Timeout | null = null;
 
   // 默认设置
   private defaultSettings: Record<string, string> = {
@@ -227,6 +274,7 @@ class FileSystemStorage {
     this.timestampIndexPath = path.join(this.indexesDir, 'timestamp.idx');
     this.pathsIndexPath = path.join(this.indexesDir, 'paths.idx');
     this.statsCachePath = path.join(this.indexesDir, 'stats.json');
+    this.statsDetailedCachePath = path.join(this.indexesDir, 'stats-detailed.json'); // 新增
     this.lockFilePath = path.join(this.dataDir, '.lock');
     this.detailCache = new LRUCache<string, RequestRecord>(50);
   }
@@ -314,6 +362,12 @@ class FileSystemStorage {
    * 释放进程锁
    */
   private async releaseLock(): Promise<void> {
+    // 停止定时刷新任务
+    this.stopStatsFlushTimer();
+
+    // 刷新统计缓存到磁盘
+    await this.flushDetailedStats();
+
     if (this.lockFileHandle) {
       try {
         await this.lockFileHandle.close();
@@ -350,6 +404,12 @@ class FileSystemStorage {
 
     // 加载统计缓存
     await this.loadStatsCache();
+
+    // 加载详细统计缓存
+    await this.loadDetailedStatsCache();
+
+    // 启动定时刷新任务
+    this.startStatsFlushTimer();
   }
 
   // ============================================================
@@ -810,6 +870,352 @@ class FileSystemStorage {
     this.statsCache.byClient[index.client]++;
   }
 
+  // ============================================================
+  // 统计系统方法
+  // ============================================================
+
+  /**
+   * 获取今天的日期字符串
+   */
+  private getToday(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * 从请求记录提取指标
+   */
+  private extractMetrics(record: RequestRecord): StatsMetrics {
+    const metrics = emptyStatsMetrics();
+
+    // Token 数据
+    metrics.inputTokens = record.inputTokens || 0;
+    metrics.outputTokens = record.outputTokens || 0;
+    metrics.totalTokens = metrics.inputTokens + metrics.outputTokens;
+
+    // 费用数据
+    metrics.inputCost = record.inputCost || 0;
+    metrics.outputCost = record.outputCost || 0;
+    metrics.totalCost = metrics.inputCost + metrics.outputCost;
+
+    // 时间数据
+    metrics.waitTime = record.waitTime || 0;
+    metrics.durationTime = record.durationMs || 0;
+
+    // FTUT 数据
+    if (record.ftut) {
+      metrics.ftutCount = 1;
+      metrics.ftutSum = record.ftut;
+      metrics.ftutAvg = record.ftut;
+    }
+
+    // 请求计数
+    const isSuccess = record.responseStatus && record.responseStatus >= 200 && record.responseStatus < 400;
+    if (isSuccess) {
+      metrics.requestSuccess = 1;
+    } else {
+      metrics.requestFailed = 1;
+    }
+    metrics.requestTotal = 1;
+
+    return metrics;
+  }
+
+  /**
+   * 合并指标（累加）
+   */
+  private mergeMetrics(target: StatsMetrics, source: StatsMetrics): void {
+    target.inputTokens += source.inputTokens;
+    target.outputTokens += source.outputTokens;
+    target.totalTokens = target.inputTokens + target.outputTokens;
+
+    target.inputCost += source.inputCost;
+    target.outputCost += source.outputCost;
+    target.totalCost = target.inputCost + target.outputCost;
+
+    target.waitTime += source.waitTime;
+    target.durationTime += source.durationTime;
+
+    target.requestSuccess += source.requestSuccess;
+    target.requestFailed += source.requestFailed;
+    target.requestTotal = target.requestTotal;
+
+    if (source.ftutCount > 0) {
+      target.ftutCount += source.ftutCount;
+      target.ftutSum += source.ftutSum;
+      target.ftutAvg = target.ftutSum / target.ftutCount;
+    }
+  }
+
+  /**
+   * 更新统计缓存（在 insertRequestRecord 时调用）
+   */
+  private updateStatsCache(record: RequestRecord): void {
+    const metrics = this.extractMetrics(record);
+    const now = record.timestamp;
+    const date = new Date(now);
+    const dateStr = this.getToday();
+    const hour = date.getHours();
+    const hourStr = String(hour).padStart(2, '0');
+    const dateHourKey = `${dateStr}:${hourStr}`;
+
+    // 更新总览统计
+    this.mergeMetrics(this.statsCache.total, metrics);
+    this.statsCache.total.updatedAt = now;
+
+    // 更新每日统计
+    if (!this.statsCache.daily[dateStr]) {
+      this.statsCache.daily[dateStr] = {
+        ...emptyStatsMetrics(),
+        date: dateStr,
+        dateKey: now,
+      };
+    }
+    this.mergeMetrics(this.statsCache.daily[dateStr], metrics);
+
+    // 更新小时统计（仅保留当天）
+    if (dateStr === this.getToday()) {
+      if (!this.statsCache.hourly[dateHourKey]) {
+        this.statsCache.hourly[dateHourKey] = {
+          ...emptyStatsMetrics(),
+          date: dateStr,
+          hour,
+          dateHour: dateHourKey,
+        };
+      }
+      this.mergeMetrics(this.statsCache.hourly[dateHourKey], metrics);
+
+      // 更新今日统计
+      if (this.statsCache.today.date !== dateStr) {
+        // 日期变更，重置今日统计
+        this.statsCache.today = {
+          date: dateStr,
+          hourly: {},
+          ...emptyStatsMetrics(),
+        };
+      }
+      this.mergeMetrics(this.statsCache.today, metrics);
+
+      // 更新今日小时统计
+      if (!this.statsCache.today.hourly[hour]) {
+        this.statsCache.today.hourly[hour] = emptyStatsMetrics();
+      }
+      this.mergeMetrics(this.statsCache.today.hourly[hour], metrics);
+    }
+
+    // 更新供应商统计
+    if (record.supplierId) {
+      const supplierKey = record.supplierId;
+      if (!this.statsCache.supplier[supplierKey]) {
+        this.statsCache.supplier[supplierKey] = {
+          ...emptyStatsMetrics(),
+          supplierId: record.supplierId,
+          supplierName: record.supplierName || record.supplierId,
+        };
+      }
+      this.mergeMetrics(this.statsCache.supplier[supplierKey], metrics);
+    }
+
+    // 更新模型统计
+    const model = (record as any).model;
+    if (model) {
+      const modelKey = model;
+      if (!this.statsCache.model[modelKey]) {
+        this.statsCache.model[modelKey] = {
+          ...emptyStatsMetrics(),
+          model: model,
+          supplierName: record.supplierName,
+        };
+      }
+      this.mergeMetrics(this.statsCache.model[modelKey], metrics);
+    }
+
+    // 更新路由统计
+    if (record.routeId) {
+      const routeKey = record.routeId;
+      if (!this.statsCache.route[routeKey]) {
+        // 从配置中查找 localService
+        const localService = this.getLocalServiceForRoute(record.routeId);
+        this.statsCache.route[routeKey] = {
+          ...emptyStatsMetrics(),
+          routeId: record.routeId,
+          localService: localService || 'claude',
+        };
+      }
+      this.mergeMetrics(this.statsCache.route[routeKey], metrics);
+    }
+
+    // 标记为脏数据
+    this.statsCache.dirty = true;
+  }
+
+  /**
+   * 从配置中获取路由对应的 localService
+   */
+  private getLocalServiceForRoute(routeId: string): string {
+    // 这个方法需要访问配置，暂时返回默认值
+    // TODO: 从配置中查找
+    return 'claude';
+  }
+
+  /**
+   * 启动定时刷新任务
+   */
+  private startStatsFlushTimer(): void {
+    // 每 30 秒刷新一次
+    this.statsFlushTimer = setInterval(() => {
+      this.flushDetailedStats().catch(err => {
+        console.error('[PromptXY] 定期刷新统计失败', err);
+      });
+    }, 30 * 1000);
+  }
+
+  /**
+   * 停止定时刷新任务
+   */
+  private stopStatsFlushTimer(): void {
+    if (this.statsFlushTimer) {
+      clearInterval(this.statsFlushTimer);
+      this.statsFlushTimer = null;
+    }
+  }
+
+  /**
+   * 刷新详细统计到磁盘
+   */
+  private async flushDetailedStats(): Promise<void> {
+    if (!this.statsCache.dirty) {
+      return;
+    }
+
+    try {
+      const content = JSON.stringify(this.statsCache, null, 2);
+      await this.atomicWrite(this.statsDetailedCachePath, content);
+
+      this.statsCache.dirty = false;
+      this.statsCache.lastFlush = Date.now();
+
+      console.log('[PromptXY] 详细统计数据已刷新到磁盘');
+    } catch (error) {
+      console.error('[PromptXY] 刷新详细统计失败', error);
+    }
+  }
+
+  /**
+   * 加载详细统计缓存（启动时）
+   */
+  private async loadDetailedStatsCache(): Promise<void> {
+    try {
+      const content = await fs.readFile(this.statsDetailedCachePath, 'utf-8');
+      const loaded = JSON.parse(content) as StatsCache;
+
+      // 合并加载的数据，确保所有必要字段都存在
+      this.statsCache = {
+        byClient: loaded.byClient || {},
+        lastCleanup: loaded.lastCleanup || 0,
+        total: loaded.total || { ...emptyStatsMetrics(), updatedAt: 0 },
+        daily: loaded.daily || {},
+        hourly: loaded.hourly || {},
+        supplier: loaded.supplier || {},
+        model: loaded.model || {},
+        route: loaded.route || {},
+        today: {
+          date: this.getToday(),
+          hourly: loaded.today?.hourly || {},
+          ...emptyStatsMetrics(),
+          ...loaded.today,
+        },
+        lastFlush: loaded.lastFlush || 0,
+        dirty: loaded.dirty || false,
+      };
+
+      // 清理过小时统计（只保留今天的）
+      const today = this.getToday();
+      Object.keys(this.statsCache.hourly).forEach(key => {
+        if (!key.startsWith(today)) {
+          delete this.statsCache.hourly[key];
+        }
+      });
+
+      console.log('[PromptXY] 详细统计缓存已加载');
+    } catch (error) {
+      // 文件不存在或解析失败，确保所有字段正确初始化
+      this.statsCache.total = { ...emptyStatsMetrics(), updatedAt: 0 };
+      this.statsCache.daily = {};
+      this.statsCache.hourly = {};
+      this.statsCache.supplier = {};
+      this.statsCache.model = {};
+      this.statsCache.route = {};
+      this.statsCache.today = {
+        date: this.getToday(),
+        hourly: {},
+        ...emptyStatsMetrics(),
+      };
+      console.log('[PromptXY] 使用默认详细统计缓存');
+    }
+  }
+
+  /**
+   * 获取总览统计
+   */
+  getStatsTotal(): StatsTotal {
+    return this.statsCache.total;
+  }
+
+  /**
+   * 获取每日统计
+   */
+  getStatsDaily(limit: number = 30): StatsDaily[] {
+    const items = Object.values(this.statsCache.daily)
+      .sort((a, b) => b.dateKey - a.dateKey)
+      .slice(0, limit);
+    return items;
+  }
+
+  /**
+   * 获取小时统计（当日）
+   */
+  getStatsHourly(): StatsHourly[] {
+    const today = this.getToday();
+    const items = Object.values(this.statsCache.hourly)
+      .filter(h => h.date === today)
+      .sort((a, b) => a.hour - b.hour);
+    return items;
+  }
+
+  /**
+   * 获取供应商统计
+   */
+  getStatsSupplier(): StatsSupplier[] {
+    return Object.values(this.statsCache.supplier);
+  }
+
+  /**
+   * 获取模型统计
+   */
+  getStatsModel(limit: number = 20, sortBy: keyof StatsMetrics = 'totalCost'): StatsModel[] {
+    return Object.values(this.statsCache.model)
+      .sort((a, b) => (b[sortBy] as number) - (a[sortBy] as number))
+      .slice(0, limit);
+  }
+
+  /**
+   * 获取路由统计
+   */
+  getStatsRoute(): StatsRoute[] {
+    return Object.values(this.statsCache.route);
+  }
+
+  /**
+   * 获取今日统计
+   */
+  getStatsToday(): StatsToday {
+    return this.statsCache.today;
+  }
+
   /**
    * 持久化索引文件
    */
@@ -863,6 +1269,19 @@ class FileSystemStorage {
       this.statsCache = {
         byClient: {},
         lastCleanup: 0,
+        total: { ...emptyStatsMetrics(), updatedAt: 0 },
+        daily: {},
+        hourly: {},
+        supplier: {},
+        model: {},
+        route: {},
+        today: {
+          date: '',
+          hourly: {},
+          ...emptyStatsMetrics(),
+        },
+        lastFlush: 0,
+        dirty: false,
       };
     }
   }
@@ -977,10 +1396,13 @@ class FileSystemStorage {
     // 4. 更新内存索引
     this.updateIndex(index);
 
-    // 5. 异步持久化索引
+    // 5. 更新统计缓存（多维度聚合）
+    this.updateStatsCache(record);
+
+    // 6. 异步持久化索引
     this.flushIndex().catch(err => console.error('[PromptXY] 异步持久化索引失败', err));
 
-    // 6. 自动清理旧记录
+    // 7. 自动清理旧记录
     const maxHistory = this.getSetting('max_history');
     const keep = maxHistory ? Number(maxHistory) : 1000;
 
@@ -1481,6 +1903,66 @@ export async function rebuildIndex(): Promise<{
  * 导出请求 ID 生成函数
  */
 export const generateRequestId = () => FileSystemStorage.generateRequestId();
+
+// ============================================================================
+// 统计系统导出函数
+// ============================================================================
+
+/**
+ * 获取总览统计
+ */
+export function getStatsTotal(): StatsTotal {
+  const storage = getDatabase();
+  return storage.getStatsTotal();
+}
+
+/**
+ * 获取每日统计列表
+ */
+export function getStatsDaily(limit: number = 30): StatsDaily[] {
+  const storage = getDatabase();
+  return storage.getStatsDaily(limit);
+}
+
+/**
+ * 获取小时统计列表（仅当日）
+ */
+export function getStatsHourly(): StatsHourly[] {
+  const storage = getDatabase();
+  return storage.getStatsHourly();
+}
+
+/**
+ * 获取供应商统计列表
+ */
+export function getStatsSupplier(): StatsSupplier[] {
+  const storage = getDatabase();
+  return storage.getStatsSupplier();
+}
+
+/**
+ * 获取模型统计列表
+ */
+export function getStatsModel(limit: number = 20, sortBy: keyof StatsMetrics = 'totalTokens'): StatsModel[] {
+  const storage = getDatabase();
+  return storage.getStatsModel(limit, sortBy);
+}
+
+/**
+ * 获取路由统计列表
+ */
+export function getStatsRoute(): StatsRoute[] {
+  const storage = getDatabase();
+  return storage.getStatsRoute();
+}
+
+/**
+ * 获取今日统计
+ */
+export function getStatsToday(): StatsToday {
+  const storage = getDatabase();
+  return storage.getStatsToday();
+}
 
 /**
  * 导出 FileSystemStorage 类和类型
