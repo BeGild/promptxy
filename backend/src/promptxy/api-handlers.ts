@@ -33,6 +33,15 @@ import {
   RouteToggleResponse,
   LocalService,
   RebuildIndexResponse,
+  StatsMetrics,
+  StatsDataResponse,
+  StatsTotal,
+  StatsDaily,
+  StatsHourly,
+  StatsSupplier,
+  StatsModel,
+  StatsRoute,
+  StatsToday,
 } from './types.js';
 import {
   getRequestList,
@@ -46,6 +55,13 @@ import {
   getSetting,
   updateSetting,
   rebuildIndex,
+  getStatsTotal,
+  getStatsDaily,
+  getStatsHourly,
+  getStatsSupplier,
+  getStatsModel,
+  getStatsRoute,
+  getStatsToday,
 } from './database.js';
 import {
   saveConfig,
@@ -1579,5 +1595,152 @@ export async function handleRebuildIndex(
       message: error?.message || '重建索引失败',
       count: 0,
     });
+  }
+}
+
+// ============================================================================
+// 统计系统 API（新增）
+// ============================================================================
+
+/**
+ * 处理获取完整统计数据
+ */
+export async function handleGetStatsData(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const total = getStatsTotal();
+    const daily = getStatsDaily();
+    const hourly = getStatsHourly();
+    const supplier = getStatsSupplier();
+    const model = getStatsModel();
+    const route = getStatsRoute();
+    const today = getStatsToday();
+
+    const response: StatsDataResponse = {
+      total,
+      daily,
+      hourly,
+      supplier,
+      model,
+      route,
+      today,
+    };
+    sendJson(res, 200, response);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get stats data', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取总览统计
+ */
+export async function handleGetStatsTotal(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const result = getStatsTotal();
+    console.log('[Debug] getStatsTotal result:', JSON.stringify(result));
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    console.error('[Debug] getStatsTotal error:', error);
+    sendJson(res, 500, { error: 'Failed to get total stats', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取每日统计
+ */
+export async function handleGetStatsDaily(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): Promise<void> {
+  try {
+    const limit = Number(url.searchParams.get('limit')) || 30;
+    const result = getStatsDaily(limit);
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get daily stats', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取小时统计（仅当日）
+ */
+export async function handleGetStatsHourly(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const result = getStatsHourly();
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get hourly stats', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取供应商统计
+ */
+export async function handleGetStatsSupplier(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const result = getStatsSupplier();
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get supplier stats', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取模型统计
+ */
+export async function handleGetStatsModel(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): Promise<void> {
+  try {
+    const limit = Number(url.searchParams.get('limit')) || 20;
+    const sortBy = url.searchParams.get('sortBy') as keyof StatsMetrics || 'totalTokens';
+    const result = getStatsModel(limit, sortBy);
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get model stats', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取路由统计
+ */
+export async function handleGetStatsRoute(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const result = getStatsRoute();
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get route stats', message: error?.message });
+  }
+}
+
+/**
+ * 处理获取今日统计
+ */
+export async function handleGetStatsToday(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
+  try {
+    const result = getStatsToday();
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    sendJson(res, 500, { error: 'Failed to get today stats', message: error?.message });
   }
 }
