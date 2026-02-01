@@ -108,7 +108,7 @@ export function useSyncPrices() {
       if (data.success) {
         toast.success(`价格同步成功: ${data.result.recordsCount} 个模型`);
       } else {
-        toast.error(`价格同步失败: ${data.result.errorMessage || '未知错误'}`);
+        toast.error(`价格同步失败: ${data.result.error || '未知错误'}`);
       }
     },
     onError: (error: any) => {
@@ -131,7 +131,7 @@ export function useSyncModels() {
       if (data.success) {
         toast.success(`模型列表同步成功: ${data.result.recordsCount} 个模型`);
       } else {
-        toast.error(`模型列表同步失败: ${data.result.errorMessage || '未知错误'}`);
+        toast.error(`模型列表同步失败: ${data.result.error || '未知错误'}`);
       }
     },
     onError: (error: any) => {

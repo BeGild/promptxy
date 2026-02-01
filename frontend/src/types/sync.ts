@@ -42,6 +42,9 @@ export interface SyncLog {
   startedAt: number;
   finishedAt?: number;
   createdAt: number;
+
+  // 计算属性：耗时（毫秒）
+  duration?: number;
 }
 
 export interface SyncLogsResponse {

@@ -173,7 +173,7 @@ export const SyncLogsModal: React.FC<SyncLogsModalProps> = ({ isOpen, onClose })
                           {log.errorMessage || '同步失败'}
                         </span>
                       )}
-                      {log.duration > 0 && (
+                      {(log.duration ?? 0) > 0 && (
                         <span className="text-xs text-tertiary ml-2">
                           ({log.duration}ms)
                         </span>

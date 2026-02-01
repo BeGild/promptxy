@@ -1123,10 +1123,10 @@ class FileSystemStorage {
         model: loaded.model || {},
         route: loaded.route || {},
         today: {
-          date: this.getToday(),
-          hourly: loaded.today?.hourly || {},
           ...emptyStatsMetrics(),
           ...loaded.today,
+          date: loaded.today?.date || this.getToday(),
+          hourly: loaded.today?.hourly || {},
         },
         lastFlush: loaded.lastFlush || 0,
         dirty: loaded.dirty || false,
