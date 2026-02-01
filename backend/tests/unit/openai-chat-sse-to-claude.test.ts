@@ -41,6 +41,65 @@ describe('OpenAI Chat SSE → Claude SSE', () => {
     });
   });
 
+  it('重复的 delta.content 不应被静默去重', () => {
+    const transformer = createOpenAIChatToClaudeSSETransformer();
+
+    transformer.pushEvent({
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: { role: 'assistant' },
+        finish_reason: null,
+      }],
+    });
+
+    const chunkA: ChatSSEEvent = {
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: { content: ' ' },
+        finish_reason: null,
+      }],
+    };
+
+    const chunkB: ChatSSEEvent = {
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: { content: ' ' },
+        finish_reason: null,
+      }],
+    };
+
+    const resultA = transformer.pushEvent(chunkA);
+    const resultB = transformer.pushEvent(chunkB);
+
+    const deltasA = resultA.events.filter(e => e.type === 'content_block_delta');
+    const deltasB = resultB.events.filter(e => e.type === 'content_block_delta');
+
+    expect(deltasA.length).toBe(1);
+    expect(deltasB.length).toBe(1);
+
+    expect(deltasA[0]).toMatchObject({
+      type: 'content_block_delta',
+      delta: { type: 'text_delta', text: ' ' },
+    });
+
+    expect(deltasB[0]).toMatchObject({
+      type: 'content_block_delta',
+      delta: { type: 'text_delta', text: ' ' },
+    });
+  });
+
   it('应正确映射 stop_reason', () => {
     const transformer = createOpenAIChatToClaudeSSETransformer();
 
@@ -211,6 +270,107 @@ describe('OpenAI Chat SSE → Claude SSE', () => {
         partial_json: '{"location":',
       },
     });
+  });
+
+  it('多个 tool_calls 的 content_block index 应稳定且互不冲突', () => {
+    const transformer = createOpenAIChatToClaudeSSETransformer();
+
+    transformer.pushEvent({
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: { role: 'assistant' },
+        finish_reason: null,
+      }],
+    });
+
+    const toolsStart: ChatSSEEvent = {
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: {
+          tool_calls: [
+            {
+              index: 0,
+              id: 'call_a',
+              type: 'function',
+              function: { name: 'tool_a', arguments: '' },
+            },
+            {
+              index: 1,
+              id: 'call_b',
+              type: 'function',
+              function: { name: 'tool_b', arguments: '' },
+            },
+          ],
+        },
+        finish_reason: null,
+      }],
+    };
+
+    const resultStart = transformer.pushEvent(toolsStart);
+    const toolStartEvents = resultStart.events.filter(e => e.type === 'content_block_start');
+
+    expect(toolStartEvents.length).toBe(2);
+
+    const idxA = (toolStartEvents[0] as any).index;
+    const idxB = (toolStartEvents[1] as any).index;
+
+    expect(idxA).not.toBe(idxB);
+
+    const deltaA: ChatSSEEvent = {
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: {
+          tool_calls: [
+            { index: 0, function: { arguments: '{"a":1' } },
+            { index: 1, function: { arguments: '{"b":2' } },
+          ],
+        },
+        finish_reason: null,
+      }],
+    };
+
+    const resultDelta = transformer.pushEvent(deltaA);
+    const jsonDeltas = resultDelta.events.filter(
+      e => e.type === 'content_block_delta' && (e as any).delta?.type === 'input_json_delta',
+    );
+
+    expect(jsonDeltas.length).toBe(2);
+
+    // 两个 tool 的 delta 应该回到各自的 index
+    const deltaIdxs = jsonDeltas.map(e => (e as any).index);
+    expect(deltaIdxs).toContain(idxA);
+    expect(deltaIdxs).toContain(idxB);
+
+    // finalize 后应对同样的 index 发送 stop
+    const final = transformer.pushEvent({
+      id: 'chatcmpl-test',
+      object: 'chat.completion.chunk',
+      created: Date.now(),
+      model: 'gpt-test',
+      choices: [{
+        index: 0,
+        delta: {},
+        finish_reason: 'tool_calls',
+      }],
+    });
+
+    const stopEvents = final.events.filter(e => e.type === 'content_block_stop');
+    const stopIdxs = stopEvents.map(e => (e as any).index);
+
+    expect(stopIdxs).toContain(idxA);
+    expect(stopIdxs).toContain(idxB);
   });
 
   it('content_block_stop 的 index 应为非负数', () => {
