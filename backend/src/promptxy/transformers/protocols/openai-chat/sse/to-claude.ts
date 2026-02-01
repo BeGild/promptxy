@@ -37,16 +37,28 @@ type TransformerOptions = {
   estimatedInputTokens?: number;
 };
 
+type ToolCallState = {
+  contentBlockIndex: number;
+  id?: string;
+  name?: string;
+  arguments: string;
+  emittedArgsLength: number;
+  started: boolean;
+};
+
 /**
  * OpenAI Chat → Claude SSE 转换器
  */
 export class OpenAIChatToClaudeSSETransformer {
   private state: State = 'init';
   private messageId: string | null = null;
-  private hasContent: boolean = false;
-  private hasTextBlockStarted: boolean = false;
-  private contentBuffer: string[] = [];
-  private toolCallsBuffer: Map<number, { id?: string; name?: string; arguments: string }> = new Map();
+
+  private nextContentBlockIndex: number = 0;
+  private textContentBlockIndex: number | null = null;
+
+  private toolCallsBuffer: Map<number, ToolCallState> = new Map();
+  private finishReason: string | null | undefined;
+
   private config: TransformerConfig;
   private options: TransformerOptions;
   private inputTokens: number | undefined;
@@ -76,7 +88,7 @@ export class OpenAIChatToClaudeSSETransformer {
       return { events, streamEnd: false };
     }
 
-    const choice = choices[0];
+    const choice: ChatSSEChoice = choices[0];
     const delta = choice.delta;
 
     // 状态转换
@@ -100,90 +112,133 @@ export class OpenAIChatToClaudeSSETransformer {
     }
 
     if (this.state === 'streaming') {
-      // 处理内容增量
+      // 处理内容增量（注意：不能对 delta.content 做字符串去重，否则会静默丢失合法重复片段）
       if (delta.content) {
-        this.hasContent = true;
-
-        // 第一个文本块：先发送 content_block_start
-        if (!this.hasTextBlockStarted) {
-          this.hasTextBlockStarted = true;
-          events.push({
-            type: 'content_block_start',
-            index: 0,
-            content_block: {
-              type: 'text',
-              text: '',
-            },
-          });
-        }
-
-        if (!this.contentBuffer.includes(delta.content)) {
-          this.contentBuffer.push(delta.content);
-          events.push({
-            type: 'content_block_delta',
-            index: 0,
-            delta: {
-              type: 'text_delta',
-              text: delta.content,
-            },
-          });
-        }
+        this.ensureTextBlockStarted(events);
+        events.push({
+          type: 'content_block_delta',
+          index: this.textContentBlockIndex!,
+          delta: {
+            type: 'text_delta',
+            text: delta.content,
+          },
+        });
       }
 
       // 处理工具调用增量
       if (delta.tool_calls && delta.tool_calls.length > 0) {
         for (const toolCall of delta.tool_calls) {
-          const index = toolCall.index;
-          let buffer = this.toolCallsBuffer.get(index);
+          const openAIIndex = toolCall.index;
+          const buffer = this.getOrCreateToolCallState(openAIIndex);
 
-          if (!buffer) {
-            buffer = { id: toolCall.id, name: toolCall.function?.name, arguments: '' };
-            this.toolCallsBuffer.set(index, buffer);
-
-            // 发送 content_block_start
-            events.push({
-              type: 'content_block_start',
-              index: this.hasContent ? 1 : 0,
-              content_block: {
-                type: 'tool_use',
-                id: toolCall.id || '',
-                name: toolCall.function?.name || '',
-              } as any,
-            });
-          }
-
-          // 更新 id 和 name
-          if (toolCall.id && !buffer.id) {
+          // 更新 id / name
+          if (toolCall.id) {
             buffer.id = toolCall.id;
           }
-          if (toolCall.function?.name && !buffer.name) {
+          if (toolCall.function?.name) {
             buffer.name = toolCall.function.name;
           }
 
           // 追加 arguments
           if (toolCall.function?.arguments) {
             buffer.arguments += toolCall.function.arguments;
-
-            // 发送 input_json_delta
-            events.push({
-              type: 'content_block_delta',
-              index: this.hasContent ? 1 : 0,
-              delta: {
-                type: 'input_json_delta',
-                partial_json: toolCall.function.arguments,
-              },
-            });
           }
+
+          // 尝试启动 tool_use block（需要 id + name）
+          this.maybeStartToolUseBlock(buffer, events);
+
+          // 如果已经 started，则发送本次增量（或补发未发送的缓存）
+          this.flushToolArgumentsDelta(buffer, events);
         }
       }
 
       // 检查是否完成
-      if (choice.finish_reason) {
+      if (choice.finish_reason !== null && choice.finish_reason !== undefined) {
+        this.finishReason = choice.finish_reason;
         return this.finalize();
       }
     }
 
     return { events, streamEnd: false };
+  }
+
+  private ensureTextBlockStarted(events: ClaudeSSEEvent[]): void {
+    if (this.textContentBlockIndex !== null) {
+      return;
+    }
+
+    this.textContentBlockIndex = this.nextContentBlockIndex++;
+    events.push({
+      type: 'content_block_start',
+      index: this.textContentBlockIndex,
+      content_block: {
+        type: 'text',
+        text: '',
+      },
+    });
+  }
+
+  private getOrCreateToolCallState(openAIIndex: number): ToolCallState {
+    const existing = this.toolCallsBuffer.get(openAIIndex);
+    if (existing) {
+      return existing;
+    }
+
+    const state: ToolCallState = {
+      contentBlockIndex: this.nextContentBlockIndex++,
+      id: undefined,
+      name: undefined,
+      arguments: '',
+      emittedArgsLength: 0,
+      started: false,
+    };
+
+    this.toolCallsBuffer.set(openAIIndex, state);
+    return state;
+  }
+
+  private maybeStartToolUseBlock(state: ToolCallState, events: ClaudeSSEEvent[]): void {
+    if (state.started) {
+      return;
+    }
+
+    if (!state.id || !state.name) {
+      return;
+    }
+
+    events.push({
+      type: 'content_block_start',
+      index: state.contentBlockIndex,
+      content_block: {
+        type: 'tool_use',
+        id: state.id,
+        name: state.name,
+      } as any,
+    });
+
+    state.started = true;
+  }
+
+  private flushToolArgumentsDelta(state: ToolCallState, events: ClaudeSSEEvent[]): void {
+    if (!state.started) {
+      return;
+    }
+
+    if (state.arguments.length <= state.emittedArgsLength) {
+      return;
+    }
+
+    const newArgs = state.arguments.slice(state.emittedArgsLength);
+    state.emittedArgsLength = state.arguments.length;
+
+    events.push({
+      type: 'content_block_delta',
+      index: state.contentBlockIndex,
+      delta: {
+        type: 'input_json_delta',
+        partial_json: newArgs,
+      },
+    });
   }
 
   /**
@@ -196,29 +251,30 @@ export class OpenAIChatToClaudeSSETransformer {
       return { events, streamEnd: true };
     }
 
-    // 发送 content_block_stop（如果有文本内容）
-    if (this.hasContent) {
-      events.push({
-        type: 'content_block_stop',
-        index: 0,
-      });
+    // 发送 content_block_stop（按 index 升序，保证序列确定）
+    const stopIndices: number[] = [];
+
+    if (this.textContentBlockIndex !== null) {
+      stopIndices.push(this.textContentBlockIndex);
     }
 
-    // 发送工具调用的 content_block_stop
-    if (this.toolCallsBuffer.size > 0) {
-      const baseIndex = this.hasContent ? 1 : 0;
-      // 按索引顺序发送 stop 事件
-      const indices = Array.from(this.toolCallsBuffer.keys()).sort((a, b) => a - b);
-      for (const idx of indices) {
-        events.push({
-          type: 'content_block_stop',
-          index: baseIndex + idx,
-        });
+    for (const state of this.toolCallsBuffer.values()) {
+      if (state.started) {
+        stopIndices.push(state.contentBlockIndex);
       }
     }
 
+    stopIndices.sort((a, b) => a - b);
+
+    for (const index of stopIndices) {
+      events.push({
+        type: 'content_block_stop',
+        index,
+      });
+    }
+
     // 映射 finish_reason
-    const finishReason = this.mapStopReason('stop'); // 默认 stop
+    const finishReason = this.mapStopReason(this.finishReason);
 
     // 发送 message_delta（带 stop_reason）
     events.push({
@@ -251,6 +307,7 @@ export class OpenAIChatToClaudeSSETransformer {
   private mapStopReason(finishReason: string | null | undefined): string | null {
     const mapping: Record<string, string> = {
       'tool_calls': 'tool_use',
+      'function_call': 'tool_use',
       'stop': 'end_turn',
       'length': 'max_tokens',
       'content_filter': 'end_turn',
