@@ -174,6 +174,7 @@ export type PromptxyConfig = {
     // autoCleanup 和 cleanupInterval 已废弃，清理现在在 insertRequestRecord 中自动触发
   };
   debug: boolean;
+  sync?: SyncConfig; // 同步配置
 };
 
 // ============================================================================
@@ -805,4 +806,165 @@ export interface StatsModelListResponse {
  */
 export interface StatsRouteListResponse {
   items: StatsRoute[];
+}
+
+// ============================================================================
+// 同步服务类型
+// ============================================================================
+
+/**
+ * 同步配置
+ */
+export interface SyncConfig {
+  /** 是否启用定时同步 */
+  enabled: boolean;
+  /** 同步间隔（小时） */
+  intervalHours: number;
+  /** 具体同步时间（HH:mm 格式，可选） */
+  syncTime?: string;
+  /** 最大重试次数 */
+  maxRetries: number;
+  /** 重试延迟（毫秒） */
+  retryDelayMs: number;
+  /** 是否使用代理 */
+  useProxy: boolean;
+  /** 数据源配置 */
+  sources: {
+    /** 价格数据源 */
+    prices: 'models.dev' | 'custom';
+    /** 模型列表数据源 */
+    models: 'models.dev' | 'custom';
+  };
+}
+
+/**
+ * 同步结果
+ */
+export interface SyncResult {
+  /** 同步类型 */
+  type: 'price' | 'model';
+  /** 同步状态 */
+  status: 'success' | 'failed' | 'partial';
+  /** 同步记录数 */
+  recordsCount: number;
+  /** 错误信息 */
+  error?: string;
+  /** 耗时（毫秒） */
+  duration: number;
+  /** 开始时间戳 */
+  startedAt: number;
+  /** 完成时间戳 */
+  finishedAt: number;
+}
+
+/**
+ * 同步状态
+ */
+export interface SyncStatus {
+  /** 是否正在同步 */
+  syncing: boolean;
+  /** 当前同步类型 */
+  currentType?: 'price' | 'model' | 'all';
+  /** 上次同步时间 */
+  lastSyncTime?: number;
+  /** 上次同步结果 */
+  lastSyncResult?: SyncResult;
+  /** 下次同步时间 */
+  nextSyncTime?: number;
+}
+
+/**
+ * 模型价格数据（来自 models.dev）
+ */
+export interface ModelPriceData {
+  /** 模型名称 */
+  id: string;
+  /** 价格信息 */
+  cost: {
+    /** 输入价格（美元/1M tokens） */
+    input: number;
+    /** 输出价格（美元/1M tokens） */
+    output: number;
+    /** 缓存读取价格 */
+    cache_read?: number;
+    /** 缓存写入价格 */
+    cache_write?: number;
+  };
+}
+
+/**
+ * models.dev API 响应格式
+ */
+export interface ModelsDevResponse {
+  [provider: string]: {
+    models: {
+      [modelName: string]: ModelPriceData;
+    };
+  };
+}
+
+/**
+ * 同步日志记录
+ */
+export interface SyncLog {
+  /** 日志 ID */
+  id: string;
+  /** 同步类型 */
+  type: 'price' | 'model';
+  /** 同步状态 */
+  status: 'success' | 'failed' | 'partial';
+  /** 记录数 */
+  recordsCount: number;
+  /** 错误信息 */
+  errorMessage?: string;
+  /** 开始时间戳 */
+  startedAt: number;
+  /** 完成时间戳 */
+  finishedAt?: number;
+  /** 创建时间戳 */
+  createdAt: number;
+}
+
+/**
+ * 存储的模型价格数据
+ */
+export interface StoredModelPrice {
+  /** 模型名称 */
+  modelName: string;
+  /** 供应商 */
+  provider: string;
+  /** 输入价格（美元/1K tokens） */
+  inputPrice: number;
+  /** 输出价格（美元/1K tokens） */
+  outputPrice: number;
+  /** 缓存读取价格 */
+  cacheReadPrice: number;
+  /** 缓存写入价格 */
+  cacheWritePrice: number;
+  /** 数据来源 */
+  source: string;
+  /** 同步时间戳 */
+  syncedAt: number;
+  /** 创建时间戳 */
+  createdAt: number;
+  /** 更新时间戳 */
+  updatedAt: number;
+}
+
+/**
+ * 存储的模型列表数据
+ */
+export interface StoredModelList {
+  /** 模型名称 */
+  modelName: string;
+  /** 供应商 */
+  provider: string;
+  /** 协议类型 */
+  protocol: 'anthropic' | 'openai-codex' | 'openai-chat' | 'gemini';
+  /** 数据来源 */
+  source: string;
+  /** 同步时间戳 */
+  syncedAt: number;
+  /** 创建时间戳 */
+  createdAt: number;
 }

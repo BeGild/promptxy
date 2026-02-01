@@ -33,6 +33,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -54,6 +55,15 @@ import {
 } from '@/hooks/useSuppliers';
 import type { Supplier, SupplierProtocol } from '@/types/api';
 import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
+import {
+  useSyncConfig,
+  useUpdateSyncConfig,
+  useSyncPrices,
+  useSyncModels,
+  useTriggerSync,
+  useSyncStatus,
+} from '@/hooks/useSync';
+import { SyncLogsModal } from './SyncLogsModal';
 
 // 供应商协议选项
 const SUPPLIER_PROTOCOLS: Array<{
@@ -119,6 +129,17 @@ export const SettingsPanel: React.FC = () => {
   const { download } = useDownloadConfig();
   const { upload } = useUploadConfig();
   const cleanupMutation = useCleanupRequests();
+
+  // 同步功能 hooks
+  const { data: syncConfig, isLoading: syncConfigLoading } = useSyncConfig();
+  const updateSyncConfigMutation = useUpdateSyncConfig();
+  const syncPricesMutation = useSyncPrices();
+  const syncModelsMutation = useSyncModels();
+  const triggerSyncMutation = useTriggerSync();
+  const { data: syncStatus } = useSyncStatus();
+
+  // 同步日志弹窗状态
+  const [isSyncLogsModalOpen, setIsSyncLogsModalOpen] = useState(false);
 
   // 供应商管理
   const { data: suppliersData, isLoading: suppliersLoading, refetch: refetchSuppliers } = useSuppliers();
@@ -619,6 +640,162 @@ export const SettingsPanel: React.FC = () => {
             </CardBody>
           </Card>
 
+          {/* 数据同步 */}
+          <Card className="lg:col-span-1 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 h-full">
+            <CardBody className="space-y-4 p-6">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="text-status-success" size={24} />
+                <h4 className="text-lg font-bold text-primary">数据同步</h4>
+              </div>
+
+              {syncConfigLoading ? (
+                <div className="flex justify-center py-4">
+                  <Spinner size="sm" color="primary" />
+                </div>
+              ) : (
+                <>
+                  {/* 自动同步开关 */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-primary">启用自动同步</span>
+                    <Switch
+                      isSelected={syncConfig?.enabled || false}
+                      onValueChange={(checked) => {
+                        if (syncConfig) {
+                          updateSyncConfigMutation.mutate({
+                            ...syncConfig,
+                            enabled: checked,
+                          });
+                        }
+                      }}
+                      size="sm"
+                    />
+                  </div>
+
+                  {/* 同步配置 */}
+                  <div className="space-y-3">
+                    <Select
+                      label="同步间隔"
+                      placeholder="选择间隔"
+                      selectedKeys={[syncConfig?.intervalHours?.toString() || '24']}
+                      onSelectionChange={(keys) => {
+                        const intervalHours = Array.from(keys)[0] as string;
+                        if (syncConfig) {
+                          updateSyncConfigMutation.mutate({
+                            ...syncConfig,
+                            intervalHours: parseInt(intervalHours),
+                          });
+                        }
+                      }}
+                      size="sm"
+                      isDisabled={!syncConfig?.enabled}
+                      classNames={{
+                        trigger: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
+                      }}
+                    >
+                      <SelectItem key="1">每小时</SelectItem>
+                      <SelectItem key="6">每6小时</SelectItem>
+                      <SelectItem key="12">每12小时</SelectItem>
+                      <SelectItem key="24">每天</SelectItem>
+                      <SelectItem key="168">每周</SelectItem>
+                    </Select>
+
+                    <Input
+                      label="同步时间"
+                      placeholder="03:00"
+                      value={syncConfig?.syncTime || '03:00'}
+                      onValueChange={(value) => {
+                        if (syncConfig) {
+                          updateSyncConfigMutation.mutate({
+                            ...syncConfig,
+                            syncTime: value,
+                          });
+                        }
+                      }}
+                      size="sm"
+                      isDisabled={!syncConfig?.enabled}
+                      classNames={{
+                        inputWrapper: 'shadow-sm bg-elevated dark:bg-elevated border border-subtle',
+                      }}
+                    />
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={() => syncPricesMutation.mutate()}
+                        isLoading={syncPricesMutation.isPending}
+                        isDisabled={syncStatus?.syncing}
+                        className="flex-1"
+                      >
+                        同步价格
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={() => syncModelsMutation.mutate()}
+                        isLoading={syncModelsMutation.isPending}
+                        isDisabled={syncStatus?.syncing}
+                        className="flex-1"
+                      >
+                        同步模型
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      color="primary"
+                      onPress={() => triggerSyncMutation.mutate()}
+                      isLoading={triggerSyncMutation.isPending}
+                      isDisabled={syncStatus?.syncing}
+                      className="w-full"
+                      startContent={<RefreshCw size={16} />}
+                    >
+                      {syncStatus?.syncing ? '同步中...' : '同步全部'}
+                    </Button>
+                  </div>
+
+                  {/* 最近同步状态 */}
+                  <div className="pt-2 border-t border-subtle">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="text-xs text-secondary mb-1">最近同步</div>
+                        {syncStatus?.lastSyncResult ? (
+                          <div className="flex items-center gap-2">
+                            <Chip
+                              size="sm"
+                              color={syncStatus.lastSyncResult.status === 'success' ? 'success' : 'danger'}
+                              variant="flat"
+                            >
+                              {syncStatus.lastSyncResult.status === 'success' ? '✓' : '✗'}{' '}
+                              {syncStatus.lastSyncResult.type === 'price' ? '价格' : '模型'}
+                            </Chip>
+                            {syncStatus.lastSyncResult.recordsCount > 0 && (
+                              <span className="text-xs text-secondary">
+                                {syncStatus.lastSyncResult.recordsCount} 条
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-tertiary">暂无同步记录</span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onPress={() => setIsSyncLogsModalOpen(true)}
+                      className="w-full mt-2 text-xs"
+                    >
+                      查看日志历史 →
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardBody>
+          </Card>
+
           {/* 关于 */}
           <Card className="lg:col-span-1 border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/10 dark:from-elevated dark:to-brand-primary/5 h-full">
             <CardBody className="space-y-4 p-6">
@@ -1000,6 +1177,12 @@ export const SettingsPanel: React.FC = () => {
             </ModalFooter>
           </ModalContent>
         </Modal>
+
+        {/* 同步日志弹窗 */}
+        <SyncLogsModal
+          isOpen={isSyncLogsModalOpen}
+          onClose={() => setIsSyncLogsModalOpen(false)}
+        />
         </>
       )}
     </div>
