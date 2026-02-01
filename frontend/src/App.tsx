@@ -17,6 +17,7 @@ import React, { useEffect, useState } from 'react';
 import { HeroUIProvider } from '@heroui/react';
 import { Toaster } from 'sonner';
 import { Header } from '@/components/layout';
+import { DashboardPage } from '@/pages/DashboardPage';
 import { RulesPage } from '@/pages/RulesPage';
 import { RequestsPage } from '@/pages/RequestsPage';
 import { PreviewPage } from '@/pages/PreviewPage';
@@ -62,6 +63,8 @@ function AppContent() {
   // 渲染对应页面
   const renderPage = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return <DashboardPage />;
       case 'rules':
         return <RulesPage />;
       case 'requests':
@@ -73,7 +76,7 @@ function AppContent() {
       case 'settings':
         return <SettingsPage />;
       default:
-        return <RulesPage />;
+        return <DashboardPage />;
     }
   };
 

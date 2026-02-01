@@ -14,7 +14,7 @@ interface UIState {
 
   // UI 状态
   sidebarCollapsed: boolean;
-  activeTab: 'rules' | 'requests' | 'preview' | 'supplier-management' | 'route-config' | 'settings';
+  activeTab: 'dashboard' | 'rules' | 'requests' | 'preview' | 'supplier-management' | 'route-config' | 'settings';
   theme: 'light' | 'dark' | 'system';
 
   // 请求侧边栏状态
@@ -31,7 +31,7 @@ interface UIState {
   closePreview: () => void;
   openSettings: () => void;
   closeSettings: () => void;
-  setActiveTab: (tab: 'rules' | 'requests' | 'preview' | 'supplier-management' | 'route-config' | 'settings') => void;
+  setActiveTab: (tab: 'dashboard' | 'rules' | 'requests' | 'preview' | 'supplier-management' | 'route-config' | 'settings') => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   toggleSidebar: () => void;
   reset: () => void;

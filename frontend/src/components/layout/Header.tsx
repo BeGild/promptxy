@@ -30,6 +30,7 @@ import {
   DropdownItem,
 } from '@heroui/react';
 import {
+  BarChart3,
   ClipboardList,
   Activity,
   PlayCircle,
@@ -50,6 +51,7 @@ import { useUIStore } from '@/store';
  * 这可以减少不必要的子组件重渲染
  */
 const MENU_ITEMS = [
+  { key: 'dashboard', label: '数据统计', icon: BarChart3, desc: '查看请求量、费用、性能等指标' },
   { key: 'rules', label: '规则管理', icon: ClipboardList, desc: '创建和管理修改规则' },
   { key: 'requests', label: '请求监控', icon: Activity, desc: '查看实时请求历史' },
   { key: 'preview', label: '预览测试', icon: PlayCircle, desc: '测试规则效果' },

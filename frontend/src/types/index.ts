@@ -5,3 +5,4 @@
 export * from './rule';
 export * from './request';
 export * from './api';
+export * from './stats';
