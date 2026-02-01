@@ -114,11 +114,16 @@ export class ModelsDevClient {
 
     for (const [provider, providerData] of Object.entries(data)) {
       for (const [modelName, modelData] of Object.entries(providerData.models)) {
+        // 跳过没有价格信息的模型
+        if (!modelData?.cost) {
+          continue;
+        }
+
         prices.push({
           modelName: modelName.toLowerCase(),
           provider,
-          inputPrice: modelData.cost.input / 1000, // 转换为美元/1K tokens
-          outputPrice: modelData.cost.output / 1000,
+          inputPrice: (modelData.cost.input || 0) / 1000, // 转换为美元/1K tokens
+          outputPrice: (modelData.cost.output || 0) / 1000,
           cacheReadPrice: (modelData.cost.cache_read || 0) / 1000,
           cacheWritePrice: (modelData.cost.cache_write || 0) / 1000,
         });
@@ -149,6 +154,11 @@ export class ModelsDevClient {
     };
 
     for (const [provider, providerData] of Object.entries(data)) {
+      // 跳过没有 models 字段的供应商
+      if (!providerData?.models) {
+        continue;
+      }
+
       const protocol = providerProtocolMap[provider] || provider;
       for (const modelName of Object.keys(providerData.models)) {
         lists.push({

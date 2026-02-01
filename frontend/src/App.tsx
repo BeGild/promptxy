@@ -23,7 +23,6 @@ import { RequestsPage } from '@/pages/RequestsPage';
 import { PreviewPage } from '@/pages/PreviewPage';
 import { RouteConfigPage } from '@/pages/RouteConfigPage';
 import { SettingsPage } from '@/pages/SettingsPage';
-import { SyncManagementPage } from '@/pages/SyncManagementPage';
 import { useUIStore, useAppStore } from '@/store';
 import { useSSE } from '@/hooks';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -74,8 +73,6 @@ function AppContent() {
         return <PreviewPage />;
       case 'route-config':
         return <RouteConfigPage />;
-      case 'sync':
-        return <SyncManagementPage />;
       case 'settings':
         return <SettingsPage />;
       default:
