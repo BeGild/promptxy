@@ -2,6 +2,7 @@ import { loadConfig, getConfigDir } from './promptxy/config.js';
 import { createGateway } from './promptxy/gateway.js';
 import { initializeDatabase } from './promptxy/database.js';
 import { createLogger } from './promptxy/logger.js';
+import { getSyncService } from './promptxy/sync/sync-service.js';
 import { mkdir } from 'node:fs/promises';
 import { parseCliArgs, printHelp, printVersion } from './promptxy/cli.js';
 
@@ -32,6 +33,13 @@ async function main() {
   // 创建统一服务器（Gateway + API）
   const server = createGateway(config, db, config.rules);
 
+  // 初始化同步服务
+  if (config.sync) {
+    const syncService = getSyncService();
+    await syncService.init(config.sync);
+    logger.info(`[PromptXY] 同步服务已初始化${config.sync.enabled ? ' (自动同步已启用)' : ''}`);
+  }
+
   // 启动服务器
   server.listen(config.listen.port, config.listen.host, () => {
     logger.info(`[PromptXY] 服务启动: http://${config.listen.host}:${config.listen.port}`);
@@ -42,6 +50,14 @@ async function main() {
   // 优雅关闭处理
   const shutdown = async () => {
     logger.info(`[PromptXY] 正在关闭服务器...`);
+
+    // 停止同步服务定时任务
+    try {
+      const syncService = getSyncService();
+      syncService.stopScheduler();
+    } catch {
+      // 忽略同步服务未初始化的情况
+    }
 
     // 关闭所有 SSE 连接
     const { getSSEConnections } = await import('./promptxy/api-handlers.js');
