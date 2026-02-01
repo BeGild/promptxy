@@ -69,6 +69,14 @@ import {
   handleDeleteRoute,
   handleToggleRoute,
   handleRebuildIndex,
+  handleGetStatsData,
+  handleGetStatsTotal,
+  handleGetStatsDaily,
+  handleGetStatsHourly,
+  handleGetStatsSupplier,
+  handleGetStatsModel,
+  handleGetStatsRoute,
+  handleGetStatsToday,
   sendJson,
   type SSEConnections,
 } from './api-handlers.js';
@@ -866,6 +874,55 @@ export function createGateway(
         // 索引重建（新增）
         if (method === 'POST' && url.pathname === '/_promptxy/rebuild-index') {
           await handleRebuildIndex(req, res);
+          return;
+        }
+
+        // ========== 统计系统 API（新增）==========
+        // 获取完整统计数据
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/data') {
+          await handleGetStatsData(req, res);
+          return;
+        }
+
+        // 获取总览统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/total') {
+          await handleGetStatsTotal(req, res);
+          return;
+        }
+
+        // 获取每日统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/daily') {
+          await handleGetStatsDaily(req, res, url);
+          return;
+        }
+
+        // 获取小时统计（仅当日）
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/hourly') {
+          await handleGetStatsHourly(req, res);
+          return;
+        }
+
+        // 获取供应商统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/supplier') {
+          await handleGetStatsSupplier(req, res);
+          return;
+        }
+
+        // 获取模型统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/model') {
+          await handleGetStatsModel(req, res, url);
+          return;
+        }
+
+        // 获取路由统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/route') {
+          await handleGetStatsRoute(req, res);
+          return;
+        }
+
+        // 获取今日统计
+        if (method === 'GET' && url.pathname === '/_promptxy/stats/today') {
+          await handleGetStatsToday(req, res);
           return;
         }
 
