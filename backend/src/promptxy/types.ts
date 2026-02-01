@@ -221,6 +221,17 @@ export interface RequestRecord {
   transformerChain?: string;
   transformTrace?: string;
   transformedPath?: string;
+
+  // 统计相关字段（可选，用于向后兼容）
+  model?: string;              // 使用的模型
+  inputTokens?: number;        // 输入 Token 数
+  outputTokens?: number;       // 输出 Token 数
+  totalTokens?: number;        // 总 Token 数
+  inputCost?: number;          // 输入费用
+  outputCost?: number;         // 输出费用
+  totalCost?: number;          // 总费用
+  waitTime?: number;           // 等待时间（首字时间）
+  ftut?: number;               // First Token Usage Time
 }
 
 // API 返回的请求记录（解析后的）
@@ -562,4 +573,236 @@ export interface RebuildIndexResponse {
   success: boolean;
   message: string;
   count: number;
+}
+
+// ============================================================================
+// 统计系统类型
+// ============================================================================
+
+/**
+ * 统计指标集合
+ * 所有指标均为累加值，便于聚合计算
+ */
+export interface StatsMetrics {
+  // Token 相关
+  inputTokens: number;        // 输入 Token 总数
+  outputTokens: number;       // 输出 Token 总数
+  totalTokens: number;        // 总 Token 数（计算字段）
+
+  // 费用相关（美元，保留 6 位小数）
+  inputCost: number;          // 输入费用
+  outputCost: number;         // 输出费用
+  totalCost: number;          // 总费用（计算字段）
+
+  // 时间相关（毫秒）
+  waitTime: number;           // 等待时间总和（首字时间）
+  durationTime: number;       // 总响应时间总和
+
+  // 请求计数
+  requestSuccess: number;     // 成功请求数
+  requestFailed: number;      // 失败请求数
+  requestTotal: number;       // 总请求数（计算字段）
+
+  // FTUT（First Token Usage Time）
+  ftutCount: number;          // 记录 FTUT 的请求数
+  ftutSum: number;            // FTUT 总和（毫秒）
+  ftutAvg: number;            // FTUT 平均值（计算字段）
+}
+
+/**
+ * 空指标初始化
+ */
+export function emptyStatsMetrics(): StatsMetrics {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    inputCost: 0,
+    outputCost: 0,
+    totalCost: 0,
+    waitTime: 0,
+    durationTime: 0,
+    requestSuccess: 0,
+    requestFailed: 0,
+    requestTotal: 0,
+    ftutCount: 0,
+    ftutSum: 0,
+    ftutAvg: 0,
+  };
+}
+
+/**
+ * 总览统计（所有时间）
+ */
+export interface StatsTotal extends StatsMetrics {
+  updatedAt: number;          // 最后更新时间
+}
+
+/**
+ * 每日统计
+ */
+export interface StatsDaily extends StatsMetrics {
+  date: string;               // YYYY-MM-DD 格式
+  dateKey: number;            // 时间戳（便于排序）
+}
+
+/**
+ * 小时统计（仅当日）
+ */
+export interface StatsHourly extends StatsMetrics {
+  date: string;               // YYYY-MM-DD
+  hour: number;               // 0-23
+  dateHour: string;           // YYYY-MM-DD:HH 格式
+}
+
+/**
+ * 供应商统计
+ */
+export interface StatsSupplier extends StatsMetrics {
+  supplierId: string;
+  supplierName: string;
+}
+
+/**
+ * 模型统计
+ */
+export interface StatsModel extends StatsMetrics {
+  model: string;              // 模型名称
+  supplierName?: string;      // 所属供应商（可选）
+}
+
+/**
+ * 路由统计
+ */
+export interface StatsRoute extends StatsMetrics {
+  routeId: string;
+  localService: string;       // claude | codex | gemini
+}
+
+/**
+ * 今日统计（内存缓存）
+ */
+export interface StatsToday extends StatsMetrics {
+  date: string;
+  hourly: Record<number, StatsMetrics>;  // 按小时（0-23）分组
+}
+
+/**
+ * 统计缓存结构
+ */
+export interface StatsCache {
+  // 现有字段
+  byClient: Record<string, number>;
+  lastCleanup: number;
+
+  // 新增统计字段
+  total: StatsTotal;
+  daily: Record<string, StatsDaily>;
+  hourly: Record<string, StatsHourly>;
+  supplier: Record<string, StatsSupplier>;
+  model: Record<string, StatsModel>;
+  route: Record<string, StatsRoute>;
+  today: StatsToday;
+
+  // 缓存元数据
+  lastFlush: number;
+  dirty: boolean;
+}
+
+/**
+ * 模型价格配置
+ * 价格单位：美元/1K tokens
+ */
+export interface ModelPrice {
+  model: string;              // 模型名称（支持通配符，如 claude-*）
+  inputPrice: number;         // 输入价格
+  outputPrice: number;        // 输出价格
+  provider?: string;          // 供应商标识（可选）
+}
+
+/**
+ * 价格配置文件
+ */
+export interface PriceConfig {
+  prices: ModelPrice[];
+  updatedAt: number;
+}
+
+// ============================================================================
+// 扩展 RequestRecord 添加统计字段
+// ============================================================================
+
+/**
+ * 扩展 RequestRecord 接口，添加统计相关字段
+ * 这些字段是可选的，用于向后兼容
+ */
+export interface RequestRecordStats {
+  // 使用的模型
+  model?: string;
+
+  // Token 统计
+  inputTokens?: number;       // 输入 Token 数
+  outputTokens?: number;      // 输出 Token 数
+  totalTokens?: number;       // 总 Token 数
+
+  // 费用统计
+  inputCost?: number;         // 输入费用
+  outputCost?: number;        // 输出费用
+  totalCost?: number;         // 总费用
+
+  // 时间统计
+  waitTime?: number;          // 等待时间（首字时间）
+  ftut?: number;              // First Token Usage Time（首字时间）
+}
+
+// ============================================================================
+// 统计 API 类型
+// ============================================================================
+
+/**
+ * 统计数据响应
+ */
+export interface StatsDataResponse {
+  total: StatsTotal;
+  daily: StatsDaily[];
+  hourly: StatsHourly[];
+  supplier: StatsSupplier[];
+  model: StatsModel[];
+  route: StatsRoute[];
+  today: StatsToday;
+}
+
+/**
+ * 每日统计列表响应
+ */
+export interface StatsDailyListResponse {
+  items: StatsDaily[];
+}
+
+/**
+ * 小时统计列表响应
+ */
+export interface StatsHourlyListResponse {
+  items: StatsHourly[];
+}
+
+/**
+ * 供应商统计列表响应
+ */
+export interface StatsSupplierListResponse {
+  items: StatsSupplier[];
+}
+
+/**
+ * 模型统计列表响应
+ */
+export interface StatsModelListResponse {
+  items: StatsModel[];
+}
+
+/**
+ * 路由统计列表响应
+ */
+export interface StatsRouteListResponse {
+  items: StatsRoute[];
 }
