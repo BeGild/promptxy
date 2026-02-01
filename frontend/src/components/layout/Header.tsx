@@ -40,6 +40,7 @@ import {
   Monitor,
   Laptop,
   GitBranch,
+  RefreshCw,
   LucideIcon,
 } from 'lucide-react';
 import { StatusIndicator, LogoIcon } from '@/components/common';
@@ -56,6 +57,7 @@ const MENU_ITEMS = [
   { key: 'requests', label: '请求监控', icon: Activity, desc: '查看实时请求历史' },
   { key: 'preview', label: '预览测试', icon: PlayCircle, desc: '测试规则效果' },
   { key: 'route-config', label: '路由配置', icon: GitBranch, desc: '配置协议转换路由' },
+  { key: 'sync', label: '数据同步', icon: RefreshCw, desc: '同步模型价格和列表' },
   { key: 'settings', label: '设置', icon: Settings, desc: '配置和数据管理' },
 ] as const;
 
