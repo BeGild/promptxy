@@ -101,6 +101,7 @@ import type { RequestContext } from './gateway-contracts.js';
 import { deriveTransformPlan } from './transform/index.js';
 import { executeUpstream } from './proxying/index.js';
 import { streamResponse } from './streaming/index.js';
+import { getPricingService } from './pricing.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -1492,6 +1493,31 @@ export function createGateway(
         const savedRequestId = generateRequestId();
         requestId = savedRequestId;
 
+        // 提取 token 和费用数据
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let inputCost = 0;
+        let outputCost = 0;
+        let model: string | undefined;
+
+        try {
+          const pricingService = getPricingService();
+          const usage = pricingService.extractUsage(transformed);
+          inputTokens = usage.inputTokens;
+          outputTokens = usage.outputTokens;
+          model = pricingService.extractModel(effectiveBody);
+
+          if (model && (inputTokens > 0 || outputTokens > 0)) {
+            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
+            inputCost = costData.inputCost;
+            outputCost = costData.outputCost;
+          }
+        } catch (err: any) {
+          if (config.debug) {
+            logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
+          }
+        }
+
         const filteredPaths = await getFilteredPaths();
         if (!shouldFilterPath(upstreamPath, filteredPaths)) {
           const record: RequestRecord = {
@@ -1522,6 +1548,14 @@ export function createGateway(
             supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
+            // 统计相关字段
+            model,
+            inputTokens,
+            outputTokens,
+            totalTokens: inputTokens + outputTokens,
+            inputCost,
+            outputCost,
+            totalCost: inputCost + outputCost,
           };
 
           try {
@@ -1656,6 +1690,46 @@ export function createGateway(
           ? `partial=true; ${finalError?.message ?? String(finalError)}`
           : undefined;
 
+        // 提取 token 和费用数据
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let inputCost = 0;
+        let outputCost = 0;
+        let model: string | undefined;
+
+        try {
+          // 解析响应体获取 token 数据
+          let parsedResponse: any = responseBodyStr;
+          if (typeof responseBodyStr === 'string') {
+            try {
+              parsedResponse = JSON.parse(responseBodyStr);
+            } catch {
+              parsedResponse = responseBodyStr;
+            }
+          }
+
+          // 提取 token 数据
+          const pricingService = getPricingService();
+          const usage = pricingService.extractUsage(parsedResponse);
+          inputTokens = usage.inputTokens;
+          outputTokens = usage.outputTokens;
+
+          // 获取模型名称
+          model = pricingService.extractModel(savedJsonBody);
+
+          // 计算费用
+          if (model && (inputTokens > 0 || outputTokens > 0)) {
+            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
+            inputCost = costData.inputCost;
+            outputCost = costData.outputCost;
+          }
+        } catch (err: any) {
+          // 解析失败时使用默认值，不影响请求记录保存
+          if (config.debug) {
+            logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
+          }
+        }
+
         const record: RequestRecord = {
           id: savedRequestId,
           timestamp: Date.now(),
@@ -1685,6 +1759,14 @@ export function createGateway(
           supplierClient: getSupplierClient(savedSupplierProtocol),
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
+          // 统计相关字段
+          model,
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
+          inputCost,
+          outputCost,
+          totalCost: inputCost + outputCost,
         };
 
         try {
