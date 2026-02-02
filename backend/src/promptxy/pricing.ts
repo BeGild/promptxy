@@ -328,12 +328,12 @@ export class PricingService {
       }
     }
     // Anthropic 格式（单个响应对象）
-    else if (responseBody.usage) {
+    else if (responseBody.usage && (responseBody.usage.input_tokens !== undefined || responseBody.usage.output_tokens !== undefined)) {
       result.inputTokens = responseBody.usage.input_tokens || 0;
       result.outputTokens = responseBody.usage.output_tokens || 0;
     }
     // OpenAI 格式
-    else if (responseBody.usage) {
+    else if (responseBody.usage && (responseBody.usage.prompt_tokens !== undefined || responseBody.usage.completion_tokens !== undefined)) {
       result.inputTokens = responseBody.usage.prompt_tokens || 0;
       result.outputTokens = responseBody.usage.completion_tokens || 0;
     }

@@ -79,6 +79,14 @@ interface RequestFile {
   transformerChain?: string;
   transformTrace?: string;
   transformedPath?: string; // 转换后的请求路径
+  // 统计相关字段
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  inputCost?: number;
+  outputCost?: number;
+  totalCost?: number;
 }
 
 /**
@@ -513,6 +521,17 @@ class FileSystemStorage {
   private async writeRequestFile(record: RequestRecord): Promise<void> {
     const filePath = path.join(this.requestsDir, `${record.id}.yaml`);
 
+    // 调试日志：检查统计字段（始终输出）
+    console.log('[PromptXY] Writing request:', {
+      id: record.id,
+      hasModel: record.model !== undefined,
+      hasInputTokens: record.inputTokens !== undefined,
+      hasOutputTokens: record.outputTokens !== undefined,
+      model: record.model,
+      inputTokens: record.inputTokens,
+      outputTokens: record.outputTokens,
+    });
+
     const fileContent: RequestFile = {
       id: record.id,
       timestamp: record.timestamp,
@@ -538,6 +557,14 @@ class FileSystemStorage {
       supplierBaseUrl: record.supplierBaseUrl,
       transformerChain: record.transformerChain,
       transformTrace: record.transformTrace,
+      // 统计相关字段
+      model: record.model,
+      inputTokens: record.inputTokens,
+      outputTokens: record.outputTokens,
+      totalTokens: record.totalTokens,
+      inputCost: record.inputCost,
+      outputCost: record.outputCost,
+      totalCost: record.totalCost,
     };
 
     // 使用 YAML dump，大字段使用多行字符串语法
@@ -587,6 +614,14 @@ class FileSystemStorage {
         transformerChain: fileContent.transformerChain,
         transformTrace: fileContent.transformTrace,
         transformedPath: fileContent.transformedPath,
+        // 统计相关字段
+        model: fileContent.model,
+        inputTokens: fileContent.inputTokens,
+        outputTokens: fileContent.outputTokens,
+        totalTokens: fileContent.totalTokens,
+        inputCost: fileContent.inputCost,
+        outputCost: fileContent.outputCost,
+        totalCost: fileContent.totalCost,
       };
     } catch (error) {
       console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);

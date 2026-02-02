@@ -1502,10 +1502,20 @@ export function createGateway(
 
         try {
           const pricingService = getPricingService();
-          const usage = pricingService.extractUsage(transformed);
+          // 使用原始响应提取 usage 数据（转换后的响应可能没有 usage 字段）
+          const usage = pricingService.extractUsage(parsed);
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
           model = pricingService.extractModel(effectiveBody);
+
+          // 调试日志
+          console.log('[PromptXY] Usage extraction:', {
+            usageKeys: parsed ? Object.keys(parsed).slice(0, 10) : 'no parsed',
+            hasUsage: !!parsed?.usage,
+            inputTokens,
+            outputTokens,
+            model,
+          });
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
             const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
@@ -1564,6 +1574,127 @@ export function createGateway(
             logger.error(`[promptxy] Failed to save request record: ${err?.message}`);
           }
         }
+
+        broadcastRequest({
+          id: savedRequestId,
+          timestamp: Date.now(),
+          client: matchedRoute.client,
+          path: upstreamPath,
+          method: method,
+          matchedRules: matches.map(m => m.ruleId),
+        });
+        return;
+      }
+
+      // 非流式：不需要转换，直接透传 JSON 响应
+      if (!isSSE && !needsResponseTransform) {
+        console.log('[PromptXY] Non-streaming no-transform path:', {
+          isSSE,
+          needsResponseTransform,
+          contentType: upstreamContentType,
+        });
+        const raw = await upstreamResponse.text();
+        let parsed: any = raw;
+        if (upstreamContentType.includes('application/json')) {
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            parsed = raw;
+          }
+        }
+
+        // 提取 token 和费用数据
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let inputCost = 0;
+        let outputCost = 0;
+        let model: string | undefined;
+
+        try {
+          const pricingService = getPricingService();
+          const usage = pricingService.extractUsage(parsed);
+          inputTokens = usage.inputTokens;
+          outputTokens = usage.outputTokens;
+          model = pricingService.extractModel(effectiveBody);
+
+          console.log('[PromptXY] No-transform usage extraction:', {
+            inputTokens,
+            outputTokens,
+            model,
+          });
+
+          if (model && (inputTokens > 0 || outputTokens > 0)) {
+            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
+            inputCost = costData.inputCost;
+            outputCost = costData.outputCost;
+          }
+        } catch (err: any) {
+          if (config.debug) {
+            logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
+          }
+        }
+
+        const duration = Date.now() - startTime;
+        const savedRequestId = generateRequestId();
+        requestId = savedRequestId;
+
+        const filteredPaths = await getFilteredPaths();
+        if (!shouldFilterPath(upstreamPath, filteredPaths)) {
+          const record: RequestRecord = {
+            id: savedRequestId,
+            timestamp: Date.now(),
+            client: matchedRoute.client,
+            path: upstreamPath,
+            method: method,
+            originalBody: originalBodyBuffer ? originalBodyBuffer.toString('utf-8') : '{}',
+            transformedBody: transformedBody,
+            modifiedBody: effectiveBody
+              ? JSON.stringify(effectiveBody)
+              : (originalBodyBuffer?.toString('utf-8') ?? '{}'),
+            requestHeaders: finalRequestHeaders,
+            originalRequestHeaders: originalRequestHeaders,
+            requestSize: originalBodyBuffer ? originalBodyBuffer.length : undefined,
+            responseSize: Buffer.byteLength(raw),
+            matchedRules: JSON.stringify(matches),
+            responseStatus: upstreamResponse.status,
+            durationMs: duration,
+            responseHeaders: responseHeaders,
+            responseBody: raw,
+            error: undefined,
+            routeId: matchedRoute.route.id,
+            supplierId: matchedRoute.supplier.id,
+            supplierName: matchedRoute.supplier.name,
+            supplierBaseUrl: matchedRoute.supplier.baseUrl,
+            supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
+            transformerChain: JSON.stringify(transformerChain),
+            transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
+            // 统计相关字段
+            model,
+            inputTokens,
+            outputTokens,
+            totalTokens: inputTokens + outputTokens,
+            inputCost,
+            outputCost,
+            totalCost: inputCost + outputCost,
+          };
+
+          try {
+            await insertRequestRecord(record);
+          } catch (err: any) {
+            logger.error(`[promptxy] Failed to save request record: ${err?.message}`);
+          }
+        }
+
+        res.statusCode = upstreamResponse.status;
+        res.setHeader('content-type', upstreamContentType);
+        for (const [key, value] of Object.entries(responseHeaders)) {
+          try {
+            res.setHeader(key, value);
+          } catch {
+            // Ignore invalid headers.
+          }
+        }
+        res.end(raw);
 
         broadcastRequest({
           id: savedRequestId,
@@ -1699,8 +1830,23 @@ export function createGateway(
 
         try {
           // 解析响应体获取 token 数据
+          // responseBodyStr 可能是 ParsedSSEEvent[] 或 JSON 对象
           let parsedResponse: any = responseBodyStr;
-          if (typeof responseBodyStr === 'string') {
+
+          // 处理 SSE 事件数组格式
+          if (Array.isArray(responseBodyStr) && responseBodyStr.length > 0) {
+            // ParsedSSEEvent[] 格式，需要转换
+            parsedResponse = responseBodyStr.map((event: any) => {
+              if (event.data && typeof event.data === 'string') {
+                try {
+                  return JSON.parse(event.data);
+                } catch {
+                  return null;
+                }
+              }
+              return null;
+            }).filter((e: any) => e !== null);
+          } else if (typeof responseBodyStr === 'string') {
             try {
               parsedResponse = JSON.parse(responseBodyStr);
             } catch {
