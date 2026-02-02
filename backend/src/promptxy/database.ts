@@ -976,7 +976,7 @@ class FileSystemStorage {
 
     target.requestSuccess += source.requestSuccess;
     target.requestFailed += source.requestFailed;
-    target.requestTotal = target.requestTotal;
+    target.requestTotal += source.requestTotal;
 
     if (source.ftutCount > 0) {
       target.ftutCount += source.ftutCount;
@@ -1088,11 +1088,21 @@ class FileSystemStorage {
   }
 
   /**
-   * 从配置中获取路由对应的 localService
+   * 从 routeId 解析 localService
+   * routeId 格式: route-{localService}-{suffix}，例如 route-claude-default, route-codex-default
    */
   private getLocalServiceForRoute(routeId: string): string {
-    // 这个方法需要访问配置，暂时返回默认值
-    // TODO: 从配置中查找
+    // 解析 routeId: route-{localService}-{suffix}
+    const parts = routeId.split('-');
+    if (parts.length >= 2 && parts[0] === 'route') {
+      // 支持多级 localService，例如 "openai-chat" -> parts[1] = "openai", parts[2] = "chat"
+      // 提取 route- 后的部分，直到最后一个 -{suffix}
+      const localService = parts.slice(1, -1).join('-');
+      if (localService) {
+        return localService;
+      }
+    }
+    // 兜底默认值
     return 'claude';
   }
 

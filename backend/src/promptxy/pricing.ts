@@ -2,221 +2,94 @@
  * PromptXY 价格计算服务
  *
  * 功能：
- * - 内置主流 AI 模型价格数据
+ * - 从本地存储获取模型价格（由 sync 服务自动同步）
  * - 支持精确匹配和通配符匹配
  * - 自动计算 Token 费用
+ * - 硬编码作为兜底
  */
 
-import type { ModelPrice } from './types.js';
+import type { ModelPrice, StoredModelPrice } from './types.js';
+import { getSyncStorage } from './sync/sync-storage.js';
 
 /**
- * 内置模型价格数据
- * 价格单位：美元/1K tokens
- * 数据来源：各官方定价页面（2026年1月）
+ * 供应商协议类型
  */
-const BUILT_IN_PRICES: ModelPrice[] = [
-  // ============================================================================
+export type SupplierProtocol =
+  | 'anthropic'
+  | 'openai-chat'
+  | 'openai-codex'
+  | 'gemini'
+  | 'zhipu'
+  | 'deepseek'
+  | 'unknown';
+
+/**
+ * 兜底价格表（当 sync 服务未同步时使用）
+ * 价格单位：美元/1K tokens
+ */
+const FALLBACK_PRICES: ModelPrice[] = [
   // Claude (Anthropic)
-  // ============================================================================
-  {
-    model: 'claude-3-5-sonnet-20241022',
-    inputPrice: 3.0,
-    outputPrice: 15.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-3-5-sonnet-20240620',
-    inputPrice: 3.0,
-    outputPrice: 15.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-3-5-haiku-20241022',
-    inputPrice: 0.8,
-    outputPrice: 4.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-3-5-haiku-20240307',
-    inputPrice: 0.8,
-    outputPrice: 4.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-3-opus-20240229',
-    inputPrice: 15.0,
-    outputPrice: 75.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-3-sonnet-20240229',
-    inputPrice: 3.0,
-    outputPrice: 15.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-3-haiku-20240307',
-    inputPrice: 0.25,
-    outputPrice: 1.25,
-    provider: 'anthropic',
-  },
-  // 通配符匹配
-  {
-    model: 'claude-*-sonnet-*',
-    inputPrice: 3.0,
-    outputPrice: 15.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'claude-*-haiku-*',
-    inputPrice: 0.8,
-    outputPrice: 4.0,
-    provider: 'anthropic',
-  },
+  { model: 'claude-3-5-sonnet-20241022', inputPrice: 3.0, outputPrice: 15.0, provider: 'anthropic' },
+  { model: 'claude-3-5-haiku-20241022', inputPrice: 0.8, outputPrice: 4.0, provider: 'anthropic' },
+  { model: 'claude-3-opus-20240229', inputPrice: 15.0, outputPrice: 75.0, provider: 'anthropic' },
+  { model: 'claude-sonnet-4-5-20250929', inputPrice: 3.0, outputPrice: 15.0, provider: 'anthropic' },
+  { model: 'claude-*-sonnet-*', inputPrice: 3.0, outputPrice: 15.0, provider: 'anthropic' },
+  { model: 'claude-*-haiku-*', inputPrice: 0.8, outputPrice: 4.0, provider: 'anthropic' },
+  { model: 'claude-*', inputPrice: 3.0, outputPrice: 15.0, provider: 'anthropic' },
 
-  // ============================================================================
   // OpenAI
-  // ============================================================================
-  {
-    model: 'gpt-4o',
-    inputPrice: 2.5,
-    outputPrice: 10.0,
-    provider: 'openai',
-  },
-  {
-    model: 'gpt-4o-mini',
-    inputPrice: 0.15,
-    outputPrice: 0.6,
-    provider: 'openai',
-  },
-  {
-    model: 'gpt-4-turbo',
-    inputPrice: 10.0,
-    outputPrice: 30.0,
-    provider: 'openai',
-  },
-  {
-    model: 'gpt-4',
-    inputPrice: 30.0,
-    outputPrice: 60.0,
-    provider: 'openai',
-  },
-  {
-    model: 'gpt-3.5-turbo',
-    inputPrice: 0.5,
-    outputPrice: 1.5,
-    provider: 'openai',
-  },
+  { model: 'gpt-4o', inputPrice: 2.5, outputPrice: 10.0, provider: 'openai' },
+  { model: 'gpt-4o-mini', inputPrice: 0.15, outputPrice: 0.6, provider: 'openai' },
+  { model: 'gpt-4-turbo', inputPrice: 10.0, outputPrice: 30.0, provider: 'openai' },
+  { model: 'gpt-3.5-turbo', inputPrice: 0.5, outputPrice: 1.5, provider: 'openai' },
+  { model: 'gpt-*', inputPrice: 0.5, outputPrice: 1.5, provider: 'openai' },
 
-  // ============================================================================
-  // Gemini (Google)
-  // ============================================================================
-  {
-    model: 'gemini-2.0-flash-exp',
-    inputPrice: 0.075,
-    outputPrice: 0.3,
-    provider: 'google',
-  },
-  {
-    model: 'gemini-2.0-flash-thinking-exp',
-    inputPrice: 0.075,
-    outputPrice: 0.3,
-    provider: 'google',
-  },
-  {
-    model: 'gemini-1.5-pro',
-    inputPrice: 1.25,
-    outputPrice: 5.0,
-    provider: 'google',
-  },
-  {
-    model: 'gemini-1.5-flash',
-    inputPrice: 0.075,
-    outputPrice: 0.3,
-    provider: 'google',
-  },
-  {
-    model: 'gemini-1.5-flash-8b',
-    inputPrice: 0.0375,
-    outputPrice: 0.15,
-    provider: 'google',
-  },
+  // Gemini
+  { model: 'gemini-1.5-pro', inputPrice: 1.25, outputPrice: 5.0, provider: 'google' },
+  { model: 'gemini-1.5-flash', inputPrice: 0.075, outputPrice: 0.3, provider: 'google' },
+  { model: 'gemini-*', inputPrice: 0.075, outputPrice: 0.3, provider: 'google' },
 
-  // ============================================================================
-  // GLM (智谱)
-  // ============================================================================
-  {
-    model: 'glm-4.6',
-    inputPrice: 0.6,
-    outputPrice: 2.2,
-    provider: 'zhipu',
-  },
-  {
-    model: 'glm-4.5',
-    inputPrice: 0.6,
-    outputPrice: 2.2,
-    provider: 'zhipu',
-  },
-  {
-    model: 'glm-4.5-air',
-    inputPrice: 0.2,
-    outputPrice: 1.1,
-    provider: 'zhipu',
-  },
-  {
-    model: 'glm-4.5-flash',
-    inputPrice: 0.0,
-    outputPrice: 0.0,
-    provider: 'zhipu',
-  },
-
-  // ============================================================================
   // DeepSeek
-  // ============================================================================
-  {
-    model: 'deepseek-chat',
-    inputPrice: 0.28,
-    outputPrice: 0.42,
-    provider: 'deepseek',
-  },
-  {
-    model: 'deepseek-reasoner',
-    inputPrice: 0.28,
-    outputPrice: 0.42,
-    provider: 'deepseek',
-  },
+  { model: 'deepseek-chat', inputPrice: 0.28, outputPrice: 0.42, provider: 'deepseek' },
+  { model: 'deepseek-*', inputPrice: 0.28, outputPrice: 0.42, provider: 'deepseek' },
 
-  // ============================================================================
-  // 通配符默认（兜底）
-  // ============================================================================
-  {
-    model: 'gpt-*',
-    inputPrice: 0.5,
-    outputPrice: 1.5,
-    provider: 'openai',
-  },
-  {
-    model: 'claude-*',
-    inputPrice: 3.0,
-    outputPrice: 15.0,
-    provider: 'anthropic',
-  },
-  {
-    model: 'gemini-*',
-    inputPrice: 0.075,
-    outputPrice: 0.3,
-    provider: 'google',
-  },
+  // GLM
+  { model: 'glm-4.5', inputPrice: 0.6, outputPrice: 2.2, provider: 'zhipu' },
+  { model: 'glm-4.5-air', inputPrice: 0.2, outputPrice: 1.1, provider: 'zhipu' },
+  { model: 'glm-4.5-flash', inputPrice: 0.0, outputPrice: 0.0, provider: 'zhipu' },
+  { model: 'glm-*', inputPrice: 0.6, outputPrice: 2.2, provider: 'zhipu' },
 ];
 
 /**
  * 价格计算服务
  */
 export class PricingService {
-  private prices: ModelPrice[];
+  private customPrices: ModelPrice[] = [];
+  private storage = getSyncStorage();
 
-  constructor(customPrices: ModelPrice[] = []) {
-    this.prices = [...BUILT_IN_PRICES, ...customPrices];
+  /**
+   * 从同步存储获取价格
+   */
+  private getStoredPrices(): ModelPrice[] {
+    try {
+      const stored = this.storage.getAllPrices();
+      return stored.map((p: StoredModelPrice) => ({
+        model: p.modelName,
+        inputPrice: p.inputPrice,
+        outputPrice: p.outputPrice,
+        provider: p.provider,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 获取所有可用价格（优先级：自定义 > 同步存储 > 兜底）
+   */
+  private getAllPrices(): ModelPrice[] {
+    const stored = this.getStoredPrices();
+    return [...this.customPrices, ...stored, ...FALLBACK_PRICES];
   }
 
   /**
@@ -224,12 +97,14 @@ export class PricingService {
    * 支持精确匹配和通配符匹配
    */
   private findPrice(model: string): ModelPrice | undefined {
-    // 精确匹配
-    let price = this.prices.find((p) => p.model === model);
+    const prices = this.getAllPrices();
+
+    // 精确匹配（优先）
+    let price = prices.find((p) => p.model === model);
 
     if (!price) {
       // 通配符匹配（按长度降序，优先匹配更具体的规则）
-      const wildcardPrices = this.prices
+      const wildcardPrices = prices
         .filter((p) => p.model.includes('*'))
         .sort((a, b) => b.model.length - a.model.length);
 
@@ -261,7 +136,6 @@ export class PricingService {
     const price = this.findPrice(model);
 
     if (!price) {
-      // 未找到价格，返回 0
       return {
         inputCost: 0,
         outputCost: 0,
@@ -275,7 +149,7 @@ export class PricingService {
     const totalCost = inputCost + outputCost;
 
     return {
-      inputCost: Math.round(inputCost * 1_000_000) / 1_000_000, // 保留 6 位小数
+      inputCost: Math.round(inputCost * 1_000_000) / 1_000_000,
       outputCost: Math.round(outputCost * 1_000_000) / 1_000_000,
       totalCost: Math.round(totalCost * 1_000_000) / 1_000_000,
     };
@@ -283,20 +157,13 @@ export class PricingService {
 
   /**
    * 从请求体中提取模型名称
-   * 支持多种协议格式
    */
   extractModel(requestBody: any): string | undefined {
     if (!requestBody || typeof requestBody !== 'object') {
       return undefined;
     }
 
-    // 标准格式：{ model: "xxx" }
     if (requestBody.model && typeof requestBody.model === 'string') {
-      return requestBody.model;
-    }
-
-    // OpenAI 兼容格式
-    if (requestBody.messages && requestBody.model) {
       return requestBody.model;
     }
 
@@ -305,7 +172,6 @@ export class PricingService {
 
   /**
    * 从响应中提取 Token 使用数据
-   * 支持多种协议格式
    */
   extractUsage(responseBody: any): {
     inputTokens: number;
@@ -342,28 +208,21 @@ export class PricingService {
   }
 
   /**
-   * 获取所有价格配置
-   */
-  getAllPrices(): ModelPrice[] {
-    return [...this.prices];
-  }
-
-  /**
-   * 添加自定义价格
+   * 添加自定义价格（覆盖同步和兜底价格）
    */
   addCustomPrice(price: ModelPrice): void {
     // 移除已存在的同模型价格
-    this.prices = this.prices.filter((p) => p.model !== price.model);
-    this.prices.push(price);
+    this.customPrices = this.customPrices.filter((p) => p.model !== price.model);
+    this.customPrices.push(price);
   }
 
   /**
-   * 移除价格配置
+   * 移除自定义价格
    */
-  removePrice(model: string): boolean {
-    const initialLength = this.prices.length;
-    this.prices = this.prices.filter((p) => p.model !== model);
-    return this.prices.length < initialLength;
+  removeCustomPrice(model: string): boolean {
+    const initialLength = this.customPrices.length;
+    this.customPrices = this.customPrices.filter((p) => p.model !== model);
+    return this.customPrices.length < initialLength;
   }
 
   /**
@@ -371,6 +230,13 @@ export class PricingService {
    */
   getModelPrice(model: string): ModelPrice | undefined {
     return this.findPrice(model);
+  }
+
+  /**
+   * 获取所有可用价格
+   */
+  getAllPricesList(): ModelPrice[] {
+    return this.getAllPrices();
   }
 }
 

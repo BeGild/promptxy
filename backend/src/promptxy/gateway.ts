@@ -1506,7 +1506,10 @@ export function createGateway(
           const usage = pricingService.extractUsage(parsed);
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
-          model = pricingService.extractModel(effectiveBody);
+
+          // 使用 targetModel 作为计费模型（转换后的上游模型）
+          // 优先级：1. routePlan.targetModel 2. effectiveBody.model 3. 从请求体提取
+          model = routePlan.targetModel || (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
           // 调试日志
           console.log('[PromptXY] Usage extraction:', {
@@ -1515,6 +1518,8 @@ export function createGateway(
             inputTokens,
             outputTokens,
             model,
+            targetModel: routePlan.targetModel,
+            effectiveModel: effectiveBody?.model,
           });
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
@@ -1615,12 +1620,16 @@ export function createGateway(
           const usage = pricingService.extractUsage(parsed);
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
-          model = pricingService.extractModel(effectiveBody);
+
+          // 使用 targetModel 作为计费模型（转换后的上游模型）
+          model = routePlan.targetModel || (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
           console.log('[PromptXY] No-transform usage extraction:', {
             inputTokens,
             outputTokens,
             model,
+            targetModel: routePlan.targetModel,
+            effectiveModel: effectiveBody?.model,
           });
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
@@ -1860,8 +1869,8 @@ export function createGateway(
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
 
-          // 获取模型名称
-          model = pricingService.extractModel(savedJsonBody);
+          // 使用 targetModel 作为计费模型（转换后的上游模型）
+          model = routePlan.targetModel || pricingService.extractModel(savedJsonBody);
 
           // 计算费用
           if (model && (inputTokens > 0 || outputTokens > 0)) {
