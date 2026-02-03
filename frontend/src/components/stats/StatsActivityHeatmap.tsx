@@ -31,9 +31,12 @@ const levelColors: Record<number, string> = {
 };
 
 export const StatsActivityHeatmap: React.FC<StatsActivityHeatmapProps> = ({ daily }) => {
-  // 获取最近 84 天的数据
+  // 获取最近 84 天的数据（按日期升序，保证时间轴稳定）
   const daysToShow = 84;
-  const recentDaily = useMemo(() => daily.slice(-daysToShow), [daily]);
+  const recentDaily = useMemo(() => {
+    const sorted = [...daily].sort((a, b) => a.dateKey - b.dateKey);
+    return sorted.slice(-daysToShow);
+  }, [daily]);
 
   // 计算最大值用于归一化
   const maxValue = Math.max(...recentDaily.map(d => d.requestTotal), 1);

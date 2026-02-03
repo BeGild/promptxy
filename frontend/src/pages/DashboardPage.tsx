@@ -6,17 +6,21 @@
  * 3. 语义化工具类（如 .card, .btn）
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, RefreshCw } from 'lucide-react';
-import { Button } from '@heroui/react';
-import { getStatsData } from '@/api/stats';
+import { Button, Select, SelectItem } from '@heroui/react';
+import { getStatsData, type StatsRange } from '@/api/stats';
 import { StatsTotalCard } from '@/components/stats/StatsTotalCard';
 import { StatsActivityHeatmap } from '@/components/stats/StatsActivityHeatmap';
 import { StatsChart } from '@/components/stats/StatsChart';
 import { StatsRankBoard } from '@/components/stats/StatsRankBoard';
 
 const DashboardPageComponent: React.FC = () => {
+  const [range, setRange] = useState<StatsRange>('30d');
+
+  const query = useMemo(() => ({ range }), [range]);
+
   // 获取统计数据
   const {
     data: statsData,
@@ -24,8 +28,8 @@ const DashboardPageComponent: React.FC = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['stats', 'data'],
-    queryFn: getStatsData,
+    queryKey: ['stats', 'data', query],
+    queryFn: () => getStatsData(query),
     refetchInterval: 30000, // 每 30 秒自动刷新
   });
 
@@ -78,12 +82,30 @@ const DashboardPageComponent: React.FC = () => {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* 页面标题 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-accent bg-clip-text text-transparent">
             数据统计
           </h1>
           <p className="text-sm text-secondary mt-1">查看请求量、费用、性能等关键指标</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select
+            size="sm"
+            selectedKeys={[range]}
+            onSelectionChange={(keys) => {
+              const key = Array.from(keys)[0] as StatsRange | undefined;
+              if (key) setRange(key);
+            }}
+            aria-label="选择时间范围"
+            className="min-w-[140px]"
+          >
+            <SelectItem key="7d">近 7 天</SelectItem>
+            <SelectItem key="30d">近 30 天</SelectItem>
+            <SelectItem key="90d">近 90 天</SelectItem>
+            <SelectItem key="all">全部</SelectItem>
+          </Select>
         </div>
       </div>
 
@@ -118,10 +140,13 @@ const DashboardPageComponent: React.FC = () => {
         />
         <StatsChart
           title="平均响应时间"
-          data={statsData.daily}
-          dataKey="durationTime"
+          data={statsData.daily.map(d => ({
+            ...d,
+            avgDurationMs: d.requestTotal > 0 ? d.durationTime / d.requestTotal : 0,
+          }))}
+          dataKey="avgDurationMs"
           color="#f59e0b"
-          formatValue={(value) => `${(value / (statsData.daily.reduce((sum, d) => sum + d.requestTotal, 0) || 1)).toFixed(0)}ms`}
+          formatValue={(value) => `${value.toFixed(0)}ms`}
         />
       </div>
 

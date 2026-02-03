@@ -208,6 +208,90 @@ export class PricingService {
   }
 
   /**
+   * 从响应内容估算 Output Tokens（当上游不返回 usage 时）
+   * 适用于流式响应
+   */
+  estimateOutputTokensFromContent(responseBody: any): number {
+    if (!responseBody) return 0;
+
+    let contentText = '';
+
+    // OpenAI 流式 SSE 格式（事件数组）
+    if (Array.isArray(responseBody)) {
+      for (const event of responseBody) {
+        // 处理 delta 格式
+        if (event.choices?.[0]?.delta?.content) {
+          contentText += event.choices[0].delta.content;
+        }
+        // 处理 text 格式 (Gemini)
+        else if (event.candidates?.[0]?.content?.parts?.[0]?.text) {
+          contentText += event.candidates[0].content.parts[0].text;
+        }
+      }
+    }
+    // OpenAI 非流式格式
+    else if (responseBody.choices?.[0]?.message?.content) {
+      contentText = responseBody.choices[0].message.content;
+    }
+    // 简单字符串响应
+    else if (typeof responseBody === 'string') {
+      contentText = responseBody;
+    }
+
+    return this.estimateTokensFromText(contentText);
+  }
+
+  /**
+   * 从请求体估算 Input Tokens
+   */
+  estimateInputTokens(requestBody: any): number {
+    if (!requestBody) return 0;
+
+    let totalText = '';
+
+    // OpenAI 格式: messages 数组
+    if (Array.isArray(requestBody.messages)) {
+      for (const msg of requestBody.messages) {
+        if (typeof msg.content === 'string') {
+          totalText += msg.content;
+        } else if (Array.isArray(msg.content)) {
+          // 多模态内容
+          for (const part of msg.content) {
+            if (part.type === 'text' && part.text) {
+              totalText += part.text;
+            }
+          }
+        }
+      }
+    }
+    // Anthropic 格式
+    else if (Array.isArray(requestBody.contents)) {
+      for (const content of requestBody.contents) {
+        if (typeof content.text === 'string') {
+          totalText += content.text;
+        }
+      }
+    }
+    // 简单 prompt 格式
+    else if (typeof requestBody.prompt === 'string') {
+      totalText = requestBody.prompt;
+    }
+
+    return this.estimateTokensFromText(totalText);
+  }
+
+  /**
+   * 文本 Token 估算（保守估计）
+   * 基于：英文约 4 字符/token，中文约 1-2 字符/token
+   * 使用 3 作为平均值，稍微高估以确保准确性
+   */
+  private estimateTokensFromText(text: string): number {
+    if (!text || text.length === 0) return 0;
+    // 每 3 个字符约 1 个 token（保守估算）
+    return Math.ceil(text.length / 3);
+  }
+
+  /**
    * 添加自定义价格（覆盖同步和兜底价格）
    */
   addCustomPrice(price: ModelPrice): void {

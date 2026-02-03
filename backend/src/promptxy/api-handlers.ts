@@ -62,6 +62,7 @@ import {
   getStatsModel,
   getStatsRoute,
   getStatsToday,
+  getStatsDataByRange,
 } from './database.js';
 import {
   saveConfig,
@@ -1608,15 +1609,44 @@ export async function handleRebuildIndex(
 export async function handleGetStatsData(
   req: http.IncomingMessage,
   res: http.ServerResponse,
+  url: URL,
 ): Promise<void> {
   try {
-    const total = getStatsTotal();
-    const daily = getStatsDaily();
+    const range = (url.searchParams.get('range') || '30d').toLowerCase();
+    const now = Date.now();
+
+    let startTime: number | undefined;
+    let endTime: number | undefined;
+
+    if (range === '7d' || range === '30d' || range === '90d') {
+      const days = Number(range.slice(0, -1));
+      startTime = now - days * 24 * 60 * 60 * 1000;
+      endTime = now;
+    } else if (range === 'all') {
+      startTime = undefined;
+      endTime = undefined;
+    } else {
+      const startParam = url.searchParams.get('startTime');
+      const endParam = url.searchParams.get('endTime');
+      startTime = startParam ? Number(startParam) : undefined;
+      endTime = endParam ? Number(endParam) : undefined;
+    }
+
+    const aggregated = getStatsDataByRange({
+      startTime,
+      endTime,
+      limitDays: range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : undefined,
+    });
+
+    // 注意：hourly/today 仍然是“今日缓存”，不参与范围聚合
     const hourly = getStatsHourly();
-    const supplier = getStatsSupplier();
-    const model = getStatsModel();
-    const route = getStatsRoute();
     const today = getStatsToday();
+
+    const total = aggregated.total;
+    const daily = aggregated.daily;
+    const supplier = aggregated.supplier;
+    const model = aggregated.model;
+    const route = aggregated.route;
 
     const response: StatsDataResponse = {
       total,
@@ -1642,10 +1672,8 @@ export async function handleGetStatsTotal(
 ): Promise<void> {
   try {
     const result = getStatsTotal();
-    console.log('[Debug] getStatsTotal result:', JSON.stringify(result));
     sendJson(res, 200, result);
   } catch (error: any) {
-    console.error('[Debug] getStatsTotal error:', error);
     sendJson(res, 500, { error: 'Failed to get total stats', message: error?.message });
   }
 }

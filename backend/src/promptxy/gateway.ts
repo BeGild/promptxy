@@ -891,7 +891,7 @@ export function createGateway(
         // ========== 统计系统 API（新增）==========
         // 获取完整统计数据
         if (method === 'GET' && url.pathname === '/_promptxy/stats/data') {
-          await handleGetStatsData(req, res);
+          await handleGetStatsData(req, res, url);
           return;
         }
 
@@ -1314,6 +1314,17 @@ export function createGateway(
         effectiveBody &&
         typeof effectiveBody === 'object'
       ) {
+        // OpenAI Chat：当开启流式时，注入 include_usage 以确保上游返回 usage
+        if (
+          matchedRoute.supplier.protocol === 'openai-chat' &&
+          (effectiveBody as any).stream === true
+        ) {
+          const existing = (effectiveBody as any).stream_options;
+          (effectiveBody as any).stream_options = {
+            ...(existing && typeof existing === 'object' ? existing : {}),
+            include_usage: true,
+          };
+        }
         const parsed = parseOpenAIModelSpec(
           (effectiveBody as any).model,
           (matchedRoute.supplier as any).reasoningEfforts,
@@ -1499,6 +1510,7 @@ export function createGateway(
         let inputCost = 0;
         let outputCost = 0;
         let model: string | undefined;
+        let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
           const pricingService = getPricingService();
@@ -1506,21 +1518,12 @@ export function createGateway(
           const usage = pricingService.extractUsage(parsed);
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
+          usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
 
           // 使用 targetModel 作为计费模型（转换后的上游模型）
           // 优先级：1. routePlan.targetModel 2. effectiveBody.model 3. 从请求体提取
           model = routePlan.targetModel || (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
-          // 调试日志
-          console.log('[PromptXY] Usage extraction:', {
-            usageKeys: parsed ? Object.keys(parsed).slice(0, 10) : 'no parsed',
-            hasUsage: !!parsed?.usage,
-            inputTokens,
-            outputTokens,
-            model,
-            targetModel: routePlan.targetModel,
-            effectiveModel: effectiveBody?.model,
-          });
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
             const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
@@ -1571,6 +1574,7 @@ export function createGateway(
             inputCost,
             outputCost,
             totalCost: inputCost + outputCost,
+            usageSource,
           };
 
           try {
@@ -1593,11 +1597,6 @@ export function createGateway(
 
       // 非流式：不需要转换，直接透传 JSON 响应
       if (!isSSE && !needsResponseTransform) {
-        console.log('[PromptXY] Non-streaming no-transform path:', {
-          isSSE,
-          needsResponseTransform,
-          contentType: upstreamContentType,
-        });
         const raw = await upstreamResponse.text();
         let parsed: any = raw;
         if (upstreamContentType.includes('application/json')) {
@@ -1614,23 +1613,18 @@ export function createGateway(
         let inputCost = 0;
         let outputCost = 0;
         let model: string | undefined;
+        let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
           const pricingService = getPricingService();
           const usage = pricingService.extractUsage(parsed);
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
+          usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
 
           // 使用 targetModel 作为计费模型（转换后的上游模型）
           model = routePlan.targetModel || (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
-          console.log('[PromptXY] No-transform usage extraction:', {
-            inputTokens,
-            outputTokens,
-            model,
-            targetModel: routePlan.targetModel,
-            effectiveModel: effectiveBody?.model,
-          });
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
             const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
@@ -1685,6 +1679,7 @@ export function createGateway(
             inputCost,
             outputCost,
             totalCost: inputCost + outputCost,
+            usageSource,
           };
 
           try {
@@ -1836,6 +1831,7 @@ export function createGateway(
         let inputCost = 0;
         let outputCost = 0;
         let model: string | undefined;
+        let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
           // 解析响应体获取 token 数据
@@ -1868,6 +1864,7 @@ export function createGateway(
           const usage = pricingService.extractUsage(parsedResponse);
           inputTokens = usage.inputTokens;
           outputTokens = usage.outputTokens;
+          usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
 
           // 使用 targetModel 作为计费模型（转换后的上游模型）
           model = routePlan.targetModel || pricingService.extractModel(savedJsonBody);

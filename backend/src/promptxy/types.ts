@@ -233,6 +233,9 @@ export interface RequestRecord {
   totalCost?: number;          // 总费用
   waitTime?: number;           // 等待时间（首字时间）
   ftut?: number;               // First Token Usage Time
+
+  // usage 来源（真实/估算）
+  usageSource?: 'actual' | 'estimated';
 }
 
 // API 返回的请求记录（解析后的）

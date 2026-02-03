@@ -10,7 +10,7 @@ import type { StatsDaily } from '@/types/stats';
 interface StatsChartProps {
   title: string;
   data: StatsDaily[];
-  dataKey: keyof StatsDaily;
+  dataKey: string;
   color: string;
   formatValue: (value: number) => string;
 }
@@ -22,10 +22,14 @@ export const StatsChart: React.FC<StatsChartProps> = ({
   color,
   formatValue,
 }) => {
-  // 过滤出有效数据
-  const validData = useMemo(() =>
-    data.filter(d => typeof d[dataKey] === 'number' && (d[dataKey] as number) > 0)
-  , [data, dataKey]);
+  // 过滤出有效数据（保留 0，剔除无效值）
+  const validData = useMemo(
+    () => data.filter(d => {
+      const v = ((d as unknown) as Record<string, unknown>)[dataKey];
+      return typeof v === 'number' && Number.isFinite(v);
+    }),
+    [data, dataKey],
+  );
 
   if (validData.length === 0) {
     return (
@@ -38,13 +42,15 @@ export const StatsChart: React.FC<StatsChartProps> = ({
     );
   }
 
-  // 计算最大值用于缩放
-  const maxValue = useMemo(() =>
-    Math.max(...validData.map(d => (d[dataKey] as number) || 0))
-  , [validData, dataKey]);
-  const minValue = useMemo(() =>
-    Math.min(...validData.map(d => (d[dataKey] as number) || 0))
-  , [validData, dataKey]);
+  // 计算最大/最小值用于缩放
+  const maxValue = useMemo(
+    () => Math.max(...validData.map(d => (((d as unknown) as Record<string, unknown>)[dataKey] as number) || 0)),
+    [validData, dataKey],
+  );
+  const minValue = useMemo(
+    () => Math.min(...validData.map(d => (((d as unknown) as Record<string, unknown>)[dataKey] as number) || 0)),
+    [validData, dataKey],
+  );
 
   // 图表尺寸
   const width = 400;
@@ -54,14 +60,22 @@ export const StatsChart: React.FC<StatsChartProps> = ({
   const chartHeight = height - padding.top - padding.bottom;
 
   // 计算点的位置
-  const points = useMemo(() =>
-    validData.map((d, i) => {
-      const x = padding.left + (i / (validData.length - 1)) * chartWidth;
-      const value = (d[dataKey] as number) || 0;
-      const y = padding.top + chartHeight - ((value - minValue) / (maxValue - minValue || 1)) * chartHeight;
-      return { x, y, value, date: d.date };
-    })
-  , [validData, dataKey, minValue, maxValue, chartWidth, chartHeight, padding]);
+  const points = useMemo(
+    () =>
+      validData
+        .slice()
+        .sort((a, b) => a.dateKey - b.dateKey)
+        .map((d, i) => {
+          const x = padding.left + (i / (validData.length - 1)) * chartWidth;
+          const value = (((d as unknown) as Record<string, unknown>)[dataKey] as number) || 0;
+          const y =
+            padding.top +
+            chartHeight -
+            ((value - minValue) / (maxValue - minValue || 1)) * chartHeight;
+          return { x, y, value, date: d.date };
+        }),
+    [validData, dataKey, minValue, maxValue, chartWidth, chartHeight, padding],
+  );
 
   // 生成路径
   const pathD = useMemo(() =>
@@ -158,7 +172,7 @@ export const StatsChart: React.FC<StatsChartProps> = ({
         <div className="mt-4 text-center">
           <span className="text-sm text-secondary">总计：</span>
           <span className="text-lg font-semibold text-brand-primary ml-1">
-            {formatValue(validData.reduce((sum, d) => sum + (d[dataKey] as number), 0))}
+            {formatValue(validData.reduce((sum, d) => sum + ((((d as unknown) as Record<string, unknown>)[dataKey] as number) || 0), 0))}
           </span>
         </div>
       </CardBody>

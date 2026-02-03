@@ -87,6 +87,7 @@ interface RequestFile {
   inputCost?: number;
   outputCost?: number;
   totalCost?: number;
+  usageSource?: 'actual' | 'estimated';
 }
 
 /**
@@ -521,16 +522,6 @@ class FileSystemStorage {
   private async writeRequestFile(record: RequestRecord): Promise<void> {
     const filePath = path.join(this.requestsDir, `${record.id}.yaml`);
 
-    // 调试日志：检查统计字段（始终输出）
-    console.log('[PromptXY] Writing request:', {
-      id: record.id,
-      hasModel: record.model !== undefined,
-      hasInputTokens: record.inputTokens !== undefined,
-      hasOutputTokens: record.outputTokens !== undefined,
-      model: record.model,
-      inputTokens: record.inputTokens,
-      outputTokens: record.outputTokens,
-    });
 
     const fileContent: RequestFile = {
       id: record.id,
@@ -565,6 +556,7 @@ class FileSystemStorage {
       inputCost: record.inputCost,
       outputCost: record.outputCost,
       totalCost: record.totalCost,
+      usageSource: record.usageSource,
     };
 
     // 使用 YAML dump，大字段使用多行字符串语法
@@ -622,6 +614,7 @@ class FileSystemStorage {
         inputCost: fileContent.inputCost,
         outputCost: fileContent.outputCost,
         totalCost: fileContent.totalCost,
+        usageSource: fileContent.usageSource,
       };
     } catch (error) {
       console.error(`[PromptXY] 加载请求文件失败: ${id}`, error);
@@ -913,11 +906,18 @@ class FileSystemStorage {
    * 获取今天的日期字符串
    */
   private getToday(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    return this.formatDate(new Date());
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private dateKeyOf(date: Date): number {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   }
 
   /**
@@ -992,7 +992,7 @@ class FileSystemStorage {
     const metrics = this.extractMetrics(record);
     const now = record.timestamp;
     const date = new Date(now);
-    const dateStr = this.getToday();
+    const dateStr = this.formatDate(date);
     const hour = date.getHours();
     const hourStr = String(hour).padStart(2, '0');
     const dateHourKey = `${dateStr}:${hourStr}`;
@@ -1006,7 +1006,7 @@ class FileSystemStorage {
       this.statsCache.daily[dateStr] = {
         ...emptyStatsMetrics(),
         date: dateStr,
-        dateKey: now,
+        dateKey: this.dateKeyOf(date),
       };
     }
     this.mergeMetrics(this.statsCache.daily[dateStr], metrics);
@@ -1218,6 +1218,60 @@ class FileSystemStorage {
       .sort((a, b) => b.dateKey - a.dateKey)
       .slice(0, limit);
     return items;
+  }
+
+  getStatsDataByRange(options: {
+    startTime?: number;
+    endTime?: number;
+    limitDays?: number;
+  }): {
+    total: StatsTotal;
+    daily: StatsDaily[];
+    supplier: StatsSupplier[];
+    model: StatsModel[];
+    route: StatsRoute[];
+  } {
+    const startTime = options.startTime;
+    const endTime = options.endTime;
+
+    // 从缓存的 daily 数据中按时间范围过滤
+    let filteredDaily = Object.values(this.statsCache.daily);
+
+    if (startTime !== undefined) {
+      const startDate = this.formatDate(new Date(startTime));
+      filteredDaily = filteredDaily.filter(d => d.date >= startDate);
+    }
+    if (endTime !== undefined) {
+      const endDate = this.formatDate(new Date(endTime));
+      filteredDaily = filteredDaily.filter(d => d.date <= endDate);
+    }
+
+    // 按日期排序并限制天数
+    filteredDaily.sort((a, b) => a.dateKey - b.dateKey);
+    const limitDays = options.limitDays;
+    if (limitDays) {
+      filteredDaily = filteredDaily.slice(-limitDays);
+    }
+
+    // 重新计算 total（基于过滤后的 daily）
+    const total: StatsTotal = { ...emptyStatsMetrics(), updatedAt: Date.now() };
+    for (const d of filteredDaily) {
+      this.mergeMetrics(total, d);
+    }
+
+    // 从缓存中获取 supplier/model/route（不过滤，因为缓存中已经是全量聚合）
+    // 注意：如果需要精确按时间范围过滤这些维度，需要更复杂的实现
+    const supplier = Object.values(this.statsCache.supplier);
+    const model = Object.values(this.statsCache.model);
+    const route = Object.values(this.statsCache.route);
+
+    return {
+      total,
+      daily: filteredDaily,
+      supplier,
+      model,
+      route,
+    };
   }
 
   /**
@@ -2013,3 +2067,19 @@ export function getStatsToday(): StatsToday {
  * 导出 FileSystemStorage 类和类型
  */
 export { FileSystemStorage };
+
+export function getStatsDataByRange(options: {
+  startTime?: number;
+  endTime?: number;
+  limitDays?: number;
+}): {
+  total: StatsTotal;
+  daily: StatsDaily[];
+  supplier: StatsSupplier[];
+  model: StatsModel[];
+  route: StatsRoute[];
+} {
+  const storage = getDatabase();
+  return storage.getStatsDataByRange(options);
+}
+

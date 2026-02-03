@@ -13,8 +13,22 @@ import type {
 /**
  * 获取完整统计数据
  */
-export async function getStatsData(): Promise<StatsDataResponse> {
-  const response = await apiClient.get('/_promptxy/stats/data');
+export type StatsRange = '7d' | '30d' | '90d' | 'all';
+
+export type StatsDataQuery = {
+  range?: StatsRange;
+  startTime?: number;
+  endTime?: number;
+};
+
+export async function getStatsData(query: StatsDataQuery = {}): Promise<StatsDataResponse> {
+  const params = new URLSearchParams();
+  if (query.range) params.set('range', query.range);
+  if (query.startTime !== undefined) params.set('startTime', String(query.startTime));
+  if (query.endTime !== undefined) params.set('endTime', String(query.endTime));
+
+  const qs = params.toString();
+  const response = await apiClient.get(`/_promptxy/stats/data${qs ? `?${qs}` : ''}`);
   return response.data;
 }
 
