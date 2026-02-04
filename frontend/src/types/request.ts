@@ -28,6 +28,20 @@ export interface RequestRecord {
   supplierBaseUrl?: string;
   transformerChain?: string[];
   transformTrace?: any;
+
+  // 模型与计费口径（新增）
+  requestedModel?: string;
+  upstreamModel?: string;
+
+  // 统计字段（可选）
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  inputCost?: number;
+  outputCost?: number;
+  totalCost?: number;
+  usageSource?: 'actual' | 'estimated';
 }
 
 export interface RequestListItem {
@@ -48,6 +62,17 @@ export interface RequestListItem {
   supplierClient?: string;
   transformerChain?: string[];
   transformedPath?: string;
+
+  // 模型与计费口径（新增，列表可选展示）
+  requestedModel?: string;
+  upstreamModel?: string;
+  model?: string;
+
+  // 统计（轻量）
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  totalCost?: number;
 }
 
 export interface RequestListResponse {

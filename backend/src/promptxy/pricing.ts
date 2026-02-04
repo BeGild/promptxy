@@ -183,13 +183,34 @@ export class PricingService {
       return result;
     }
 
-    // Anthropic 格式（SSE 事件数组）
+    // SSE 事件数组（Anthropic / OpenAI Chat / Codex Responses 等）
     if (Array.isArray(responseBody)) {
-      for (const event of responseBody) {
+      // 从尾部回扫，优先拿到最终 usage（更接近“completed/stop”事件）
+      for (let i = responseBody.length - 1; i >= 0; i--) {
+        const event = responseBody[i];
+        if (!event || typeof event !== 'object') continue;
+
+        // Claude (Anthropic): message_stop.message.usage
         if (event.type === 'message_stop' && event.message?.usage) {
           result.inputTokens = event.message.usage.input_tokens || 0;
           result.outputTokens = event.message.usage.output_tokens || 0;
           break;
+        }
+
+        // Codex Responses SSE: response.completed.response.usage
+        // 以及兼容一些实现：evt.response.usage
+        const usageCandidate = (event as any).usage ?? (event as any).message?.usage ?? (event as any).response?.usage;
+        if (usageCandidate && typeof usageCandidate === 'object') {
+          if ((usageCandidate as any).input_tokens !== undefined || (usageCandidate as any).output_tokens !== undefined) {
+            result.inputTokens = (usageCandidate as any).input_tokens || 0;
+            result.outputTokens = (usageCandidate as any).output_tokens || 0;
+            break;
+          }
+          if ((usageCandidate as any).prompt_tokens !== undefined || (usageCandidate as any).completion_tokens !== undefined) {
+            result.inputTokens = (usageCandidate as any).prompt_tokens || 0;
+            result.outputTokens = (usageCandidate as any).completion_tokens || 0;
+            break;
+          }
         }
       }
     }

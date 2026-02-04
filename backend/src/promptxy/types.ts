@@ -224,7 +224,12 @@ export interface RequestRecord {
   transformedPath?: string;
 
   // 统计相关字段（可选，用于向后兼容）
-  model?: string;              // 使用的模型
+  // requestedModel: 入站/用户请求的模型
+  // upstreamModel: 上游实际返回/使用的模型（若能解析到）
+  requestedModel?: string;
+  upstreamModel?: string;
+
+  model?: string;              // 计费模型（优先 upstreamModel，其次 requestedModel）
   inputTokens?: number;        // 输入 Token 数
   outputTokens?: number;       // 输出 Token 数
   totalTokens?: number;        // 总 Token 数
@@ -266,6 +271,18 @@ export interface RequestRecordResponse {
   supplierBaseUrl?: string; // 供应商上游地址
   transformerChain?: string[]; // 转换链数组
   transformTrace?: any; // 转换追踪信息
+
+  // 模型与计费口径（新增）
+  requestedModel?: string;
+  upstreamModel?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  inputCost?: number;
+  outputCost?: number;
+  totalCost?: number;
+  usageSource?: 'actual' | 'estimated';
 }
 
 // 请求列表响应
@@ -285,6 +302,21 @@ export interface RequestListResponse {
     responseStatus?: number;
     durationMs?: number;
     error?: string;
+
+    // 供应商和转换信息（兼容前端列表展示）
+    supplierName?: string;
+    supplierClient?: string;
+    transformerChain?: string[];
+    transformedPath?: string;
+
+    // 模型与计费口径（列表只带轻量字段）
+    requestedModel?: string;
+    upstreamModel?: string;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    totalCost?: number;
   }>;
 }
 
