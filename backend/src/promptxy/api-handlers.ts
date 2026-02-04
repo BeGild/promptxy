@@ -266,6 +266,18 @@ export async function handleGetRequest(
       supplierBaseUrl: record.supplierBaseUrl,
       transformerChain: record.transformerChain ? JSON.parse(record.transformerChain) : undefined,
       transformTrace: record.transformTrace ? safeParseJson(record.transformTrace) : undefined,
+
+      // 模型与计费口径（新增）
+      requestedModel: (record as any).requestedModel,
+      upstreamModel: (record as any).upstreamModel,
+      model: (record as any).model,
+      inputTokens: (record as any).inputTokens,
+      outputTokens: (record as any).outputTokens,
+      totalTokens: (record as any).totalTokens,
+      inputCost: (record as any).inputCost,
+      outputCost: (record as any).outputCost,
+      totalCost: (record as any).totalCost,
+      usageSource: (record as any).usageSource,
     };
 
     sendJson(res, 200, response);

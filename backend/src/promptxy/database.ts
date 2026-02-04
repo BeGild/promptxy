@@ -46,6 +46,16 @@ interface RequestIndex {
   supplierClient?: string;
   transformerChain?: string[];
   transformedPath?: string;
+
+  // 模型与计费口径（轻量索引字段）
+  requestedModel?: string;
+  upstreamModel?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  totalCost?: number;
+  usageSource?: 'actual' | 'estimated';
 }
 
 /**
@@ -80,6 +90,8 @@ interface RequestFile {
   transformTrace?: string;
   transformedPath?: string; // 转换后的请求路径
   // 统计相关字段
+  requestedModel?: string;
+  upstreamModel?: string;
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
@@ -549,6 +561,8 @@ class FileSystemStorage {
       transformerChain: record.transformerChain,
       transformTrace: record.transformTrace,
       // 统计相关字段
+      requestedModel: (record as any).requestedModel,
+      upstreamModel: (record as any).upstreamModel,
       model: record.model,
       inputTokens: record.inputTokens,
       outputTokens: record.outputTokens,
@@ -672,6 +686,14 @@ class FileSystemStorage {
       supplierClient = '',
       transformerChainStr = '',
       transformedPath = '',
+      requestedModel = '',
+      upstreamModel = '',
+      billingModel = '',
+      inputTokensStr = '',
+      outputTokensStr = '',
+      totalTokensStr = '',
+      totalCostStr = '',
+      usageSource = '',
     ] = parts;
 
     // 解析 transformerChain（从 JSON 字符串转为数组）
@@ -701,6 +723,15 @@ class FileSystemStorage {
       supplierClient: supplierClient || undefined,
       transformerChain: transformerChain,
       transformedPath: transformedPath || undefined,
+      // 模型与计费口径（轻量索引字段）
+      requestedModel: requestedModel || undefined,
+      upstreamModel: upstreamModel || undefined,
+      model: billingModel || undefined,
+      inputTokens: inputTokensStr ? Number(inputTokensStr) : undefined,
+      outputTokens: outputTokensStr ? Number(outputTokensStr) : undefined,
+      totalTokens: totalTokensStr ? Number(totalTokensStr) : undefined,
+      totalCost: totalCostStr ? Number(totalCostStr) : undefined,
+      usageSource: (usageSource === 'actual' || usageSource === 'estimated') ? (usageSource as any) : undefined,
     };
   }
 
@@ -725,6 +756,15 @@ class FileSystemStorage {
       index.supplierClient ?? '',
       index.transformerChain ? JSON.stringify(index.transformerChain) : '',
       index.transformedPath ?? '',
+      // 模型与计费口径（轻量索引字段）
+      index.requestedModel ?? '',
+      index.upstreamModel ?? '',
+      index.model ?? '',
+      index.inputTokens ?? '',
+      index.outputTokens ?? '',
+      index.totalTokens ?? '',
+      index.totalCost ?? '',
+      index.usageSource ?? '',
     ].join('|');
   }
 
@@ -1490,6 +1530,15 @@ class FileSystemStorage {
       supplierClient: record.supplierClient,
       transformerChain: transformerChain,
       transformedPath: record.transformedPath,
+      // 模型与计费口径（轻量索引字段）
+      requestedModel: (record as any).requestedModel,
+      upstreamModel: (record as any).upstreamModel,
+      model: record.model,
+      inputTokens: record.inputTokens,
+      outputTokens: record.outputTokens,
+      totalTokens: record.totalTokens,
+      totalCost: record.totalCost,
+      usageSource: record.usageSource,
     };
 
     // 4. 更新内存索引
@@ -1582,6 +1631,14 @@ class FileSystemStorage {
       supplierClient: idx.supplierClient,
       transformerChain: idx.transformerChain,
       transformedPath: idx.transformedPath,
+      // 模型与计费口径（轻量）
+      requestedModel: idx.requestedModel,
+      upstreamModel: idx.upstreamModel,
+      model: idx.model,
+      inputTokens: idx.inputTokens,
+      outputTokens: idx.outputTokens,
+      totalTokens: idx.totalTokens,
+      totalCost: idx.totalCost,
     }));
 
     return {

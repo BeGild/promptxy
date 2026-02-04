@@ -1510,6 +1510,8 @@ export function createGateway(
         let inputCost = 0;
         let outputCost = 0;
         let model: string | undefined;
+        let requestedModel: string | undefined;
+        let upstreamModel: string | undefined;
         let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
@@ -1520,10 +1522,14 @@ export function createGateway(
           outputTokens = usage.outputTokens;
           usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
 
-          // 使用 targetModel 作为计费模型（转换后的上游模型）
-          // 优先级：1. routePlan.targetModel 2. effectiveBody.model 3. 从请求体提取
-          model = routePlan.targetModel || (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
+          // 入站/用户请求模型
+          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
+          // 上游实际模型：优先从上游原始响应读取
+          upstreamModel = (parsed as any)?.model || (parsed as any)?.response?.model || routePlan.targetModel;
+
+          // 计费模型：上游优先，其次请求模型
+          model = upstreamModel || requestedModel;
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
             const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
@@ -1567,6 +1573,8 @@ export function createGateway(
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
             // 统计相关字段
+            requestedModel,
+            upstreamModel,
             model,
             inputTokens,
             outputTokens,
@@ -1613,6 +1621,8 @@ export function createGateway(
         let inputCost = 0;
         let outputCost = 0;
         let model: string | undefined;
+        let requestedModel: string | undefined;
+        let upstreamModel: string | undefined;
         let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
@@ -1622,9 +1632,14 @@ export function createGateway(
           outputTokens = usage.outputTokens;
           usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
 
-          // 使用 targetModel 作为计费模型（转换后的上游模型）
-          model = routePlan.targetModel || (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
+          // 入站/用户请求模型
+          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
+          // 上游实际模型：优先从上游原始响应读取
+          upstreamModel = (parsed as any)?.model || (parsed as any)?.response?.model || routePlan.targetModel;
+
+          // 计费模型：上游优先，其次请求模型
+          model = upstreamModel || requestedModel;
 
           if (model && (inputTokens > 0 || outputTokens > 0)) {
             const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
@@ -1672,6 +1687,8 @@ export function createGateway(
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
             // 统计相关字段
+            requestedModel,
+            upstreamModel,
             model,
             inputTokens,
             outputTokens,
@@ -1831,6 +1848,8 @@ export function createGateway(
         let inputCost = 0;
         let outputCost = 0;
         let model: string | undefined;
+        let requestedModel: string | undefined;
+        let upstreamModel: string | undefined;
         let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
@@ -1841,16 +1860,18 @@ export function createGateway(
           // 处理 SSE 事件数组格式
           if (Array.isArray(responseBodyStr) && responseBodyStr.length > 0) {
             // ParsedSSEEvent[] 格式，需要转换
-            parsedResponse = responseBodyStr.map((event: any) => {
-              if (event.data && typeof event.data === 'string') {
-                try {
-                  return JSON.parse(event.data);
-                } catch {
-                  return null;
+            parsedResponse = responseBodyStr
+              .map((event: any) => {
+                if (event.data && typeof event.data === 'string') {
+                  try {
+                    return JSON.parse(event.data);
+                  } catch {
+                    return null;
+                  }
                 }
-              }
-              return null;
-            }).filter((e: any) => e !== null);
+                return null;
+              })
+              .filter((e: any) => e !== null);
           } else if (typeof responseBodyStr === 'string') {
             try {
               parsedResponse = JSON.parse(responseBodyStr);
@@ -1866,8 +1887,25 @@ export function createGateway(
           outputTokens = usage.outputTokens;
           usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
 
-          // 使用 targetModel 作为计费模型（转换后的上游模型）
-          model = routePlan.targetModel || pricingService.extractModel(savedJsonBody);
+          // 入站/用户请求模型
+          requestedModel = pricingService.extractModel(savedJsonBody);
+
+          // 上游实际模型：优先从 SSE 事件末尾的 response.completed.response.model 获取（若存在）
+          if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+            for (let i = parsedResponse.length - 1; i >= 0; i--) {
+              const evt = parsedResponse[i];
+              const m = (evt as any)?.response?.model || (evt as any)?.model;
+              if (typeof m === 'string' && m.trim()) {
+                upstreamModel = m;
+                break;
+              }
+            }
+          } else {
+            upstreamModel = (parsedResponse as any)?.model || (parsedResponse as any)?.response?.model;
+          }
+
+          // 计费模型：上游优先，其次请求模型
+          model = upstreamModel || requestedModel || routePlan.targetModel;
 
           // 计算费用
           if (model && (inputTokens > 0 || outputTokens > 0)) {
@@ -1912,6 +1950,8 @@ export function createGateway(
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
           // 统计相关字段
+          requestedModel,
+          upstreamModel,
           model,
           inputTokens,
           outputTokens,
