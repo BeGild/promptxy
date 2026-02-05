@@ -32,6 +32,7 @@ export interface RequestRecord {
   // 模型与计费口径（新增）
   requestedModel?: string;
   upstreamModel?: string;
+  cachedInputTokens?: number;
 
   // 统计字段（可选）
   model?: string;
@@ -67,6 +68,7 @@ export interface RequestListItem {
   requestedModel?: string;
   upstreamModel?: string;
   model?: string;
+  cachedInputTokens?: number;
 
   // 统计（轻量）
   inputTokens?: number;

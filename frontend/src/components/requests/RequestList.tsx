@@ -469,16 +469,28 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                   <TableCell className="w-40 text-sm font-mono text-xs text-primary dark:text-primary text-center">
                     {formatTimeWithMs(item.timestamp)}
                   </TableCell>
-                  <TableCell className="text-center">
-                    <TransformFlowBadge
-                      fromClient={item.client}
-                      toClient={item.supplierClient}
-                      isSupplierRequest={!!item.supplierName}
-                      transformerChain={item.transformerChain}
-                      supplierName={item.supplierName}
-                      size="md"
-                    />
-                  </TableCell>
+	                  <TableCell className="text-center">
+	                    <div className="flex flex-col items-center gap-1 min-w-0">
+	                      <TransformFlowBadge
+	                        fromClient={item.client}
+	                        toClient={item.supplierClient}
+	                        isSupplierRequest={!!item.supplierName}
+	                        transformerChain={item.transformerChain}
+	                        supplierName={item.supplierName}
+	                        requestedModel={item.requestedModel}
+	                        upstreamModel={item.upstreamModel}
+	                        billingModel={item.model}
+	                        cachedInputTokens={item.cachedInputTokens}
+	                        size="md"
+	                      />
+	                      <div
+	                        className="text-xs font-mono text-tertiary max-w-36 truncate"
+	                        title={item.model || undefined}
+	                      >
+	                        {item.model || '-'}
+	                      </div>
+	                    </div>
+	                  </TableCell>
                   <TableCell className="w-64 max-w-80">
                     <PathCell
                       originalPath={item.path}

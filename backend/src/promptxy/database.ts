@@ -51,6 +51,7 @@ interface RequestIndex {
   requestedModel?: string;
   upstreamModel?: string;
   model?: string;
+  cachedInputTokens?: number;
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
@@ -93,6 +94,7 @@ interface RequestFile {
   requestedModel?: string;
   upstreamModel?: string;
   model?: string;
+  cachedInputTokens?: number;
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
@@ -564,6 +566,7 @@ class FileSystemStorage {
       requestedModel: (record as any).requestedModel,
       upstreamModel: (record as any).upstreamModel,
       model: record.model,
+      cachedInputTokens: (record as any).cachedInputTokens,
       inputTokens: record.inputTokens,
       outputTokens: record.outputTokens,
       totalTokens: record.totalTokens,
@@ -621,7 +624,10 @@ class FileSystemStorage {
         transformTrace: fileContent.transformTrace,
         transformedPath: fileContent.transformedPath,
         // 统计相关字段
+        requestedModel: fileContent.requestedModel,
+        upstreamModel: fileContent.upstreamModel,
         model: fileContent.model,
+        cachedInputTokens: fileContent.cachedInputTokens,
         inputTokens: fileContent.inputTokens,
         outputTokens: fileContent.outputTokens,
         totalTokens: fileContent.totalTokens,
@@ -694,6 +700,7 @@ class FileSystemStorage {
       totalTokensStr = '',
       totalCostStr = '',
       usageSource = '',
+      cachedInputTokensStr = '',
     ] = parts;
 
     // 解析 transformerChain（从 JSON 字符串转为数组）
@@ -727,6 +734,7 @@ class FileSystemStorage {
       requestedModel: requestedModel || undefined,
       upstreamModel: upstreamModel || undefined,
       model: billingModel || undefined,
+      cachedInputTokens: cachedInputTokensStr ? Number(cachedInputTokensStr) : undefined,
       inputTokens: inputTokensStr ? Number(inputTokensStr) : undefined,
       outputTokens: outputTokensStr ? Number(outputTokensStr) : undefined,
       totalTokens: totalTokensStr ? Number(totalTokensStr) : undefined,
@@ -765,6 +773,7 @@ class FileSystemStorage {
       index.totalTokens ?? '',
       index.totalCost ?? '',
       index.usageSource ?? '',
+      index.cachedInputTokens ?? '',
     ].join('|');
   }
 
@@ -806,29 +815,39 @@ class FileSystemStorage {
             }
           }
 
-          newTimeIndex.push({
-            id: record.id,
-            timestamp: record.timestamp,
-            client: record.client,
-            path: record.path,
-            method: record.method,
-            requestSize: record.requestSize,
-            responseSize: record.responseSize,
-            responseStatus: record.responseStatus,
-            durationMs: record.durationMs,
-            error: record.error,
-            matchedRulesBrief: record.matchedRules
-              ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
-              : [],
-            // 供应商和转换信息
-            supplierName: record.supplierName,
-            supplierClient: record.supplierClient,
-            transformerChain: transformerChain,
-            transformedPath: record.transformedPath,
-          });
-          this.pathCache.add(record.path);
-        }
-      }
+	          newTimeIndex.push({
+	            id: record.id,
+	            timestamp: record.timestamp,
+	            client: record.client,
+	            path: record.path,
+	            method: record.method,
+	            requestSize: record.requestSize,
+	            responseSize: record.responseSize,
+	            responseStatus: record.responseStatus,
+	            durationMs: record.durationMs,
+	            error: record.error,
+	            matchedRulesBrief: record.matchedRules
+	              ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
+	              : [],
+	            // 供应商和转换信息
+	            supplierName: record.supplierName,
+	            supplierClient: record.supplierClient,
+	            transformerChain: transformerChain,
+	            transformedPath: record.transformedPath,
+	            // 模型与计费口径（轻量索引字段）
+	            requestedModel: (record as any).requestedModel,
+	            upstreamModel: (record as any).upstreamModel,
+	            model: (record as any).model,
+	            cachedInputTokens: (record as any).cachedInputTokens,
+	            inputTokens: (record as any).inputTokens,
+	            outputTokens: (record as any).outputTokens,
+	            totalTokens: (record as any).totalTokens,
+	            totalCost: (record as any).totalCost,
+	            usageSource: (record as any).usageSource,
+	          });
+	          this.pathCache.add(record.path);
+	        }
+	      }
 
       // 按时间戳倒序排列
       newTimeIndex.sort((a, b) => b.timestamp - a.timestamp);
@@ -866,29 +885,39 @@ class FileSystemStorage {
             }
           }
 
-          newTimeIndex.push({
-            id: record.id,
-            timestamp: record.timestamp,
-            client: record.client,
-            path: record.path,
-            method: record.method,
-            requestSize: record.requestSize,
-            responseSize: record.responseSize,
-            responseStatus: record.responseStatus,
-            durationMs: record.durationMs,
-            error: record.error,
-            matchedRulesBrief: record.matchedRules
-              ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
-              : [],
-            // 供应商和转换信息
-            supplierName: record.supplierName,
-            supplierClient: record.supplierClient,
-            transformerChain: transformerChain,
-            transformedPath: record.transformedPath,
-          });
-          this.pathCache.add(record.path);
-        }
-      }
+	          newTimeIndex.push({
+	            id: record.id,
+	            timestamp: record.timestamp,
+	            client: record.client,
+	            path: record.path,
+	            method: record.method,
+	            requestSize: record.requestSize,
+	            responseSize: record.responseSize,
+	            responseStatus: record.responseStatus,
+	            durationMs: record.durationMs,
+	            error: record.error,
+	            matchedRulesBrief: record.matchedRules
+	              ? JSON.parse(record.matchedRules).map((m: any) => m.ruleId)
+	              : [],
+	            // 供应商和转换信息
+	            supplierName: record.supplierName,
+	            supplierClient: record.supplierClient,
+	            transformerChain: transformerChain,
+	            transformedPath: record.transformedPath,
+	            // 模型与计费口径（轻量索引字段）
+	            requestedModel: (record as any).requestedModel,
+	            upstreamModel: (record as any).upstreamModel,
+	            model: (record as any).model,
+	            cachedInputTokens: (record as any).cachedInputTokens,
+	            inputTokens: (record as any).inputTokens,
+	            outputTokens: (record as any).outputTokens,
+	            totalTokens: (record as any).totalTokens,
+	            totalCost: (record as any).totalCost,
+	            usageSource: (record as any).usageSource,
+	          });
+	          this.pathCache.add(record.path);
+	        }
+	      }
 
       // 按时间戳倒序排列
       newTimeIndex.sort((a, b) => b.timestamp - a.timestamp);
@@ -1534,6 +1563,7 @@ class FileSystemStorage {
       requestedModel: (record as any).requestedModel,
       upstreamModel: (record as any).upstreamModel,
       model: record.model,
+      cachedInputTokens: (record as any).cachedInputTokens,
       inputTokens: record.inputTokens,
       outputTokens: record.outputTokens,
       totalTokens: record.totalTokens,
@@ -1635,6 +1665,7 @@ class FileSystemStorage {
       requestedModel: idx.requestedModel,
       upstreamModel: idx.upstreamModel,
       model: idx.model,
+      cachedInputTokens: idx.cachedInputTokens,
       inputTokens: idx.inputTokens,
       outputTokens: idx.outputTokens,
       totalTokens: idx.totalTokens,
@@ -2139,4 +2170,3 @@ export function getStatsDataByRange(options: {
   const storage = getDatabase();
   return storage.getStatsDataByRange(options);
 }
-

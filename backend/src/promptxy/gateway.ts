@@ -1508,34 +1508,46 @@ export function createGateway(
         let inputTokens = 0;
         let outputTokens = 0;
         let inputCost = 0;
-        let outputCost = 0;
-        let model: string | undefined;
-        let requestedModel: string | undefined;
-        let upstreamModel: string | undefined;
-        let usageSource: 'actual' | 'estimated' = 'estimated';
+	        let outputCost = 0;
+	        let model: string | undefined;
+	        let requestedModel: string | undefined;
+	        let upstreamModel: string | undefined;
+	        let cachedInputTokens: number | undefined;
+	        let usageSource: 'actual' | 'estimated' = 'estimated';
 
-        try {
-          const pricingService = getPricingService();
-          // 使用原始响应提取 usage 数据（转换后的响应可能没有 usage 字段）
-          const usage = pricingService.extractUsage(parsed);
-          inputTokens = usage.inputTokens;
-          outputTokens = usage.outputTokens;
-          usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
+	        try {
+	          const pricingService = getPricingService();
+	          // 使用原始响应提取 usage 数据（转换后的响应可能没有 usage 字段）
+	          const usage = pricingService.extractUsage(parsed);
+	          const rawInputTokens = usage.inputTokens;
+	          const rawOutputTokens = usage.outputTokens;
+	          inputTokens = rawInputTokens;
+	          outputTokens = rawOutputTokens;
 
-          // 入站/用户请求模型
-          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
+	          const cachedInfo = pricingService.extractCachedInputTokens(parsed);
+	          cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
+	          usageSource = (rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0)
+	            ? 'actual'
+	            : 'estimated';
+
+	          if (cachedInfo.subtractFromInputTokens) {
+	            inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
+	          }
+
+	          // 入站/用户请求模型
+	          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
           // 上游实际模型：优先从上游原始响应读取
           upstreamModel = (parsed as any)?.model || (parsed as any)?.response?.model || routePlan.targetModel;
 
-          // 计费模型：上游优先，其次请求模型
-          model = upstreamModel || requestedModel;
+	          // 计费模型：上游优先，其次请求模型
+	          model = upstreamModel || requestedModel;
 
-          if (model && (inputTokens > 0 || outputTokens > 0)) {
-            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
-            inputCost = costData.inputCost;
-            outputCost = costData.outputCost;
-          }
+	          if (model && (inputTokens > 0 || outputTokens > 0)) {
+	            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
+	            inputCost = costData.inputCost;
+	            outputCost = costData.outputCost;
+	          }
         } catch (err: any) {
           if (config.debug) {
             logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
@@ -1572,15 +1584,16 @@ export function createGateway(
             supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
-            // 统计相关字段
-            requestedModel,
-            upstreamModel,
-            model,
-            inputTokens,
-            outputTokens,
-            totalTokens: inputTokens + outputTokens,
-            inputCost,
-            outputCost,
+	            // 统计相关字段
+	            requestedModel,
+	            upstreamModel,
+	            model,
+	            cachedInputTokens,
+	            inputTokens,
+	            outputTokens,
+	            totalTokens: inputTokens + outputTokens,
+	            inputCost,
+	            outputCost,
             totalCost: inputCost + outputCost,
             usageSource,
           };
@@ -1619,21 +1632,33 @@ export function createGateway(
         let inputTokens = 0;
         let outputTokens = 0;
         let inputCost = 0;
-        let outputCost = 0;
-        let model: string | undefined;
-        let requestedModel: string | undefined;
-        let upstreamModel: string | undefined;
-        let usageSource: 'actual' | 'estimated' = 'estimated';
+	        let outputCost = 0;
+	        let model: string | undefined;
+	        let requestedModel: string | undefined;
+	        let upstreamModel: string | undefined;
+	        let cachedInputTokens: number | undefined;
+	        let usageSource: 'actual' | 'estimated' = 'estimated';
 
-        try {
-          const pricingService = getPricingService();
-          const usage = pricingService.extractUsage(parsed);
-          inputTokens = usage.inputTokens;
-          outputTokens = usage.outputTokens;
-          usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
+	        try {
+	          const pricingService = getPricingService();
+	          const usage = pricingService.extractUsage(parsed);
+	          const rawInputTokens = usage.inputTokens;
+	          const rawOutputTokens = usage.outputTokens;
+	          inputTokens = rawInputTokens;
+	          outputTokens = rawOutputTokens;
 
-          // 入站/用户请求模型
-          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
+	          const cachedInfo = pricingService.extractCachedInputTokens(parsed);
+	          cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
+	          usageSource = (rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0)
+	            ? 'actual'
+	            : 'estimated';
+
+	          if (cachedInfo.subtractFromInputTokens) {
+	            inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
+	          }
+
+	          // 入站/用户请求模型
+	          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
 
           // 上游实际模型：优先从上游原始响应读取
           upstreamModel = (parsed as any)?.model || (parsed as any)?.response?.model || routePlan.targetModel;
@@ -1686,15 +1711,16 @@ export function createGateway(
             supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
-            // 统计相关字段
-            requestedModel,
-            upstreamModel,
-            model,
-            inputTokens,
-            outputTokens,
-            totalTokens: inputTokens + outputTokens,
-            inputCost,
-            outputCost,
+	            // 统计相关字段
+	            requestedModel,
+	            upstreamModel,
+	            model,
+	            cachedInputTokens,
+	            inputTokens,
+	            outputTokens,
+	            totalTokens: inputTokens + outputTokens,
+	            inputCost,
+	            outputCost,
             totalCost: inputCost + outputCost,
             usageSource,
           };
@@ -1846,11 +1872,12 @@ export function createGateway(
         let inputTokens = 0;
         let outputTokens = 0;
         let inputCost = 0;
-        let outputCost = 0;
-        let model: string | undefined;
-        let requestedModel: string | undefined;
-        let upstreamModel: string | undefined;
-        let usageSource: 'actual' | 'estimated' = 'estimated';
+	        let outputCost = 0;
+	        let model: string | undefined;
+	        let requestedModel: string | undefined;
+	        let upstreamModel: string | undefined;
+	        let cachedInputTokens: number | undefined;
+	        let usageSource: 'actual' | 'estimated' = 'estimated';
 
         try {
           // 解析响应体获取 token 数据
@@ -1880,12 +1907,23 @@ export function createGateway(
             }
           }
 
-          // 提取 token 数据
-          const pricingService = getPricingService();
-          const usage = pricingService.extractUsage(parsedResponse);
-          inputTokens = usage.inputTokens;
-          outputTokens = usage.outputTokens;
-          usageSource = (inputTokens > 0 || outputTokens > 0) ? 'actual' : 'estimated';
+	          // 提取 token 数据
+	          const pricingService = getPricingService();
+	          const usage = pricingService.extractUsage(parsedResponse);
+	          const rawInputTokens = usage.inputTokens;
+	          const rawOutputTokens = usage.outputTokens;
+	          inputTokens = rawInputTokens;
+	          outputTokens = rawOutputTokens;
+
+	          const cachedInfo = pricingService.extractCachedInputTokens(parsedResponse);
+	          cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
+	          usageSource = (rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0)
+	            ? 'actual'
+	            : 'estimated';
+
+	          if (cachedInfo.subtractFromInputTokens) {
+	            inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
+	          }
 
           // 入站/用户请求模型
           requestedModel = pricingService.extractModel(savedJsonBody);
@@ -1949,17 +1987,19 @@ export function createGateway(
           supplierClient: getSupplierClient(savedSupplierProtocol),
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
-          // 统计相关字段
-          requestedModel,
-          upstreamModel,
-          model,
-          inputTokens,
-          outputTokens,
-          totalTokens: inputTokens + outputTokens,
-          inputCost,
-          outputCost,
-          totalCost: inputCost + outputCost,
-        };
+	          // 统计相关字段
+	          requestedModel,
+	          upstreamModel,
+	          model,
+	          cachedInputTokens,
+	          inputTokens,
+	          outputTokens,
+	          totalTokens: inputTokens + outputTokens,
+	          inputCost,
+	          outputCost,
+	          totalCost: inputCost + outputCost,
+	          usageSource,
+	        };
 
         try {
           await insertRequestRecord(record);

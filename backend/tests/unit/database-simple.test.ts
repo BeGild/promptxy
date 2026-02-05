@@ -64,12 +64,17 @@ describe('Database Module - FileSystemStorage', () => {
       supplierName: 'claude-anthropic',
       supplierBaseUrl: 'https://api.anthropic.com',
       transformerChain: JSON.stringify([]),
+      requestedModel: 'claude-3-5-sonnet-20241022',
+      upstreamModel: 'claude-3-5-sonnet-20241022',
+      cachedInputTokens: 12,
     });
 
     const detail = await getRequestDetail(id);
     expect(detail).toBeTruthy();
     expect(detail!.id).toBe(id);
     expect(detail!.supplierId).toBe('claude-anthropic');
+    expect((detail as any)!.requestedModel).toBe('claude-3-5-sonnet-20241022');
+    expect((detail as any)!.upstreamModel).toBe('claude-3-5-sonnet-20241022');
+    expect((detail as any)!.cachedInputTokens).toBe(12);
   });
 });
-

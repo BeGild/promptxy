@@ -271,6 +271,7 @@ export async function handleGetRequest(
       requestedModel: (record as any).requestedModel,
       upstreamModel: (record as any).upstreamModel,
       model: (record as any).model,
+      cachedInputTokens: (record as any).cachedInputTokens,
       inputTokens: (record as any).inputTokens,
       outputTokens: (record as any).outputTokens,
       totalTokens: (record as any).totalTokens,

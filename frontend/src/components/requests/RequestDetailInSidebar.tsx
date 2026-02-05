@@ -229,39 +229,66 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
             )}
 
             {/* 转换链信息 */}
-            {transformerChain.length > 0 && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-tertiary">转换链:</span>
-                <div className="flex items-center gap-1 flex-wrap">
-                  {transformerChain.map((step, index) => (
-                    <React.Fragment key={index}>
-                      <Chip size="sm" variant="flat" color="primary" className="h-5 min-h-5">
-                        {step}
-                      </Chip>
-                      {index < transformerChain.length - 1 && (
-                        <ArrowRight size={12} className="text-tertiary" />
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-                <Button
-                  size="sm"
-                  variant="light"
-                  color="primary"
-                  onPress={() => setIsTransformDetailOpen(true)}
-                  startContent={<Eye size={14} />}
-                  className="h-5 min-h-5 px-2 min-w-0 text-xs"
-                >
-                  详情
-                </Button>
-              </div>
-            )}
+	            {transformerChain.length > 0 && (
+	              <div className="flex items-center gap-2 text-xs">
+	                <span className="text-tertiary">转换链:</span>
+	                <div className="flex items-center gap-1 flex-wrap">
+	                  {transformerChain.map((step, index) => (
+	                    <React.Fragment key={index}>
+	                      <Chip size="sm" variant="flat" color="primary" className="h-5 min-h-5">
+	                        {step}
+	                      </Chip>
+	                      {index < transformerChain.length - 1 && (
+	                        <ArrowRight size={12} className="text-tertiary" />
+	                      )}
+	                    </React.Fragment>
+	                  ))}
+	                </div>
+	                <Button
+	                  size="sm"
+	                  variant="light"
+	                  color="primary"
+	                  onPress={() => setIsTransformDetailOpen(true)}
+	                  startContent={<Eye size={14} />}
+	                  className="h-5 min-h-5 px-2 min-w-0 text-xs"
+	                >
+	                  详情
+	                </Button>
+	              </div>
+	            )}
 
-            {/* 跳转到配置 */}
-            {request.supplierId && (
-              <Button
-                size="sm"
-                variant="flat"
+	            {/* 模型与计费口径 */}
+	            {(request.model || request.requestedModel || request.upstreamModel || request.cachedInputTokens) && (
+	              <div className="flex items-center gap-2 text-xs flex-wrap">
+	                <span className="text-tertiary">模型:</span>
+	                {request.model && (
+	                  <Chip size="sm" variant="flat" color="secondary" className="h-5 min-h-5">
+	                    计费 {request.model}
+	                  </Chip>
+	                )}
+	                {request.requestedModel && (
+	                  <Chip size="sm" variant="flat" className="h-5 min-h-5">
+	                    请求 {request.requestedModel}
+	                  </Chip>
+	                )}
+	                {request.upstreamModel && (
+	                  <Chip size="sm" variant="flat" className="h-5 min-h-5">
+	                    上游 {request.upstreamModel}
+	                  </Chip>
+	                )}
+	                {typeof request.cachedInputTokens === 'number' && request.cachedInputTokens > 0 && (
+	                  <Chip size="sm" variant="flat" color="warning" className="h-5 min-h-5">
+	                    缓存 {request.cachedInputTokens}
+	                  </Chip>
+	                )}
+	              </div>
+	            )}
+
+	            {/* 跳转到配置 */}
+	            {request.supplierId && (
+	              <Button
+	                size="sm"
+	                variant="flat"
                 color="primary"
                 onPress={() => setActiveTab('route-config')}
                 className="text-xs h-6"

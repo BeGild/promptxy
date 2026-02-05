@@ -229,6 +229,67 @@ export class PricingService {
   }
 
   /**
+   * 从响应中提取缓存命中 Token 数（用于统一计费口径）
+   *
+   * 约定：
+   * - OpenAI/Codex 原始 usage 形态：cached_tokens 与 input/prompt tokens 同口径（需要从 inputTokens 中扣除）
+   * - Claude usage 形态：cache_read_input_tokens 表示缓存命中 token 数，但 input_tokens 通常已经扣除（不应再次扣）
+   */
+  extractCachedInputTokens(responseBody: any): {
+    cachedInputTokens: number;
+    subtractFromInputTokens: boolean;
+  } {
+    const empty = { cachedInputTokens: 0, subtractFromInputTokens: false };
+    if (!responseBody) return empty;
+
+    const fromUsage = (usage: any) => {
+      if (!usage || typeof usage !== 'object') return empty;
+
+      const cachedFromResponses = (usage as any)?.input_tokens_details?.cached_tokens;
+      if (typeof cachedFromResponses === 'number' && Number.isFinite(cachedFromResponses)) {
+        return { cachedInputTokens: cachedFromResponses, subtractFromInputTokens: true };
+      }
+
+      const cachedFromChat = (usage as any)?.prompt_tokens_details?.cached_tokens;
+      if (typeof cachedFromChat === 'number' && Number.isFinite(cachedFromChat)) {
+        return { cachedInputTokens: cachedFromChat, subtractFromInputTokens: true };
+      }
+
+      const cachedFromClaude = (usage as any)?.cache_read_input_tokens;
+      if (typeof cachedFromClaude === 'number' && Number.isFinite(cachedFromClaude)) {
+        return { cachedInputTokens: cachedFromClaude, subtractFromInputTokens: false };
+      }
+
+      return empty;
+    };
+
+    // SSE 事件数组：优先取尾部最终 usage（与 extractUsage 同策略）
+    if (Array.isArray(responseBody)) {
+      for (let i = responseBody.length - 1; i >= 0; i--) {
+        const event = responseBody[i];
+        if (!event || typeof event !== 'object') continue;
+
+        const usageCandidate =
+          (event as any).usage ??
+          (event as any).message?.usage ??
+          (event as any).response?.usage;
+
+        const extracted = fromUsage(usageCandidate);
+        if (extracted.cachedInputTokens !== 0 || extracted.subtractFromInputTokens) {
+          return extracted;
+        }
+      }
+      return empty;
+    }
+
+    const usageCandidate =
+      (responseBody as any).usage ??
+      (responseBody as any).message?.usage ??
+      (responseBody as any).response?.usage;
+    return fromUsage(usageCandidate);
+  }
+
+  /**
    * 从响应内容估算 Output Tokens（当上游不返回 usage 时）
    * 适用于流式响应
    */
