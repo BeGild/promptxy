@@ -228,6 +228,8 @@ export interface RequestRecord {
   // upstreamModel: 上游实际返回/使用的模型（若能解析到）
   requestedModel?: string;
   upstreamModel?: string;
+  // cachedInputTokens: 上游返回的缓存命中 token 数（如 OpenAI/Codex cached_tokens / Claude cache_read_input_tokens）
+  cachedInputTokens?: number;
 
   model?: string;              // 计费模型（优先 upstreamModel，其次 requestedModel）
   inputTokens?: number;        // 输入 Token 数
@@ -275,6 +277,7 @@ export interface RequestRecordResponse {
   // 模型与计费口径（新增）
   requestedModel?: string;
   upstreamModel?: string;
+  cachedInputTokens?: number;
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
@@ -313,6 +316,7 @@ export interface RequestListResponse {
     requestedModel?: string;
     upstreamModel?: string;
     model?: string;
+    cachedInputTokens?: number;
     inputTokens?: number;
     outputTokens?: number;
     totalTokens?: number;

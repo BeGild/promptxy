@@ -42,6 +42,14 @@ interface TransformFlowBadgeProps {
   transformerChain?: string[];
   /** 供应商名称（用于 tooltip） */
   supplierName?: string;
+  /** 入站/用户请求模型（用于 tooltip） */
+  requestedModel?: string;
+  /** 上游实际模型（用于 tooltip） */
+  upstreamModel?: string;
+  /** 计费模型（用于 tooltip） */
+  billingModel?: string;
+  /** 缓存命中 tokens（用于 tooltip） */
+  cachedInputTokens?: number;
   /** 尺寸变体 */
   size?: 'sm' | 'md' | 'lg';
 }
@@ -63,6 +71,10 @@ export const TransformFlowBadge: React.FC<TransformFlowBadgeProps> = ({
   isSupplierRequest = false,
   transformerChain,
   supplierName,
+  requestedModel,
+  upstreamModel,
+  billingModel,
+  cachedInputTokens,
   size = 'md',
 }) => {
   // 如果没有目标客户端，使用原始客户端（表示直连）
@@ -87,6 +99,19 @@ export const TransformFlowBadge: React.FC<TransformFlowBadgeProps> = ({
 
     if (hasTransformerChain) {
       parts.push(`转换链: ${transformerChain.join(' → ')}`);
+    }
+
+    if (billingModel) {
+      parts.push(`计费模型: ${billingModel}`);
+    }
+    if (requestedModel) {
+      parts.push(`请求模型: ${requestedModel}`);
+    }
+    if (upstreamModel) {
+      parts.push(`上游模型: ${upstreamModel}`);
+    }
+    if (typeof cachedInputTokens === 'number' && cachedInputTokens > 0) {
+      parts.push(`缓存命中: ${cachedInputTokens} tokens`);
     }
 
     if (parts.length === 0) {
