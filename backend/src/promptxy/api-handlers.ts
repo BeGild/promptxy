@@ -1645,15 +1645,16 @@ export async function handleGetStatsData(
       endTime = endParam ? Number(endParam) : undefined;
     }
 
-    const aggregated = getStatsDataByRange({
-      startTime,
-      endTime,
-      limitDays: range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : undefined,
-    });
-
-    // 注意：hourly/today 仍然是“今日缓存”，不参与范围聚合
-    const hourly = getStatsHourly();
-    const today = getStatsToday();
+    const [aggregated, hourly, today] = await Promise.all([
+      getStatsDataByRange({
+        startTime,
+        endTime,
+        limitDays: range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : undefined,
+      }),
+      // 注意：hourly/today 仍然是“今日统计”，不参与范围聚合
+      getStatsHourly(),
+      getStatsToday(),
+    ]);
 
     const total = aggregated.total;
     const daily = aggregated.daily;
@@ -1684,7 +1685,7 @@ export async function handleGetStatsTotal(
   res: http.ServerResponse,
 ): Promise<void> {
   try {
-    const result = getStatsTotal();
+    const result = await getStatsTotal();
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get total stats', message: error?.message });
@@ -1701,7 +1702,7 @@ export async function handleGetStatsDaily(
 ): Promise<void> {
   try {
     const limit = Number(url.searchParams.get('limit')) || 30;
-    const result = getStatsDaily(limit);
+    const result = await getStatsDaily(limit);
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get daily stats', message: error?.message });
@@ -1716,7 +1717,7 @@ export async function handleGetStatsHourly(
   res: http.ServerResponse,
 ): Promise<void> {
   try {
-    const result = getStatsHourly();
+    const result = await getStatsHourly();
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get hourly stats', message: error?.message });
@@ -1731,7 +1732,7 @@ export async function handleGetStatsSupplier(
   res: http.ServerResponse,
 ): Promise<void> {
   try {
-    const result = getStatsSupplier();
+    const result = await getStatsSupplier();
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get supplier stats', message: error?.message });
@@ -1749,7 +1750,7 @@ export async function handleGetStatsModel(
   try {
     const limit = Number(url.searchParams.get('limit')) || 20;
     const sortBy = url.searchParams.get('sortBy') as keyof StatsMetrics || 'totalTokens';
-    const result = getStatsModel(limit, sortBy);
+    const result = await getStatsModel(limit, sortBy);
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get model stats', message: error?.message });
@@ -1764,7 +1765,7 @@ export async function handleGetStatsRoute(
   res: http.ServerResponse,
 ): Promise<void> {
   try {
-    const result = getStatsRoute();
+    const result = await getStatsRoute();
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get route stats', message: error?.message });
@@ -1779,7 +1780,7 @@ export async function handleGetStatsToday(
   res: http.ServerResponse,
 ): Promise<void> {
   try {
-    const result = getStatsToday();
+    const result = await getStatsToday();
     sendJson(res, 200, result);
   } catch (error: any) {
     sendJson(res, 500, { error: 'Failed to get today stats', message: error?.message });
