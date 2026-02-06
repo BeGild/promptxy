@@ -36,6 +36,7 @@ import { Filter, RefreshCw, X, Eye, Trash2, ChevronLeft, ChevronRight } from 'lu
 import { EmptyState } from '@/components/common';
 import { RequestListItem, RequestFilters } from '@/types';
 import { formatTimeWithMs, getStatusColor } from '@/utils';
+import { formatUsdCostCompact } from '@/utils/format';
 import { PathAutocomplete } from './PathAutocomplete';
 import { TransformFlowBadge } from './TransformFlowBadge';
 import { PathCell } from './PathCell';
@@ -273,6 +274,24 @@ const RequestListComponent: React.FC<RequestListProps> = ({
     };
   }, [requests.length, total]);
 
+  const getPricingSnapshotTooltip = useCallback((snapshot?: string) => {
+    if (!snapshot) return '';
+    try {
+      const parsed = JSON.parse(snapshot);
+      const formatted = JSON.stringify(parsed, null, 2);
+      return formatted.length > 420 ? `${formatted.slice(0, 420)}...` : formatted;
+    } catch {
+      return snapshot.length > 420 ? `${snapshot.slice(0, 420)}...` : snapshot;
+    }
+  }, []);
+
+  const renderCostText = useCallback((item: RequestListItem) => {
+    if (item.pricingStatus !== 'calculated' || typeof item.totalCost !== 'number') {
+      return '--';
+    }
+    return formatUsdCostCompact(item.totalCost);
+  }, []);
+
   type RequestTableItem = RequestListItem & { _isViewed: boolean };
   const tableItems = useMemo<RequestTableItem[]>(() => {
     return requests.map(request => ({
@@ -401,6 +420,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
             <TableColumn className="w-64 max-w-80 text-left">路径</TableColumn>
             <TableColumn className="w-16 text-center">规则</TableColumn>
             <TableColumn className="text-center">状态</TableColumn>
+            <TableColumn className="w-28 text-left">费用</TableColumn>
             <TableColumn className="w-32 text-left">大小</TableColumn>
             <TableColumn className="w-24 text-center">耗时</TableColumn>
             <TableColumn className="w-20 text-center">操作</TableColumn>
@@ -517,6 +537,9 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                     >
                       {item.responseStatus || 'N/A'}
                     </Chip>
+                  </TableCell>
+                  <TableCell className="w-28 text-sm text-primary dark:text-primary font-mono" title={getPricingSnapshotTooltip(item.pricingSnapshot)}>
+                    {renderCostText(item)}
                   </TableCell>
                   <TableCell className="w-48 text-sm text-primary dark:text-primary">
                     {item.requestSize || item.responseSize ? (

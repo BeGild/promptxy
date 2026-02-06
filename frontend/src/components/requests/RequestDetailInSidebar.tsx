@@ -29,6 +29,7 @@ import {
   formatHeadersAsJSON,
 } from '@/utils';
 import { RequestDetailPanel } from '@/components/request-viewer';
+import { formatUsdCostCompact } from '@/utils/format';
 import { MatchMode, type RegexResult } from '@/utils/regexGenerator';
 import { Server, ArrowRight, Eye, CheckCircle2, ChevronDown, Copy } from 'lucide-react';
 
@@ -158,6 +159,25 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
   // 解析转换链
   const transformerChain = request.transformerChain || [];
   const hasRouteInfo = request.supplierId || request.supplierName || transformerChain.length > 0;
+
+  let parsedPricingSnapshot: any = undefined;
+  let priceSource = '-';
+  if (request.pricingSnapshot) {
+    try {
+      parsedPricingSnapshot = JSON.parse(request.pricingSnapshot);
+      if (typeof parsedPricingSnapshot?.priceSource === 'string' && parsedPricingSnapshot.priceSource) {
+        priceSource = parsedPricingSnapshot.priceSource;
+      }
+    } catch {
+      // ignore pricing snapshot parsing errors
+    }
+  }
+
+  const pricingStatusText = request.pricingStatus || '历史记录无计费快照';
+  const totalCostText =
+    request.pricingStatus === 'calculated' && typeof request.totalCost === 'number'
+      ? formatUsdCostCompact(request.totalCost)
+      : '--';
 
   return (
     <div className="space-y-3">
@@ -299,6 +319,50 @@ export const RequestDetailInSidebar: React.FC<RequestDetailInSidebarProps> = ({
           </CardBody>
         </Card>
       )}
+
+      {/* 计费详情（Table） */}
+      <Card className="rounded-lg overflow-hidden border border-brand-primary/30 dark:border-brand-primary/20 bg-gradient-to-br from-elevated to-brand-primary/5 dark:from-elevated dark:to-brand-primary/10">
+        <CardHeader className="px-3 py-2 text-xs font-semibold text-primary">计费详情</CardHeader>
+        <Divider className="bg-subtle" />
+        <CardBody className="p-0">
+          <table className="w-full text-xs">
+            <tbody>
+              <tr className="border-b border-subtle">
+                <td className="px-3 py-2 text-tertiary w-32">计费模型</td>
+                <td className="px-3 py-2 font-mono text-primary">{request.model || '-'}</td>
+              </tr>
+              <tr className="border-b border-subtle">
+                <td className="px-3 py-2 text-tertiary">输入/输出 Token</td>
+                <td className="px-3 py-2 font-mono text-primary">
+                  {(typeof request.inputTokens === 'number' ? request.inputTokens : '-') +
+                    ' / ' +
+                    (typeof request.outputTokens === 'number' ? request.outputTokens : '-')}
+                </td>
+              </tr>
+              <tr className="border-b border-subtle">
+                <td className="px-3 py-2 text-tertiary">缓存 Token</td>
+                <td className="px-3 py-2 font-mono text-primary">
+                  {typeof request.cachedInputTokens === 'number' ? request.cachedInputTokens : '-'}
+                </td>
+              </tr>
+              <tr className="border-b border-subtle">
+                <td className="px-3 py-2 text-tertiary">总费用</td>
+                <td className="px-3 py-2 font-mono text-primary">{totalCostText}</td>
+              </tr>
+              <tr className="border-b border-subtle">
+                <td className="px-3 py-2 text-tertiary">计费状态</td>
+                <td className="px-3 py-2 text-primary">{pricingStatusText}</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 text-tertiary">来源信息</td>
+                <td className="px-3 py-2 text-primary">
+                  {`usage:${request.usageSource || '-'}, price:${priceSource}`}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </CardBody>
+      </Card>
 
       {/* 转换详情弹窗 */}
       <Modal

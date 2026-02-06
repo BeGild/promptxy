@@ -138,6 +138,20 @@ export interface GatewayAuth {
 }
 
 /**
+ * 供应商模型计费映射
+ */
+export interface ModelPricingMapping {
+  modelName: string;
+  billingModel: string;
+  priceMode: 'inherit' | 'custom';
+  customPrice?: {
+    inputPrice: number;
+    outputPrice: number;
+  };
+  updatedAt?: number;
+}
+
+/**
  * 供应商配置
  * 只管理上游 API 信息，不绑定本地路径
  */
@@ -150,6 +164,7 @@ export interface Supplier {
   enabled: boolean; // 是否启用
   auth?: SupplierAuth; // 上游认证配置（支持 none/bearer/header）
   supportedModels: string[]; // 供应商支持的上游模型列表（用于路由映射与校验）
+  modelPricingMappings?: ModelPricingMapping[]; // 供应商内模型计费映射
   /**
    * 可识别的 reasoning effort 列表。
    * 用于将 modelSpec "<base>-<effort>" 解析为 `model=<base>` + `reasoning.effort=<effort>`。
@@ -215,6 +230,7 @@ export interface RequestRecord {
 
   // 供应商和转换信息
   routeId?: string;
+  routeNameSnapshot?: string;
   supplierId?: string;
   supplierName?: string;
   supplierBaseUrl?: string;
@@ -243,6 +259,10 @@ export interface RequestRecord {
 
   // usage 来源（真实/估算）
   usageSource?: 'actual' | 'estimated';
+
+  // 计费状态与快照
+  pricingStatus?: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+  pricingSnapshot?: string;
 }
 
 // API 返回的请求记录（解析后的）
@@ -268,6 +288,7 @@ export interface RequestRecordResponse {
 
   // 供应商和转换信息（新增）
   routeId?: string; // 命中的路由 ID
+  routeNameSnapshot?: string; // 路由名称快照
   supplierId?: string; // 供应商 ID
   supplierName?: string; // 供应商名称
   supplierBaseUrl?: string; // 供应商上游地址
@@ -286,6 +307,8 @@ export interface RequestRecordResponse {
   outputCost?: number;
   totalCost?: number;
   usageSource?: 'actual' | 'estimated';
+  pricingStatus?: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+  pricingSnapshot?: string;
 }
 
 // 请求列表响应
@@ -317,6 +340,9 @@ export interface RequestListResponse {
     upstreamModel?: string;
     model?: string;
     cachedInputTokens?: number;
+    routeNameSnapshot?: string;
+    pricingStatus?: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+    pricingSnapshot?: string;
     inputTokens?: number;
     outputTokens?: number;
     totalTokens?: number;
@@ -793,6 +819,10 @@ export interface RequestRecordStats {
   // 时间统计
   waitTime?: number;          // 等待时间（首字时间）
   ftut?: number;              // First Token Usage Time（首字时间）
+
+  // 计费状态与快照
+  pricingStatus?: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+  pricingSnapshot?: string;
 }
 
 // ============================================================================

@@ -53,6 +53,7 @@ import {
   handleStats,
   handleDatabaseInfo,
   handleGetSuppliers,
+  handleSearchModels,
   handleCreateSupplier,
   handleUpdateSupplier,
   handleDeleteSupplier,
@@ -102,6 +103,7 @@ import { deriveTransformPlan } from './transform/index.js';
 import { executeUpstream } from './proxying/index.js';
 import { streamResponse } from './streaming/index.js';
 import { getPricingService } from './pricing.js';
+import { getSyncStorage } from './sync/sync-storage.js';
 
 type RouteInfo = {
   client: PromptxyClient;
@@ -111,6 +113,230 @@ type RouteInfo = {
   supplier: Supplier; // 完整的 supplier 配置（包含 auth）
   route: Route; // 命中的 route
 };
+
+type PricingExtractionResult = {
+  requestedModel?: string;
+  upstreamModel?: string;
+  model?: string;
+  cachedInputTokens?: number;
+  inputTokens: number;
+  outputTokens: number;
+  inputCost: number;
+  outputCost: number;
+  usageSource: 'actual' | 'estimated';
+  pricingStatus: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+  pricingSnapshot?: string;
+};
+
+type SupplierPricingMapping = NonNullable<Supplier['modelPricingMappings']>[number];
+
+function getRouteNameSnapshot(route: Route): string {
+  const map: Record<LocalService, string> = {
+    claude: 'Claude 路由',
+    codex: 'Codex 路由',
+    gemini: 'Gemini 路由',
+  };
+  return map[route.localService] || route.localService;
+}
+
+function normalizeModelName(model: unknown): string | undefined {
+  if (typeof model !== 'string') return undefined;
+  const normalized = model.trim();
+  return normalized || undefined;
+}
+
+function findSupplierPricingMapping(
+  supplier: Supplier | undefined,
+  modelName: string | undefined,
+): SupplierPricingMapping | undefined {
+  if (!supplier || !modelName || !Array.isArray(supplier.modelPricingMappings)) {
+    return undefined;
+  }
+  return supplier.modelPricingMappings.find(item => normalizeModelName(item.modelName) === modelName);
+}
+
+function roundUsdCost(value: number): number {
+  return Math.round(value * 1_000_000) / 1_000_000;
+}
+
+function extractAndCalculatePricing(options: {
+  responsePayload: any;
+  requestPayload: any;
+  fallbackModel?: string;
+  supplier?: Supplier;
+}): PricingExtractionResult {
+  const result: PricingExtractionResult = {
+    inputTokens: 0,
+    outputTokens: 0,
+    inputCost: 0,
+    outputCost: 0,
+    usageSource: 'estimated',
+    pricingStatus: 'skipped_no_usage',
+  };
+
+  const pricingService = getPricingService();
+
+  let parsedResponse: any = options.responsePayload;
+  if (Array.isArray(options.responsePayload) && options.responsePayload.length > 0) {
+    parsedResponse = options.responsePayload
+      .map((event: any) => {
+        if (event?.data && typeof event.data === 'string') {
+          try {
+            return JSON.parse(event.data);
+          } catch {
+            return null;
+          }
+        }
+        return event && typeof event === 'object' ? event : null;
+      })
+      .filter((item: any) => item !== null);
+  } else if (typeof options.responsePayload === 'string') {
+    try {
+      parsedResponse = JSON.parse(options.responsePayload);
+    } catch {
+      parsedResponse = options.responsePayload;
+    }
+  }
+
+  const usage = pricingService.extractUsage(parsedResponse);
+  const rawInputTokens = usage.inputTokens;
+  const rawOutputTokens = usage.outputTokens;
+
+  const cachedInfo = pricingService.extractCachedInputTokens(parsedResponse);
+  const cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
+
+  let inputTokens = rawInputTokens;
+  if (cachedInfo.subtractFromInputTokens) {
+    inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
+  }
+
+  result.inputTokens = inputTokens;
+  result.outputTokens = rawOutputTokens;
+  result.cachedInputTokens = cachedInputTokens;
+  result.usageSource = rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0
+    ? 'actual'
+    : 'estimated';
+
+  if (result.inputTokens === 0 && result.outputTokens === 0 && !result.cachedInputTokens) {
+    const estimatedInput = pricingService.estimateInputTokens(options.requestPayload);
+    const estimatedOutput = pricingService.estimateOutputTokensFromContent(parsedResponse);
+    if (estimatedInput > 0 || estimatedOutput > 0) {
+      result.inputTokens = estimatedInput;
+      result.outputTokens = estimatedOutput;
+      result.usageSource = 'estimated';
+    }
+  }
+
+  result.requestedModel = pricingService.extractModel(options.requestPayload);
+
+  if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+    for (let i = parsedResponse.length - 1; i >= 0; i--) {
+      const evt = parsedResponse[i];
+      const model = (evt as any)?.response?.model || (evt as any)?.model;
+      if (typeof model === 'string' && model.trim()) {
+        result.upstreamModel = model;
+        break;
+      }
+    }
+  } else {
+    const model = (parsedResponse as any)?.model || (parsedResponse as any)?.response?.model;
+    if (typeof model === 'string' && model.trim()) {
+      result.upstreamModel = model;
+    }
+  }
+
+  const modelCandidates = [
+    normalizeModelName(result.upstreamModel),
+    normalizeModelName(result.requestedModel),
+    normalizeModelName(options.fallbackModel),
+  ].filter((item, index, array): item is string => !!item && array.indexOf(item) === index);
+
+  const mappedModel = modelCandidates.find(model => !!findSupplierPricingMapping(options.supplier, model));
+  const matchedMapping = findSupplierPricingMapping(options.supplier, mappedModel);
+
+  const hasBillableTokens =
+    result.inputTokens > 0 || result.outputTokens > 0 || (result.cachedInputTokens ?? 0) > 0;
+  if (!hasBillableTokens) {
+    return result;
+  }
+
+  const billingModel = normalizeModelName(matchedMapping?.billingModel || mappedModel || modelCandidates[0]);
+  result.model = billingModel;
+
+  if (!billingModel) {
+    result.pricingStatus = 'skipped_no_rule';
+    return result;
+  }
+
+  let unitPrice: { input: number; output: number; cacheRead?: number } | undefined;
+  let priceSource: 'models.dev' | 'custom' = 'models.dev';
+  let ruleId = `model:${billingModel}`;
+
+  if (matchedMapping?.priceMode === 'custom') {
+    if (!matchedMapping.customPrice) {
+      result.pricingStatus = 'skipped_no_rule';
+      return result;
+    }
+    unitPrice = {
+      input: matchedMapping.customPrice.inputPrice,
+      output: matchedMapping.customPrice.outputPrice,
+    };
+    priceSource = 'custom';
+    ruleId = `supplier:${options.supplier?.id ?? 'unknown'}:model:${matchedMapping.modelName}`;
+  } else {
+    const price = pricingService.getModelPrice(billingModel);
+    if (!price) {
+      result.pricingStatus = 'skipped_no_rule';
+      return result;
+    }
+
+    const storedPrice = getSyncStorage().getPrice(billingModel);
+    unitPrice = {
+      input: price.inputPrice,
+      output: price.outputPrice,
+      cacheRead:
+        typeof storedPrice?.cacheReadPrice === 'number' && Number.isFinite(storedPrice.cacheReadPrice)
+          ? storedPrice.cacheReadPrice
+          : undefined,
+    };
+
+    if (matchedMapping) {
+      ruleId = `supplier:${options.supplier?.id ?? 'unknown'}:model:${matchedMapping.modelName}`;
+    }
+  }
+
+  const cachedInputTokensForCost = result.cachedInputTokens ?? 0;
+  const inputCost =
+    (result.inputTokens / 1000) * unitPrice.input +
+    (cachedInputTokensForCost / 1000) * (unitPrice.cacheRead ?? 0);
+  const outputCost = (result.outputTokens / 1000) * unitPrice.output;
+
+  result.inputCost = roundUsdCost(inputCost);
+  result.outputCost = roundUsdCost(outputCost);
+  result.pricingStatus = 'calculated';
+  result.pricingSnapshot = JSON.stringify({
+    ruleId,
+    ruleVersion: 1,
+    priceSource,
+    currency: 'USD',
+    unitPrice: {
+      input: unitPrice.input,
+      output: unitPrice.output,
+      ...(typeof unitPrice.cacheRead === 'number' ? { cacheRead: unitPrice.cacheRead } : {}),
+    },
+    billableTokens: {
+      input: result.inputTokens,
+      output: result.outputTokens,
+      cachedInput: cachedInputTokensForCost,
+    },
+    formula:
+      typeof unitPrice.cacheRead === 'number'
+        ? '(input*in + output*out + cache*cacheRead)/1000'
+        : '(input*in + output*out)/1000',
+  });
+
+  return result;
+}
 
 type RouteResolutionErrorCode =
   | 'model_missing'
@@ -775,6 +1001,11 @@ export function createGateway(
         // 供应商管理
         if (method === 'GET' && url.pathname === '/_promptxy/suppliers') {
           await handleGetSuppliers(req, res, config);
+          return;
+        }
+
+        if (method === 'GET' && url.pathname === '/_promptxy/models/search') {
+          await handleSearchModels(req, res, url);
           return;
         }
 
@@ -1504,51 +1735,23 @@ export function createGateway(
         const savedRequestId = generateRequestId();
         requestId = savedRequestId;
 
-        // 提取 token 和费用数据
-        let inputTokens = 0;
-        let outputTokens = 0;
-        let inputCost = 0;
-	        let outputCost = 0;
-	        let model: string | undefined;
-	        let requestedModel: string | undefined;
-	        let upstreamModel: string | undefined;
-	        let cachedInputTokens: number | undefined;
-	        let usageSource: 'actual' | 'estimated' = 'estimated';
-
-	        try {
-	          const pricingService = getPricingService();
-	          // 使用原始响应提取 usage 数据（转换后的响应可能没有 usage 字段）
-	          const usage = pricingService.extractUsage(parsed);
-	          const rawInputTokens = usage.inputTokens;
-	          const rawOutputTokens = usage.outputTokens;
-	          inputTokens = rawInputTokens;
-	          outputTokens = rawOutputTokens;
-
-	          const cachedInfo = pricingService.extractCachedInputTokens(parsed);
-	          cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
-	          usageSource = (rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0)
-	            ? 'actual'
-	            : 'estimated';
-
-	          if (cachedInfo.subtractFromInputTokens) {
-	            inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
-	          }
-
-	          // 入站/用户请求模型
-	          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
-
-          // 上游实际模型：优先从上游原始响应读取
-          upstreamModel = (parsed as any)?.model || (parsed as any)?.response?.model || routePlan.targetModel;
-
-	          // 计费模型：上游优先，其次请求模型
-	          model = upstreamModel || requestedModel;
-
-	          if (model && (inputTokens > 0 || outputTokens > 0)) {
-	            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
-	            inputCost = costData.inputCost;
-	            outputCost = costData.outputCost;
-	          }
+        let pricingResult: PricingExtractionResult;
+        try {
+          pricingResult = extractAndCalculatePricing({
+            responsePayload: parsed,
+            requestPayload: effectiveBody || jsonBody,
+            fallbackModel: routePlan.targetModel,
+            supplier: matchedRoute.supplier,
+          });
         } catch (err: any) {
+          pricingResult = {
+            inputTokens: 0,
+            outputTokens: 0,
+            inputCost: 0,
+            outputCost: 0,
+            usageSource: 'estimated',
+            pricingStatus: 'error',
+          };
           if (config.debug) {
             logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
           }
@@ -1578,24 +1781,27 @@ export function createGateway(
             responseBody: bodyStr,
             error: undefined,
             routeId: matchedRoute.route.id,
+            routeNameSnapshot: getRouteNameSnapshot(matchedRoute.route),
             supplierId: matchedRoute.supplier.id,
             supplierName: matchedRoute.supplier.name,
             supplierBaseUrl: matchedRoute.supplier.baseUrl,
             supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
-	            // 统计相关字段
-	            requestedModel,
-	            upstreamModel,
-	            model,
-	            cachedInputTokens,
-	            inputTokens,
-	            outputTokens,
-	            totalTokens: inputTokens + outputTokens,
-	            inputCost,
-	            outputCost,
-            totalCost: inputCost + outputCost,
-            usageSource,
+            // 统计相关字段
+            requestedModel: pricingResult.requestedModel,
+            upstreamModel: pricingResult.upstreamModel,
+            model: pricingResult.model,
+            cachedInputTokens: pricingResult.cachedInputTokens,
+            inputTokens: pricingResult.inputTokens,
+            outputTokens: pricingResult.outputTokens,
+            totalTokens: pricingResult.inputTokens + pricingResult.outputTokens,
+            inputCost: pricingResult.inputCost,
+            outputCost: pricingResult.outputCost,
+            totalCost: pricingResult.inputCost + pricingResult.outputCost,
+            usageSource: pricingResult.usageSource,
+            pricingStatus: pricingResult.pricingStatus,
+            pricingSnapshot: pricingResult.pricingSnapshot,
           };
 
           try {
@@ -1628,50 +1834,23 @@ export function createGateway(
           }
         }
 
-        // 提取 token 和费用数据
-        let inputTokens = 0;
-        let outputTokens = 0;
-        let inputCost = 0;
-	        let outputCost = 0;
-	        let model: string | undefined;
-	        let requestedModel: string | undefined;
-	        let upstreamModel: string | undefined;
-	        let cachedInputTokens: number | undefined;
-	        let usageSource: 'actual' | 'estimated' = 'estimated';
-
-	        try {
-	          const pricingService = getPricingService();
-	          const usage = pricingService.extractUsage(parsed);
-	          const rawInputTokens = usage.inputTokens;
-	          const rawOutputTokens = usage.outputTokens;
-	          inputTokens = rawInputTokens;
-	          outputTokens = rawOutputTokens;
-
-	          const cachedInfo = pricingService.extractCachedInputTokens(parsed);
-	          cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
-	          usageSource = (rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0)
-	            ? 'actual'
-	            : 'estimated';
-
-	          if (cachedInfo.subtractFromInputTokens) {
-	            inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
-	          }
-
-	          // 入站/用户请求模型
-	          requestedModel = (effectiveBody?.model as string) || pricingService.extractModel(jsonBody);
-
-          // 上游实际模型：优先从上游原始响应读取
-          upstreamModel = (parsed as any)?.model || (parsed as any)?.response?.model || routePlan.targetModel;
-
-          // 计费模型：上游优先，其次请求模型
-          model = upstreamModel || requestedModel;
-
-          if (model && (inputTokens > 0 || outputTokens > 0)) {
-            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
-            inputCost = costData.inputCost;
-            outputCost = costData.outputCost;
-          }
+        let pricingResult: PricingExtractionResult;
+        try {
+          pricingResult = extractAndCalculatePricing({
+            responsePayload: parsed,
+            requestPayload: effectiveBody || jsonBody,
+            fallbackModel: routePlan.targetModel,
+            supplier: matchedRoute.supplier,
+          });
         } catch (err: any) {
+          pricingResult = {
+            inputTokens: 0,
+            outputTokens: 0,
+            inputCost: 0,
+            outputCost: 0,
+            usageSource: 'estimated',
+            pricingStatus: 'error',
+          };
           if (config.debug) {
             logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
           }
@@ -1705,24 +1884,27 @@ export function createGateway(
             responseBody: raw,
             error: undefined,
             routeId: matchedRoute.route.id,
+            routeNameSnapshot: getRouteNameSnapshot(matchedRoute.route),
             supplierId: matchedRoute.supplier.id,
             supplierName: matchedRoute.supplier.name,
             supplierBaseUrl: matchedRoute.supplier.baseUrl,
             supplierClient: getSupplierClient(matchedRoute.supplier.protocol),
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
-	            // 统计相关字段
-	            requestedModel,
-	            upstreamModel,
-	            model,
-	            cachedInputTokens,
-	            inputTokens,
-	            outputTokens,
-	            totalTokens: inputTokens + outputTokens,
-	            inputCost,
-	            outputCost,
-            totalCost: inputCost + outputCost,
-            usageSource,
+            // 统计相关字段
+            requestedModel: pricingResult.requestedModel,
+            upstreamModel: pricingResult.upstreamModel,
+            model: pricingResult.model,
+            cachedInputTokens: pricingResult.cachedInputTokens,
+            inputTokens: pricingResult.inputTokens,
+            outputTokens: pricingResult.outputTokens,
+            totalTokens: pricingResult.inputTokens + pricingResult.outputTokens,
+            inputCost: pricingResult.inputCost,
+            outputCost: pricingResult.outputCost,
+            totalCost: pricingResult.inputCost + pricingResult.outputCost,
+            usageSource: pricingResult.usageSource,
+            pricingStatus: pricingResult.pricingStatus,
+            pricingSnapshot: pricingResult.pricingSnapshot,
           };
 
           try {
@@ -1868,91 +2050,23 @@ export function createGateway(
           ? `partial=true; ${finalError?.message ?? String(finalError)}`
           : undefined;
 
-        // 提取 token 和费用数据
-        let inputTokens = 0;
-        let outputTokens = 0;
-        let inputCost = 0;
-	        let outputCost = 0;
-	        let model: string | undefined;
-	        let requestedModel: string | undefined;
-	        let upstreamModel: string | undefined;
-	        let cachedInputTokens: number | undefined;
-	        let usageSource: 'actual' | 'estimated' = 'estimated';
-
+        let pricingResult: PricingExtractionResult;
         try {
-          // 解析响应体获取 token 数据
-          // responseBodyStr 可能是 ParsedSSEEvent[] 或 JSON 对象
-          let parsedResponse: any = responseBodyStr;
-
-          // 处理 SSE 事件数组格式
-          if (Array.isArray(responseBodyStr) && responseBodyStr.length > 0) {
-            // ParsedSSEEvent[] 格式，需要转换
-            parsedResponse = responseBodyStr
-              .map((event: any) => {
-                if (event.data && typeof event.data === 'string') {
-                  try {
-                    return JSON.parse(event.data);
-                  } catch {
-                    return null;
-                  }
-                }
-                return null;
-              })
-              .filter((e: any) => e !== null);
-          } else if (typeof responseBodyStr === 'string') {
-            try {
-              parsedResponse = JSON.parse(responseBodyStr);
-            } catch {
-              parsedResponse = responseBodyStr;
-            }
-          }
-
-	          // 提取 token 数据
-	          const pricingService = getPricingService();
-	          const usage = pricingService.extractUsage(parsedResponse);
-	          const rawInputTokens = usage.inputTokens;
-	          const rawOutputTokens = usage.outputTokens;
-	          inputTokens = rawInputTokens;
-	          outputTokens = rawOutputTokens;
-
-	          const cachedInfo = pricingService.extractCachedInputTokens(parsedResponse);
-	          cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
-	          usageSource = (rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0)
-	            ? 'actual'
-	            : 'estimated';
-
-	          if (cachedInfo.subtractFromInputTokens) {
-	            inputTokens = Math.max(rawInputTokens - cachedInfo.cachedInputTokens, 0);
-	          }
-
-          // 入站/用户请求模型
-          requestedModel = pricingService.extractModel(savedJsonBody);
-
-          // 上游实际模型：优先从 SSE 事件末尾的 response.completed.response.model 获取（若存在）
-          if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
-            for (let i = parsedResponse.length - 1; i >= 0; i--) {
-              const evt = parsedResponse[i];
-              const m = (evt as any)?.response?.model || (evt as any)?.model;
-              if (typeof m === 'string' && m.trim()) {
-                upstreamModel = m;
-                break;
-              }
-            }
-          } else {
-            upstreamModel = (parsedResponse as any)?.model || (parsedResponse as any)?.response?.model;
-          }
-
-          // 计费模型：上游优先，其次请求模型
-          model = upstreamModel || requestedModel || routePlan.targetModel;
-
-          // 计算费用
-          if (model && (inputTokens > 0 || outputTokens > 0)) {
-            const costData = pricingService.calculateCost(model, inputTokens, outputTokens);
-            inputCost = costData.inputCost;
-            outputCost = costData.outputCost;
-          }
+          pricingResult = extractAndCalculatePricing({
+            responsePayload: responseBodyStr,
+            requestPayload: savedJsonBody,
+            fallbackModel: routePlan.targetModel,
+            supplier: matchedRoute.supplier,
+          });
         } catch (err: any) {
-          // 解析失败时使用默认值，不影响请求记录保存
+          pricingResult = {
+            inputTokens: 0,
+            outputTokens: 0,
+            inputCost: 0,
+            outputCost: 0,
+            usageSource: 'estimated',
+            pricingStatus: 'error',
+          };
           if (config.debug) {
             logger.debug(`[promptxy] Failed to extract usage/cost data: ${err?.message}`);
           }
@@ -1981,25 +2095,28 @@ export function createGateway(
           error: errorMessage,
           // 路由 / 供应商 / 转换信息
           routeId: savedRouteId,
+          routeNameSnapshot: getRouteNameSnapshot(matchedRoute.route),
           supplierId: savedSupplierId,
           supplierName: savedSupplierName,
           supplierBaseUrl: savedSupplierBaseUrl,
           supplierClient: getSupplierClient(savedSupplierProtocol),
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
-	          // 统计相关字段
-	          requestedModel,
-	          upstreamModel,
-	          model,
-	          cachedInputTokens,
-	          inputTokens,
-	          outputTokens,
-	          totalTokens: inputTokens + outputTokens,
-	          inputCost,
-	          outputCost,
-	          totalCost: inputCost + outputCost,
-	          usageSource,
-	        };
+          // 统计相关字段
+          requestedModel: pricingResult.requestedModel,
+          upstreamModel: pricingResult.upstreamModel,
+          model: pricingResult.model,
+          cachedInputTokens: pricingResult.cachedInputTokens,
+          inputTokens: pricingResult.inputTokens,
+          outputTokens: pricingResult.outputTokens,
+          totalTokens: pricingResult.inputTokens + pricingResult.outputTokens,
+          inputCost: pricingResult.inputCost,
+          outputCost: pricingResult.outputCost,
+          totalCost: pricingResult.inputCost + pricingResult.outputCost,
+          usageSource: pricingResult.usageSource,
+          pricingStatus: pricingResult.pricingStatus,
+          pricingSnapshot: pricingResult.pricingSnapshot,
+        };
 
         try {
           await insertRequestRecord(record);
@@ -2080,12 +2197,14 @@ export function createGateway(
             error: error,
             // 路由 / 供应商 / 转换信息
             routeId: route.route?.id,
+            routeNameSnapshot: route.route ? getRouteNameSnapshot(route.route) : undefined,
             supplierId: route?.supplier?.id,
             supplierName: route?.supplier?.name,
             supplierBaseUrl: route?.supplier?.baseUrl,
             supplierClient: route?.supplier?.protocol ? getSupplierClient(route.supplier.protocol) : undefined,
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
+            pricingStatus: 'error',
           };
 
           try {

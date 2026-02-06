@@ -128,6 +128,13 @@ describe('Gateway Integration Tests', () => {
     expect(detail.body.supplierId).toBe('codex-up');
     expect(detail.body.supplierBaseUrl).toContain(`:${upstreamPort}`);
     expect(Array.isArray(detail.body.transformerChain)).toBe(true);
+    expect(detail.body.routeNameSnapshot).toBe('Codex 路由');
+    expect(typeof detail.body.pricingStatus).toBe('string');
+    expect(typeof detail.body.pricingSnapshot).toBe('string');
+
+    expect(list.body.items[0].routeNameSnapshot).toBe('Codex 路由');
+    expect(typeof list.body.items[0].pricingStatus).toBe('string');
+    expect(typeof list.body.items[0].pricingSnapshot).toBe('string');
   });
 
   it('应在 /codex 出站时解析 modelSpec 并注入 reasoning.effort（命中 supplier.reasoningEfforts/默认列表）', async () => {

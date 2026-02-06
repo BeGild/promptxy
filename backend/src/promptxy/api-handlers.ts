@@ -71,6 +71,7 @@ import {
   assertSupplier,
   assertSupplierPathConflicts,
 } from './config.js';
+import { getSyncStorage } from './sync/sync-storage.js';
 import { applyPromptRules } from './rules/engine.js';
 import { readRequestBody } from './http.js';
 import { mutateClaudeBody } from './adapters/claude.js';
@@ -261,6 +262,7 @@ export async function handleGetRequest(
 
       // 路由 / 供应商 / 转换信息
       routeId: record.routeId,
+      routeNameSnapshot: (record as any).routeNameSnapshot,
       supplierId: record.supplierId,
       supplierName: record.supplierName,
       supplierBaseUrl: record.supplierBaseUrl,
@@ -279,6 +281,8 @@ export async function handleGetRequest(
       outputCost: (record as any).outputCost,
       totalCost: (record as any).totalCost,
       usageSource: (record as any).usageSource,
+      pricingStatus: (record as any).pricingStatus,
+      pricingSnapshot: (record as any).pricingSnapshot,
     };
 
     sendJson(res, 200, response);
@@ -694,10 +698,61 @@ export async function handleGetSuppliers(
 }
 
 /**
+ * 搜索模型列表（供前端模型下拉使用）
+ */
+export async function handleSearchModels(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+): Promise<void> {
+  try {
+    const protocol = url.searchParams.get('protocol') || undefined;
+    const q = url.searchParams.get('q') || undefined;
+    const limitParam = url.searchParams.get('limit');
+    const parsedLimit = limitParam ? Number(limitParam) : undefined;
+    const limit = typeof parsedLimit === 'number' && Number.isFinite(parsedLimit)
+      ? parsedLimit
+      : undefined;
+
+    const storage = getSyncStorage();
+    const items = storage.searchModels({ protocol, q, limit });
+    sendJson(res, 200, { items });
+  } catch (error: any) {
+    sendJson(res, 500, {
+      error: 'Failed to search models',
+      message: error?.message || String(error),
+    });
+  }
+}
+
+/**
  * 生成唯一 ID
  */
 export function generateId(): string {
   return `supplier-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function normalizeModelPricingMappings(mappings: any): any[] {
+  if (!Array.isArray(mappings)) return [];
+  return mappings
+    .filter(item => item && typeof item === 'object')
+    .map((item: any) => {
+      const normalized: any = {
+        modelName: item.modelName,
+        billingModel: item.billingModel,
+        priceMode: item.priceMode,
+        updatedAt: typeof item.updatedAt === 'number' ? item.updatedAt : Date.now(),
+      };
+
+      if (item.priceMode === 'custom' && item.customPrice && typeof item.customPrice === 'object') {
+        normalized.customPrice = {
+          inputPrice: item.customPrice.inputPrice,
+          outputPrice: item.customPrice.outputPrice,
+        };
+      }
+
+      return normalized;
+    });
 }
 
 /**
@@ -719,6 +774,7 @@ export async function handleCreateSupplier(
       supportedModels: Array.isArray((supplierData as any).supportedModels)
         ? (supplierData as any).supportedModels
         : [],
+      modelPricingMappings: normalizeModelPricingMappings((supplierData as any).modelPricingMappings),
     };
 
     // 验证供应商
@@ -764,6 +820,7 @@ export async function handleUpdateSupplier(
     (supplier as any).supportedModels = Array.isArray((supplier as any).supportedModels)
       ? (supplier as any).supportedModels
       : [];
+    (supplier as any).modelPricingMappings = normalizeModelPricingMappings((supplier as any).modelPricingMappings);
 
     // 验证供应商
     assertSupplier(`supplier.${supplierId}`, supplier);

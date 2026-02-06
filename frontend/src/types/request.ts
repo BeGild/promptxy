@@ -23,6 +23,7 @@ export interface RequestRecord {
 
   // 供应商和转换信息
   routeId?: string;
+  routeNameSnapshot?: string;
   supplierId?: string;
   supplierName?: string;
   supplierBaseUrl?: string;
@@ -43,6 +44,8 @@ export interface RequestRecord {
   outputCost?: number;
   totalCost?: number;
   usageSource?: 'actual' | 'estimated';
+  pricingStatus?: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+  pricingSnapshot?: string;
 }
 
 export interface RequestListItem {
@@ -63,6 +66,7 @@ export interface RequestListItem {
   supplierClient?: string;
   transformerChain?: string[];
   transformedPath?: string;
+  routeNameSnapshot?: string;
 
   // 模型与计费口径（新增，列表可选展示）
   requestedModel?: string;
@@ -75,6 +79,8 @@ export interface RequestListItem {
   outputTokens?: number;
   totalTokens?: number;
   totalCost?: number;
+  pricingStatus?: 'calculated' | 'skipped_no_usage' | 'skipped_no_rule' | 'error';
+  pricingSnapshot?: string;
 }
 
 export interface RequestListResponse {

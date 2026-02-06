@@ -258,6 +258,49 @@ export function assertSupplier(label: string, supplier: Supplier): void {
     }
   }
 
+  if ((supplier as any).modelPricingMappings !== undefined) {
+    if (!Array.isArray((supplier as any).modelPricingMappings)) {
+      throw new Error(`${label}.modelPricingMappings must be an array`);
+    }
+    const seenModelNames = new Set<string>();
+    for (let i = 0; i < (supplier as any).modelPricingMappings.length; i++) {
+      const item = (supplier as any).modelPricingMappings[i];
+      const itemLabel = `${label}.modelPricingMappings[${i}]`;
+      if (!item || typeof item !== 'object') {
+        throw new Error(`${itemLabel} must be an object`);
+      }
+      if (typeof item.modelName !== 'string' || !item.modelName.trim()) {
+        throw new Error(`${itemLabel}.modelName must be a non-empty string`);
+      }
+      if (typeof item.billingModel !== 'string' || !item.billingModel.trim()) {
+        throw new Error(`${itemLabel}.billingModel must be a non-empty string`);
+      }
+      if (item.priceMode !== 'inherit' && item.priceMode !== 'custom') {
+        throw new Error(`${itemLabel}.priceMode must be one of: inherit, custom`);
+      }
+
+      if (seenModelNames.has(item.modelName)) {
+        throw new Error(`${label}.modelPricingMappings has duplicate modelName: ${item.modelName}`);
+      }
+      seenModelNames.add(item.modelName);
+
+      if (item.priceMode === 'custom') {
+        if (!item.customPrice || typeof item.customPrice !== 'object') {
+          throw new Error(`${itemLabel}.customPrice is required when priceMode is 'custom'`);
+        }
+        if (typeof item.customPrice.inputPrice !== 'number') {
+          throw new Error(`${itemLabel}.customPrice.inputPrice must be a number`);
+        }
+        if (typeof item.customPrice.outputPrice !== 'number') {
+          throw new Error(`${itemLabel}.customPrice.outputPrice must be a number`);
+        }
+        if (item.customPrice.inputPrice < 0 || item.customPrice.outputPrice < 0) {
+          throw new Error(`${itemLabel}.customPrice prices must be >= 0`);
+        }
+      }
+    }
+  }
+
   // reasoningEfforts（UI 不暴露；未知 effort 允许，故仅做结构校验）
   if ((supplier as any).reasoningEfforts !== undefined) {
     if (!Array.isArray((supplier as any).reasoningEfforts)) {
@@ -323,6 +366,42 @@ function migrateSuppliers(suppliers: Supplier[]): Supplier[] {
       changed = true;
     } else if (JSON.stringify(normalizedSupportedModels) !== JSON.stringify(originalSupportedModels)) {
       supplier.supportedModels = normalizedSupportedModels;
+      changed = true;
+    }
+
+    const originalModelPricingMappings = supplier.modelPricingMappings;
+    if (originalModelPricingMappings === undefined) {
+      supplier.modelPricingMappings = [];
+      changed = true;
+    } else if (Array.isArray(originalModelPricingMappings)) {
+      const normalizedMappings = originalModelPricingMappings
+        .filter(item => item && typeof item === 'object')
+        .map((item: any) => {
+          const modelName = typeof item.modelName === 'string' ? item.modelName.trim() : '';
+          const billingModel = typeof item.billingModel === 'string' ? item.billingModel.trim() : '';
+          const priceMode = item.priceMode === 'custom' ? 'custom' : 'inherit';
+          const mapped: any = {
+            modelName,
+            billingModel,
+            priceMode,
+            updatedAt: typeof item.updatedAt === 'number' ? item.updatedAt : Date.now(),
+          };
+          if (priceMode === 'custom' && item.customPrice && typeof item.customPrice === 'object') {
+            mapped.customPrice = {
+              inputPrice: typeof item.customPrice.inputPrice === 'number' ? item.customPrice.inputPrice : 0,
+              outputPrice: typeof item.customPrice.outputPrice === 'number' ? item.customPrice.outputPrice : 0,
+            };
+          }
+          return mapped;
+        })
+        .filter((item: any) => item.modelName && item.billingModel);
+
+      if (JSON.stringify(normalizedMappings) !== JSON.stringify(originalModelPricingMappings)) {
+        supplier.modelPricingMappings = normalizedMappings;
+        changed = true;
+      }
+    } else {
+      supplier.modelPricingMappings = [];
       changed = true;
     }
 
@@ -596,6 +675,12 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
 }
 
 function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyConfig {
+  const nextSuppliers = (incoming.suppliers ?? base.suppliers).map((supplier: any) => ({
+    ...supplier,
+    supportedModels: Array.isArray(supplier.supportedModels) ? supplier.supportedModels : [],
+    modelPricingMappings: Array.isArray(supplier.modelPricingMappings) ? supplier.modelPricingMappings : [],
+  }));
+
   return {
     listen: {
       host: incoming.listen?.host ?? base.listen.host,
@@ -605,7 +690,7 @@ function mergeConfig(base: PromptxyConfig, incoming: PartialConfig): PromptxyCon
           ? incoming.listen.port
           : base.listen.port,
     },
-    suppliers: incoming.suppliers ?? base.suppliers,
+    suppliers: nextSuppliers,
     routes: incoming.routes ?? base.routes,
     rules: incoming.rules ?? base.rules,
     storage: {

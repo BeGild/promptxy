@@ -107,6 +107,23 @@ export class SqliteStorage {
 
   private settingsCache: Record<string, string> = { ...this.defaultSettings };
 
+  private async safeAddColumn(table: string, column: string, typeDef: string): Promise<void> {
+    const db = this.assertDb();
+    try {
+      await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${typeDef}`);
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      if (
+        message.includes('duplicate column name') ||
+        message.includes('already exists') ||
+        message.includes(`duplicate column name: ${column}`)
+      ) {
+        return;
+      }
+      throw error;
+    }
+  }
+
   constructor() {
     const homeDir = os.homedir();
     this.dataDir = path.join(homeDir, '.local', 'promptxy');
@@ -258,6 +275,7 @@ CREATE TABLE IF NOT EXISTS requests (
   transformed_path TEXT,
 
   route_id TEXT,
+  route_name_snapshot TEXT,
   supplier_id TEXT,
   supplier_base_url TEXT,
 
@@ -274,7 +292,9 @@ CREATE TABLE IF NOT EXISTS requests (
   total_cost REAL,
   wait_time INTEGER,
   ftut INTEGER,
-  usage_source TEXT
+  usage_source TEXT,
+  pricing_status TEXT,
+  pricing_snapshot_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS request_payloads (
@@ -295,6 +315,10 @@ CREATE INDEX IF NOT EXISTS idx_requests_ts ON requests(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_requests_client_ts ON requests(client, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_requests_path_ts ON requests(path, ts DESC);
 `);
+
+    await this.safeAddColumn('requests', 'route_name_snapshot', 'TEXT');
+    await this.safeAddColumn('requests', 'pricing_status', 'TEXT');
+    await this.safeAddColumn('requests', 'pricing_snapshot_json', 'TEXT');
   }
 
   async close(): Promise<void> {
@@ -368,21 +392,23 @@ INSERT INTO requests (
   request_size, response_size, response_status, duration_ms, error,
   matched_rules_brief,
   supplier_name, supplier_client, transformer_chain, transformed_path,
-  route_id, supplier_id, supplier_base_url,
+  route_id, route_name_snapshot, supplier_id, supplier_base_url,
   requested_model, upstream_model, billing_model, cached_input_tokens,
   input_tokens, output_tokens, total_tokens,
   input_cost, output_cost, total_cost,
-  wait_time, ftut, usage_source
+  wait_time, ftut, usage_source,
+  pricing_status, pricing_snapshot_json
 ) VALUES (
   ?, ?, ?, ?, ?,
   ?, ?, ?, ?, ?,
   ?,
   ?, ?, ?, ?,
-  ?, ?, ?,
+  ?, ?, ?, ?,
   ?, ?, ?, ?,
   ?, ?, ?,
   ?, ?, ?,
-  ?, ?, ?
+  ?, ?, ?,
+  ?, ?
 )
         `,
         [
@@ -402,6 +428,7 @@ INSERT INTO requests (
           record.transformerChain ?? null,
           record.transformedPath ?? null,
           record.routeId ?? null,
+          record.routeNameSnapshot ?? null,
           record.supplierId ?? null,
           record.supplierBaseUrl ?? null,
           record.requestedModel ?? null,
@@ -417,6 +444,8 @@ INSERT INTO requests (
           record.waitTime ?? null,
           record.ftut ?? null,
           record.usageSource ?? null,
+          record.pricingStatus ?? null,
+          record.pricingSnapshot ?? null,
         ],
       );
 
@@ -537,6 +566,7 @@ WHERE id IN (
       supplier_client: string | null;
       transformer_chain: string | null;
       transformed_path: string | null;
+      route_name_snapshot: string | null;
       requested_model: string | null;
       upstream_model: string | null;
       billing_model: string | null;
@@ -545,6 +575,8 @@ WHERE id IN (
       output_tokens: number | null;
       total_tokens: number | null;
       total_cost: number | null;
+      pricing_status: string | null;
+      pricing_snapshot_json: string | null;
     }>(
       `
 SELECT
@@ -552,8 +584,10 @@ SELECT
   request_size, response_size, response_status, duration_ms, error,
   matched_rules_brief,
   supplier_name, supplier_client, transformer_chain, transformed_path,
+  route_name_snapshot,
   requested_model, upstream_model, billing_model,
-  cached_input_tokens, input_tokens, output_tokens, total_tokens, total_cost
+  cached_input_tokens, input_tokens, output_tokens, total_tokens, total_cost,
+  pricing_status, pricing_snapshot_json
 FROM requests
 ${whereSql}
 ORDER BY ts DESC
@@ -578,6 +612,7 @@ LIMIT ? OFFSET ?
       supplierClient: r.supplier_client ?? undefined,
       transformerChain: safeJsonParse<string[]>(r.transformer_chain || '') ?? undefined,
       transformedPath: r.transformed_path ?? undefined,
+      routeNameSnapshot: r.route_name_snapshot ?? undefined,
       requestedModel: r.requested_model ?? undefined,
       upstreamModel: r.upstream_model ?? undefined,
       model: r.billing_model ?? undefined,
@@ -586,6 +621,8 @@ LIMIT ? OFFSET ?
       outputTokens: r.output_tokens ?? undefined,
       totalTokens: r.total_tokens ?? undefined,
       totalCost: r.total_cost ?? undefined,
+      pricingStatus: (r.pricing_status as RequestRecord['pricingStatus']) ?? undefined,
+      pricingSnapshot: r.pricing_snapshot_json ?? undefined,
     }));
 
     return { total, limit, offset, items };
@@ -612,6 +649,7 @@ SELECT
   r.transformer_chain as transformer_chain,
   r.transformed_path as transformed_path,
   r.route_id as route_id,
+  r.route_name_snapshot as route_name_snapshot,
   r.supplier_id as supplier_id,
   r.supplier_base_url as supplier_base_url,
   r.requested_model as requested_model,
@@ -627,6 +665,8 @@ SELECT
   r.wait_time as wait_time,
   r.ftut as ftut,
   r.usage_source as usage_source,
+  r.pricing_status as pricing_status,
+  r.pricing_snapshot_json as pricing_snapshot_json,
 
   p.original_body as original_body,
   p.transformed_body as transformed_body,
@@ -666,6 +706,7 @@ WHERE r.id = ?
       responseBody: row.response_body ?? undefined,
       error: row.error ?? undefined,
       routeId: row.route_id ?? undefined,
+      routeNameSnapshot: row.route_name_snapshot ?? undefined,
       supplierId: row.supplier_id ?? undefined,
       supplierName: row.supplier_name ?? undefined,
       supplierBaseUrl: row.supplier_base_url ?? undefined,
@@ -686,6 +727,8 @@ WHERE r.id = ?
       waitTime: row.wait_time ?? undefined,
       ftut: row.ftut ?? undefined,
       usageSource: row.usage_source ?? undefined,
+      pricingStatus: row.pricing_status ?? undefined,
+      pricingSnapshot: row.pricing_snapshot_json ?? undefined,
     };
   }
 

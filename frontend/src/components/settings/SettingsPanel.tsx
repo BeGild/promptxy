@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip, Switch, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Select, SelectItem } from '@heroui/react';
+import { Card, CardBody, Button, Input, Badge, Spinner, Divider, Chip, Switch, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Select, SelectItem, Autocomplete, AutocompleteItem } from '@heroui/react';
 import {
   BarChart3,
   Database,
@@ -45,7 +45,7 @@ import {
 } from '@/hooks';
 import { useCleanupRequests, useStats } from '@/hooks/useRequests';
 import { formatBytes, getClientColorStyle } from '@/utils';
-import { fetchSettings, updateSettings } from '@/api/config';
+import { fetchSettings, updateSettings, searchModels } from '@/api/config';
 import {
   useSuppliers,
   useCreateSupplier,
@@ -53,7 +53,7 @@ import {
   useDeleteSupplier,
   useToggleSupplier,
 } from '@/hooks/useSuppliers';
-import type { Supplier, SupplierProtocol } from '@/types/api';
+import type { Supplier, SupplierProtocol, ModelPricingMapping } from '@/types/api';
 import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/icons/SupplierIcons';
 import {
   useSyncConfig,
@@ -157,6 +157,8 @@ export const SettingsPanel: React.FC = () => {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [supplierModelInput, setSupplierModelInput] = useState('');
+  const [modelSearchItems, setModelSearchItems] = useState<Array<{ key: string; value: string; source: string }>>([]);
+  const [isModelSearching, setIsModelSearching] = useState(false);
   const [isTokenVisible, setIsTokenVisible] = useState(false);
   const [supplierFormData, setSupplierFormData] = useState<Partial<Supplier>>({
     name: '',
@@ -166,11 +168,141 @@ export const SettingsPanel: React.FC = () => {
     enabled: true,
     auth: { type: 'bearer' },
     supportedModels: [],
+    modelPricingMappings: [],
     description: '',
   });
 
   const suppliers = suppliersData?.suppliers || [];
 
+  const normalizeSupportedModels = (models?: string[]): string[] => {
+    if (!Array.isArray(models)) return [];
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+    for (const model of models) {
+      if (typeof model !== 'string') continue;
+      const value = model.trim();
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      normalized.push(value);
+    }
+    return normalized;
+  };
+
+  const buildModelPricingMappings = (
+    models: string[],
+    mappings?: ModelPricingMapping[],
+  ): ModelPricingMapping[] => {
+    const sourceMap = new Map<string, ModelPricingMapping>();
+    for (const item of mappings || []) {
+      if (!item || typeof item.modelName !== 'string') continue;
+      const modelName = item.modelName.trim();
+      if (!modelName) continue;
+      sourceMap.set(modelName, item);
+    }
+
+    return models.map(modelName => {
+      const existing = sourceMap.get(modelName);
+      const billingModel = existing?.billingModel?.trim() || modelName;
+      const priceMode = existing?.priceMode === 'custom' ? 'custom' : 'inherit';
+      const customPrice =
+        priceMode === 'custom' && existing?.customPrice
+          ? {
+              inputPrice: Number(existing.customPrice.inputPrice) || 0,
+              outputPrice: Number(existing.customPrice.outputPrice) || 0,
+            }
+          : undefined;
+
+      return {
+        modelName,
+        billingModel,
+        priceMode,
+        ...(customPrice ? { customPrice } : {}),
+        updatedAt: existing?.updatedAt || Date.now(),
+      } satisfies ModelPricingMapping;
+    });
+  };
+
+  const handleAddSupplierModel = (rawModel: string) => {
+    const modelName = rawModel.trim();
+    if (!modelName) return;
+
+    setSupplierFormData(prev => {
+      const supportedModels = normalizeSupportedModels([...(prev.supportedModels || []), modelName]);
+      const modelPricingMappings = buildModelPricingMappings(supportedModels, prev.modelPricingMappings);
+      return { ...prev, supportedModels, modelPricingMappings };
+    });
+
+    setSupplierModelInput('');
+  };
+
+  const handleRemoveSupplierModel = (modelName: string) => {
+    setSupplierFormData(prev => {
+      const supportedModels = normalizeSupportedModels((prev.supportedModels || []).filter(m => m !== modelName));
+      const modelPricingMappings = buildModelPricingMappings(supportedModels, prev.modelPricingMappings);
+      return { ...prev, supportedModels, modelPricingMappings };
+    });
+  };
+
+  const handleUpdateModelPricingMapping = (
+    modelName: string,
+    patch: Partial<ModelPricingMapping>,
+  ) => {
+    setSupplierFormData(prev => {
+      const supportedModels = normalizeSupportedModels(prev.supportedModels || []);
+      const modelPricingMappings = buildModelPricingMappings(supportedModels, prev.modelPricingMappings).map(item => {
+        if (item.modelName !== modelName) return item;
+        const next: ModelPricingMapping = { ...item, ...patch, updatedAt: Date.now() };
+        if (next.priceMode === 'inherit') {
+          delete next.customPrice;
+        } else if (!next.customPrice) {
+          next.customPrice = { inputPrice: 0, outputPrice: 0 };
+        }
+        return next;
+      });
+      return { ...prev, supportedModels, modelPricingMappings };
+    });
+  };
+
+  useEffect(() => {
+    if (!isSupplierModalOpen) return;
+
+    const protocol = supplierFormData.protocol;
+    const query = supplierModelInput.trim();
+    if (!protocol || !query) {
+      setModelSearchItems([]);
+      setIsModelSearching(false);
+      return;
+    }
+
+    let canceled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setIsModelSearching(true);
+        const result = await searchModels({ protocol, q: query, limit: 20 });
+        if (canceled) return;
+        setModelSearchItems(
+          (result.items || []).map(item => ({
+            key: item.modelName,
+            value: item.modelName,
+            source: item.source,
+          })),
+        );
+      } catch {
+        if (!canceled) {
+          setModelSearchItems([]);
+        }
+      } finally {
+        if (!canceled) {
+          setIsModelSearching(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      canceled = true;
+      clearTimeout(timer);
+    };
+  }, [isSupplierModalOpen, supplierFormData.protocol, supplierModelInput]);
   // 初始化：从后端读取设置
   useEffect(() => {
     const loadSettings = async () => {
@@ -295,17 +427,28 @@ export const SettingsPanel: React.FC = () => {
       enabled: true,
       auth: { type: 'bearer' },
       supportedModels: [],
+      modelPricingMappings: [],
       description: '',
     });
     setSupplierModelInput('');
+    setModelSearchItems([]);
     setIsSupplierModalOpen(true);
   };
 
   // 供应商管理 - 打开编辑供应商弹窗
   const handleOpenEditSupplierModal = (supplier: Supplier) => {
+    const supportedModels = normalizeSupportedModels([
+      ...(supplier.supportedModels || []),
+      ...((supplier.modelPricingMappings || []).map(item => item.modelName)),
+    ]);
     setEditingSupplier(supplier);
-    setSupplierFormData({ ...supplier });
+    setSupplierFormData({
+      ...supplier,
+      supportedModels,
+      modelPricingMappings: buildModelPricingMappings(supportedModels, supplier.modelPricingMappings),
+    });
     setSupplierModelInput('');
+    setModelSearchItems([]);
     setIsSupplierModalOpen(true);
   };
 
@@ -316,18 +459,51 @@ export const SettingsPanel: React.FC = () => {
       return;
     }
 
+    const supportedModels = normalizeSupportedModels(supplierFormData.supportedModels || []);
+    const modelPricingMappings = buildModelPricingMappings(
+      supportedModels,
+      supplierFormData.modelPricingMappings,
+    );
+
+    for (const mapping of modelPricingMappings) {
+      if (!mapping.billingModel.trim()) {
+        toast.error(`模型 ${mapping.modelName} 缺少计费模型`);
+        return;
+      }
+
+      if (mapping.priceMode === 'custom') {
+        const inputPrice = Number(mapping.customPrice?.inputPrice);
+        const outputPrice = Number(mapping.customPrice?.outputPrice);
+        if (!Number.isFinite(inputPrice) || !Number.isFinite(outputPrice)) {
+          toast.error(`模型 ${mapping.modelName} 的自定义价格必须是数字`);
+          return;
+        }
+        if (inputPrice < 0 || outputPrice < 0) {
+          toast.error(`模型 ${mapping.modelName} 的价格不能小于 0`);
+          return;
+        }
+      }
+    }
+
+    const payload: Partial<Supplier> = {
+      ...supplierFormData,
+      supportedModels,
+      modelPricingMappings,
+    };
+
     try {
       if (editingSupplier) {
         await updateSupplierMutation.mutateAsync({
           supplierId: editingSupplier.id,
-          supplier: supplierFormData as Supplier,
+          supplier: payload as Supplier,
         });
       } else {
         await createSupplierMutation.mutateAsync({
-          supplier: supplierFormData as Omit<Supplier, 'id'>,
+          supplier: payload as Omit<Supplier, 'id'>,
         });
       }
 
+      setSupplierFormData(payload);
       setIsSupplierModalOpen(false);
       await refetchSuppliers();
       toast.success(`${editingSupplier ? '更新' : '添加'}供应商成功！`);
@@ -360,6 +536,11 @@ export const SettingsPanel: React.FC = () => {
   };
 
   const isLoading = configLoading || statsLoading || settingsLoading;
+  const supplierModels = normalizeSupportedModels(supplierFormData.supportedModels || []);
+  const supplierModelMappings = buildModelPricingMappings(
+    supplierModels,
+    supplierFormData.modelPricingMappings,
+  );
 
   return (
     <div className="space-y-6">
@@ -1001,29 +1182,24 @@ export const SettingsPanel: React.FC = () => {
                 </Select>
               </div>
 
-              {/* 支持模型（Chips） */}
+              {/* 模型与计费 */}
               <div>
                 <label className="text-sm font-medium text-primary mb-2 block">
-                  支持的模型
+                  模型与计费
                 </label>
                 <div className="p-3 rounded-lg border border-subtle bg-canvas dark:bg-secondary/30 space-y-3">
                   <div className="flex flex-wrap gap-2">
-                    {(supplierFormData.supportedModels || []).length === 0 ? (
+                    {supplierModels.length === 0 ? (
                       <span className="text-xs text-tertiary">
-                        未配置（/claude 映射与校验将不可用）
+                        未配置模型；可搜索选择或直接输入自定义模型
                       </span>
                     ) : (
-                      (supplierFormData.supportedModels || []).map(model => (
+                      supplierModels.map(model => (
                         <Chip
                           key={model}
                           size="sm"
                           variant="flat"
-                          onClose={() => {
-                            setSupplierFormData(prev => ({
-                              ...prev,
-                              supportedModels: (prev.supportedModels || []).filter(m => m !== model),
-                            }));
-                          }}
+                          onClose={() => handleRemoveSupplierModel(model)}
                         >
                           {model}
                         </Chip>
@@ -1031,29 +1207,147 @@ export const SettingsPanel: React.FC = () => {
                     )}
                   </div>
 
-                  <Input
-                    value={supplierModelInput}
-                    onValueChange={setSupplierModelInput}
-                    placeholder="输入模型后回车添加，例如: gpt-5.2-high"
+                  <Autocomplete
+                    inputValue={supplierModelInput}
+                    onInputChange={setSupplierModelInput}
+                    allowsCustomValue
+                    selectedKey={null}
+                    items={modelSearchItems}
+                    onSelectionChange={key => {
+                      if (typeof key === 'string') {
+                        handleAddSupplierModel(key);
+                      }
+                    }}
                     radius="lg"
                     variant="bordered"
-                    description="支持回车添加、去重；用于 Claude 路由模型映射与校验"
+                    placeholder="搜索模型并回车添加；无匹配即为自定义模型"
+                    description="添加后自动创建计费模型映射（默认 计费模型=模型名）"
+                    isLoading={isModelSearching}
                     onKeyDown={e => {
                       if (e.key !== 'Enter') return;
                       e.preventDefault();
-                      const value = supplierModelInput.trim();
-                      if (!value) return;
-                      setSupplierFormData(prev => {
-                        const list = prev.supportedModels || [];
-                        if (list.includes(value)) return prev;
-                        return { ...prev, supportedModels: [...list, value] };
-                      });
-                      setSupplierModelInput('');
+                      handleAddSupplierModel(supplierModelInput);
                     }}
-                  />
+                  >
+                    {(item: { key: string; value: string; source: string }) => (
+                      <AutocompleteItem key={item.key} textValue={item.value} description={item.source}>
+                        {item.value}
+                      </AutocompleteItem>
+                    )}
+                  </Autocomplete>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-subtle">
+                          <th className="text-left px-2 py-2 text-tertiary font-medium">模型名</th>
+                          <th className="text-left px-2 py-2 text-tertiary font-medium">计费模型</th>
+                          <th className="text-left px-2 py-2 text-tertiary font-medium">价格模式</th>
+                          <th className="text-left px-2 py-2 text-tertiary font-medium">自定义价格（输入/输出）</th>
+                          <th className="text-left px-2 py-2 text-tertiary font-medium">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {supplierModels.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-2 py-3 text-tertiary">
+                              暂无模型，请先从上方添加模型
+                            </td>
+                          </tr>
+                        ) : (
+                          supplierModels.map(modelName => {
+                            const mapping = supplierModelMappings.find(item => item.modelName === modelName);
+                            const priceMode = mapping?.priceMode === 'custom' ? 'custom' : 'inherit';
+                            const customInput = mapping?.customPrice?.inputPrice ?? 0;
+                            const customOutput = mapping?.customPrice?.outputPrice ?? 0;
+
+                            return (
+                              <tr key={modelName} className="border-b border-subtle/70">
+                                <td className="px-2 py-2 font-mono text-primary">{modelName}</td>
+                                <td className="px-2 py-2">
+                                  <Input
+                                    size="sm"
+                                    value={mapping?.billingModel || modelName}
+                                    onValueChange={value =>
+                                      handleUpdateModelPricingMapping(modelName, { billingModel: value })
+                                    }
+                                    placeholder="计费模型名"
+                                    variant="bordered"
+                                  />
+                                </td>
+                                <td className="px-2 py-2 min-w-36">
+                                  <Select
+                                    size="sm"
+                                    selectedKeys={[priceMode]}
+                                    onSelectionChange={keys => {
+                                      const mode = Array.from(keys)[0] as 'inherit' | 'custom';
+                                      handleUpdateModelPricingMapping(modelName, { priceMode: mode });
+                                    }}
+                                    variant="bordered"
+                                  >
+                                    <SelectItem key="inherit">继承</SelectItem>
+                                    <SelectItem key="custom">自定义</SelectItem>
+                                  </Select>
+                                </td>
+                                <td className="px-2 py-2">
+                                  {priceMode === 'custom' ? (
+                                    <div className="flex items-center gap-2 min-w-56">
+                                      <Input
+                                        size="sm"
+                                        type="number"
+                                        step="0.000001"
+                                        value={String(customInput)}
+                                        onValueChange={value =>
+                                          handleUpdateModelPricingMapping(modelName, {
+                                            customPrice: {
+                                              inputPrice: Number(value || 0),
+                                              outputPrice: customOutput,
+                                            },
+                                          })
+                                        }
+                                        placeholder="输入单价"
+                                        variant="bordered"
+                                      />
+                                      <Input
+                                        size="sm"
+                                        type="number"
+                                        step="0.000001"
+                                        value={String(customOutput)}
+                                        onValueChange={value =>
+                                          handleUpdateModelPricingMapping(modelName, {
+                                            customPrice: {
+                                              inputPrice: customInput,
+                                              outputPrice: Number(value || 0),
+                                            },
+                                          })
+                                        }
+                                        placeholder="输出单价"
+                                        variant="bordered"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-tertiary">跟随计费模型价格</span>
+                                  )}
+                                </td>
+                                <td className="px-2 py-2">
+                                  <Button
+                                    size="sm"
+                                    variant="light"
+                                    color="danger"
+                                    onPress={() => handleRemoveSupplierModel(modelName)}
+                                  >
+                                    删除
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-
               <div>
                 <label className="text-sm font-medium text-primary mb-2 block">
                   认证方式

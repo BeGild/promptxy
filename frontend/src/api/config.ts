@@ -9,6 +9,7 @@ import type {
   SupplierDeleteResponse,
   SupplierToggleRequest,
   SupplierToggleResponse,
+  ModelSearchResponse,
   Route,
   RoutesFetchResponse,
   RouteCreateRequest,
@@ -140,6 +141,24 @@ export async function toggleSupplier(
   request: SupplierToggleRequest,
 ): Promise<SupplierToggleResponse> {
   const response = await apiClient.post(`/_promptxy/suppliers/${supplierId}/toggle`, request);
+  return response.data;
+}
+
+/**
+ * 搜索模型候选（支持可搜索下拉 + 自定义输入）
+ */
+export async function searchModels(params: {
+  protocol?: string;
+  q?: string;
+  limit?: number;
+}): Promise<ModelSearchResponse> {
+  const query = new URLSearchParams();
+  if (params.protocol) query.set('protocol', params.protocol);
+  if (params.q) query.set('q', params.q);
+  if (typeof params.limit === 'number') query.set('limit', String(params.limit));
+
+  const suffix = query.toString();
+  const response = await apiClient.get(`/_promptxy/models/search${suffix ? `?${suffix}` : ''}`);
   return response.data;
 }
 

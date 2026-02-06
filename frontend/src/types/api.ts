@@ -107,6 +107,17 @@ export interface SupplierAuth {
   headerValue?: string;
 }
 
+export interface ModelPricingMapping {
+  modelName: string;
+  billingModel: string;
+  priceMode: 'inherit' | 'custom';
+  customPrice?: {
+    inputPrice: number;
+    outputPrice: number;
+  };
+  updatedAt?: number;
+}
+
 /**
  * 供应商配置（只管理上游供应商，不绑定本地路径）
  */
@@ -119,6 +130,7 @@ export interface Supplier {
   enabled: boolean;
   auth?: SupplierAuth;
   supportedModels: string[]; // 供应商支持的上游模型列表
+  modelPricingMappings?: ModelPricingMapping[];
   reasoningEfforts?: string[]; // 可选：用于解析 modelSpec 的 effort 列表（UI 不暴露）
   description?: string;
 }
@@ -161,6 +173,15 @@ export interface SupplierToggleResponse {
   success: boolean;
   message: string;
   supplier: Supplier;
+}
+
+export interface ModelSearchItem {
+  modelName: string;
+  source: string;
+}
+
+export interface ModelSearchResponse {
+  items: ModelSearchItem[];
 }
 
 // ============================================================================

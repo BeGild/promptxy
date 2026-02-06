@@ -123,5 +123,7 @@ describe('E2E Flow', () => {
     expect(detail.body.supplierId).toBe('codex-up');
     expect(detail.body.transformerChain).toEqual(['codex']);
     expect(detail.body.transformTrace).toBeTruthy();
+    expect(detail.body.routeNameSnapshot).toBe('Claude 路由');
+    expect(typeof detail.body.pricingStatus).toBe('string');
   });
 });
