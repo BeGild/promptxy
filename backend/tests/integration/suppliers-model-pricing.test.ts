@@ -89,6 +89,8 @@ describe('API Server - Suppliers modelPricingMappings', () => {
             customPrice: {
               inputPrice: 0.002,
               outputPrice: 0.006,
+              cacheReadPrice: 0.0002,
+              cacheWritePrice: 0.0004,
             },
           },
         ],
@@ -100,5 +102,7 @@ describe('API Server - Suppliers modelPricingMappings', () => {
     expect(updateRes.body.supplier.modelPricingMappings).toHaveLength(1);
     expect(updateRes.body.supplier.modelPricingMappings[0].priceMode).toBe('custom');
     expect(updateRes.body.supplier.modelPricingMappings[0].customPrice.inputPrice).toBe(0.002);
+    expect(updateRes.body.supplier.modelPricingMappings[0].customPrice.cacheReadPrice).toBe(0.0002);
+    expect(updateRes.body.supplier.modelPricingMappings[0].customPrice.cacheWritePrice).toBe(0.0004);
   });
 });

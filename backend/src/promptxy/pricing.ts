@@ -176,8 +176,9 @@ export class PricingService {
   extractUsage(responseBody: any): {
     inputTokens: number;
     outputTokens: number;
+    cacheCreationInputTokens: number;
   } {
-    const result = { inputTokens: 0, outputTokens: 0 };
+    const result = { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0 };
 
     if (!responseBody) {
       return result;
@@ -194,6 +195,7 @@ export class PricingService {
         if (event.type === 'message_stop' && event.message?.usage) {
           result.inputTokens = event.message.usage.input_tokens || 0;
           result.outputTokens = event.message.usage.output_tokens || 0;
+          result.cacheCreationInputTokens = event.message.usage.cache_creation_input_tokens || 0;
           break;
         }
 
@@ -204,6 +206,7 @@ export class PricingService {
           if ((usageCandidate as any).input_tokens !== undefined || (usageCandidate as any).output_tokens !== undefined) {
             result.inputTokens = (usageCandidate as any).input_tokens || 0;
             result.outputTokens = (usageCandidate as any).output_tokens || 0;
+            result.cacheCreationInputTokens = (usageCandidate as any).cache_creation_input_tokens || 0;
             break;
           }
           if ((usageCandidate as any).prompt_tokens !== undefined || (usageCandidate as any).completion_tokens !== undefined) {
@@ -218,6 +221,7 @@ export class PricingService {
     else if (responseBody.usage && (responseBody.usage.input_tokens !== undefined || responseBody.usage.output_tokens !== undefined)) {
       result.inputTokens = responseBody.usage.input_tokens || 0;
       result.outputTokens = responseBody.usage.output_tokens || 0;
+      result.cacheCreationInputTokens = responseBody.usage.cache_creation_input_tokens || 0;
     }
     // OpenAI 格式
     else if (responseBody.usage && (responseBody.usage.prompt_tokens !== undefined || responseBody.usage.completion_tokens !== undefined)) {

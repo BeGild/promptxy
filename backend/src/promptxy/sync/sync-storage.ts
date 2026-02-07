@@ -202,27 +202,28 @@ export class SyncStorage {
    * 搜索模型列表（用于前端 Combobox 候选）
    */
   searchModels(options: {
-    protocol?: string;
     q?: string;
     limit?: number;
   }): Array<{ modelName: string; source: string }> {
-    const protocol = options.protocol?.trim();
     const q = options.q?.trim().toLowerCase();
     const limit = Math.max(1, Math.min(options.limit ?? 20, 100));
 
     let lists = this.getAllLists();
 
-    if (protocol) {
-      lists = lists.filter(item => item.protocol === protocol);
-    }
-
     if (q) {
       lists = lists.filter(item => item.modelName.toLowerCase().includes(q));
     }
 
-    return lists
-      .slice(0, limit)
-      .map(item => ({ modelName: item.modelName, source: item.source }));
+    const seen = new Set<string>();
+    const deduped: Array<{ modelName: string; source: string }> = [];
+    for (const item of lists) {
+      if (seen.has(item.modelName)) continue;
+      seen.add(item.modelName);
+      deduped.push({ modelName: item.modelName, source: item.source });
+      if (deduped.length >= limit) break;
+    }
+
+    return deduped;
   }
 
   // ========================================================================

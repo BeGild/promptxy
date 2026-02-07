@@ -706,7 +706,6 @@ export async function handleSearchModels(
   url: URL,
 ): Promise<void> {
   try {
-    const protocol = url.searchParams.get('protocol') || undefined;
     const q = url.searchParams.get('q') || undefined;
     const limitParam = url.searchParams.get('limit');
     const parsedLimit = limitParam ? Number(limitParam) : undefined;
@@ -715,7 +714,7 @@ export async function handleSearchModels(
       : undefined;
 
     const storage = getSyncStorage();
-    const items = storage.searchModels({ protocol, q, limit });
+    const items = storage.searchModels({ q, limit });
     sendJson(res, 200, { items });
   } catch (error: any) {
     sendJson(res, 500, {
@@ -748,6 +747,12 @@ function normalizeModelPricingMappings(mappings: any): any[] {
         normalized.customPrice = {
           inputPrice: item.customPrice.inputPrice,
           outputPrice: item.customPrice.outputPrice,
+          ...(typeof item.customPrice.cacheReadPrice === 'number'
+            ? { cacheReadPrice: item.customPrice.cacheReadPrice }
+            : {}),
+          ...(typeof item.customPrice.cacheWritePrice === 'number'
+            ? { cacheWritePrice: item.customPrice.cacheWritePrice }
+            : {}),
         };
       }
 

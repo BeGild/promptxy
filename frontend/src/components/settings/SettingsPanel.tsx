@@ -65,6 +65,8 @@ import {
 } from '@/hooks/useSync';
 import { SyncLogsModal } from './SyncLogsModal';
 
+type ModelSearchOption = { key: string; value: string; source: string };
+
 // 供应商协议选项
 const SUPPLIER_PROTOCOLS: Array<{
   key: SupplierProtocol;
@@ -157,8 +159,11 @@ export const SettingsPanel: React.FC = () => {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [supplierModelInput, setSupplierModelInput] = useState('');
-  const [modelSearchItems, setModelSearchItems] = useState<Array<{ key: string; value: string; source: string }>>([]);
+  const [modelSearchItems, setModelSearchItems] = useState<ModelSearchOption[]>([]);
   const [isModelSearching, setIsModelSearching] = useState(false);
+  const [billingModelSearchInput, setBillingModelSearchInput] = useState('');
+  const [billingModelSearchItems, setBillingModelSearchItems] = useState<ModelSearchOption[]>([]);
+  const [isBillingModelSearching, setIsBillingModelSearching] = useState(false);
   const [isTokenVisible, setIsTokenVisible] = useState(false);
   const [supplierFormData, setSupplierFormData] = useState<Partial<Supplier>>({
     name: '',
@@ -202,13 +207,19 @@ export const SettingsPanel: React.FC = () => {
 
     return models.map(modelName => {
       const existing = sourceMap.get(modelName);
-      const billingModel = existing?.billingModel?.trim() || modelName;
+      const billingModel = typeof existing?.billingModel === 'string' ? existing.billingModel : modelName;
       const priceMode = existing?.priceMode === 'custom' ? 'custom' : 'inherit';
       const customPrice =
         priceMode === 'custom' && existing?.customPrice
           ? {
               inputPrice: Number(existing.customPrice.inputPrice) || 0,
               outputPrice: Number(existing.customPrice.outputPrice) || 0,
+              ...(typeof existing.customPrice.cacheReadPrice === 'number'
+                ? { cacheReadPrice: Number(existing.customPrice.cacheReadPrice) || 0 }
+                : {}),
+              ...(typeof existing.customPrice.cacheWritePrice === 'number'
+                ? { cacheWritePrice: Number(existing.customPrice.cacheWritePrice) || 0 }
+                : {}),
             }
           : undefined;
 
@@ -256,6 +267,13 @@ export const SettingsPanel: React.FC = () => {
           delete next.customPrice;
         } else if (!next.customPrice) {
           next.customPrice = { inputPrice: 0, outputPrice: 0 };
+        } else {
+          if (typeof next.customPrice.inputPrice !== 'number') {
+            next.customPrice.inputPrice = 0;
+          }
+          if (typeof next.customPrice.outputPrice !== 'number') {
+            next.customPrice.outputPrice = 0;
+          }
         }
         return next;
       });
@@ -266,9 +284,8 @@ export const SettingsPanel: React.FC = () => {
   useEffect(() => {
     if (!isSupplierModalOpen) return;
 
-    const protocol = supplierFormData.protocol;
     const query = supplierModelInput.trim();
-    if (!protocol || !query) {
+    if (!query) {
       setModelSearchItems([]);
       setIsModelSearching(false);
       return;
@@ -278,7 +295,7 @@ export const SettingsPanel: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         setIsModelSearching(true);
-        const result = await searchModels({ protocol, q: query, limit: 20 });
+        const result = await searchModels({ q: query, limit: 20 });
         if (canceled) return;
         setModelSearchItems(
           (result.items || []).map(item => ({
@@ -302,7 +319,41 @@ export const SettingsPanel: React.FC = () => {
       canceled = true;
       clearTimeout(timer);
     };
-  }, [isSupplierModalOpen, supplierFormData.protocol, supplierModelInput]);
+  }, [isSupplierModalOpen, supplierModelInput]);
+
+  useEffect(() => {
+    if (!isSupplierModalOpen) return;
+
+    const query = billingModelSearchInput.trim();
+    let canceled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setIsBillingModelSearching(true);
+        const result = await searchModels({ q: query || undefined, limit: 20 });
+        if (canceled) return;
+        setBillingModelSearchItems(
+          (result.items || []).map(item => ({
+            key: item.modelName,
+            value: item.modelName,
+            source: item.source,
+          })),
+        );
+      } catch {
+        if (!canceled) {
+          setBillingModelSearchItems([]);
+        }
+      } finally {
+        if (!canceled) {
+          setIsBillingModelSearching(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      canceled = true;
+      clearTimeout(timer);
+    };
+  }, [isSupplierModalOpen, billingModelSearchInput]);
   // 初始化：从后端读取设置
   useEffect(() => {
     const loadSettings = async () => {
@@ -432,6 +483,8 @@ export const SettingsPanel: React.FC = () => {
     });
     setSupplierModelInput('');
     setModelSearchItems([]);
+    setBillingModelSearchInput('');
+    setBillingModelSearchItems([]);
     setIsSupplierModalOpen(true);
   };
 
@@ -449,6 +502,8 @@ export const SettingsPanel: React.FC = () => {
     });
     setSupplierModelInput('');
     setModelSearchItems([]);
+    setBillingModelSearchInput('');
+    setBillingModelSearchItems([]);
     setIsSupplierModalOpen(true);
   };
 
@@ -474,8 +529,24 @@ export const SettingsPanel: React.FC = () => {
       if (mapping.priceMode === 'custom') {
         const inputPrice = Number(mapping.customPrice?.inputPrice);
         const outputPrice = Number(mapping.customPrice?.outputPrice);
+        const cacheReadPrice = mapping.customPrice?.cacheReadPrice;
+        const cacheWritePrice = mapping.customPrice?.cacheWritePrice;
         if (!Number.isFinite(inputPrice) || !Number.isFinite(outputPrice)) {
           toast.error(`模型 ${mapping.modelName} 的自定义价格必须是数字`);
+          return;
+        }
+        if (
+          cacheReadPrice !== undefined &&
+          (!Number.isFinite(Number(cacheReadPrice)) || Number(cacheReadPrice) < 0)
+        ) {
+          toast.error(`模型 ${mapping.modelName} 的缓存读取价格必须是大于等于 0 的数字`);
+          return;
+        }
+        if (
+          cacheWritePrice !== undefined &&
+          (!Number.isFinite(Number(cacheWritePrice)) || Number(cacheWritePrice) < 0)
+        ) {
+          toast.error(`模型 ${mapping.modelName} 的缓存写入价格必须是大于等于 0 的数字`);
           return;
         }
         if (inputPrice < 0 || outputPrice < 0) {
@@ -1221,7 +1292,7 @@ export const SettingsPanel: React.FC = () => {
                     radius="lg"
                     variant="bordered"
                     placeholder="搜索模型并回车添加；无匹配即为自定义模型"
-                    description="添加后自动创建计费模型映射（默认 计费模型=模型名）"
+                    description="添加后自动创建计费模型映射（计费模型支持手动编辑，保存时校验）"
                     isLoading={isModelSearching}
                     onKeyDown={e => {
                       if (e.key !== 'Enter') return;
@@ -1243,7 +1314,7 @@ export const SettingsPanel: React.FC = () => {
                           <th className="text-left px-2 py-2 text-tertiary font-medium">模型名</th>
                           <th className="text-left px-2 py-2 text-tertiary font-medium">计费模型</th>
                           <th className="text-left px-2 py-2 text-tertiary font-medium">价格模式</th>
-                          <th className="text-left px-2 py-2 text-tertiary font-medium">自定义价格（输入/输出）</th>
+                          <th className="text-left px-2 py-2 text-tertiary font-medium">自定义价格（输入/输出必填，缓存读写选填）</th>
                           <th className="text-left px-2 py-2 text-tertiary font-medium">操作</th>
                         </tr>
                       </thead>
@@ -1260,20 +1331,48 @@ export const SettingsPanel: React.FC = () => {
                             const priceMode = mapping?.priceMode === 'custom' ? 'custom' : 'inherit';
                             const customInput = mapping?.customPrice?.inputPrice ?? 0;
                             const customOutput = mapping?.customPrice?.outputPrice ?? 0;
+                            const customCacheRead = mapping?.customPrice?.cacheReadPrice;
+                            const customCacheWrite = mapping?.customPrice?.cacheWritePrice;
 
                             return (
                               <tr key={modelName} className="border-b border-subtle/70">
                                 <td className="px-2 py-2 font-mono text-primary">{modelName}</td>
                                 <td className="px-2 py-2">
-                                  <Input
+                                  <Autocomplete
                                     size="sm"
-                                    value={mapping?.billingModel || modelName}
-                                    onValueChange={value =>
-                                      handleUpdateModelPricingMapping(modelName, { billingModel: value })
-                                    }
+                                    inputValue={mapping?.billingModel ?? ''}
+                                    onInputChange={value => {
+                                      setBillingModelSearchInput(value);
+                                      handleUpdateModelPricingMapping(modelName, { billingModel: value });
+                                    }}
+                                    allowsCustomValue
+                                    selectedKey={null}
+                                    items={billingModelSearchItems}
+                                    onSelectionChange={key => {
+                                      if (typeof key === 'string') {
+                                        setBillingModelSearchInput(key);
+                                        handleUpdateModelPricingMapping(modelName, { billingModel: key });
+                                      }
+                                    }}
+                                    onOpenChange={isOpen => {
+                                      if (isOpen) {
+                                        setBillingModelSearchInput((mapping?.billingModel ?? '').trim());
+                                      }
+                                    }}
                                     placeholder="计费模型名"
                                     variant="bordered"
-                                  />
+                                    isLoading={isBillingModelSearching}
+                                  >
+                                    {(item: ModelSearchOption) => (
+                                      <AutocompleteItem
+                                        key={item.key}
+                                        textValue={item.value}
+                                        description={item.source}
+                                      >
+                                        {item.value}
+                                      </AutocompleteItem>
+                                    )}
+                                  </Autocomplete>
                                 </td>
                                 <td className="px-2 py-2 min-w-36">
                                   <Select
@@ -1291,7 +1390,7 @@ export const SettingsPanel: React.FC = () => {
                                 </td>
                                 <td className="px-2 py-2">
                                   {priceMode === 'custom' ? (
-                                    <div className="flex items-center gap-2 min-w-56">
+                                    <div className="grid grid-cols-2 gap-2 min-w-72">
                                       <Input
                                         size="sm"
                                         type="number"
@@ -1302,6 +1401,12 @@ export const SettingsPanel: React.FC = () => {
                                             customPrice: {
                                               inputPrice: Number(value || 0),
                                               outputPrice: customOutput,
+                                              ...(customCacheRead !== undefined
+                                                ? { cacheReadPrice: customCacheRead }
+                                                : {}),
+                                              ...(customCacheWrite !== undefined
+                                                ? { cacheWritePrice: customCacheWrite }
+                                                : {}),
                                             },
                                           })
                                         }
@@ -1318,10 +1423,60 @@ export const SettingsPanel: React.FC = () => {
                                             customPrice: {
                                               inputPrice: customInput,
                                               outputPrice: Number(value || 0),
+                                              ...(customCacheRead !== undefined
+                                                ? { cacheReadPrice: customCacheRead }
+                                                : {}),
+                                              ...(customCacheWrite !== undefined
+                                                ? { cacheWritePrice: customCacheWrite }
+                                                : {}),
                                             },
                                           })
                                         }
                                         placeholder="输出单价"
+                                        variant="bordered"
+                                      />
+                                      <Input
+                                        size="sm"
+                                        type="number"
+                                        step="0.000001"
+                                        value={customCacheRead === undefined ? '' : String(customCacheRead)}
+                                        onValueChange={value =>
+                                          handleUpdateModelPricingMapping(modelName, {
+                                            customPrice: {
+                                              inputPrice: customInput,
+                                              outputPrice: customOutput,
+                                              ...(value.trim()
+                                                ? { cacheReadPrice: Number(value || 0) }
+                                                : {}),
+                                              ...(customCacheWrite !== undefined
+                                                ? { cacheWritePrice: customCacheWrite }
+                                                : {}),
+                                            },
+                                          })
+                                        }
+                                        placeholder="缓存读取单价（选填）"
+                                        variant="bordered"
+                                      />
+                                      <Input
+                                        size="sm"
+                                        type="number"
+                                        step="0.000001"
+                                        value={customCacheWrite === undefined ? '' : String(customCacheWrite)}
+                                        onValueChange={value =>
+                                          handleUpdateModelPricingMapping(modelName, {
+                                            customPrice: {
+                                              inputPrice: customInput,
+                                              outputPrice: customOutput,
+                                              ...(customCacheRead !== undefined
+                                                ? { cacheReadPrice: customCacheRead }
+                                                : {}),
+                                              ...(value.trim()
+                                                ? { cacheWritePrice: Number(value || 0) }
+                                                : {}),
+                                            },
+                                          })
+                                        }
+                                        placeholder="缓存写入单价（选填）"
                                         variant="bordered"
                                       />
                                     </div>

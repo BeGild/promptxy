@@ -73,6 +73,14 @@ describe('API Server - models search', () => {
         syncedAt: Date.now(),
         createdAt: Date.now(),
       },
+      {
+        modelName: 'glm-4.5',
+        provider: 'zhipuai',
+        protocol: 'gemini',
+        source: 'models.dev',
+        syncedAt: Date.now(),
+        createdAt: Date.now(),
+      },
     ]);
   });
 
@@ -89,5 +97,12 @@ describe('API Server - models search', () => {
     expect(res.body.items.length).toBeGreaterThan(0);
     expect(res.body.items.every((item: any) => String(item.modelName).includes('gpt'))).toBe(true);
   });
-});
 
+  it('GET /_promptxy/models/search 应忽略 protocol 过滤并按关键词返回', async () => {
+    const res = await client.get('/_promptxy/models/search?protocol=openai-chat&q=glm&limit=5');
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.items)).toBe(true);
+    expect(res.body.items.some((item: any) => item.modelName === 'glm-4.5')).toBe(true);
+  });
+});

@@ -185,6 +185,17 @@ describe('Config Module', () => {
                   billingModel: 'gpt-5-mini',
                   priceMode: 'inherit',
                 },
+                {
+                  modelName: 'private-custom',
+                  billingModel: 'private-custom',
+                  priceMode: 'custom',
+                  customPrice: {
+                    inputPrice: 0.002,
+                    outputPrice: 0.006,
+                    cacheReadPrice: 0.0002,
+                    cacheWritePrice: 0.0004,
+                  },
+                },
               ],
             },
           ],
@@ -215,6 +226,7 @@ describe('Config Module', () => {
 
     const config = await loadConfig();
     expect(config.suppliers[0].modelPricingMappings?.[0].billingModel).toBe('gpt-5-mini');
+    expect(config.suppliers[0].modelPricingMappings?.[1].customPrice?.cacheReadPrice).toBe(0.0002);
   });
 
   it('应拒绝 modelPricingMappings 中重复 modelName', async () => {
@@ -276,6 +288,67 @@ describe('Config Module', () => {
     );
 
     await expect(loadConfig()).rejects.toThrow(/modelPricingMappings has duplicate modelName: m1/);
+  });
+
+  it('应拒绝 customPrice.cacheReadPrice 为负数', async () => {
+    await mkdir(TEST_ROOT, { recursive: true });
+    process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+    await writeFile(
+      TEST_CONFIG_PATH,
+      JSON.stringify(
+        {
+          listen: { host: '127.0.0.1', port: 7070 },
+          suppliers: [
+            {
+              id: 's1',
+              name: 's1',
+              displayName: 'S1',
+              baseUrl: 'https://api.example.com',
+              protocol: 'anthropic',
+              enabled: true,
+              auth: { type: 'none' },
+              supportedModels: [],
+              modelPricingMappings: [
+                {
+                  modelName: 'm1',
+                  billingModel: 'm1',
+                  priceMode: 'custom',
+                  customPrice: {
+                    inputPrice: 0.1,
+                    outputPrice: 0.2,
+                    cacheReadPrice: -1,
+                  },
+                },
+              ],
+            },
+          ],
+          routes: [
+            {
+              id: 'route-claude-default',
+              localService: 'claude',
+              modelMappings: [
+                {
+                  id: 'mapping-default',
+                  inboundModel: '*',
+                  targetSupplierId: 's1',
+                  enabled: true,
+                },
+              ],
+              enabled: true,
+            },
+          ],
+          rules: [],
+          storage: { maxHistory: 100 },
+          debug: false,
+        },
+        null,
+        2,
+      ),
+      'utf-8',
+    );
+
+    await expect(loadConfig()).rejects.toThrow(/customPrice\.cacheReadPrice must be a number >= 0/);
   });
 
   it('应拒绝非法 routes 结构', async () => {

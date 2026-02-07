@@ -114,6 +114,8 @@ export interface ModelPricingMapping {
   customPrice?: {
     inputPrice: number;
     outputPrice: number;
+    cacheReadPrice?: number;
+    cacheWritePrice?: number;
   };
   updatedAt?: number;
 }

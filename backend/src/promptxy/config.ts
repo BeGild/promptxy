@@ -297,6 +297,18 @@ export function assertSupplier(label: string, supplier: Supplier): void {
         if (item.customPrice.inputPrice < 0 || item.customPrice.outputPrice < 0) {
           throw new Error(`${itemLabel}.customPrice prices must be >= 0`);
         }
+        if (
+          item.customPrice.cacheReadPrice !== undefined &&
+          (typeof item.customPrice.cacheReadPrice !== 'number' || item.customPrice.cacheReadPrice < 0)
+        ) {
+          throw new Error(`${itemLabel}.customPrice.cacheReadPrice must be a number >= 0`);
+        }
+        if (
+          item.customPrice.cacheWritePrice !== undefined &&
+          (typeof item.customPrice.cacheWritePrice !== 'number' || item.customPrice.cacheWritePrice < 0)
+        ) {
+          throw new Error(`${itemLabel}.customPrice.cacheWritePrice must be a number >= 0`);
+        }
       }
     }
   }
@@ -390,6 +402,12 @@ function migrateSuppliers(suppliers: Supplier[]): Supplier[] {
             mapped.customPrice = {
               inputPrice: typeof item.customPrice.inputPrice === 'number' ? item.customPrice.inputPrice : 0,
               outputPrice: typeof item.customPrice.outputPrice === 'number' ? item.customPrice.outputPrice : 0,
+              ...(typeof item.customPrice.cacheReadPrice === 'number'
+                ? { cacheReadPrice: item.customPrice.cacheReadPrice }
+                : {}),
+              ...(typeof item.customPrice.cacheWritePrice === 'number'
+                ? { cacheWritePrice: item.customPrice.cacheWritePrice }
+                : {}),
             };
           }
           return mapped;

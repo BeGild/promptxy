@@ -119,6 +119,7 @@ type PricingExtractionResult = {
   upstreamModel?: string;
   model?: string;
   cachedInputTokens?: number;
+  cacheWriteInputTokens?: number;
   inputTokens: number;
   outputTokens: number;
   inputCost: number;
@@ -204,6 +205,7 @@ function extractAndCalculatePricing(options: {
 
   const cachedInfo = pricingService.extractCachedInputTokens(parsedResponse);
   const cachedInputTokens = cachedInfo.cachedInputTokens > 0 ? cachedInfo.cachedInputTokens : undefined;
+  const cacheWriteInputTokens = usage.cacheCreationInputTokens > 0 ? usage.cacheCreationInputTokens : undefined;
 
   let inputTokens = rawInputTokens;
   if (cachedInfo.subtractFromInputTokens) {
@@ -213,11 +215,21 @@ function extractAndCalculatePricing(options: {
   result.inputTokens = inputTokens;
   result.outputTokens = rawOutputTokens;
   result.cachedInputTokens = cachedInputTokens;
-  result.usageSource = rawInputTokens > 0 || rawOutputTokens > 0 || cachedInfo.cachedInputTokens > 0
+  result.cacheWriteInputTokens = cacheWriteInputTokens;
+  result.usageSource =
+    rawInputTokens > 0 ||
+    rawOutputTokens > 0 ||
+    cachedInfo.cachedInputTokens > 0 ||
+    usage.cacheCreationInputTokens > 0
     ? 'actual'
     : 'estimated';
 
-  if (result.inputTokens === 0 && result.outputTokens === 0 && !result.cachedInputTokens) {
+  if (
+    result.inputTokens === 0 &&
+    result.outputTokens === 0 &&
+    !result.cachedInputTokens &&
+    !result.cacheWriteInputTokens
+  ) {
     const estimatedInput = pricingService.estimateInputTokens(options.requestPayload);
     const estimatedOutput = pricingService.estimateOutputTokensFromContent(parsedResponse);
     if (estimatedInput > 0 || estimatedOutput > 0) {
@@ -255,7 +267,10 @@ function extractAndCalculatePricing(options: {
   const matchedMapping = findSupplierPricingMapping(options.supplier, mappedModel);
 
   const hasBillableTokens =
-    result.inputTokens > 0 || result.outputTokens > 0 || (result.cachedInputTokens ?? 0) > 0;
+    result.inputTokens > 0 ||
+    result.outputTokens > 0 ||
+    (result.cachedInputTokens ?? 0) > 0 ||
+    (result.cacheWriteInputTokens ?? 0) > 0;
   if (!hasBillableTokens) {
     return result;
   }
@@ -268,7 +283,7 @@ function extractAndCalculatePricing(options: {
     return result;
   }
 
-  let unitPrice: { input: number; output: number; cacheRead?: number } | undefined;
+  let unitPrice: { input: number; output: number; cacheRead?: number; cacheWrite?: number } | undefined;
   let priceSource: 'models.dev' | 'custom' = 'models.dev';
   let ruleId = `model:${billingModel}`;
 
@@ -280,6 +295,14 @@ function extractAndCalculatePricing(options: {
     unitPrice = {
       input: matchedMapping.customPrice.inputPrice,
       output: matchedMapping.customPrice.outputPrice,
+      cacheRead:
+        typeof matchedMapping.customPrice.cacheReadPrice === 'number'
+          ? matchedMapping.customPrice.cacheReadPrice
+          : undefined,
+      cacheWrite:
+        typeof matchedMapping.customPrice.cacheWritePrice === 'number'
+          ? matchedMapping.customPrice.cacheWritePrice
+          : undefined,
     };
     priceSource = 'custom';
     ruleId = `supplier:${options.supplier?.id ?? 'unknown'}:model:${matchedMapping.modelName}`;
@@ -298,6 +321,10 @@ function extractAndCalculatePricing(options: {
         typeof storedPrice?.cacheReadPrice === 'number' && Number.isFinite(storedPrice.cacheReadPrice)
           ? storedPrice.cacheReadPrice
           : undefined,
+      cacheWrite:
+        typeof storedPrice?.cacheWritePrice === 'number' && Number.isFinite(storedPrice.cacheWritePrice)
+          ? storedPrice.cacheWritePrice
+          : undefined,
     };
 
     if (matchedMapping) {
@@ -306,9 +333,11 @@ function extractAndCalculatePricing(options: {
   }
 
   const cachedInputTokensForCost = result.cachedInputTokens ?? 0;
+  const cacheWriteInputTokensForCost = result.cacheWriteInputTokens ?? 0;
   const inputCost =
     (result.inputTokens / 1000) * unitPrice.input +
-    (cachedInputTokensForCost / 1000) * (unitPrice.cacheRead ?? 0);
+    (cachedInputTokensForCost / 1000) * (unitPrice.cacheRead ?? 0) +
+    (cacheWriteInputTokensForCost / 1000) * (unitPrice.cacheWrite ?? 0);
   const outputCost = (result.outputTokens / 1000) * unitPrice.output;
 
   result.inputCost = roundUsdCost(inputCost);
@@ -323,15 +352,17 @@ function extractAndCalculatePricing(options: {
       input: unitPrice.input,
       output: unitPrice.output,
       ...(typeof unitPrice.cacheRead === 'number' ? { cacheRead: unitPrice.cacheRead } : {}),
+      ...(typeof unitPrice.cacheWrite === 'number' ? { cacheWrite: unitPrice.cacheWrite } : {}),
     },
     billableTokens: {
       input: result.inputTokens,
       output: result.outputTokens,
       cachedInput: cachedInputTokensForCost,
+      cacheWriteInput: cacheWriteInputTokensForCost,
     },
     formula:
-      typeof unitPrice.cacheRead === 'number'
-        ? '(input*in + output*out + cache*cacheRead)/1000'
+      typeof unitPrice.cacheRead === 'number' || typeof unitPrice.cacheWrite === 'number'
+        ? '(input*in + output*out + cacheRead*cacheRead + cacheWrite*cacheWrite)/1000'
         : '(input*in + output*out)/1000',
   });
 
