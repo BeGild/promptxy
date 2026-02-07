@@ -54,12 +54,21 @@ export const PathCell: React.FC<PathCellProps> = ({
     <div className="flex flex-col justify-center py-1 min-w-0">
       {/* 主路径行 */}
       <div className="flex items-center min-w-0">
-        <span
-          className="font-mono text-xs text-primary dark:text-primary truncate block"
-          title={mainPath}
-        >
-          {mainPath}
-        </span>
+        <Tooltip
+            content={
+              <div className="text-xs max-w-sm">
+                <div className="font-medium mb-2 text-primary">请求路径</div>
+                <pre className="whitespace-pre-wrap break-words font-mono text-tertiary text-[10px] leading-relaxed bg-secondary/30 dark:bg-secondary/30 p-2 rounded">
+                  {mainPath}
+                </pre>
+              </div>
+            }
+            placement="top"
+          >
+            <span className="font-mono text-xs text-primary dark:text-primary truncate block hover:text-secondary dark:hover:text-secondary cursor-help transition-colors">
+              {mainPath}
+            </span>
+          </Tooltip>
       </div>
 
       {/* 次要路径行（转换后路径） */}
@@ -70,20 +79,27 @@ export const PathCell: React.FC<PathCellProps> = ({
 
           <Tooltip
             content={
-              <div className="text-xs">
-                <div className="font-medium mb-1">路径转换</div>
-                <div className="text-tertiary">
-                  <div className="truncate">原始: {mainPath}</div>
-                  <div className="truncate">转换: {secondaryPath}</div>
+              <div className="text-xs max-w-sm">
+                <div className="font-medium mb-2 text-primary">路径转换</div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-tertiary font-medium flex-shrink-0">原始:</span>
+                    <pre className="whitespace-pre-wrap break-words font-mono text-tertiary text-[10px] leading-relaxed bg-secondary/30 dark:bg-secondary/30 p-2 rounded flex-1">
+                      {mainPath}
+                    </pre>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-tertiary font-medium flex-shrink-0">转换:</span>
+                    <pre className="whitespace-pre-wrap break-words font-mono text-tertiary text-[10px] leading-relaxed bg-secondary/30 dark:bg-secondary/30 p-2 rounded flex-1">
+                      {secondaryPath}
+                    </pre>
+                  </div>
                 </div>
               </div>
             }
             placement="right"
           >
-            <span
-              className="font-mono text-[10px] text-tertiary dark:text-tertiary truncate block hover:text-secondary dark:hover:text-secondary transition-colors cursor-help"
-              title={secondaryPath}
-            >
+            <span className="font-mono text-[10px] text-tertiary dark:text-tertiary truncate block hover:text-secondary dark:hover:text-secondary cursor-help transition-colors">
               {secondaryPath}
             </span>
           </Tooltip>

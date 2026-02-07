@@ -42,9 +42,11 @@ interface TransformFlowBadgeProps {
   transformerChain?: string[];
   /** 供应商名称（用于 tooltip） */
   supplierName?: string;
-  /** 入站/用户请求模型（用于 tooltip） */
+  /** 客户端原始请求模型（用于 tooltip） */
+  originalRequestModel?: string;
+  /** 发送给供应商的模型（用于 tooltip） */
   requestedModel?: string;
-  /** 上游实际模型（用于 tooltip） */
+  /** 供应商响应中的模型（用于 tooltip） */
   upstreamModel?: string;
   /** 计费模型（用于 tooltip） */
   billingModel?: string;
@@ -71,6 +73,7 @@ export const TransformFlowBadge: React.FC<TransformFlowBadgeProps> = ({
   isSupplierRequest = false,
   transformerChain,
   supplierName,
+  originalRequestModel,
   requestedModel,
   upstreamModel,
   billingModel,
@@ -91,34 +94,58 @@ export const TransformFlowBadge: React.FC<TransformFlowBadgeProps> = ({
 
   // 构建 tooltip 内容
   const tooltipContent = () => {
-    const parts: string[] = [];
+    const parts: { label: string; value: string }[] = [];
 
     if (supplierName) {
-      parts.push(`供应商: ${supplierName}`);
+      parts.push({ label: '供应商', value: supplierName });
     }
 
     if (hasTransformerChain) {
-      parts.push(`转换链: ${transformerChain.join(' → ')}`);
+      parts.push({ label: '转换链', value: transformerChain.join(' → ') });
     }
 
     if (billingModel) {
-      parts.push(`计费模型: ${billingModel}`);
+      parts.push({ label: '计费模型', value: billingModel });
+    }
+
+    // 三个模型分别显示，因为它们来自不同阶段
+    if (originalRequestModel) {
+      parts.push({ label: '原始请求模型', value: originalRequestModel });
     }
     if (requestedModel) {
-      parts.push(`请求模型: ${requestedModel}`);
+      parts.push({ label: '发送模型', value: requestedModel });
     }
     if (upstreamModel) {
-      parts.push(`上游模型: ${upstreamModel}`);
+      parts.push({ label: '上游模型', value: upstreamModel });
     }
     if (typeof cachedInputTokens === 'number' && cachedInputTokens > 0) {
-      parts.push(`缓存命中: ${cachedInputTokens} tokens`);
+      parts.push({ label: '缓存命中', value: `${cachedInputTokens} tokens` });
     }
 
     if (parts.length === 0) {
-      return `直连请求 (${formatClient(fromClient)})`;
+      return (
+        <div className="text-xs max-w-sm">
+          <div className="font-medium mb-2 text-primary">请求流程</div>
+          <div className="text-tertiary">直连请求 ({formatClient(fromClient)})</div>
+        </div>
+      );
     }
 
-    return parts.join('\n');
+    return (
+      <div className="text-xs max-w-sm">
+        <div className="font-medium mb-2 text-primary">请求流程</div>
+        <div className="space-y-1">
+          {parts.map((part, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-tertiary font-medium flex-shrink-0">{part.label}:</span>
+              <pre className="whitespace-pre-wrap break-words font-mono text-tertiary text-[10px] leading-relaxed bg-secondary/30 dark:bg-secondary/30 p-2 rounded flex-1">
+                {part.value}
+              </pre>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   // 获取客户端颜色样式

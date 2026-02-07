@@ -279,6 +279,7 @@ CREATE TABLE IF NOT EXISTS requests (
   supplier_id TEXT,
   supplier_base_url TEXT,
 
+  original_request_model TEXT,
   requested_model TEXT,
   upstream_model TEXT,
   billing_model TEXT,
@@ -393,7 +394,7 @@ INSERT INTO requests (
   matched_rules_brief,
   supplier_name, supplier_client, transformer_chain, transformed_path,
   route_id, route_name_snapshot, supplier_id, supplier_base_url,
-  requested_model, upstream_model, billing_model, cached_input_tokens,
+  original_request_model, requested_model, upstream_model, billing_model, cached_input_tokens,
   input_tokens, output_tokens, total_tokens,
   input_cost, output_cost, total_cost,
   wait_time, ftut, usage_source,
@@ -431,6 +432,7 @@ INSERT INTO requests (
           record.routeNameSnapshot ?? null,
           record.supplierId ?? null,
           record.supplierBaseUrl ?? null,
+          (record as any).originalRequestModel ?? null,
           record.requestedModel ?? null,
           record.upstreamModel ?? null,
           record.model ?? null,
@@ -567,6 +569,7 @@ WHERE id IN (
       transformer_chain: string | null;
       transformed_path: string | null;
       route_name_snapshot: string | null;
+      original_request_model: string | null;
       requested_model: string | null;
       upstream_model: string | null;
       billing_model: string | null;
@@ -585,7 +588,7 @@ SELECT
   matched_rules_brief,
   supplier_name, supplier_client, transformer_chain, transformed_path,
   route_name_snapshot,
-  requested_model, upstream_model, billing_model,
+  original_request_model, requested_model, upstream_model, billing_model,
   cached_input_tokens, input_tokens, output_tokens, total_tokens, total_cost,
   pricing_status, pricing_snapshot_json
 FROM requests
@@ -613,6 +616,7 @@ LIMIT ? OFFSET ?
       transformerChain: safeJsonParse<string[]>(r.transformer_chain || '') ?? undefined,
       transformedPath: r.transformed_path ?? undefined,
       routeNameSnapshot: r.route_name_snapshot ?? undefined,
+      originalRequestModel: r.original_request_model ?? undefined,
       requestedModel: r.requested_model ?? undefined,
       upstreamModel: r.upstream_model ?? undefined,
       model: r.billing_model ?? undefined,
@@ -652,6 +656,7 @@ SELECT
   r.route_name_snapshot as route_name_snapshot,
   r.supplier_id as supplier_id,
   r.supplier_base_url as supplier_base_url,
+  r.original_request_model as original_request_model,
   r.requested_model as requested_model,
   r.upstream_model as upstream_model,
   r.billing_model as billing_model,
@@ -714,6 +719,7 @@ WHERE r.id = ?
       transformerChain: row.transformer_chain ?? undefined,
       transformTrace: row.transform_trace ?? undefined,
       transformedPath: row.transformed_path ?? undefined,
+      originalRequestModel: row.original_request_model ?? undefined,
       requestedModel: row.requested_model ?? undefined,
       upstreamModel: row.upstream_model ?? undefined,
       cachedInputTokens: row.cached_input_tokens ?? undefined,

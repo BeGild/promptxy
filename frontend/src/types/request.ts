@@ -69,6 +69,10 @@ export interface RequestListItem {
   routeNameSnapshot?: string;
 
   // 模型与计费口径（新增，列表可选展示）
+  // originalRequestModel: 客户端原始请求的模型
+  // requestedModel: 发送给供应商的模型（转换后）
+  // upstreamModel: 供应商响应中的模型
+  originalRequestModel?: string;
   requestedModel?: string;
   upstreamModel?: string;
   model?: string;

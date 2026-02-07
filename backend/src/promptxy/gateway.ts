@@ -115,8 +115,9 @@ type RouteInfo = {
 };
 
 type PricingExtractionResult = {
-  requestedModel?: string;
-  upstreamModel?: string;
+  originalRequestModel?: string;  // 客户端原始请求的模型
+  requestedModel?: string;        // 发送给供应商的模型（转换后）
+  upstreamModel?: string;         // 供应商响应中的模型
   model?: string;
   cachedInputTokens?: number;
   cacheWriteInputTokens?: number;
@@ -162,7 +163,8 @@ function roundUsdCost(value: number): number {
 
 function extractAndCalculatePricing(options: {
   responsePayload: any;
-  requestPayload: any;
+  originalRequestPayload: any;  // 客户端原始请求
+  requestPayload: any;          // 发送给供应商的请求（转换后）
   fallbackModel?: string;
   supplier?: Supplier;
 }): PricingExtractionResult {
@@ -239,6 +241,8 @@ function extractAndCalculatePricing(options: {
     }
   }
 
+  // 分别提取三个模型
+  result.originalRequestModel = pricingService.extractModel(options.originalRequestPayload);
   result.requestedModel = pricingService.extractModel(options.requestPayload);
 
   if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
@@ -1770,6 +1774,7 @@ export function createGateway(
         try {
           pricingResult = extractAndCalculatePricing({
             responsePayload: parsed,
+            originalRequestPayload: jsonBody,
             requestPayload: effectiveBody || jsonBody,
             fallbackModel: routePlan.targetModel,
             supplier: matchedRoute.supplier,
@@ -1820,6 +1825,7 @@ export function createGateway(
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
             // 统计相关字段
+            originalRequestModel: pricingResult.originalRequestModel,
             requestedModel: pricingResult.requestedModel,
             upstreamModel: pricingResult.upstreamModel,
             model: pricingResult.model,
@@ -1869,6 +1875,7 @@ export function createGateway(
         try {
           pricingResult = extractAndCalculatePricing({
             responsePayload: parsed,
+            originalRequestPayload: jsonBody,
             requestPayload: effectiveBody || jsonBody,
             fallbackModel: routePlan.targetModel,
             supplier: matchedRoute.supplier,
@@ -1923,6 +1930,7 @@ export function createGateway(
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
             // 统计相关字段
+            originalRequestModel: pricingResult.originalRequestModel,
             requestedModel: pricingResult.requestedModel,
             upstreamModel: pricingResult.upstreamModel,
             model: pricingResult.model,
@@ -2085,6 +2093,7 @@ export function createGateway(
         try {
           pricingResult = extractAndCalculatePricing({
             responsePayload: responseBodyStr,
+            originalRequestPayload: jsonBody,
             requestPayload: savedJsonBody,
             fallbackModel: routePlan.targetModel,
             supplier: matchedRoute.supplier,

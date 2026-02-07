@@ -31,6 +31,7 @@ import {
   Badge,
   Select,
   SelectItem,
+  Tooltip,
 } from '@heroui/react';
 import { Filter, RefreshCw, X, Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmptyState } from '@/components/common';
@@ -279,9 +280,23 @@ const RequestListComponent: React.FC<RequestListProps> = ({
     try {
       const parsed = JSON.parse(snapshot);
       const formatted = JSON.stringify(parsed, null, 2);
-      return formatted.length > 420 ? `${formatted.slice(0, 420)}...` : formatted;
+      return (
+        <div className="text-xs max-w-md overflow-x-auto">
+          <div className="font-medium mb-2 text-primary">费用详情</div>
+          <pre className="whitespace-pre-wrap break-words font-mono text-tertiary text-[10px] leading-relaxed bg-secondary/30 dark:bg-secondary/30 p-2 rounded">
+            {formatted.length > 420 ? `${formatted.slice(0, 420)}...` : formatted}
+          </pre>
+        </div>
+      );
     } catch {
-      return snapshot.length > 420 ? `${snapshot.slice(0, 420)}...` : snapshot;
+      return (
+        <div className="text-xs max-w-md">
+          <div className="font-medium mb-2 text-primary">费用详情</div>
+          <pre className="whitespace-pre-wrap break-words font-mono text-tertiary text-[10px] leading-relaxed bg-secondary/30 dark:bg-secondary/30 p-2 rounded">
+            {snapshot.length > 420 ? `${snapshot.slice(0, 420)}...` : snapshot}
+          </pre>
+        </div>
+      );
     }
   }, []);
 
@@ -497,6 +512,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
 	                        isSupplierRequest={!!item.supplierName}
 	                        transformerChain={item.transformerChain}
 	                        supplierName={item.supplierName}
+	                        originalRequestModel={item.originalRequestModel}
 	                        requestedModel={item.requestedModel}
 	                        upstreamModel={item.upstreamModel}
 	                        billingModel={item.model}
@@ -538,8 +554,12 @@ const RequestListComponent: React.FC<RequestListProps> = ({
                       {item.responseStatus || 'N/A'}
                     </Chip>
                   </TableCell>
-                  <TableCell className="w-28 text-sm text-primary dark:text-primary font-mono" title={getPricingSnapshotTooltip(item.pricingSnapshot)}>
-                    {renderCostText(item)}
+                  <TableCell className="w-28">
+                    <Tooltip content={getPricingSnapshotTooltip(item.pricingSnapshot)} placement="top">
+                      <span className="text-sm text-primary dark:text-primary font-mono hover:text-secondary dark:hover:text-secondary cursor-help transition-colors block truncate">
+                        {renderCostText(item)}
+                      </span>
+                    </Tooltip>
                   </TableCell>
                   <TableCell className="w-48 text-sm text-primary dark:text-primary">
                     {item.requestSize || item.responseSize ? (

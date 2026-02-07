@@ -242,8 +242,10 @@ export interface RequestRecord {
   transformedPath?: string;
 
   // 统计相关字段（可选，用于向后兼容）
-  // requestedModel: 入站/用户请求的模型
+  // originalRequestModel: 客户端原始请求的模型
+  // requestedModel: 发送给供应商的模型（转换后）
   // upstreamModel: 上游实际返回/使用的模型（若能解析到）
+  originalRequestModel?: string;
   requestedModel?: string;
   upstreamModel?: string;
   // cachedInputTokens: 上游返回的缓存命中 token 数（如 OpenAI/Codex cached_tokens / Claude cache_read_input_tokens）
@@ -298,6 +300,7 @@ export interface RequestRecordResponse {
   transformTrace?: any; // 转换追踪信息
 
   // 模型与计费口径（新增）
+  originalRequestModel?: string;
   requestedModel?: string;
   upstreamModel?: string;
   cachedInputTokens?: number;
@@ -338,6 +341,7 @@ export interface RequestListResponse {
     transformedPath?: string;
 
     // 模型与计费口径（列表只带轻量字段）
+    originalRequestModel?: string;
     requestedModel?: string;
     upstreamModel?: string;
     model?: string;
