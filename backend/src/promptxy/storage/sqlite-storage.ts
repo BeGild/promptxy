@@ -320,6 +320,7 @@ CREATE INDEX IF NOT EXISTS idx_requests_path_ts ON requests(path, ts DESC);
     await this.safeAddColumn('requests', 'route_name_snapshot', 'TEXT');
     await this.safeAddColumn('requests', 'pricing_status', 'TEXT');
     await this.safeAddColumn('requests', 'pricing_snapshot_json', 'TEXT');
+    await this.safeAddColumn('requests', 'original_request_model', 'TEXT');
   }
 
   async close(): Promise<void> {
