@@ -72,6 +72,8 @@
     --color-client-codex-bg: #EDF2F7;
     --color-client-codex-light: #E2E8F0;
 
+    --color-client-openai-chat: #10A37F; /* OpenAI Chat - 绿色 */
+
     --color-client-gemini: #4285F4; /* Google Gemini - 蓝色 */
     --color-client-gemini-bg: #EBF3FE;
     --color-client-gemini-light: #D2E3FC;

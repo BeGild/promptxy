@@ -28,6 +28,7 @@ import { AnthropicIcon, OpenAIIcon, GeminiIcon, CodexIcon } from '@/components/i
 const CLIENT_ICONS: Record<string, React.ReactNode> = {
   claude: <AnthropicIcon size={20} className="w-full h-full" />,
   codex: <CodexIcon size={20} className="w-full h-full" />,
+  'openai-chat': <OpenAIIcon size={20} className="w-full h-full" />,
   gemini: <GeminiIcon size={20} className="w-full h-full" />,
 };
 

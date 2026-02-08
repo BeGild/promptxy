@@ -116,6 +116,7 @@ export function formatClient(client: string): string {
   const map: Record<string, string> = {
     claude: 'Claude',
     codex: 'Codex',
+    'openai-chat': 'OpenAI Chat',
     gemini: 'Gemini',
   };
   return map[client] || client;
@@ -148,6 +149,7 @@ export function getClientColorStyle(client: string): React.CSSProperties {
   const colorMap: Record<string, string> = {
     claude: 'var(--color-client-claude)', // Anthropic Claude - 橙色 #D97757
     codex: 'var(--color-client-codex)', // OpenAI Codex - 深灰蓝 #2D3748
+    'openai-chat': 'var(--color-client-openai-chat)',
     gemini: 'var(--color-client-gemini)', // Google Gemini - 蓝色 #4285F4
   };
   const color = colorMap[client] || 'var(--color-text-primary)';

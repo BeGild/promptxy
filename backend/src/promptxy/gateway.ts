@@ -20,6 +20,7 @@ import { createLogger } from './logger.js';
 import {
   PromptxyConfig,
   PromptxyClient,
+  SupplierClientIcon,
   PromptxyRuleMatch,
   PromptxyRule,
   RequestRecord,
@@ -497,10 +498,10 @@ function deriveTransformer(
  * 根据供应商协议获取客户端类型
  * 用于前端显示正确的图标
  */
-function getSupplierClient(protocol: Supplier['protocol']): PromptxyClient {
+function getSupplierClient(protocol: Supplier['protocol']): SupplierClientIcon {
   if (protocol === 'anthropic') return 'claude';
   if (protocol === 'openai-codex') return 'codex';
-  if (protocol === 'openai-chat') return 'codex'; // 复用 codex 图标
+  if (protocol === 'openai-chat') return 'openai-chat';
   if (protocol === 'gemini') return 'gemini';
   return 'claude'; // 默认
 }

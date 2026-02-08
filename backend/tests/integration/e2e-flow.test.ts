@@ -1,5 +1,5 @@
 /**
- * PromptXY 端到端流程测试：Claude Code → /claude → 协议转换器(codex/gemini/openai-chat) → 上游
+ * PromptXY 端到端流程测试：Claude Code → /claude → 协议转换器(codex/openai-chat/...) → 上游
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -70,6 +70,13 @@ describe('E2E Flow', () => {
               outboundModel: 'gpt-4o-mini',
               enabled: true,
             },
+            {
+              id: 'm-haiku',
+              inboundModel: '*-haiku-*',
+              targetSupplierId: 'openai-chat-up',
+              outboundModel: 'gpt-4o-mini',
+              enabled: true,
+            },
           ],
           enabled: true,
         },
@@ -125,5 +132,38 @@ describe('E2E Flow', () => {
     expect(detail.body.transformTrace).toBeTruthy();
     expect(detail.body.routeNameSnapshot).toBe('Claude 路由');
     expect(typeof detail.body.pricingStatus).toBe('string');
+  });
+
+  it('应将 Claude /v1/messages 转为 OpenAI Chat /chat/completions 且 supplierClient 为 openai-chat', async () => {
+    const res = await client.post('/claude/v1/messages', {
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 32,
+      system: 'You are a helpful assistant.',
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.type).toBe('message');
+
+    const captured = getCaptured();
+    expect(captured.url).toBe('/chat/completions');
+
+    await waitForCondition(async () => {
+      const list = await client.get('/_promptxy/requests?limit=10&client=claude');
+      return (list.body?.total || 0) >= 1;
+    }, 2000);
+
+    const list = await client.get('/_promptxy/requests?limit=10&client=claude');
+    const item = list.body.items[0];
+
+    expect(item.routeNameSnapshot).toBe('Claude 路由');
+    expect(item.supplierName).toBe('openai-chat-up');
+    expect(item.supplierClient).toBe('openai-chat');
+    expect(item.transformerChain).toEqual(['openai-chat']);
+
+    const detail = await client.get(`/_promptxy/requests/${item.id}`);
+    expect(detail.body.routeId).toBe('r-claude-to-codex');
+    expect(detail.body.supplierId).toBe('openai-chat-up');
+    expect(detail.body.transformerChain).toEqual(['openai-chat']);
   });
 });

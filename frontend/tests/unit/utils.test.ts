@@ -165,6 +165,7 @@ describe('Formatter Utils', () => {
     it('应该格式化已知客户端', () => {
       expect(formatClient('claude')).toBe('Claude');
       expect(formatClient('codex')).toBe('Codex');
+      expect(formatClient('openai-chat')).toBe('OpenAI Chat');
       expect(formatClient('gemini')).toBe('Gemini');
     });
 

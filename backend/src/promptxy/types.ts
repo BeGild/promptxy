@@ -14,6 +14,9 @@
 // ============================================================================
 
 export type PromptxyClient = 'claude' | 'codex' | 'gemini';
+
+// 供应商侧图标展示用（不等同于入口 client）
+export type SupplierClientIcon = PromptxyClient | 'openai-chat';
 export type PromptxyField = 'system' | 'instructions';
 
 export type PromptxyOpType =
