@@ -1308,6 +1308,7 @@ export function createGateway(
       let bodyBuffer: Buffer | undefined;
       const expectsBody = method !== 'GET' && method !== 'HEAD';
 
+      let inboundOriginalRequestModel: string | undefined;
       if (expectsBody) {
         bodyBuffer = await readRequestBody(req, { maxBytes: 20 * 1024 * 1024 });
         originalBodyBuffer = bodyBuffer; // 保存原始请求体
@@ -1316,6 +1317,10 @@ export function createGateway(
         if (shouldParseJson(Array.isArray(contentType) ? contentType[0] : contentType)) {
           try {
             jsonBody = JSON.parse(bodyBuffer.toString('utf-8'));
+            inboundOriginalRequestModel =
+              jsonBody && typeof jsonBody === 'object' && typeof (jsonBody as any).model === 'string'
+                ? (jsonBody as any).model
+                : undefined;
           } catch {
             // Keep passthrough behavior when JSON is invalid; upstream will reject if needed.
             jsonBody = undefined;
@@ -1826,7 +1831,7 @@ export function createGateway(
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
             // 统计相关字段
-            originalRequestModel: pricingResult.originalRequestModel,
+            originalRequestModel: inboundOriginalRequestModel,
             requestedModel: pricingResult.requestedModel,
             upstreamModel: pricingResult.upstreamModel,
             model: pricingResult.model,
@@ -1931,7 +1936,7 @@ export function createGateway(
             transformerChain: JSON.stringify(transformerChain),
             transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
             // 统计相关字段
-            originalRequestModel: pricingResult.originalRequestModel,
+            originalRequestModel: inboundOriginalRequestModel,
             requestedModel: pricingResult.requestedModel,
             upstreamModel: pricingResult.upstreamModel,
             model: pricingResult.model,
@@ -2048,6 +2053,7 @@ export function createGateway(
       const savedClient = matchedRoute.client;
       const savedPath = upstreamPath ?? url.pathname;
       const savedJsonBody = effectiveBody;
+      const savedOriginalRequestModel = inboundOriginalRequestModel;
       const savedSupplierId = matchedRoute.supplier.id;
       const savedSupplierName = matchedRoute.supplier.name;
       const savedSupplierBaseUrl = matchedRoute.supplier.baseUrl;
@@ -2144,6 +2150,7 @@ export function createGateway(
           transformerChain: JSON.stringify(transformerChain),
           transformTrace: transformTrace ? JSON.stringify(transformTrace) : undefined,
           // 统计相关字段
+          originalRequestModel: savedOriginalRequestModel,
           requestedModel: pricingResult.requestedModel,
           upstreamModel: pricingResult.upstreamModel,
           model: pricingResult.model,

@@ -132,6 +132,11 @@ describe('E2E Flow', () => {
     expect(detail.body.transformTrace).toBeTruthy();
     expect(detail.body.routeNameSnapshot).toBe('Claude 路由');
     expect(typeof detail.body.pricingStatus).toBe('string');
+
+    // originalRequestModel 必须来自入站请求体（任何 modelMapping / 协议转换之前）
+    expect(detail.body.originalRequestModel).toBe('claude-3-5-sonnet-20241022');
+    // requestedModel 代表实际发送给上游的模型（转换后）
+    expect(detail.body.requestedModel).toBe('gpt-4o-mini');
   });
 
   it('应将 Claude /v1/messages 转为 OpenAI Chat /chat/completions 且 supplierClient 为 openai-chat', async () => {

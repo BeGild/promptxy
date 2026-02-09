@@ -270,6 +270,7 @@ export async function handleGetRequest(
       transformTrace: record.transformTrace ? safeParseJson(record.transformTrace) : undefined,
 
       // 模型与计费口径（新增）
+      originalRequestModel: (record as any).originalRequestModel,
       requestedModel: (record as any).requestedModel,
       upstreamModel: (record as any).upstreamModel,
       model: (record as any).model,
