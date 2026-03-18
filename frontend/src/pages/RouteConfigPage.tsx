@@ -54,6 +54,14 @@ const LOCAL_SERVICES: Array<{
     icon: CodexIcon,
   },
   {
+    key: 'chat',
+    label: 'Chat',
+    prefix: '/chat',
+    protocol: 'openai-chat',
+    color: '#10A37F',
+    icon: OpenAIIcon,
+  },
+  {
     key: 'gemini',
     label: 'Gemini',
     prefix: '/gemini',
@@ -139,7 +147,7 @@ export const RouteConfigPage: React.FC = () => {
         }
       }
     }
-    // Codex/Gemini: 检查单一供应商
+    // Codex/Chat/Gemini: 检查单一供应商
     else {
       if (!newRoute.singleSupplierId) {
         toast.error('请选择上游供应商');
@@ -549,7 +557,7 @@ export const RouteConfigPage: React.FC = () => {
                       enabled: true,
                     });
                   } else {
-                    // Codex/Gemini: 清空规则，准备选择单一供应商
+                    // Codex/Chat/Gemini: 清空规则，准备选择单一供应商
                     setNewRoute({
                       localService: key,
                       modelMappings: [],
@@ -591,7 +599,7 @@ export const RouteConfigPage: React.FC = () => {
               />
             )}
 
-            {/* Codex/Gemini: 单一供应商选择 */}
+            {/* Codex/Chat/Gemini: 单一供应商选择 */}
             {newRoute.localService !== 'claude' && (
               <div>
                 <label className="text-sm font-medium text-primary mb-2 block">
@@ -614,7 +622,7 @@ export const RouteConfigPage: React.FC = () => {
                 </Select>
                 {getAvailableSuppliers(newRoute.localService!).length === 0 && (
                   <p className="text-xs text-tertiary mt-2">
-                    ⚠️ 仅显示 {newRoute.localService} 协议的供应商
+                    ⚠️ 仅显示 {newRoute.localService} 对应协议的供应商
                   </p>
                 )}
               </div>
@@ -680,7 +688,7 @@ export const RouteConfigPage: React.FC = () => {
                   />
                 )}
 
-                {/* Codex/Gemini: 单一供应商选择 */}
+                {/* Codex/Chat/Gemini: 单一供应商选择 */}
                 {editingRoute.localService !== 'claude' && (
                   <div>
                     <label className="text-sm font-medium text-primary mb-2 block">

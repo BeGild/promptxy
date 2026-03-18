@@ -53,11 +53,11 @@ describe('Config Module', () => {
     expect(config.listen.port).toBe(7070);
 
     expect(config.suppliers).toHaveLength(4);
-    expect(config.routes).toHaveLength(3);
+    expect(config.routes).toHaveLength(4);
 
-    // 默认路由应为三条入口各一条 enabled
+    // 默认路由应为四条入口各一条 enabled
     const enabledRoutes = config.routes.filter(r => r.enabled);
-    expect(enabledRoutes).toHaveLength(3);
+    expect(enabledRoutes).toHaveLength(4);
 
     expect(config.storage.maxHistory).toBeGreaterThan(0);
     expect(config.debug).toBe(false);
@@ -87,7 +87,7 @@ describe('Config Module', () => {
 
     // 未显式提供时应使用默认 suppliers/routes
     expect(config.suppliers).toHaveLength(4);
-    expect(config.routes).toHaveLength(3);
+    expect(config.routes).toHaveLength(4);
   });
 
   it('应应用环境变量覆盖（host/port/debug/maxHistory）', async () => {
@@ -679,6 +679,58 @@ describe('Config Module', () => {
       await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*modelMappings.*gemini.*singleSupplierId/);
     });
 
+    it('应拒绝 chat route 中的 modelMappings（只允许 singleSupplierId）', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-chat-invalid',
+          localService: 'chat',
+          modelMappings: [
+            {
+              id: 'mapping-default',
+              inboundModel: '*',
+              targetSupplierId: 'openai-chat-official',
+              outboundModel: undefined,
+              enabled: true,
+            },
+          ],
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'openai-chat-official',
+                name: 'openai-chat-official',
+                displayName: 'OpenAI Chat',
+                baseUrl: 'https://api.openai.com/v1',
+                protocol: 'openai-chat',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\].*modelMappings.*chat.*singleSupplierId/);
+    });
+
     it('应拒绝 codex route 缺少 singleSupplierId', async () => {
       await mkdir(TEST_ROOT, { recursive: true });
       process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
@@ -748,6 +800,49 @@ describe('Config Module', () => {
                 displayName: 'Gemini (Google)',
                 baseUrl: 'https://generativelanguage.googleapis.com',
                 protocol: 'gemini',
+                enabled: true,
+                auth: { type: 'none' },
+                supportedModels: [],
+              },
+            ],
+            routes,
+            rules: [],
+            storage: { maxHistory: 100 },
+            debug: false,
+          },
+          null,
+          2,
+        ),
+        'utf-8',
+      );
+
+      await expect(loadConfig()).rejects.toThrow(/config\.routes\[0\]\.singleSupplierId.*non-empty string/);
+    });
+
+    it('应拒绝 chat route 缺少 singleSupplierId', async () => {
+      await mkdir(TEST_ROOT, { recursive: true });
+      process.env.PROMPTXY_CONFIG = TEST_CONFIG_PATH;
+
+      const routes = [
+        {
+          id: 'route-chat-missing-supplier',
+          localService: 'chat',
+          enabled: true,
+        },
+      ];
+
+      await writeFile(
+        TEST_CONFIG_PATH,
+        JSON.stringify(
+          {
+            listen: { host: '127.0.0.1', port: 7070 },
+            suppliers: [
+              {
+                id: 'openai-chat-official',
+                name: 'openai-chat-official',
+                displayName: 'OpenAI Chat',
+                baseUrl: 'https://api.openai.com/v1',
+                protocol: 'openai-chat',
                 enabled: true,
                 auth: { type: 'none' },
                 supportedModels: [],

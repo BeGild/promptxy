@@ -95,7 +95,7 @@ export const RequestDetailSidebar: React.FC<RequestDetailSidebarProps> = ({
       }
 
       // 验证 client 是否为有效的 PromptxyClient
-      const validClients: PromptxyClient[] = ['claude', 'codex', 'gemini'];
+      const validClients: PromptxyClient[] = ['claude', 'codex', 'chat', 'gemini'];
       const client: PromptxyClient = validClients.includes(request.client as PromptxyClient)
         ? (request.client as PromptxyClient)
         : 'claude';

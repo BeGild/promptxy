@@ -193,12 +193,12 @@ export interface ModelSearchResponse {
 /**
  * 本地服务类型
  */
-export type LocalService = 'claude' | 'codex' | 'gemini';
+export type LocalService = 'claude' | 'codex' | 'chat' | 'gemini';
 
 /**
  * 转换器类型
  */
-export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'gemini' | 'none';
+export type TransformerType = 'anthropic' | 'openai' | 'codex' | 'openai-chat' | 'gemini' | 'none';
 
 /**
  * 模型映射规则
@@ -229,14 +229,14 @@ export interface ModelMappingRule {
  */
 export interface Route {
   id: string;
-  localService: LocalService; // 本地服务（/claude, /codex, /gemini）
+  localService: LocalService; // 本地服务（/claude, /codex, /chat, /gemini）
   /**
    * 模型映射规则列表（仅 claude 路由使用）
    * 按顺序匹配，第一个命中的生效
    */
   modelMappings?: ModelMappingRule[];
   /**
-   * 单一供应商ID（codex/gemini 路由使用，简化配置）
+   * 单一供应商ID（codex/chat/gemini 路由使用，简化配置）
    */
   singleSupplierId?: string;
   enabled: boolean;

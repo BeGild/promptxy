@@ -26,6 +26,7 @@ export const ConfigStatusIndicator: React.FC = () => {
   const paths = [
     { key: '/claude', label: '/claude' },
     { key: '/codex', label: '/codex' },
+    { key: '/chat', label: '/chat' },
     { key: '/gemini', label: '/gemini' },
   ];
 

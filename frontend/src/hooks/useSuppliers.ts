@@ -21,6 +21,7 @@ import type {
 const PREFIX_COLORS: Record<string, string> = {
   '/claude': '🟧', // Claude (Anthropic) - 橙色 #D97757
   '/codex': '⬛', // Codex (Responses) - 深灰蓝 #2D3748
+  '/chat': '🟩', // OpenAI Chat - 绿色 #10A37F
   '/gemini': '🟦', // Gemini (Google) - 蓝色 #4285F4
   '/test': '🟫',
   '/custom': '🟥',
@@ -32,6 +33,7 @@ const PREFIX_COLORS: Record<string, string> = {
 export const COMMON_PREFIX_OPTIONS: CommonPrefixOption[] = [
   { prefix: '/claude', label: '/claude', description: 'Claude API', color: '🟧' },
   { prefix: '/codex', label: '/codex', description: 'Codex API (Responses)', color: '⬛' },
+  { prefix: '/chat', label: '/chat', description: 'OpenAI Chat API', color: '🟩' },
   { prefix: '/gemini', label: '/gemini', description: 'Gemini API', color: '🟦' },
   { prefix: '/test', label: '/test', description: '测试用', color: '🟫' },
 ];

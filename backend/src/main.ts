@@ -44,7 +44,7 @@ async function main() {
   server.listen(config.listen.port, config.listen.host, () => {
     logger.info(`[PromptXY] 服务启动: http://${config.listen.host}:${config.listen.port}`);
     logger.info(`[PromptXY] API路由: /_promptxy/*`);
-    logger.info(`[PromptXY] 代理路由: /claude/*, /codex/*, /gemini/*`);
+    logger.info(`[PromptXY] 代理路由: /claude/*, /codex/*, /chat/*, /gemini/*`);
   });
 
   // 优雅关闭处理

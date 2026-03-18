@@ -16,7 +16,7 @@
  */
 
 import React from 'react';
-import { AnthropicIcon, CodexIcon, GeminiIcon } from '@/components/icons/SupplierIcons';
+import { AnthropicIcon, CodexIcon, GeminiIcon, OpenAIIcon } from '@/components/icons/SupplierIcons';
 import type { LocalService } from '@/types/api';
 
 interface LocalServiceConfig {
@@ -50,6 +50,16 @@ const LOCAL_SERVICES: LocalServiceConfig[] = [
     bgColorClass: 'bg-[#2D3748]/25',
     textColorClass: 'text-[#2D3748]',
     icon: CodexIcon,
+  },
+  {
+    key: 'chat',
+    label: 'Chat',
+    prefix: '/chat',
+    protocol: 'openai-chat',
+    color: '#10A37F',
+    bgColorClass: 'bg-[#10A37F]/25',
+    textColorClass: 'text-[#10A37F]',
+    icon: OpenAIIcon,
   },
   {
     key: 'gemini',

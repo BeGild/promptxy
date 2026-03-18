@@ -486,8 +486,9 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
 
   const requireSupplierProtocol = (
     localService: string,
-  ): 'openai-codex' | 'gemini' | null => {
+  ): 'openai-codex' | 'openai-chat' | 'gemini' | null => {
     if (localService === 'codex') return 'openai-codex';
+    if (localService === 'chat') return 'openai-chat';
     if (localService === 'gemini') return 'gemini';
     return null;
   };
@@ -558,7 +559,7 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
       throw new Error(`${label}.enabled must be a boolean`);
     }
 
-    // 字段互斥检查：claude vs codex/gemini 使用不同的字段
+    // 字段互斥检查：claude vs codex/chat/gemini 使用不同的字段
     if (route.localService === 'claude') {
       // claude 不应该有 singleSupplierId
       if ('singleSupplierId' in route && route.singleSupplierId !== undefined) {
@@ -606,15 +607,15 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
         // Claude 支持所有协议的供应商转换
         assertTargetModelForSupplier(ruleLabel, targetSupplier, rule.outboundModel);
       }
-    } else if (route.localService === 'codex' || route.localService === 'gemini') {
-      // codex/gemini 不应该有 modelMappings
+    } else if (route.localService === 'codex' || route.localService === 'chat' || route.localService === 'gemini') {
+      // codex/chat/gemini 不应该有 modelMappings
       if ('modelMappings' in route && route.modelMappings !== undefined && route.modelMappings.length > 0) {
         throw new Error(
           `${label}.modelMappings 不适用于 ${route.localService} 路由。${route.localService} 路由应使用 singleSupplierId 字段。`
         );
       }
 
-      // codex/gemini 必须有 singleSupplierId
+      // codex/chat/gemini 必须有 singleSupplierId
       if (!route.singleSupplierId || typeof route.singleSupplierId !== 'string') {
         throw new Error(`${label}.singleSupplierId must be a non-empty string`);
       }
@@ -625,7 +626,7 @@ function assertConfig(config: PromptxyConfig): PromptxyConfig {
       }
       assertSupplierProtocolForRoute(`${label}.singleSupplierId`, route.localService, targetSupplier);
     } else {
-      throw new Error(`${label}.localService 必须是 'claude'、'codex' 或 'gemini' 之一`);
+      throw new Error(`${label}.localService 必须是 'claude'、'codex'、'chat' 或 'gemini' 之一`);
     }
   }
 
@@ -965,13 +966,16 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
     enabledSeen.add(route.localService);
   }
 
-  // 3) 补齐缺失的本地入口路由（claude/codex/gemini）
+  // 3) 补齐缺失的本地入口路由（claude/codex/chat/gemini）
   const ensureRoute = (localService: Route['localService']) => {
     if (next.some(r => r.localService === localService)) return;
 
     const pickSupplier = () => {
       if (localService === 'codex') {
         return suppliers.find(s => s.enabled && s.protocol === 'openai-codex') ?? suppliers.find(s => s.protocol === 'openai-codex');
+      }
+      if (localService === 'chat') {
+        return suppliers.find(s => s.enabled && s.protocol === 'openai-chat') ?? suppliers.find(s => s.protocol === 'openai-chat');
       }
       if (localService === 'gemini') {
         return suppliers.find(s => s.enabled && s.protocol === 'gemini') ?? suppliers.find(s => s.protocol === 'gemini');
@@ -1020,6 +1024,7 @@ function migrateRoutes(routes: unknown, suppliers: Supplier[]): Route[] | undefi
 
   ensureRoute('claude');
   ensureRoute('codex');
+  ensureRoute('chat');
   ensureRoute('gemini');
 
   return changed ? next : routes;

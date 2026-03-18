@@ -70,6 +70,12 @@ describe("gateway routing compat", () => {
           enabled: true,
           singleSupplierId: "gemini-up",
         },
+        {
+          id: "r-chat",
+          localService: "chat",
+          enabled: true,
+          singleSupplierId: "openai-chat-up",
+        },
       ],
       rules: [],
       storage: { maxHistory: 1000 },
@@ -81,7 +87,7 @@ describe("gateway routing compat", () => {
       pathname: string;
       body: any;
       expect: {
-        localService: "claude" | "codex" | "gemini";
+        localService: "claude" | "codex" | "chat" | "gemini";
         supplierId: string;
         supplierProtocol: string;
         targetModel: string | undefined;
@@ -121,6 +127,18 @@ describe("gateway routing compat", () => {
           supplierId: "gemini-up",
           supplierProtocol: "gemini",
           targetModel: "gemini-pro",
+          transformer: "none",
+        },
+      },
+      {
+        name: "chat routes to singleSupplierId with passthrough transformer",
+        pathname: "/chat/v1/chat/completions",
+        body: { model: "gpt-4o-mini" },
+        expect: {
+          localService: "chat",
+          supplierId: "openai-chat-up",
+          supplierProtocol: "openai-chat",
+          targetModel: "gpt-4o-mini",
           transformer: "none",
         },
       },

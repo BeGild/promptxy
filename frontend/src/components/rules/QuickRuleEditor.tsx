@@ -125,7 +125,7 @@ const createRuleFromRequest = (
 
   // 将 string 类型的 client 转换为 PromptxyClient 类型
   rule.when.client =
-    request.client === 'claude' || request.client === 'codex' || request.client === 'gemini'
+    request.client === 'claude' || request.client === 'codex' || request.client === 'chat' || request.client === 'gemini'
       ? request.client
       : 'claude'; // 默认值
 
@@ -303,7 +303,7 @@ export const QuickRuleEditor: React.FC<QuickRuleEditorProps> = ({
 
     try {
       // 验证 client 是否为有效的 PromptxyClient
-      const validClients: PromptxyClient[] = ['claude', 'codex', 'gemini'];
+      const validClients: PromptxyClient[] = ['claude', 'codex', 'chat', 'gemini'];
       const client: PromptxyClient = validClients.includes(request.client as PromptxyClient)
         ? (request.client as PromptxyClient)
         : 'claude';

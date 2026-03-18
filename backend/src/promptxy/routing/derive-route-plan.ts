@@ -22,7 +22,7 @@ export function deriveRoutePlan(
 
   const inboundModel = ctx.bodySummary?.model;
 
-  if (route.localService === "codex" || route.localService === "gemini") {
+  if (route.localService === "codex" || route.localService === "chat" || route.localService === "gemini") {
     const supplier = (deps.suppliers || []).find(s => s.id === route.singleSupplierId);
     return {
       localService: route.localService,

@@ -70,6 +70,7 @@
 │  │  │  API路由     │  │  SSE推送     │  │  代理核心    │  │
 │  │  │  /_promptxy/*│  │  /_promptxy  │  │  /claude/*   │  │
 │  │  │              │  │              │  │  /codex/*    │  │
+│  │  │              │  │              │  │  /chat/*     │  │
 │  │  │              │  │              │  │  /gemini/*   │  │
 │  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  │
 │  └─────────┼──────────────────┼──────────────────┼─────────┘
@@ -209,6 +210,12 @@ export ANTHROPIC_BASE_URL="http://127.0.0.1:PORT/claude"
 export OPENAI_BASE_URL="http://127.0.0.1:PORT/codex"
 ```
 
+### OpenAI Chat 客户端
+
+```bash
+export OPENAI_BASE_URL="http://127.0.0.1:PORT/chat"
+```
+
 ### Gemini CLI
 
 ```bash
@@ -216,7 +223,7 @@ export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:PORT/gemini"
 ```
 > KEY/TOKEN的配置保持原样即可(透明代理，完美转发)
 
-> 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/codex`、`/gemini`）。
+> 将 `PORT` 替换为实际运行端口。所有 CLI 配置都必须带上路径前缀（`/claude`、`/codex`、`/chat`、`/gemini`）。
 
 ## 🧩 按模型粒度映射到供应商 + 模型
 
@@ -233,7 +240,7 @@ PromptXY 通过"模型映射规则"解决该问题：
 
 > 提示：若目标供应商配置了 `supportedModels` 且非空，UI 会提供目标模型下拉选择。
 
-> 入口约束：`/codex` 仅允许选择 `protocol=openai` 的供应商，`/gemini` 仅允许选择 `protocol=gemini` 的供应商。
+> 入口约束：`/codex` 仅允许选择 `protocol=openai-codex` 的供应商，`/chat` 仅允许选择 `protocol=openai-chat` 的供应商，`/gemini` 仅允许选择 `protocol=gemini` 的供应商。
 
 > transformer 不再作为配置字段保存，运行时会根据入口与目标供应商协议自动推断。
 

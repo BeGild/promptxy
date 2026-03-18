@@ -13,7 +13,7 @@
 // 基础类型
 // ============================================================================
 
-export type PromptxyClient = 'claude' | 'codex' | 'gemini';
+export type PromptxyClient = 'claude' | 'codex' | 'chat' | 'gemini';
 
 // 供应商侧图标展示用（不等同于入口 client）
 export type SupplierClientIcon = PromptxyClient | 'openai-chat';
@@ -541,7 +541,7 @@ export interface PathsResponse {
 /**
  * 本地服务类型（对应路径前缀）
  */
-export type LocalService = 'claude' | 'codex' | 'gemini';
+export type LocalService = 'claude' | 'codex' | 'chat' | 'gemini';
 
 /**
  * 转换器类型
@@ -580,14 +580,14 @@ export interface ModelMappingRule {
  */
 export interface Route {
   id: string; // 路由唯一标识
-  localService: LocalService; // 本地服务（/claude, /codex, /gemini）
+  localService: LocalService; // 本地服务（/claude, /codex, /chat, /gemini）
   /**
    * 模型映射规则列表（仅 claude 路由使用）
    * 按顺序匹配，第一个命中的生效
    */
   modelMappings?: ModelMappingRule[];
   /**
-   * 单一供应商ID（codex/gemini 路由使用，简化配置）
+   * 单一供应商ID（codex/chat/gemini 路由使用，简化配置）
    * 这些路由不支持协议转换，只需指定一个同协议的供应商
    */
   singleSupplierId?: string;
@@ -751,7 +751,7 @@ export interface StatsModel extends StatsMetrics {
  */
 export interface StatsRoute extends StatsMetrics {
   routeId: string;
-  localService: string;       // claude | codex | gemini
+  localService: string;       // claude | codex | chat | gemini
 }
 
 /**

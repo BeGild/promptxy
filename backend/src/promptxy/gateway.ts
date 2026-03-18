@@ -137,6 +137,7 @@ function getRouteNameSnapshot(route: Route): string {
   const map: Record<LocalService, string> = {
     claude: 'Claude 路由',
     codex: 'Codex 路由',
+    chat: 'Chat 路由',
     gemini: 'Gemini 路由',
   };
   return map[route.localService] || route.localService;
@@ -471,6 +472,11 @@ function matchLocalService(pathname: string): {
   if (pathname === '/codex')
     return { client: 'codex', localService: 'codex', pathPrefix: '/codex' };
 
+  if (pathname.startsWith('/chat/'))
+    return { client: 'chat', localService: 'chat', pathPrefix: '/chat' };
+  if (pathname === '/chat')
+    return { client: 'chat', localService: 'chat', pathPrefix: '/chat' };
+
   if (pathname.startsWith('/gemini/'))
     return { client: 'gemini', localService: 'gemini', pathPrefix: '/gemini' };
   if (pathname === '/gemini')
@@ -484,6 +490,7 @@ function deriveTransformer(
   supplierProtocol: Supplier['protocol'],
 ): TransformerType {
   if (localService === 'codex') return 'none';
+  if (localService === 'chat') return 'none';
   if (localService === 'gemini') return 'none';
 
   if (supplierProtocol === 'anthropic') return 'none';
@@ -507,9 +514,12 @@ function getSupplierClient(protocol: Supplier['protocol']): SupplierClientIcon {
 }
 
 function validateRouteConstraints(route: Route, supplier: Supplier): string | null {
-  // Codex/Gemini：必须透明转发，且 supplier 协议必须匹配
+  // Codex/Chat/Gemini：必须透明转发，且 supplier 协议必须匹配
   if (route.localService === 'codex') {
     if (supplier.protocol !== 'openai-codex') return 'Codex 入口仅允许对接 openai-codex 协议供应商';
+  }
+  if (route.localService === 'chat') {
+    if (supplier.protocol !== 'openai-chat') return 'Chat 入口仅允许对接 openai-chat 协议供应商';
   }
   if (route.localService === 'gemini') {
     if (supplier.protocol !== 'gemini') return 'Gemini 入口仅允许对接 gemini 协议供应商';
@@ -529,8 +539,8 @@ function resolveEffectiveModelMapping(
   route: Route,
   suppliers: Supplier[],
 ): EffectiveModelMappingResult {
-  // Codex/Gemini: 使用单一供应商配置
-  if (route.localService === 'codex' || route.localService === 'gemini') {
+  // Codex/Chat/Gemini: 使用单一供应商配置
+  if (route.localService === 'codex' || route.localService === 'chat' || route.localService === 'gemini') {
     if (!route.singleSupplierId) {
       return {
         ok: false,

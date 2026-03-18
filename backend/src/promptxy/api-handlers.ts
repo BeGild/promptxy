@@ -1222,6 +1222,7 @@ export async function handleValidateTransformer(
 const LOCAL_SERVICE_PROTOCOLS: Record<LocalService, 'anthropic' | 'openai' | 'gemini'> = {
   claude: 'anthropic',
   codex: 'openai',
+  chat: 'openai',
   gemini: 'gemini',
 };
 
@@ -1325,6 +1326,9 @@ function assertRouteProtocolConstraint(
   if (localService === 'codex' && supplierProtocol !== 'openai-codex') {
     throw new Error('Codex 入口仅允许对接 openai-codex 协议供应商');
   }
+  if (localService === 'chat' && supplierProtocol !== 'openai-chat') {
+    throw new Error('Chat 入口仅允许对接 openai-chat 协议供应商');
+  }
   if (localService === 'gemini' && supplierProtocol !== 'gemini') {
     throw new Error('Gemini 入口仅允许对接 gemini 协议供应商');
   }
@@ -1335,6 +1339,7 @@ function deriveTransformer(
   supplierProtocol: Supplier['protocol'],
 ): string {
   if (localService === 'codex') return 'none';
+  if (localService === 'chat') return 'none';
   if (localService === 'gemini') return 'none';
   if (supplierProtocol === 'anthropic') return 'none';
   if (supplierProtocol === 'openai-codex') return 'codex';
@@ -1372,8 +1377,8 @@ export async function handleCreateRoute(
 
     const localService = routeData.localService;
 
-    // Codex/Gemini: 验证单一供应商
-    if (localService === 'codex' || localService === 'gemini') {
+    // Codex/Chat/Gemini: 验证单一供应商
+    if (localService === 'codex' || localService === 'chat' || localService === 'gemini') {
       if (!routeData.singleSupplierId) {
         sendJson(res, 400, {
           success: false,
@@ -1389,7 +1394,7 @@ export async function handleCreateRoute(
         });
         return;
       }
-      // 入口协议约束（codex/gemini 不允许跨协议）
+      // 入口协议约束（codex/chat/gemini 不允许跨协议）
       try {
         assertRouteProtocolConstraint(localService, supplier.protocol);
       } catch (e: any) {
@@ -1481,8 +1486,8 @@ export async function handleUpdateRoute(
     const currentRoute = config.routes[index];
     const nextLocalService = currentRoute.localService;
 
-    // Codex/Gemini: 验证单一供应商
-    if (nextLocalService === 'codex' || nextLocalService === 'gemini') {
+    // Codex/Chat/Gemini: 验证单一供应商
+    if (nextLocalService === 'codex' || nextLocalService === 'chat' || nextLocalService === 'gemini') {
       const nextSupplierId = routeUpdate.singleSupplierId ?? currentRoute.singleSupplierId;
       if (!nextSupplierId) {
         sendJson(res, 400, { success: false, message: '必须指定上游供应商' });
@@ -1493,7 +1498,7 @@ export async function handleUpdateRoute(
         sendJson(res, 400, { success: false, message: '指定的上游供应商不存在' });
         return;
       }
-      // 入口协议约束（codex/gemini 不允许跨协议）
+      // 入口协议约束（codex/chat/gemini 不允许跨协议）
       try {
         assertRouteProtocolConstraint(nextLocalService, supplier.protocol);
       } catch (e: any) {

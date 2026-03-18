@@ -2,7 +2,7 @@
  * 规则相关类型定义
  */
 
-export type PromptxyClient = 'claude' | 'codex' | 'gemini';
+export type PromptxyClient = 'claude' | 'codex' | 'chat' | 'gemini';
 export type PromptxyField = 'system' | 'instructions';
 
 export type PromptxyOpType =

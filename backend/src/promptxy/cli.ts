@@ -82,6 +82,7 @@ export function printHelp(): void {
   /_promptxy/*              Web 管理界面和 API 端点
   /claude/*                 Claude API 代理 (Anthropic)
   /codex/*                  Codex API 代理 (Responses)
+  /chat/*                   OpenAI Chat API 代理
   /gemini/*                 Gemini API 代理 (Google)
 
 使用示例:
@@ -97,6 +98,9 @@ CLI 工具配置:
 
   # OpenAI Codex
   export OPENAI_BASE_URL="http://127.0.0.1:7070/codex"
+
+  # OpenAI Chat
+  export OPENAI_BASE_URL="http://127.0.0.1:7070/chat"
 
   # Gemini CLI
   export GOOGLE_GEMINI_BASE_URL="http://127.0.0.1:7070/gemini"

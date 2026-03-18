@@ -361,6 +361,7 @@ const RequestListComponent: React.FC<RequestListProps> = ({
           <SelectItem key="all">所有客户端</SelectItem>
           <SelectItem key="claude">Claude</SelectItem>
           <SelectItem key="codex">Codex</SelectItem>
+          <SelectItem key="chat">Chat</SelectItem>
           <SelectItem key="gemini">Gemini</SelectItem>
         </Select>
 

@@ -29,6 +29,7 @@ interface LocalServiceConfig {
 const LOCAL_SERVICE_COLORS: LocalServiceConfig[] = [
   { key: 'claude', color: '#D4935D' },
   { key: 'codex', color: '#2D3748' },
+  { key: 'chat', color: '#10A37F' },
   { key: 'gemini', color: '#4285F4' },
 ];
 

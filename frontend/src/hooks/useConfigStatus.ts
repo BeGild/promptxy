@@ -6,6 +6,7 @@ import type { Supplier, Route } from '@/types/api';
 interface ConfigStatus {
   '/claude': string | null;
   '/codex': string | null;
+  '/chat': string | null;
   '/gemini': string | null;
 }
 
@@ -22,6 +23,7 @@ export function useConfigStatus(): ConfigStatus {
     const status: ConfigStatus = {
       '/claude': null,
       '/codex': null,
+      '/chat': null,
       '/gemini': null,
     };
 
@@ -37,7 +39,7 @@ export function useConfigStatus(): ConfigStatus {
       return s ? s.displayName || s.name : null;
     };
 
-    const enabledRoute = (localService: 'claude' | 'codex' | 'gemini'): Route | undefined => {
+    const enabledRoute = (localService: 'claude' | 'codex' | 'chat' | 'gemini'): Route | undefined => {
       const list = byLocalService[localService] || [];
       return list.find(r => r.enabled);
     };
@@ -48,13 +50,14 @@ export function useConfigStatus(): ConfigStatus {
         // Claude: 使用第一个映射规则的供应商
         return route.modelMappings?.[0]?.targetSupplierId;
       } else {
-        // Codex/Gemini: 使用单一供应商
+        // Codex/Chat/Gemini: 使用单一供应商
         return route.singleSupplierId;
       }
     };
 
     status['/claude'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('claude')));
     status['/codex'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('codex')));
+    status['/chat'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('chat')));
     status['/gemini'] = resolveSupplierName(resolveRouteSupplierId(enabledRoute('gemini')));
 
     return status;
